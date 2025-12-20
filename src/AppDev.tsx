@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import DashboardHome from './DashboardHome';
 
 // --- INTERFACCE & TIPI ---
 
-interface League { id: string; name: string }
+interface League { id: string; name: string; country: string }
 interface RoundInfo { name: string; label: string; type: 'previous' | 'current' | 'next' }
 interface Match { 
   id: string; home: string; away: string; 
@@ -37,16 +38,41 @@ interface ChatMessage {
 }
 
 // --- CONFIGURAZIONE ---
+// --- CONFIGURAZIONE ---
 const API_BASE = 'http://127.0.0.1:5001/puppals-456c7/us-central1/api';
 
+// 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
 const COUNTRIES = [
-  { code: 'Italy', flag: '🇮🇹', name: 'Italia' },
-  { code: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'Inghilterra' },
-  { code: 'Spain', flag: '🇪🇸', name: 'Spagna' },
-  { code: 'Germany', flag: '🇩🇪', name: 'Germania' },
-  { code: 'France', flag: '🇫🇷', name: 'Francia' },
-  { code: 'Netherlands', flag: '🇳🇱', name: 'Olanda' },
-  { code: 'Portugal', flag: '🇵🇹', name: 'Portogallo' }
+  { code: 'ALL', name: 'Tutto il Mondo', flag: '🌍' },
+  { code: 'Italy', name: 'Italia', flag: '🇮🇹' },
+  { code: 'England', name: 'Inghilterra', flag: '🇬🇧' },
+  { code: 'Spain', name: 'Spagna', flag: '🇪🇸' },
+  { code: 'Germany', name: 'Germania', flag: '🇩🇪' },
+  { code: 'France', name: 'Francia', flag: '🇫🇷' },
+  { code: 'Netherlands', name: 'Olanda', flag: '🇳🇱' },
+  { code: 'Portugal', name: 'Portogallo', flag: '🇵🇹' }
+];
+
+// 2. AGGIORNIAMO LA LISTA CAMPIONATI PER USARE GLI STESSI CODICI
+
+const LEAGUES_MAP: League[] = [
+    // ITALIA
+    { id: 'serie-a', name: 'Serie A', country: 'Italy' },
+    { id: 'serie-b', name: 'Serie B', country: 'Italy' },
+    { id: 'seriec-a', name: 'Serie C - Gir A', country: 'Italy' },
+    { id: 'seriec-b', name: 'Serie C - Gir B', country: 'Italy' },
+    { id: 'seriec-c', name: 'Serie C - Gir C', country: 'Italy' },
+  
+    // INGHILTERRA
+    { id: 'premier', name: 'Premier League', country: 'England' },
+    { id: 'championship', name: 'Championship', country: 'England' },
+  
+    // ALTRE NAZIONI
+    { id: 'laliga', name: 'La Liga', country: 'Spain' },
+    { id: 'bundes', name: 'Bundesliga', country: 'Germany' },
+    { id: 'ligue1', name: 'Ligue 1', country: 'France' },
+    { id: 'eredivisie', name: 'Eredivisie', country: 'Netherlands' },
+    { id: 'primeira', name: 'Primeira Liga', country: 'Portugal' },
 ];
 
 // --- TEMA NEON / SCI-FI ---
@@ -103,7 +129,12 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto', padding: '0' 
   },
   arenaContent: {
-    padding: '30px', maxWidth: '1200px', margin: '0 auto', width: '100%'
+    // Ho cambiato il padding: 30px sopra/lati, ma 0px sotto.
+    // Questo elimina lo spazio morto in fondo.
+    padding: '30px 30px 0px 30px', 
+    maxWidth: '1200px', 
+    margin: '0 auto', 
+    width: '100%'
   },
 
   // CARDS GENERICHE
@@ -185,7 +216,7 @@ export default function AppDev() {
   const [rounds, setRounds] = useState<RoundInfo[]>([]);
   const [selectedRound, setSelectedRound] = useState<RoundInfo | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
-  
+  const [activeLeague, setActiveLeague] = useState<string | null>(null);
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result'>('list');
@@ -374,15 +405,33 @@ export default function AppDev() {
 
   const renderMatchList = () => (
     <div style={styles.arenaContent}>
-      <div style={{ display:'flex', gap:'10px', marginBottom:'20px', padding:'15px', background: theme.panel, borderRadius:'12px', border: theme.panelBorder }}>
+      
+      {/* 1. NAVIGAZIONE STILE "CAPSULA NEON" (Esattamente i tuoi parametri) */}
+      <div style={{ 
+          display: 'flex', 
+          background: 'rgba(18, 20, 35, 0.85)', 
+          marginBottom: '15px', 
+          marginTop: '-10px',
+          gap: '10px', 
+          padding: '10px', 
+          borderRadius: '30px', 
+          border: '1px solid rgba(0, 240, 255, 0.2)' 
+      }}>
         {rounds.map(r => (
            <button 
              key={r.name} 
              onClick={() => setSelectedRound(r)}
              style={{
-               flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold',
-               background: selectedRound?.name === r.name ? theme.cyan : 'rgba(255,255,255,0.05)',
-               color: selectedRound?.name === r.name ? '#000' : theme.text
+               flex: 1, 
+               padding: '8px', 
+               background: selectedRound?.name === r.name ? 'rgb(0, 240, 255)' : 'transparent',
+               border: 'none', 
+               cursor: 'pointer', 
+               fontWeight: 'bold', 
+               fontSize: '13px',
+               color: selectedRound?.name === r.name ? 'rgb(0, 0, 0)' : 'rgb(139, 155, 180)',
+               transition: 'background 0.2s',
+               borderRadius: '25px'
              }}
            >
              {r.label}
@@ -390,23 +439,140 @@ export default function AppDev() {
         ))}
       </div>
 
-      {matches.length === 0 ? <div style={{textAlign:'center', padding:'40px', color: theme.textDim}}>Nessuna partita trovata</div> :
-       matches.map(m => (
-        <div key={m.id} style={styles.matchRow} onClick={() => prepareSimulation(m)}>
-          <div style={{width:'40%', textAlign:'right', fontWeight:'bold', fontSize:'15px'}}>{m.home}</div>
+      {/* 2. LISTA PARTITE (Stile Card "Pixel Perfect") */}
+      {matches.length === 0 ? (
+        <div style={{textAlign:'center', padding:'40px', color: theme.textDim}}>Nessuna partita trovata</div> 
+      ) : (
+       matches.map(match => {
+        const isFuture = selectedRound?.type === 'next';
+        const showLucifero = !isFuture && match.h2h_data?.lucifero_home != null;
+        
+        // Quote simulate (Placeholder)
+        const odds = { 1: '1.85', X: '3.40', 2: '4.20' }; 
+
+        return (
+        <div 
+          key={match.id}
+          onClick={() => prepareSimulation(match)}
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '20px',
+            padding: '10.2px 15px',
+            marginBottom: '5px',
+            cursor: 'pointer',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            transition: 'background 0.2s'
+          }}
+          onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+          }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+          }}
+        >
+          {/* A. DATA (Sinistra - Parametri esatti) */}
           <div style={{
-            padding:'5px 15px', borderRadius:'20px', background:'rgba(255,255,255,0.1)', 
-            fontWeight:'bold', fontSize:'12px', color: theme.cyan
+              display:'flex', flexDirection:'column', alignItems:'center', width:'45px', 
+              borderRight:'1px solid rgba(255, 255, 255, 0.1)', marginRight:'15px'
           }}>
-            {m.status === 'Finished' ? m.real_score : m.match_time}
+             <div style={{fontSize:'10px', color:'rgb(136, 136, 136)', fontWeight:'bold'}}>
+                {match.date_obj ? new Date(match.date_obj).toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit'}) : ''}
+             </div>
+             <div style={{fontSize:'11px', color:'rgb(0, 240, 255)', fontWeight:'bold'}}>
+                {match.match_time}
+             </div>
           </div>
-          <div style={{width:'40%', textAlign:'left', fontWeight:'bold', fontSize:'15px'}}>{m.away}</div>
+
+          {/* B. SQUADRE E BARRE (Centro) */}
+          <div style={{flex: 1, display:'flex', alignItems:'center', justifyContent:'center'}}>
+              
+              {/* CASA */}
+              <div style={{flex:1, display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'10px'}}>
+                 {showLucifero && (
+                    <div style={{display:'flex', alignItems:'center'}}>
+                        <span style={{fontSize:'10px', color:'rgb(5, 249, 182)', marginRight:'4px', fontWeight:'bold'}}>{Math.round((match.h2h_data.lucifero_home / 25) * 100)}%</span>
+                        <div style={{width:'35px', height:'5px', background:'rgba(255, 255, 255, 0.1)', borderRadius:'3px'}}>
+                            <div style={{
+                                width: `${Math.min((match.h2h_data.lucifero_home / 25) * 100, 100)}%`, 
+                                height:'100%', 
+                                background:'rgb(5, 249, 182)', 
+                                boxShadow:'0 0 8px rgb(5, 249, 182)', 
+                                borderRadius:'3px'
+                            }}></div>
+                        </div>
+                    </div>
+                 )}
+                 <div style={{fontWeight:'bold', fontSize:'16px', color:'white', textAlign:'right'}}>{match.home}</div>
+              </div>
+
+              {/* VS */}
+              <div style={{
+                  background: 'rgba(0, 0, 0, 0.4)', padding:'4px 12px', borderRadius:'8px', 
+                  fontSize:'12px', fontWeight:'bold', color:'rgb(139, 155, 180)',
+                  minWidth:'45px', textAlign:'center', margin:'0 20px'
+              }}>
+                  {match.status === 'Finished' && match.real_score ? match.real_score : 'VS'}
+              </div>
+
+              {/* OSPITE */}
+              <div style={{flex:1, display:'flex', justifyContent:'flex-start', alignItems:'center', gap:'10px'}}>
+                 <div style={{fontWeight:'bold', fontSize:'16px', color:'white', textAlign:'left'}}>{match.away}</div>
+                 {showLucifero && (
+                    <div style={{display:'flex', alignItems:'center'}}>
+                        <div style={{width:'35px', height:'5px', background:'rgba(255, 255, 255, 0.1)', borderRadius:'3px'}}>
+                            <div style={{
+                                width: `${Math.min((match.h2h_data.lucifero_away / 25) * 100, 100)}%`, 
+                                height:'100%', 
+                                background:'rgb(255, 159, 67)', 
+                                boxShadow:'0 0 8px rgb(255, 159, 67)', 
+                                borderRadius:'3px'
+                            }}></div>
+                        </div>
+                        <span style={{fontSize:'10px', color:'rgb(255, 159, 67)', marginLeft:'4px', fontWeight:'bold'}}>{Math.round((match.h2h_data.lucifero_away / 25) * 100)}%</span>
+                    </div>
+                 )}
+              </div>
+          </div>
+
+          {/* C. QUOTE (Destra - Parametri esatti) */}
+          <div style={{
+              display:'flex', gap:'8px', marginLeft:'20px', paddingLeft:'15px', 
+              borderLeft:'1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center', minWidth:'30px'}}>
+                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px'}}>1</span>
+                  <span style={{fontSize:'12px', color:'rgb(221, 221, 221)', background:'rgba(255, 255, 255, 0.05)', padding:'3px 8px', borderRadius:'4px', width:'100%', textAlign:'center'}}>{odds[1]}</span>
+              </div>
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center', minWidth:'30px'}}>
+                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px'}}>X</span>
+                  <span style={{fontSize:'12px', color:'rgb(221, 221, 221)', background:'rgba(255, 255, 255, 0.05)', padding:'3px 8px', borderRadius:'4px', width:'100%', textAlign:'center'}}>{odds.X}</span>
+              </div>
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center', minWidth:'30px'}}>
+                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px'}}>2</span>
+                  <span style={{fontSize:'12px', color:'rgb(221, 221, 221)', background:'rgba(255, 255, 255, 0.05)', padding:'3px 8px', borderRadius:'4px', width:'100%', textAlign:'center'}}>{odds[2]}</span>
+              </div>
+          </div>
+
         </div>
-      ))}
+      );
+      }))}
     </div>
   );
 
-  const renderPreMatch = () => (
+  const renderPreMatch = () => {
+    // Calcolo Percentuali (conversione da base 25 a base 100)
+    // Se il dato manca, mettiamo 0 per sicurezza
+    const homeVal = selectedMatch?.h2h_data?.lucifero_home || 0;
+    const awayVal = selectedMatch?.h2h_data?.lucifero_away || 0;
+    
+    // Formula: (Voto / 25) * 100
+    const homePerc = Math.round((homeVal / 25) * 100);
+    const awayPerc = Math.round((awayVal / 25) * 100);
+
+    return (
     <div style={styles.arenaContent}>
       <button onClick={() => setViewState('list')} style={{background:'transparent', border:'none', color: theme.textDim, cursor:'pointer', marginBottom:'10px'}}>← Torna alla lista</button>
       
@@ -418,26 +584,96 @@ export default function AppDev() {
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px'}}>
+        {/* COLONNA SINISTRA: STATISTICHE */}
         <div>
            <h3 style={{color: theme.textDim, borderBottom: '1px solid #333', paddingBottom:'5px'}}>Statistiche Squadre</h3>
+           
+           {/* --- BLOCCO LUCIFERO (VERSIONE FINAL - PERCENTUALI) --- */}
+           {/* Mostra solo se i dati esistono e sono validi */}
+           {selectedMatch?.h2h_data?.lucifero_home != null && (
+            <div style={{
+                marginBottom: '20px', 
+                padding: '15px', 
+                background: 'rgba(255, 255, 255, 0.03)', // Sfondo molto leggero ed elegante
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.05)',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+            }}>
+               <div style={{
+                   display:'flex', 
+                   justifyContent:'space-between', 
+                   alignItems:'center', 
+                   marginBottom:'15px'
+               }}>
+                   <span style={{fontSize:'13px', textTransform:'uppercase', color: theme.textDim, letterSpacing:'1.5px', fontWeight:'bold'}}>
+                       ⚡ Stato di Forma
+                   </span>
+                   <span style={{fontSize:'11px', color: '#555', fontStyle:'italic'}}>
+                       (Indice Prestazione)
+                   </span>
+               </div>
+               
+               {/* BARRA SQUADRA CASA */}
+               <div style={{marginBottom:'15px'}}>
+                 <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'6px'}}>
+                    <span style={{fontWeight:'bold', color: '#fff'}}>{selectedMatch.home}</span>
+                    <span style={{color: theme.success, fontWeight:'bold', fontFamily:'monospace', fontSize:'15px'}}>
+                      {homePerc}%
+                    </span>
+                 </div>
+                 {/* Background barra grigia scura */}
+                 <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden'}}>
+                   {/* Barra colorata dinamica */}
+                   <div style={{
+                     width: `${homePerc}%`, 
+                     height:'100%', 
+                     background: `linear-gradient(90deg, ${theme.success}, #00f2ff)`,
+                     boxShadow: `0 0 12px ${theme.success}`,
+                     borderRadius:'4px',
+                     transition: 'width 1s ease-out'
+                   }}></div>
+                 </div>
+               </div>
+
+               {/* BARRA SQUADRA TRASFERTA */}
+               <div>
+                 <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'6px'}}>
+                    <span style={{fontWeight:'bold', color: '#fff'}}>{selectedMatch.away}</span>
+                    <span style={{color: theme.warning, fontWeight:'bold', fontFamily:'monospace', fontSize:'15px'}}>
+                       {awayPerc}%
+                    </span>
+                 </div>
+                 <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden'}}>
+                   <div style={{
+                     width: `${awayPerc}%`, 
+                     height:'100%', 
+                     background: `linear-gradient(90deg, ${theme.warning}, #ff0055)`,
+                     boxShadow: `0 0 12px ${theme.warning}`,
+                     borderRadius:'4px',
+                     transition: 'width 1s ease-out'
+                   }}></div>
+                 </div>
+               </div>
+            </div>
+           )}
+           {/* --- FINE BLOCCO LUCIFERO --- */}
+
            <div style={styles.statBlock}>
-             <span>Forma {selectedMatch?.home}</span>
-             <span style={{color: theme.success}}>V V P V N</span>
+             <span>H2H Storico</span>
+             <span style={{color: theme.textDim, fontSize:'12px'}}>
+                {selectedMatch?.h2h_data?.history_summary || "Dati non disponibili"}
+             </span>
            </div>
+           
            <div style={styles.statBlock}>
-             <span>Forma {selectedMatch?.away}</span>
-             <span style={{color: theme.warning}}>P P V N P</span>
-           </div>
-           <div style={styles.statBlock}>
-             <span>H2H Recenti</span>
-             <span>2 Vittorie Casa - 1 Pareggio</span>
-           </div>
-           <div style={styles.statBlock}>
-             <span>Probabilità Goal</span>
-             <span style={{color: theme.cyan}}>Alta (Over 2.5)</span>
+             <span>Media Gol Prevista</span>
+             <span style={{color: theme.cyan}}>
+                {selectedMatch?.h2h_data?.avg_total_goals ? selectedMatch.h2h_data.avg_total_goals : "N/D"}
+             </span>
            </div>
         </div>
 
+        {/* COLONNA DESTRA: CONFIGURAZIONE */}
         <div style={styles.card}>
            <h3 style={{marginTop:0}}>Configura Simulazione</h3>
            
@@ -483,6 +719,7 @@ export default function AppDev() {
       </div>
     </div>
   );
+}
 
   const renderAnimation = () => (
     <div style={styles.animContainer}>
@@ -568,6 +805,35 @@ export default function AppDev() {
     </div>
   );
 
+  // --- BLOCCO 1: LOGICA DASHBOARD ---
+  if (!activeLeague) {
+    return (
+      <DashboardHome 
+        onSelectLeague={(id) => {
+          
+          // 1. CERCA NELLA NUOVA LISTA 'LEAGUES_MAP'
+          // (Ora non si confonde più con la variabile di stato!)
+          const campionatoTrovato = LEAGUES_MAP.find(L => L.id === id);
+
+          // 2. RECUPERA LA NAZIONE
+          const nazioneGiusta = campionatoTrovato ? campionatoTrovato.country : 'Italy';
+
+          console.log(`Click Dashboard: ${id} -> Nazione: ${nazioneGiusta}`);
+
+          // 3. IMPOSTA I DATI
+          setCountry(nazioneGiusta); 
+          setLeague(id);             
+          
+          // 4. APRI IL SITO
+          setViewState('list');     
+          setSelectedMatch(null);   
+          setActiveLeague(id); 
+        }} 
+      />
+    );
+  }
+
+  // --- BLOCCO 2: SITO PRINCIPALE ---
   return (
     <div style={styles.wrapper}>
       <style>{`
@@ -577,13 +843,57 @@ export default function AppDev() {
         ::-webkit-scrollbar-thumb { background: #333; borderRadius: 3px; }
       `}</style>
 
-      {/* TOP BAR */}
+      {/* TOP BAR UNIFICATA */}
       <div style={styles.topBar}>
-        <div style={styles.logo}>⚽ AI SIMULATOR PRO</div>
+        
+        {/* GRUPPO SINISTRA: Tasto Indietro + Logo */}
+        <div style={{display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px'}}> 
+             
+             {/* TASTO INDIETRO ELEGANTE */}
+             <button 
+               onClick={() => setActiveLeague(null)} 
+               style={{
+                 background: 'rgba(0, 240, 255, 0.1)', 
+                 border: '1px solid rgba(0, 240, 255, 0.3)', 
+                 color: '#00f0ff', 
+                 padding: '8px 16px', 
+                 borderRadius: '8px', 
+                 cursor: 'pointer', 
+                 fontWeight: 'bold',
+                 fontSize: '12px',
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: '6px',
+                 transition: 'all 0.2s'
+               }}
+               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
+               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
+             >
+               ← DASHBOARD
+             </button>
+
+             {/* LOGO CON PALLONE ILLUMINATO */}
+             <div style={{...styles.logo, display: 'flex', alignItems: 'center'}}>
+                <img 
+                  src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png" 
+                  alt="Logo" 
+                  style={{
+                    height: '28px', 
+                    width: 'auto', 
+                    marginRight: '15px', 
+                    // MODIFICA QUI: brightness(1.5) lo rende molto più chiaro e acceso
+                    filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)' 
+                  }} 
+                />
+                AI SIMULATOR PRO
+             </div>
+        </div>
+
+        {/* PARTE DESTRA (Crediti, Utente...) */}
         <div style={{display:'flex', gap:'20px', alignItems:'center'}}>
           <div style={{fontSize:'12px', color: theme.textDim}}>Crediti: <span style={{color: theme.success}}>∞</span></div>
           <button onClick={() => alert('Tema toggle')} style={{background:'none', border:'none', fontSize:'18px', cursor:'pointer'}}>🌙</button>
-          <div style={{width:'32px', height:'32px', borderRadius:'50%', background: theme.purple, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>U</div>
+          <div style={{width:'32px', height:'32px', borderRadius:'50%', background: theme.purple, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', boxShadow: `0 0 10px ${theme.purple}`}}>U</div>
         </div>
       </div>
 
@@ -593,15 +903,15 @@ export default function AppDev() {
           <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold'}}>NAZIONE</div>
           <select 
             value={country} onChange={e => setCountry(e.target.value)}
-            style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px'}}
+            style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px', width: '100%'}}
           >
             {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
           </select>
 
-          <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold', marginTop:'10px'}}>CAMPIONATO</div>
+          <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold', marginTop:'15px'}}>CAMPIONATO</div>
           <select 
              value={league} onChange={e => setLeague(e.target.value)}
-             style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px'}}
+             style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px', width: '100%'}}
           >
             {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
@@ -615,7 +925,7 @@ export default function AppDev() {
                <div style={{fontWeight:'bold', marginTop:'5px'}}>Napoli vs Roma</div>
                <div style={{color: theme.success, fontSize:'12px'}}>1 + Over 1.5</div>
             </div>
-            <div style={{...styles.card, padding:'15px', position:'relative', overflow:'hidden', cursor:'pointer'}}>
+            <div style={{...styles.card, padding:'15px', position:'relative', overflow:'hidden', cursor:'pointer', marginTop:'10px'}}>
                <div style={getWidgetGlow(theme.danger)} />
                <div style={{fontSize:'11px', color: theme.textDim}}>RISCHIO ALTO</div>
                <div style={{fontWeight:'bold', marginTop:'5px'}}>Lecce vs Verona</div>

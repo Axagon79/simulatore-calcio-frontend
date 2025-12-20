@@ -172,11 +172,41 @@ function App() {
     setGroupedMatches(grouped)
   }
 
-  const handleSimulate = () => {
-    if (selectedMatch) {
-      alert(`🚀 Simulazione avviata!\n\n${selectedMatch.home} vs ${selectedMatch.away}\n📅 ${new Date(selectedMatch.date_obj).toLocaleDateString('it-IT')}\n🕐 ${selectedMatch.match_time}`)
+  const [simulationResults, setSimulationResults] = useState<any>(null)
+  const [isSimulating, setIsSimulating] = useState(false)
+
+  const handleSimulate = async () => {
+    if (!selectedMatch) return
+    
+    setIsSimulating(true)
+    setSimulationResults(null)
+    
+    try {
+      const response = await fetch(`${API_BASE}/simulation/simulate-match`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          home_team: selectedMatch.home,
+          away_team: selectedMatch.away,
+          league: league,
+          round: selectedRound?.name,
+          match_id: selectedMatch.id
+        })
+      })
+      
+      if (!response.ok) throw new Error('Errore simulazione')
+      
+      const results = await response.json()
+      setSimulationResults(results)
+      
+    } catch (error) {
+      console.error('Errore:', error)
+      alert('❌ Errore durante la simulazione')
+    } finally {
+      setIsSimulating(false)
     }
   }
+
 
   const selectedCountry = COUNTRIES.find(c => c.code === country)
   const selectedLeague = leagues.find(l => l.id === league)
@@ -335,12 +365,39 @@ function App() {
               </div>
             </div>
             
+            {/* Bottone Simula con stato */}
             <button 
-              style={styles.simulateBtn}
               onClick={handleSimulate}
+              style={styles.simulateBtn}
+              disabled={isSimulating}
             >
-              🚀 SIMULA QUESTA PARTITA
+              {isSimulating ? '⏳ SIMULAZIONE IN CORSO...' : '🚀 SIMULA QUESTA PARTITA'}
             </button>
+
+            {/* Risultati Simulazione */}
+            {simulationResults && (
+              <div style={{
+                marginTop: '24px',
+                padding: '20px',
+                backgroundColor: '#f0f4ff',
+                borderRadius: '14px',
+                border: '2px solid #667eea'
+              }}>
+                <h3 style={{ marginBottom: '16px', color: '#667eea' }}>
+                  📊 Risultati Simulazione
+                </h3>
+                <pre style={{ 
+                  backgroundColor: 'white', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  overflow: 'auto',
+                  fontSize: '14px'
+                }}>
+                  {JSON.stringify(simulationResults, null, 2)}
+                </pre>
+              </div>
+            )}
+
           </div>
         )}
       </div>

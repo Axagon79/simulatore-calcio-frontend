@@ -562,199 +562,439 @@ export default function AppDev() {
     </div>
   );
 
+    // --- FUNZIONE MANCANTE: ANIMAZIONE GRAFICA ---
+  const renderAnimation = () => (
+        <div style={styles.animContainer}>
+        <div style={styles.timerDisplay}>{timer}'</div>
+        
+        {/* Campo da Gioco Neon */}
+        <div style={styles.pitch}>
+            {/* Linea di metà campo */}
+            <div style={{position:'absolute', left:'50%', height:'100%', borderLeft:'1px solid rgba(255,255,255,0.2)'}}></div>
+            <div style={{position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)', width:'80px', height:'80px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'50%'}}></div>
+            
+            {/* Barra Momentum (La lancetta della partita) */}
+            <div style={{
+            ...styles.momentumBar,
+            left: `${momentum}%`,
+            width: '4px',
+            boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
+            }} />
+            
+            {/* Nomi Squadre in basso */}
+            <div style={{position:'absolute', bottom:'10px', left:'10px', fontSize:'12px', fontWeight:'bold', color: theme.cyan}}>{selectedMatch?.home}</div>
+            <div style={{position:'absolute', bottom:'10px', right:'10px', fontSize:'12px', fontWeight:'bold', color: theme.danger}}>{selectedMatch?.away}</div>
+        </div>
+
+        {/* Feed Eventi (Gol, Cartellini...) */}
+        <div style={styles.eventFeed}>
+            {animEvents.length === 0 ? <div style={{color:'#666', textAlign:'center', marginTop:'10px', fontSize:'12px'}}>Fischio d'inizio...</div> :
+            animEvents.map((e, i) => (
+                <div key={i} style={{marginBottom:'5px', fontSize:'13px', borderBottom:'1px solid rgba(255,255,255,0.1)', paddingBottom:'2px', color:'white'}}>
+                {e}
+                </div>
+            ))
+            }
+        </div>
+        
+        <div style={{marginTop:'20px', color: theme.cyan, letterSpacing:'2px', fontSize:'10px', animation:'pulse 2s infinite'}}>
+            SIMULAZIONE LIVE DAL CORE AI
+        </div>
+        </div>
+    );
   const renderPreMatch = () => {
-    // Calcolo Percentuali (conversione da base 25 a base 100)
-    // Se il dato manca, mettiamo 0 per sicurezza
+
+    // --- 1. FUNZIONE COLORI LED ---
+    const getTrendColor = (valore: number) => {
+        if (valore >= 80) return '#00ff88'; // Verde
+        if (valore >= 60) return '#adff2f'; // Verde mela
+        if (valore >= 40) return '#ffea00'; // Giallo
+        if (valore >= 25) return '#ff8800'; // Arancione
+        return '#ff4444';                   // Rosso
+    };
+    
+    // INCOLLA QUESTE (Dati reali dal DB):
+    const homeTrend = selectedMatch?.h2h_data?.lucifero_trend_home || [0,0,0,0,0]; 
+    const awayTrend = selectedMatch?.h2h_data?.lucifero_trend_away || [0,0,0,0,0];
+
+    // Calcolo della media dei 5 trend
+    const homeAvg = (homeTrend.reduce((a: number, b: number) => a + b, 0) / 5).toFixed(1);
+    const awayAvg = (awayTrend.reduce((a: number, b: number) => a + b, 0) / 5).toFixed(1);
+    
+    // Pentagono (5 Assi)
+    const homeRadar = [88, 85, 70, 90, 95]; 
+    const awayRadar = [60, 50, 45, 55, 40];
+
+    // Psicologia
+    const homeMotiv = 90; const awayMotiv = 45;
+    const homeFieldFactor = 85; const awayFieldFactor = 20;
+
+    // Lucifero Base
     const homeVal = selectedMatch?.h2h_data?.lucifero_home || 0;
     const awayVal = selectedMatch?.h2h_data?.lucifero_away || 0;
-    
-    // Formula: (Voto / 25) * 100
     const homePerc = Math.round((homeVal / 25) * 100);
     const awayPerc = Math.round((awayVal / 25) * 100);
+    
+    const homeTrust: string = 'S'; 
+    const awayTrust: string = 'C';
+    const bvsIndex = 72; 
+    const historyWeight = 85; 
 
+    // --- 2. HELPER GRAFICI ---
+
+    const drawPentagramRadar = (stats: number[], color: string) => {
+        const center = 60; // Centro ridotto
+        const radius = 45; // Raggio ridotto (meno ingombrante)
+        const totalPoints = 5;
+        const points = stats.map((v, i) => {
+            const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
+            const x = center + (v / 100) * radius * Math.cos(angle);
+            const y = center + (v / 100) * radius * Math.sin(angle);
+            return `${x},${y}`;
+        }).join(' ');
+        return <polygon points={points} fill={color} fillOpacity={0.4} stroke={color} strokeWidth="2" />;
+    };
+
+    const drawPentagonGrid = (radius: number, opacity: number) => {
+        const center = 60;
+        const totalPoints = 5;
+        const points = Array.from({ length: totalPoints }).map((_, i) => {
+            const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
+            return `${center + radius * Math.cos(angle)},${center + radius * Math.sin(angle)}`;
+        }).join(' ');
+        return <polygon points={points} fill="none" stroke="#444" strokeWidth="0.5" strokeOpacity={opacity} />;
+    };
+
+    const drawPentagonAxes = () => {
+        const center = 60; const radius = 45; const totalPoints = 5;
+        return Array.from({ length: totalPoints }).map((_, i) => {
+            const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
+            const x2 = center + radius * Math.cos(angle);
+            const y2 = center + radius * Math.sin(angle);
+            return <line key={i} x1={center} y1={center} x2={x2} y2={y2} stroke="#444" strokeWidth="0.5" />;
+        });
+    };
+
+    // --- 3. RENDER ---
     return (
     <div style={styles.arenaContent}>
-      <button onClick={() => setViewState('list')} style={{background:'transparent', border:'none', color: theme.textDim, cursor:'pointer', marginBottom:'10px'}}>← Torna alla lista</button>
       
-      <div style={{textAlign:'center', marginBottom:'30px'}}>
-        <h2 style={{fontSize:'32px', margin:'0 0 10px 0', textShadow:`0 0 20px ${theme.purple}`}}>
-          {selectedMatch?.home} <span style={{color:theme.textDim}}>vs</span> {selectedMatch?.away}
-        </h2>
-        <div style={{color: theme.cyan, fontSize:'14px', letterSpacing:'1px'}}>ANALISI PRE-PARTITA</div>
+      {/* HEADER */}
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px', borderBottom:'1px solid rgba(255,255,255,0.1)', paddingBottom:'10px'}}>
+          <button onClick={() => setViewState('list')} style={{background:'transparent', border:'none', color: theme.textDim, cursor:'pointer', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
+            <span>←</span> LISTA
+          </button>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:'10px', color: theme.cyan, letterSpacing:'2px'}}>ANALYSIS CORE</div>
+            <div style={{fontSize:'18px', fontWeight:'bold'}}>
+                {selectedMatch?.home} <span style={{color:theme.textDim, fontSize:'14px'}}>vs</span> {selectedMatch?.away}
+            </div>
+          </div>
+          <div style={{width:'60px'}}></div>
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px'}}>
-        {/* COLONNA SINISTRA: STATISTICHE */}
-        <div>
-           <h3 style={{color: theme.textDim, borderBottom: '1px solid #333', paddingBottom:'5px'}}>Statistiche Squadre</h3>
+      <div style={{display:'grid', gridTemplateColumns:'1.3fr 0.8fr', gap:'20px'}}>
+        
+        {/* === COLONNA SINISTRA: DATI VISIVI === */}
+        <div style={{display:'flex', flexDirection:'column', gap:'15px'}}>
            
-           {/* --- BLOCCO LUCIFERO (VERSIONE FINAL - PERCENTUALI) --- */}
-           {/* Mostra solo se i dati esistono e sono validi */}
-           {selectedMatch?.h2h_data?.lucifero_home != null && (
-            <div style={{
-                marginBottom: '20px', 
-                padding: '15px', 
-                background: 'rgba(255, 255, 255, 0.03)', // Sfondo molto leggero ed elegante
-                borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.05)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
-            }}>
-               <div style={{
-                   display:'flex', 
-                   justifyContent:'space-between', 
-                   alignItems:'center', 
-                   marginBottom:'15px'
-               }}>
-                   <span style={{fontSize:'13px', textTransform:'uppercase', color: theme.textDim, letterSpacing:'1.5px', fontWeight:'bold'}}>
-                       ⚡ Stato di Forma
-                   </span>
-                   <span style={{fontSize:'11px', color: '#555', fontStyle:'italic'}}>
-                       (Indice Prestazione)
-                   </span>
+           {/* A1. LUCIFERO POWER (SOLO POTENZA ATTUALE) */}
+            <div style={{...styles.card, padding:'20px', marginBottom: '15px'}}>
+                <div style={{fontSize:'11px', color: theme.cyan, marginBottom:'15px', fontWeight:'bold', letterSpacing:'2px', borderBottom:'1px solid rgba(0, 240, 255, 0.2)', paddingBottom:'5px'}}>
+                    ⚡ LUCIFERO POWER INDEX
+                </div>
+                
+                {/* CASA */}
+                <div style={{marginBottom:'15px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'8px', fontWeight:'bold'}}>
+                        <span style={{color: 'white'}}>{selectedMatch?.home}</span>
+                        <span style={{color: theme.cyan, textShadow: `0 0 10px ${theme.cyan}`}}>{homePerc}%</span>
+                    </div>
+                    <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden', border: '1px solid rgba(255,255,255,0.1)'}}>
+                        <div style={{
+                            width: `${homePerc}%`, 
+                            height:'100%', 
+                            background: `linear-gradient(90deg, ${theme.cyan}, #00f2ff)`, 
+                            boxShadow: `0 0 15px ${theme.cyan}`
+                        }}></div>
+                    </div>
+                </div>
+
+                {/* OSPITE */}
+                <div>
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'8px', fontWeight:'bold'}}>
+                        <span style={{color: 'white'}}>{selectedMatch?.away}</span>
+                        <span style={{color: theme.danger, textShadow: `0 0 10px ${theme.danger}`}}>{awayPerc}%</span>
+                    </div>
+                    <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden', border: '1px solid rgba(255,255,255,0.1)'}}>
+                        <div style={{
+                            width: `${awayPerc}%`, 
+                            height:'100%', 
+                            background: `linear-gradient(90deg, ${theme.danger}, #ff5e00)`, 
+                            boxShadow: `0 0 15px ${theme.danger}`
+                        }}></div>
+                    </div>
+                </div>
+            </div>
+            {/* A2. TREND INERZIA - FIX ALLINEAMENTO VISIVO NOMI */}
+            <div style={{...styles.card, padding:'15px', marginBottom: '15px'}}>
+                <div style={{fontSize:'10px', color: theme.textDim, marginBottom:'15px', fontWeight:'bold', letterSpacing:'1px', borderBottom:'1px solid rgba(255,255,255,0.05)', paddingBottom:'5px'}}>
+                    📈 TREND INERZIA (MEDIA STORICA)
+                </div>
+
+                <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                    
+                    {/* RIGA CASA */}
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                            {/* NOME SQUADRA: Aggiunto transform per abbassarlo di 2px e pareggiarlo alla barra */}
+                            <span style={{
+                                fontSize: '14px', 
+                                color: 'white', 
+                                fontWeight: 'bold', 
+                                width: '120px', 
+                                lineHeight: '1',
+                                transform: 'translateY(4px)' 
+                            }}>
+                                {selectedMatch?.home}
+                            </span>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '80px', justifyContent: 'center' }}>
+                                <span style={{ fontSize: '11px', color: getTrendColor(Number(homeAvg)), fontWeight: 'bold', lineHeight: '1' }}>
+                                    {homeAvg}%
+                                </span>
+                                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                                    <div style={{ 
+                                        width: `${homeAvg}%`, 
+                                        height: '100%', 
+                                        background: getTrendColor(Number(homeAvg)),
+                                        boxShadow: `0 0 8px ${getTrendColor(Number(homeAvg))}`,
+                                        transition: 'width 0.8s ease-in-out' 
+                                    }} />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
+                            {homeTrend.map((val: number, i: number) => (
+                                <div key={i} style={{
+                                    width: '28px', height: '10px', borderRadius: '2px',
+                                    background: getTrendColor(val),
+                                    opacity: (val / 100) + 0.2,
+                                    boxShadow: val > 60 ? `0 0 10px ${getTrendColor(val)}` : 'none',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }} title={`${val}%`} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* RIGA OSPITE */}
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                            {/* NOME SQUADRA: Stesso fix anche qui */}
+                            <span style={{
+                                fontSize: '14px', 
+                                color: 'white', 
+                                fontWeight: 'bold', 
+                                width: '120px', 
+                                lineHeight: '1',
+                                transform: 'translateY(4px)'
+                            }}>
+                                {selectedMatch?.away}
+                            </span>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '80px', justifyContent: 'center' }}>
+                                <span style={{ fontSize: '11px', color: getTrendColor(Number(awayAvg)), fontWeight: 'bold', lineHeight: '1' }}>
+                                    {awayAvg}%
+                                </span>
+                                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                                    <div style={{ 
+                                        width: `${awayAvg}%`, 
+                                        height: '100%', 
+                                        background: getTrendColor(Number(awayAvg)),
+                                        boxShadow: `0 0 8px ${getTrendColor(Number(awayAvg))}`,
+                                        transition: 'width 0.8s ease-in-out' 
+                                    }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
+                            {awayTrend.map((val: number, i: number) => (
+                                <div key={i} style={{
+                                    width: '28px', height: '10px', borderRadius: '2px',
+                                    background: getTrendColor(val),
+                                    opacity: (val / 100) + 0.2,
+                                    boxShadow: val > 60 ? `0 0 10px ${getTrendColor(val)}` : 'none',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }} title={`${val}%`} />
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {/* B. DNA SYSTEM (SPOSTATO IN BASSO A SINISTRA) */}
+           <div style={{
+               ...styles.card, 
+               padding: '15px',
+               marginTop: '100px',    // Questa riga lo spinge in basso
+               marginBottom: '10px', 
+               display: 'flex', 
+               flexDirection: 'column', 
+               alignItems: 'center', 
+               justifyContent: 'center', 
+               width: '260px', 
+               height: '260px', 
+               alignSelf: 'flex-start' // Lo ancora tutto a sinistra
+           }}>
+               <div style={{width:'100%', borderBottom:'4px solid rgba(255,255,255,0.05)',marginTop:'-15px', marginBottom:'30px', paddingBottom:'5px', textAlign:'left'}}>
+                    <div style={{fontSize:'10px', color: theme.textDim, fontWeight:'bold', letterSpacing:'1px', marginBottom:'25px'}}>🕸️ DNA SYSTEM</div>
+                    
+                    <div style={{display:'flex', justifyContent:'center', gap:'12px', fontSize:'12px', fontWeight:'bold'}}>
+                       <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                           <div style={{width:'8px', height:'8px', background: theme.cyan, borderRadius:'2px', boxShadow:`0 0 5px ${theme.cyan}`}}></div>
+                           <span style={{color: 'white'}}>{selectedMatch?.home.substring(0,12)}</span>
+                       </div>
+                       <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
+                           <div style={{width:'8px', height:'8px', background: theme.danger, borderRadius:'2px', boxShadow:`0 0 5px ${theme.danger}`}}></div>
+                           <span style={{color: 'white'}}>{selectedMatch?.away.substring(0,12)}</span>
+                       </div>
+                    </div>
                </div>
                
-               {/* BARRA SQUADRA CASA */}
-               <div style={{marginBottom:'15px'}}>
-                 <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'6px'}}>
-                    <span style={{fontWeight:'bold', color: '#fff'}}>{selectedMatch.home}</span>
-                    <span style={{color: theme.success, fontWeight:'bold', fontFamily:'monospace', fontSize:'15px'}}>
-                      {homePerc}%
-                    </span>
-                 </div>
-                 {/* Background barra grigia scura */}
-                 <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden'}}>
-                   {/* Barra colorata dinamica */}
-                   <div style={{
-                     width: `${homePerc}%`, 
-                     height:'100%', 
-                     background: `linear-gradient(90deg, ${theme.success}, #00f2ff)`,
-                     boxShadow: `0 0 12px ${theme.success}`,
-                     borderRadius:'4px',
-                     transition: 'width 1s ease-out'
-                   }}></div>
-                 </div>
-               </div>
+               <div style={{position:'relative', width:'170px', height:'170px', marginTop:'-5px'}}> 
+                   <svg width="180" height="180" viewBox="0 0 120 120" style={{overflow:'visible'}}>
+                       {drawPentagonGrid(45, 0.5)}  
+                       {drawPentagonGrid(30, 0.2)}  
+                       {drawPentagonGrid(15, 0.2)}  
+                       {drawPentagonAxes()}
 
-               {/* BARRA SQUADRA TRASFERTA */}
-               <div>
-                 <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'6px'}}>
-                    <span style={{fontWeight:'bold', color: '#fff'}}>{selectedMatch.away}</span>
-                    <span style={{color: theme.warning, fontWeight:'bold', fontFamily:'monospace', fontSize:'15px'}}>
-                       {awayPerc}%
-                    </span>
-                 </div>
-                 <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden'}}>
-                   <div style={{
-                     width: `${awayPerc}%`, 
-                     height:'100%', 
-                     background: `linear-gradient(90deg, ${theme.warning}, #ff0055)`,
-                     boxShadow: `0 0 12px ${theme.warning}`,
-                     borderRadius:'4px',
-                     transition: 'width 1s ease-out'
-                   }}></div>
-                 </div>
-               </div>
-            </div>
-           )}
-           {/* --- FINE BLOCCO LUCIFERO --- */}
+                       <text x="60" y="5" fontSize="8" fill="#fff" textAnchor="middle" fontWeight="bold">ATT</text> 
+                       <text x="115" y="45" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">TEC</text> 
+                       <text x="95" y="115" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">DIF</text> 
+                       <text x="25" y="115" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">VAL</text> 
+                       <text x="5" y="45" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">FRM</text> 
 
-           <div style={styles.statBlock}>
-             <span>H2H Storico</span>
-             <span style={{color: theme.textDim, fontSize:'12px'}}>
-                {selectedMatch?.h2h_data?.history_summary || "Dati non disponibili"}
-             </span>
-           </div>
-           
-           <div style={styles.statBlock}>
-             <span>Media Gol Prevista</span>
-             <span style={{color: theme.cyan}}>
-                {selectedMatch?.h2h_data?.avg_total_goals ? selectedMatch.h2h_data.avg_total_goals : "N/D"}
-             </span>
+                       {drawPentagramRadar(homeRadar, theme.cyan)}
+                       {drawPentagramRadar(awayRadar, theme.danger)}
+                   </svg>
+               </div>
            </div>
         </div>
 
-        {/* COLONNA DESTRA: CONFIGURAZIONE */}
-        <div style={styles.card}>
-           <h3 style={{marginTop:0}}>Configura Simulazione</h3>
-           
-           <div style={{marginBottom:'20px'}}>
-             <label style={{display:'block', marginBottom:'8px', color: theme.textDim, fontSize:'12px'}}>MODALITÀ</label>
-             <div style={{display:'flex', gap:'10px'}}>
-               {['fast', 'animated'].map((m: any) => (
-                 <button key={m} onClick={() => setSimMode(m)} style={{
-                   flex:1, padding:'10px', borderRadius:'8px', border: `1px solid ${simMode===m ? theme.cyan : 'transparent'}`,
-                   background: simMode===m ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)',
-                   color: 'white', cursor:'pointer'
-                 }}>
-                   {m === 'fast' ? '⚡ Veloce' : '🎬 Animata'}
-                 </button>
-               ))}
-             </div>
-           </div>
+        {/* === COLONNA DESTRA: DATI EXTRA + CONTROLLI (TORNATI!) === */}
+        <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+            
+            {/* 1. TRUST & BVS & STORIA (Compatti) */}
+            <div style={{...styles.card, padding:'12px', marginBottom:0, display:'flex', flexDirection:'column', gap:'12px'}}>
+                {/* Trust Row */}
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid #333', paddingBottom:'8px'}}>
+                    <span style={{fontSize:'10px', color: theme.textDim, fontWeight:'bold'}}>🛡️ TRUST</span>
+                    <div style={{display:'flex', gap:'5px'}}>
+                        <span style={{background: homeTrust==='S'?theme.cyan:'#333', color:homeTrust==='S'?'black':'white', fontSize:'10px', padding:'2px 6px', borderRadius:'3px', fontWeight:'bold'}}>{selectedMatch?.home.substring(0,3)}: {homeTrust}</span>
+                        <span style={{background: awayTrust==='S'?theme.cyan:theme.danger, color:'white', fontSize:'10px', padding:'2px 6px', borderRadius:'3px', fontWeight:'bold'}}>{selectedMatch?.away.substring(0,3)}: {awayTrust}</span>
+                    </div>
+                </div>
+                {/* BVS & Storia Grid */}
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
+                    <div>
+                        <div style={{fontSize:'9px', color: theme.textDim, fontWeight:'bold', marginBottom:'3px'}}>🏎️ BVS</div>
+                        <div style={{width:'100%', height:'3px', background:'#222'}}><div style={{width:`${bvsIndex}%`, height:'100%', background: bvsIndex>60?theme.danger:theme.success}}></div></div>
+                    </div>
+                    <div>
+                        <div style={{fontSize:'9px', color: theme.textDim, fontWeight:'bold', marginBottom:'3px'}}>⚖️ STORIA</div>
+                        <div style={{width:'100%', height:'3px', background:'#222'}}><div style={{width:`${historyWeight}%`, height:'100%', background: theme.purple}}></div></div>
+                    </div>
+                </div>
+            </div>
 
-           <div style={{marginBottom:'20px'}}>
-             <label style={{display:'block', marginBottom:'8px', color: theme.textDim, fontSize:'12px'}}>PROFONDITÀ ANALISI</label>
-             <select 
-               value={simDepth} 
-               onChange={(e:any) => setSimDepth(e.target.value)}
-               style={{width:'100%', padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'8px'}}
-             >
-               <option value="quick">Rapida (100 cicli)</option>
-               <option value="normal">Normale (500 cicli)</option>
-               <option value="deep">Approfondita (2000 cicli)</option>
-             </select>
-           </div>
+            {/* 2. PSICOLOGIA & CAMPO */}
+            <div style={{...styles.card, padding:'12px', marginBottom:0}}>
+                <div style={{fontSize:'10px', color: theme.textDim, fontWeight:'bold', marginBottom:'8px'}}>🧠 PSICOLOGIA</div>
+                {/* Motivazioni */}
+                <div style={{marginBottom:'8px'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'2px', height:'4px'}}>
+                         <div style={{flex:1, background:'#222', display:'flex', justifyContent:'flex-end'}}><div style={{width: `${homeMotiv}%`, background: theme.cyan, height:'100%'}}></div></div>
+                         <div style={{width:'2px', background:'#555'}}></div>
+                         <div style={{flex:1, background:'#222'}}><div style={{width: `${awayMotiv}%`, background: theme.danger, height:'100%'}}></div></div>
+                    </div>
+                    <div style={{fontSize:'8px', color:'#666', textAlign:'center', marginTop:'2px'}}>MOTIVAZIONI</div>
+                </div>
+                {/* Fattore Campo (Ora usa sia homeFieldFactor che awayFieldFactor) */}
+                <div style={{display:'flex', gap:'5px', alignItems:'center'}}>
+                     <span style={{fontSize:'8px', color:'#666', width:'40px'}}>CAMPO</span>
+                     
+                     {/* Barra Casa (Impatto Stadio) */}
+                     <div style={{flex:1, height:'4px', background:'#222', borderRadius:'2px'}}>
+                        <div style={{width: `${homeFieldFactor}%`, height:'100%', background: theme.cyan}}></div>
+                     </div>
+                     
+                     {/* Barra Ospite (Resistenza Trasferta) - QUI RISOLVIAMO L'ERRORE */}
+                     <div style={{flex:1, height:'4px', background:'#222', borderRadius:'2px'}}>
+                        <div style={{width: `${awayFieldFactor}%`, height:'100%', background: theme.danger}}></div>
+                     </div>
+                     
+                     <span style={{fontSize:'8px', color: theme.textDim}}>{homeFieldFactor}% / {awayFieldFactor}%</span>
+                </div>
+            </div>
 
-           <button 
-             onClick={startSimulation}
-             style={{
-               width:'100%', padding:'15px', background: `linear-gradient(90deg, ${theme.cyan}, ${theme.purple})`,
-               border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', fontSize:'16px',
-               cursor:'pointer', boxShadow:`0 0 20px rgba(188, 19, 254, 0.4)`
-             }}
-           >
-             AVVIA SIMULAZIONE
-           </button>
+            {/* 3. CONFIGURAZIONE (ECCOLI TORNATI!) */}
+            <div style={{...styles.card, padding:'15px', border:`1px solid ${theme.cyan}`, background:'rgba(0, 240, 255, 0.05)'}}>
+                <div style={{fontSize:'10px', fontWeight:'bold', color: theme.cyan, borderBottom:'1px solid rgba(0,240,255,0.2)', paddingBottom:'5px', marginBottom:'10px'}}>
+                    ⚙️ CONFIGURAZIONE SIMULAZIONE
+                </div>
+
+                {/* ALGORITMO */}
+                <div style={{marginBottom:'10px'}}>
+                    <select style={{width:'100%', padding:'6px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'4px', fontSize:'10px', outline:'none'}}>
+                        <option value="6">Lucifero V4 (Standard)</option>
+                        <option value="5">Neural Network Beta</option>
+                        <option value="1">Poisson Simple</option>
+                    </select>
+                </div>
+
+                {/* CICLI & MODE GRID */}
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'15px'}}>
+                    <div>
+                        <div style={{fontSize:'9px', color: theme.textDim, marginBottom:'3px'}}>CICLI</div>
+                        <div style={{display:'flex', gap:'2px'}}>
+                            {['100', '500'].map((d: any) => (
+                                <button key={d} onClick={() => setSimDepth(d==='100'?'quick':'normal')} style={{
+                                    flex:1, padding:'5px', fontSize:'9px', cursor:'pointer',
+                                    background: (simDepth==='quick'&&d==='100')||(simDepth==='normal'&&d==='500') ? theme.cyan : '#222',
+                                    color: (simDepth==='quick'&&d==='100')||(simDepth==='normal'&&d==='500') ? 'black' : '#888',
+                                    border: 'none', borderRadius:'3px'
+                                }}>{d}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <div style={{fontSize:'9px', color: theme.textDim, marginBottom:'3px'}}>MODO</div>
+                        <div style={{display:'flex', gap:'2px'}}>
+                            <button onClick={() => setSimMode('fast')} style={{flex:1, padding:'5px', fontSize:'9px', background: simMode==='fast'?theme.success:'#222', color:simMode==='fast'?'black':'#888', border:'none', borderRadius:'3px'}}>⚡</button>
+                            <button onClick={() => setSimMode('animated')} style={{flex:1, padding:'5px', fontSize:'9px', background: simMode==='animated'?theme.purple:'#222', color:simMode==='animated'?'white':'#888', border:'none', borderRadius:'3px'}}>🎬</button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* TASTO AVVIO */}
+                <button 
+                     onClick={startSimulation}
+                     style={{
+                       width:'100%', padding:'12px', background: `linear-gradient(90deg, ${theme.cyan}, ${theme.purple})`,
+                       border:'none', borderRadius:'6px', color:'white', fontWeight:'900', fontSize:'12px',
+                       cursor:'pointer', letterSpacing:'1px', boxShadow: `0 0 15px rgba(0, 240, 255, 0.3)`
+                     }}
+                   >
+                     AVVIA SIMULAZIONE
+                </button>
+            </div>
         </div>
       </div>
     </div>
-  );
-}
-
-  const renderAnimation = () => (
-    <div style={styles.animContainer}>
-      <div style={styles.timerDisplay}>{timer}'</div>
-      
-      <div style={styles.pitch}>
-        <div style={{position:'absolute', left:'50%', height:'100%', borderLeft:'1px solid rgba(255,255,255,0.2)'}}></div>
-        <div style={{position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)', width:'80px', height:'80px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'50%'}}></div>
-        
-        <div style={{
-          ...styles.momentumBar,
-          left: `${momentum}%`,
-          width: '4px',
-          boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
-        }} />
-        
-        <div style={{position:'absolute', bottom:'10px', left:'10px', fontSize:'12px', fontWeight:'bold'}}>{selectedMatch?.home}</div>
-        <div style={{position:'absolute', bottom:'10px', right:'10px', fontSize:'12px', fontWeight:'bold'}}>{selectedMatch?.away}</div>
-      </div>
-
-      <div style={styles.eventFeed}>
-        {animEvents.length === 0 ? <div style={{color:'#666', textAlign:'center', marginTop:'10px'}}>Partita iniziata...</div> :
-          animEvents.map((e, i) => (
-            <div key={i} style={{marginBottom:'5px', fontSize:'14px', borderBottom:'1px solid rgba(255,255,255,0.1)', paddingBottom:'2px'}}>
-              {e}
-            </div>
-          ))
-        }
-      </div>
-      
-      <div style={{marginTop:'20px', color: theme.cyan, letterSpacing:'2px', fontSize:'12px', animation:'pulse 2s infinite'}}>
-        SIMULAZIONE LIVE DAL CORE AI
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderResult = () => (
     <div style={styles.arenaContent}>

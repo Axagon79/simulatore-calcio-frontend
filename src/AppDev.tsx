@@ -5,10 +5,32 @@ import DashboardHome from './DashboardHome';
 
 interface League { id: string; name: string; country: string }
 interface RoundInfo { name: string; label: string; type: 'previous' | 'current' | 'next' }
+
+interface BvsData {
+    // Le 3 Linee Grafiche
+    bvs_match_index: number; // Linea Generale (-7 a +7)
+    bvs_index: number;       // Forza Casa
+    bvs_away: number;        // Forza Ospite
+    
+    // Il "Semaforo" e i Testi
+    tip_market: string;      // Es: "CONSIGLIO TECNICO: SEGNO 1"
+    tip_sign: string;        // Es: "1" o "---"
+    bvs_advice: string;      // La frase narrativa
+    classification: string;  // "PURO", "SEMI", "NON_BVS"
+    
+    // Affidabilità
+    trust_home_letter: string; // "A", "B", "C"...
+    trust_away_letter: string;
+  
+    // Quote per il confronto (Gap)
+    qt_1: number;
+    gap_reale?: number;      // Opzionale
+  }
+
 interface Match { 
   id: string; home: string; away: string; 
   real_score?: string | null; match_time: string; 
-  status: string; date_obj: string; h2h_data?: any 
+  status: string; date_obj: string; h2h_data?: BvsData & any 
 }
 
 interface SimulationResult {
@@ -207,6 +229,8 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '12px 12px 12px 0'
   }
 };
+
+
 
 export default function AppDev() {
   // --- STATO APPLICAZIONE ---
@@ -606,11 +630,17 @@ export default function AppDev() {
 
     // --- 1. FUNZIONE COLORI LED ---
     const getTrendColor = (valore: number) => {
-        if (valore >= 80) return '#00ff88'; // Verde
-        if (valore >= 60) return '#adff2f'; // Verde mela
-        if (valore >= 40) return '#ffea00'; // Giallo
-        if (valore >= 25) return '#ff8800'; // Arancione
-        return '#ff4444';                   // Rosso
+        // SCALA 10 LIVELLI - COLORI SOLIDI E VIVIDI
+        if (valore >= 90) return 'rgba(0, 255, 100, 1)';   // Verde Smeraldo
+        if (valore >= 80) return 'rgba(0, 255, 0, 1)';     // Verde Puro
+        if (valore >= 70) return 'rgba(150, 255, 0, 1)';   // Verde Prato
+        if (valore >= 60) return 'rgba(210, 255, 0, 1)';   // Lime
+        if (valore >= 50) return 'rgba(255, 255, 0, 1)';   // Giallo
+        if (valore >= 40) return 'rgba(255, 200, 0, 1)';   // Arancio Chiaro
+        if (valore >= 30) return 'rgba(255, 140, 0, 1)';   // Arancione
+        if (valore >= 20) return 'rgba(255, 80, 0, 1)';    // Arancio Scuro
+        if (valore >= 10) return 'rgba(255, 30, 0, 1)';    // Rosso Vivo
+        return 'rgba(255, 0, 0, 1)';                       // Rosso Assoluto
     };
     
     // INCOLLA QUESTE (Dati reali dal DB):
@@ -629,15 +659,8 @@ export default function AppDev() {
     const homeMotiv = 90; const awayMotiv = 45;
     const homeFieldFactor = 85; const awayFieldFactor = 20;
 
-    // Lucifero Base
-    const homeVal = selectedMatch?.h2h_data?.lucifero_home || 0;
-    const awayVal = selectedMatch?.h2h_data?.lucifero_away || 0;
-    const homePerc = Math.round((homeVal / 25) * 100);
-    const awayPerc = Math.round((awayVal / 25) * 100);
     
-    const homeTrust: string = 'S'; 
-    const awayTrust: string = 'C';
-    const bvsIndex = 72; 
+    
     const historyWeight = 85; 
 
     // --- 2. HELPER GRAFICI ---
@@ -693,53 +716,64 @@ export default function AppDev() {
           <div style={{width:'60px'}}></div>
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'1.3fr 0.8fr', gap:'20px'}}>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', alignItems: 'start'}}>
         
         {/* === COLONNA SINISTRA: DATI VISIVI === */}
         <div style={{display:'flex', flexDirection:'column', gap:'15px'}}>
            
            {/* A1. LUCIFERO POWER (SOLO POTENZA ATTUALE) */}
-            <div style={{...styles.card, padding:'20px', marginBottom: '15px'}}>
+           <div style={{
+                ...styles.card, 
+                padding:'15px', 
+                marginBottom: '-5px',
+                width: '100%', 
+                minHeight: '100px',
+                boxSizing: 'border-box' // <--- QUESTA È LA CHIAVE MAGICA
+            }}>
                 <div style={{fontSize:'11px', color: theme.cyan, marginBottom:'15px', fontWeight:'bold', letterSpacing:'2px', borderBottom:'1px solid rgba(0, 240, 255, 0.2)', paddingBottom:'5px'}}>
-                    ⚡ LUCIFERO POWER INDEX
+                    ⚡ FORMA A.L.1  INDEX
                 </div>
                 
-                {/* CASA */}
-                <div style={{marginBottom:'15px'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'8px', fontWeight:'bold'}}>
-                        <span style={{color: 'white'}}>{selectedMatch?.home}</span>
-                        <span style={{color: theme.cyan, textShadow: `0 0 10px ${theme.cyan}`}}>{homePerc}%</span>
+                {/* Casa */}
+                <div>
+                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
+                        <div style={{fontSize:'12px', color:'white'}}>{selectedMatch?.home}</div>
+                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
                     </div>
-                    <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden', border: '1px solid rgba(255,255,255,0.1)'}}>
+                    {/* Altezza portata a 6px per matchare i led sopra */}
+                    <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
                         <div style={{
-                            width: `${homePerc}%`, 
+                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_index || 0) + 6) / 13) * 100, 0), 100)}%`, 
                             height:'100%', 
-                            background: `linear-gradient(90deg, ${theme.cyan}, #00f2ff)`, 
-                            boxShadow: `0 0 15px ${theme.cyan}`
-                        }}></div>
+                            background: Number(selectedMatch?.h2h_data?.bvs_index || 0) > 0 ? theme.success : theme.danger
+                        }} />
                     </div>
                 </div>
 
-                {/* OSPITE */}
+                {/* Ospite */}
                 <div>
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginBottom:'8px', fontWeight:'bold'}}>
-                        <span style={{color: 'white'}}>{selectedMatch?.away}</span>
-                        <span style={{color: theme.danger, textShadow: `0 0 10px ${theme.danger}`}}>{awayPerc}%</span>
+                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px',marginTop: '15px'}}>
+                        <div style={{fontSize:'12px', color:'white'}}>{selectedMatch?.away}</div>
+                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
                     </div>
-                    <div style={{width:'100%', height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden', border: '1px solid rgba(255,255,255,0.1)'}}>
+                    {/* Altezza portata a 6px per matchare i led sopra */}
+                    <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
                         <div style={{
-                            width: `${awayPerc}%`, 
+                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_away || 0) + 6) / 13) * 100, 0), 100)}%`, 
                             height:'100%', 
-                            background: `linear-gradient(90deg, ${theme.danger}, #ff5e00)`, 
-                            boxShadow: `0 0 15px ${theme.danger}`
-                        }}></div>
+                            background: Number(selectedMatch?.h2h_data?.bvs_away || 0) > 0 ? theme.success : theme.danger
+                        }} />
                     </div>
                 </div>
             </div>
-            {/* A2. TREND INERZIA - FIX ALLINEAMENTO VISIVO NOMI */}
-            <div style={{...styles.card, padding:'15px', marginBottom: '15px'}}>
-                <div style={{fontSize:'10px', color: theme.textDim, marginBottom:'15px', fontWeight:'bold', letterSpacing:'1px', borderBottom:'1px solid rgba(255,255,255,0.05)', paddingBottom:'5px'}}>
-                    📈 TREND INERZIA (MEDIA STORICA)
+
+            {/* A2. TREND INERZIA - SCALA 10 LIVELLI CON PERCENTUALI INTERNE (%) E FRECCIA */}
+            <div style={{...styles.card, padding:'15px', marginBottom: '15px', width: '100%', boxSizing: 'border-box'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom:'15px', borderBottom:'1px solid rgba(255,255,255,0.05)', paddingBottom:'5px'}}>
+                    <span style={{fontSize:'11px', color: theme.textDim, fontWeight:'bold', letterSpacing:'1px'}}>
+                        📈 TREND INERZIA M.L.5 INDEX
+                    </span>
+                    <span style={{fontSize:'14px', color: theme.cyan, fontWeight: 'bold'}}>⟶</span>
                 </div>
 
                 <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
@@ -747,14 +781,9 @@ export default function AppDev() {
                     {/* RIGA CASA */}
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                         <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                            {/* NOME SQUADRA: Aggiunto transform per abbassarlo di 2px e pareggiarlo alla barra */}
                             <span style={{
-                                fontSize: '14px', 
-                                color: 'white', 
-                                fontWeight: 'bold', 
-                                width: '120px', 
-                                lineHeight: '1',
-                                transform: 'translateY(4px)' 
+                                fontSize: '14px', color: 'white', fontWeight: 'bold', width: '120px', 
+                                lineHeight: '1', display: 'inline-block', transform: 'translateY(4px)' 
                             }}>
                                 {selectedMatch?.home}
                             </span>
@@ -765,8 +794,7 @@ export default function AppDev() {
                                 </span>
                                 <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
                                     <div style={{ 
-                                        width: `${homeAvg}%`, 
-                                        height: '100%', 
+                                        width: `${homeAvg}%`, height: '100%', 
                                         background: getTrendColor(Number(homeAvg)),
                                         boxShadow: `0 0 8px ${getTrendColor(Number(homeAvg))}`,
                                         transition: 'width 0.8s ease-in-out' 
@@ -775,30 +803,39 @@ export default function AppDev() {
                             </div>
                         </div>
                         
-                        <div style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
-                            {homeTrend.map((val: number, i: number) => (
-                                <div key={i} style={{
-                                    width: '28px', height: '10px', borderRadius: '2px',
-                                    background: getTrendColor(val),
-                                    opacity: (val / 100) + 0.2,
-                                    boxShadow: val > 60 ? `0 0 10px ${getTrendColor(val)}` : 'none',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }} title={`${val}%`} />
-                            ))}
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                            <div style={{display: 'flex', gap: '5px'}}>
+                                {[...homeTrend].reverse().map((val: number, i: number) => (
+                                    <div key={i} style={{
+                                        width: '36px', height: '14px', borderRadius: '2px', 
+                                        background: getTrendColor(val),
+                                        opacity: 0.9,
+                                        boxShadow: `0 0 8px ${getTrendColor(val)}`,
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <span style={{ fontSize: '8px', color: '#000', fontWeight: '900', letterSpacing: '-0.5px' }}>
+                                            {Math.round(val)}%
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <span style={{ 
+                                fontSize: '18px', fontWeight: 'bold', 
+                                color: getTrendColor(homeTrend[0]), 
+                                textShadow: `0 0 8px ${getTrendColor(homeTrend[0])}`
+                            }}>
+                                ⟶
+                            </span>
                         </div>
                     </div>
 
                     {/* RIGA OSPITE */}
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                         <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                            {/* NOME SQUADRA: Stesso fix anche qui */}
                             <span style={{
-                                fontSize: '14px', 
-                                color: 'white', 
-                                fontWeight: 'bold', 
-                                width: '120px', 
-                                lineHeight: '1',
-                                transform: 'translateY(4px)'
+                                fontSize: '14px', color: 'white', fontWeight: 'bold', width: '120px', 
+                                lineHeight: '1', display: 'inline-block', transform: 'translateY(4px)'
                             }}>
                                 {selectedMatch?.away}
                             </span>
@@ -809,8 +846,7 @@ export default function AppDev() {
                                 </span>
                                 <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
                                     <div style={{ 
-                                        width: `${awayAvg}%`, 
-                                        height: '100%', 
+                                        width: `${awayAvg}%`, height: '100%', 
                                         background: getTrendColor(Number(awayAvg)),
                                         boxShadow: `0 0 8px ${getTrendColor(Number(awayAvg))}`,
                                         transition: 'width 0.8s ease-in-out' 
@@ -819,22 +855,37 @@ export default function AppDev() {
                             </div>
                         </div>
 
-                        <div style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
-                            {awayTrend.map((val: number, i: number) => (
-                                <div key={i} style={{
-                                    width: '28px', height: '10px', borderRadius: '2px',
-                                    background: getTrendColor(val),
-                                    opacity: (val / 100) + 0.2,
-                                    boxShadow: val > 60 ? `0 0 10px ${getTrendColor(val)}` : 'none',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }} title={`${val}%`} />
-                            ))}
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                            <div style={{display: 'flex', gap: '5px'}}>
+                                {[...awayTrend].reverse().map((val: number, i: number) => (
+                                    <div key={i} style={{
+                                        width: '36px', height: '14px', borderRadius: '2px',
+                                        background: getTrendColor(val),
+                                        opacity: 0.9,
+                                        boxShadow: `0 0 8px ${getTrendColor(val)}`,
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <span style={{ fontSize: '8px', color: '#000', fontWeight: '900', letterSpacing: '-0.5px' }}>
+                                            {Math.round(val)}%
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <span style={{ 
+                                fontSize: '18px', fontWeight: 'bold', 
+                                color: getTrendColor(awayTrend[0]), 
+                                textShadow: `0 0 8px ${getTrendColor(awayTrend[0])}`
+                            }}>
+                                ⟶
+                            </span>
                         </div>
                     </div>
-
                 </div>
             </div>
+
             {/* B. DNA SYSTEM (SPOSTATO IN BASSO A SINISTRA) */}
+
            <div style={{
                ...styles.card, 
                padding: '15px',
@@ -883,59 +934,191 @@ export default function AppDev() {
            </div>
         </div>
 
-        {/* === COLONNA DESTRA: DATI EXTRA + CONTROLLI (TORNATI!) === */}
-        <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+        {/* === COLONNA DESTRA: ANALISI COMPETITIVA VALORI CORE === */}
+        <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
             
-            {/* 1. TRUST & BVS & STORIA (Compatti) */}
-            <div style={{...styles.card, padding:'12px', marginBottom:0, display:'flex', flexDirection:'column', gap:'12px'}}>
-                {/* Trust Row */}
-                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid #333', paddingBottom:'8px'}}>
-                    <span style={{fontSize:'10px', color: theme.textDim, fontWeight:'bold'}}>🛡️ TRUST</span>
-                    <div style={{display:'flex', gap:'5px'}}>
-                        <span style={{background: homeTrust==='S'?theme.cyan:'#333', color:homeTrust==='S'?'black':'white', fontSize:'10px', padding:'2px 6px', borderRadius:'3px', fontWeight:'bold'}}>{selectedMatch?.home.substring(0,3)}: {homeTrust}</span>
-                        <span style={{background: awayTrust==='S'?theme.cyan:theme.danger, color:'white', fontSize:'10px', padding:'2px 6px', borderRadius:'3px', fontWeight:'bold'}}>{selectedMatch?.away.substring(0,3)}: {awayTrust}</span>
+            {/* === SEZIONE BVS: LOGICA UFFICIALE DA MANUALE === */}
+            <div style={{
+                ...styles.card, 
+                width: '100%', 
+                padding:'15px', 
+                borderLeft: `4px solid ${theme.purple}`, 
+                overflow: 'hidden',
+                boxSizing: 'border-box' // <--- AGGIUNGI QUESTO
+            }}>
+            
+            {/* INTESTAZIONE: TIPO E LINEARITÀ */}
+        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
+            <div style={{display:'flex', flexDirection:'column'}}>
+                <span style={{fontSize:'10px', color: theme.purple, fontWeight:'bold'}}>BIAS C.O.R.E.</span>
+                <span style={{
+                    fontSize:'16px', 
+                    fontWeight:'900', 
+                    color: selectedMatch?.h2h_data?.classification === 'PURO' ? '#00ff88' : // Verde Smeraldo
+                        selectedMatch?.h2h_data?.classification === 'SEMI' ? '#ffd000' : // Giallo Oro
+                        '#ff4444' // Rosso Alert
+                }}>
+                    {selectedMatch?.h2h_data?.classification === 'PURO' ? '💎 FLUSSO COERENTE' : 
+                    selectedMatch?.h2h_data?.classification === 'SEMI' ? '⚖️ FLUSSO INSTABILE' : '⚠️ FLUSSO DISCORDANTE'}
+                </span>
+            </div>
+            <div style={{textAlign:'right'}}>
+                <div style={{fontSize:'9px', color: theme.textDim}}>INTEGRITÀ DEL FLUSSO</div>
+                <span style={{fontSize:'11px', fontWeight:'bold', color: selectedMatch?.h2h_data?.is_linear ? '#00ff88' : '#ff4444'}}>
+                    {selectedMatch?.h2h_data?.is_linear ? '✅ SINCRONIZZATO' : '❌ FUORI SINCRO'}
+                </span>
+            </div>
+        </div>
+
+            {/* BOX PROTOCOLLO OPERATIVO */}
+<div style={{
+    background: 'rgba(188, 19, 254, 0.05)', 
+    padding:'12px', 
+    borderRadius:'8px', 
+    border:'1px solid rgba(188, 19, 254, 0.2)', 
+    marginBottom:'15px'
+}}>
+    <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>
+        PROTOCOLLO OPERATIVO
+    </div>
+    <div style={{fontSize:'14px', fontWeight:'900', color: '#00f0ff'}}>
+        {!selectedMatch?.h2h_data?.is_linear ? (
+            <span style={{color: '#ffcc00'}}>⚠️ DIVERGENZA: VALUTARE OPZIONI UNDER/OVER</span>
+        ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
+            <span style={{color: '#ff4444'}}>⛔ ANALISI NON CONCLUSA: ALTA VOLATILITÀ</span>
+        ) : (
+            <span>🎯 ESPOSIZIONE TARGET: SEGNO {selectedMatch?.h2h_data?.tip_sign}</span>
+        )}
+    </div>
+</div>
+
+            {/* LE TRE BARRE DI INDICE */}
+            <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+                {/* 1. MATCH INDEX (QUALITÀ GENERALE) */}
+                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'10px', fontWeight:'bold'}}>
+                        <span style={{color:theme.textDim}}>RATING DI COERENZA</span>
+                        <span style={{color:theme.purple}}>{selectedMatch?.h2h_data?.bvs_match_index || '0.0'}</span>
+                    </div>
+                    <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
+                        <div style={{
+                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_match_index || 0) + 6) / 13) * 100, 0), 100)}%`,
+                            height:'100%', background: theme.purple, transition: 'width 1s'
+                        }} />
                     </div>
                 </div>
-                {/* BVS & Storia Grid */}
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
-                    <div>
-                        <div style={{fontSize:'9px', color: theme.textDim, fontWeight:'bold', marginBottom:'3px'}}>🏎️ BVS</div>
-                        <div style={{width:'100%', height:'3px', background:'#222'}}><div style={{width:`${bvsIndex}%`, height:'100%', background: bvsIndex>60?theme.danger:theme.success}}></div></div>
+
+                {/* 2. BARRE TEAM (VALORE INDIVIDUALE) */}
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px', marginTop:'5px'}}>
+                    {/* Casa */}
+                <div>
+                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
+                        <div style={{fontSize:'9px', color:'white'}}>{selectedMatch?.home}</div>
+                        <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
                     </div>
-                    <div>
-                        <div style={{fontSize:'9px', color: theme.textDim, fontWeight:'bold', marginBottom:'3px'}}>⚖️ STORIA</div>
-                        <div style={{width:'100%', height:'3px', background:'#222'}}><div style={{width:`${historyWeight}%`, height:'100%', background: theme.purple}}></div></div>
+                    <div style={{width:'100%', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', overflow:'hidden'}}>
+                        <div style={{
+                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_index || 0) + 6) / 13) * 100, 0), 100)}%`, 
+                            height:'100%', 
+                            background: Number(selectedMatch?.h2h_data?.bvs_index || 0) > 0 ? theme.success : theme.danger
+                        }} />
+                    </div>
+                </div>
+
+                {/* Ospite */}
+                <div>
+                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
+                        <div style={{fontSize:'9px', color:'white'}}>{selectedMatch?.away}</div>
+                        <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
+                    </div>
+                    <div style={{width:'100%', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', overflow:'hidden'}}>
+                        <div style={{
+                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_away || 0) + 6) / 13) * 100, 0), 100)}%`, 
+                            height:'100%', 
+                            background: Number(selectedMatch?.h2h_data?.bvs_away || 0) > 0 ? theme.success : theme.danger
+                        }} />
                     </div>
                 </div>
             </div>
 
-            {/* 2. PSICOLOGIA & CAMPO */}
-            <div style={{...styles.card, padding:'12px', marginBottom:0}}>
-                <div style={{fontSize:'10px', color: theme.textDim, fontWeight:'bold', marginBottom:'8px'}}>🧠 PSICOLOGIA</div>
-                {/* Motivazioni */}
-                <div style={{marginBottom:'8px'}}>
-                    <div style={{display:'flex', alignItems:'center', gap:'2px', height:'4px'}}>
-                         <div style={{flex:1, background:'#222', display:'flex', justifyContent:'flex-end'}}><div style={{width: `${homeMotiv}%`, background: theme.cyan, height:'100%'}}></div></div>
-                         <div style={{width:'2px', background:'#555'}}></div>
-                         <div style={{flex:1, background:'#222'}}><div style={{width: `${awayMotiv}%`, background: theme.danger, height:'100%'}}></div></div>
-                    </div>
-                    <div style={{fontSize:'8px', color:'#666', textAlign:'center', marginTop:'2px'}}>MOTIVAZIONI</div>
+            {/* SEZIONE QUOTE: Allunga il box verso il basso */}
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:'10px', marginTop:'10px', display:'flex', justifyContent:'space-around'}}>
+                <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'8px', color: theme.textDim}}>1</div>
+                    <div style={{fontSize:'12px', fontWeight:'bold', color:'white'}}>{selectedMatch?.h2h_data?.odds?.['1'] || '-'}</div>
                 </div>
-                {/* Fattore Campo (Ora usa sia homeFieldFactor che awayFieldFactor) */}
-                <div style={{display:'flex', gap:'5px', alignItems:'center'}}>
-                     <span style={{fontSize:'8px', color:'#666', width:'40px'}}>CAMPO</span>
-                     
-                     {/* Barra Casa (Impatto Stadio) */}
-                     <div style={{flex:1, height:'4px', background:'#222', borderRadius:'2px'}}>
-                        <div style={{width: `${homeFieldFactor}%`, height:'100%', background: theme.cyan}}></div>
-                     </div>
-                     
-                     {/* Barra Ospite (Resistenza Trasferta) - QUI RISOLVIAMO L'ERRORE */}
-                     <div style={{flex:1, height:'4px', background:'#222', borderRadius:'2px'}}>
-                        <div style={{width: `${awayFieldFactor}%`, height:'100%', background: theme.danger}}></div>
-                     </div>
-                     
-                     <span style={{fontSize:'8px', color: theme.textDim}}>{homeFieldFactor}% / {awayFieldFactor}%</span>
+                <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'8px', color: theme.textDim}}>X</div>
+                    <div style={{fontSize:'12px', fontWeight:'bold', color:'white'}}>{selectedMatch?.h2h_data?.odds?.['X'] || '-'}</div>
+                </div>
+                <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'8px', color: theme.textDim}}>2</div>
+                    <div style={{fontSize:'12px', fontWeight:'bold', color:'white'}}>{selectedMatch?.h2h_data?.odds?.['2'] || '-'}</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+            {/* 2. SEZIONE STORIA (PRECEDENTI) */}
+            <div style={{...styles.card, padding:'12px', marginBottom: 0}}>
+                <div style={{fontSize:'9px', color: theme.cyan, fontWeight:'bold', letterSpacing:'1px', marginBottom:'10px', textTransform:'uppercase'}}>⚖️ STORIA (Precedenti)</div>
+                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.home}</span>
+                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
+                            <div style={{width:`${historyWeight}%`, height:'100%', background:theme.cyan, boxShadow:`0 0 8px ${theme.cyan}`}} />
+                        </div>
+                        <span style={{fontSize:'11px', color:theme.cyan, fontWeight:'bold', width:'35px'}}>{historyWeight}%</span>
+                    </div>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.away}</span>
+                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
+                            <div style={{width:`${100 - historyWeight}%`, height:'100%', background:theme.cyan, opacity:0.4}} />
+                        </div>
+                        <span style={{fontSize:'11px', color:theme.textDim, width:'35px'}}>{100 - historyWeight}%</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. SEZIONE CAMPO (FATTORI AMBIENTALI) */}
+            <div style={{...styles.card, padding:'12px', marginBottom: 0}}>
+                <div style={{fontSize:'9px', color: theme.success, fontWeight:'bold', letterSpacing:'1px', marginBottom:'10px', textTransform:'uppercase'}}>🏟️ CAMPO (Fattore Stadio)</div>
+                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.home}</span>
+                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
+                            <div style={{width:`${homeFieldFactor}%`, height:'100%', background:theme.success, boxShadow:`0 0 8px ${theme.success}`}} />
+                        </div>
+                        <span style={{fontSize:'11px', color:theme.success, fontWeight:'bold', width:'35px'}}>{homeFieldFactor}%</span>
+                    </div>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.away}</span>
+                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
+                            <div style={{width:`${awayFieldFactor}%`, height:'100%', background:theme.danger, boxShadow:`0 0 8px ${theme.danger}`}} />
+                        </div>
+                        <span style={{fontSize:'11px', color:theme.danger, fontWeight:'bold', width:'35px'}}>{awayFieldFactor}%</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 4. SEZIONE AFFIDABILITÀ (PSICOLOGIA) */}
+            <div style={{...styles.card, padding:'12px', marginBottom: 0}}>
+                <div style={{fontSize:'9px', color: theme.warning, fontWeight:'bold', letterSpacing:'1px', marginBottom:'10px', textTransform:'uppercase'}}>🧠 AFFIDABILITÀ (Stabilità)</div>
+                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.home}</span>
+                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
+                            <div style={{width:`${homeMotiv}%`, height:'100%', background:theme.warning, boxShadow:`0 0 8px ${theme.warning}`}} />
+                        </div>
+                        <span style={{fontSize:'11px', color:theme.warning, fontWeight:'bold', width:'35px'}}>{homeMotiv}%</span>
+                    </div>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.away}</span>
+                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
+                            <div style={{width:`${awayMotiv}%`, height:'100%', background:theme.danger}} />
+                        </div>
+                        <span style={{fontSize:'11px', color:theme.danger, fontWeight:'bold', width:'35px'}}>{awayMotiv}%</span>
+                    </div>
                 </div>
             </div>
 
@@ -1045,26 +1228,30 @@ export default function AppDev() {
     </div>
   );
 
-  // --- BLOCCO 1: LOGICA DASHBOARD ---
+  // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta) ---
   if (!activeLeague) {
     return (
       <DashboardHome 
         onSelectLeague={(id) => {
           
-          // 1. CERCA NELLA NUOVA LISTA 'LEAGUES_MAP'
-          // (Ora non si confonde più con la variabile di stato!)
+          // 1. Cerchiamo il campionato nella mappa costante
           const campionatoTrovato = LEAGUES_MAP.find(L => L.id === id);
 
-          // 2. RECUPERA LA NAZIONE
-          const nazioneGiusta = campionatoTrovato ? campionatoTrovato.country : 'Italy';
+          // 2. Determiniamo la nazione (con un fallback sicuro su Italy)
+          let nazioneGiusta = "Italy";
+          if (campionatoTrovato) {
+            nazioneGiusta = campionatoTrovato.country;
+          } else if (id.includes('premier') || id.includes('championship')) {
+            nazioneGiusta = "England";
+          }
 
-          console.log(`Click Dashboard: ${id} -> Nazione: ${nazioneGiusta}`);
+          console.log(`Navigazione Dashboard: ID=${id} -> Nazione=${nazioneGiusta}`);
 
-          // 3. IMPOSTA I DATI
+          // 3. Impostiamo gli stati per forzare il caricamento dei dati
           setCountry(nazioneGiusta); 
           setLeague(id);             
           
-          // 4. APRI IL SITO
+          // 4. Reset degli stati di visualizzazione
           setViewState('list');     
           setSelectedMatch(null);   
           setActiveLeague(id); 

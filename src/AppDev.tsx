@@ -789,6 +789,20 @@ export default function AppDev() {
         });
     };
 
+    // INCOLLA QUESTO PEZZO PRIMA DEL 'return ('
+    const oddsBoxStyle = {
+        backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+        borderRadius: '4px',                           
+        padding: '0px 6px',                           
+        minWidth: '0px',                              
+        marginTop: '0px',
+        fontSize: '13px',
+        fontWeight: 'bold',
+        color: 'white',
+        border: '1px solid rgba(255, 255, 255, 0.05)', 
+        display: 'inline-block'                        
+    };
+
     // --- 3. RENDER ---
     return (
     <div style={styles.arenaContent}>
@@ -1048,73 +1062,149 @@ export default function AppDev() {
         <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
             
             {/* === SEZIONE BVS: LOGICA UFFICIALE DA MANUALE === */}
-            <div style={{
-                ...styles.card, 
-                width: '100%', 
-                padding:'15px', 
-                borderLeft: `4px solid ${theme.purple}`, 
-                overflow: 'hidden',
-                boxSizing: 'border-box' // <--- AGGIUNGI QUESTO
-            }}>
-            
-            {/* INTESTAZIONE: TIPO E LINEARITÀ */}
-        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
-            <div style={{display:'flex', flexDirection:'column'}}>
-                <span style={{fontSize:'10px', color: theme.purple, fontWeight:'bold'}}>BIAS C.O.R.E.</span>
-                <span style={{
-                    fontSize:'16px', 
-                    fontWeight:'900', 
-                    color: selectedMatch?.h2h_data?.classification === 'PURO' ? '#00ff88' : // Verde Smeraldo
-                        selectedMatch?.h2h_data?.classification === 'SEMI' ? '#ffd000' : // Giallo Oro
-                        '#ff4444' // Rosso Alert
-                }}>
-                    {selectedMatch?.h2h_data?.classification === 'PURO' ? '💎 FLUSSO COERENTE' : 
-                    selectedMatch?.h2h_data?.classification === 'SEMI' ? '⚖️ FLUSSO INSTABILE' : '⚠️ FLUSSO DISCORDANTE'}
-                </span>
-            </div>
-            <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'9px', color: theme.textDim}}>INTEGRITÀ DEL FLUSSO</div>
-                <span style={{fontSize:'11px', fontWeight:'bold', color: selectedMatch?.h2h_data?.is_linear ? '#00ff88' : '#ff4444'}}>
-                    {selectedMatch?.h2h_data?.is_linear ? '✅ SINCRONIZZATO' : '❌ FUORI SINCRO'}
-                </span>
-            </div>
-        </div>
-
-            {/* BOX PROTOCOLLO OPERATIVO */}
 <div style={{
-    background: 'rgba(188, 19, 254, 0.05)', 
-    padding:'12px', 
-    borderRadius:'8px', 
-    border:'1px solid rgba(188, 19, 254, 0.2)', 
-    marginBottom:'15px'
+    ...styles.card, 
+    width: '100%', 
+    padding:'8px 5px', // Padding verticale leggermente aumentato, laterale ridotto
+    borderLeft: `4px solid ${theme.purple}`, 
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    display: 'flex', 
+    flexDirection: 'column',
+    justifyContent: 'space-between', // Aiuta a distribuire lo spazio se avanza
+    height: '100%' // Tenta di occupare l'altezza disponibile (se il genitore lo permette)
 }}>
-    <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>
-        PROTOCOLLO OPERATIVO
+    
+    {/* TITOLO CENTRATO (Ridotto margine) */}
+    <div style={{width: '100%', textAlign: 'center', marginBottom: '2px'}}>
+        <span style={{fontSize:'10px', color: theme.danger, fontWeight:'bold', letterSpacing:'1px'}}>BIAS C.O.R.E.</span>
     </div>
-    <div style={{fontSize:'14px', fontWeight:'900', color: '#00f0ff'}}>
-        {!selectedMatch?.h2h_data?.is_linear ? (
-            <span style={{color: '#ffcc00'}}>⚠️ DIVERGENZA: VALUTARE OPZIONI UNDER/OVER</span>
-        ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
-            <span style={{color: '#ff4444'}}>⛔ ANALISI NON CONCLUSA: ALTA VOLATILITÀ</span>
-        ) : (
-            <span>🎯 ESPOSIZIONE TARGET: SEGNO {selectedMatch?.h2h_data?.tip_sign}</span>
-        )}
+
+    {/* SOTTO-SEZIONE DIVISA (Ridotto margine inferiore) */}
+    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px', width:'100%', alignItems:'center'}}>
+        <div style={{display:'flex', flexDirection:'column', width: '55%', justifyContent:'center'}}>
+            <span style={{
+                fontSize:'15px', // Ridotto da 16px per risparmiare spazio
+                fontWeight:'900', 
+                color: selectedMatch?.h2h_data?.classification === 'PURO' ? '#00ff88' : 
+                       selectedMatch?.h2h_data?.classification === 'SEMI' ? '#ffd000' : 
+                       '#ff4444' 
+            }}>
+                {selectedMatch?.h2h_data?.classification === 'PURO' ? '💎 FLUSSO COERENTE' : 
+                 selectedMatch?.h2h_data?.classification === 'SEMI' ? '⚖️ FLUSSO INSTABILE' : '⚠️ FLUSSO DISCORDANTE'}
+            </span>
+        </div>
+        <div style={{textAlign:'right'}}>
+            <div style={{fontSize:'9px', color: theme.textDim}}>INTEGRITÀ DEL FLUSSO</div>
+            <span style={{fontSize:'10px', fontWeight:'bold', color: selectedMatch?.h2h_data?.is_linear ? '#00ff88' : '#ff4444'}}>
+                {selectedMatch?.h2h_data?.is_linear ? '✅ SINCRONIZZATO' : '❌ FUORI SINCRO'}
+            </span>
+        </div>
     </div>
-</div>
+
+    {/* BOX PROTOCOLLO OPERATIVO (Compattato drasticamente) */}
+    <div style={{
+        background: 'rgba(188, 19, 254, 0.05)', 
+        padding:'6px 8px', // Ridotto padding da 12px a 6px
+        borderRadius:'6px', 
+        border:'1px solid rgba(188, 19, 254, 0.2)', 
+        marginBottom:'8px' // Ridotto margine da 15px a 8px
+    }}>
+        <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold', marginBottom:'2px', letterSpacing:'1px'}}>
+            PROTOCOLLO OPERATIVO
+        </div>
+        <div style={{fontSize:'13px', fontWeight:'900', color: 'rgb(235, 252, 0)'}}> {/* Font leggermente ridotto */}
+            {!selectedMatch?.h2h_data?.is_linear ? (
+                <span style={{color: '#ffcc00'}}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+            ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
+                <span style={{color: '#ff4444'}}>⛔ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+            ) : (
+                <span>🎯 B.T.R. :&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+            )}
+        </div>
+    </div>
 
             {/* LE TRE BARRE DI INDICE */}
             <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-                {/* 1. MATCH INDEX (QUALITÀ GENERALE) */}
-                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'10px', fontWeight:'bold'}}>
-                        <span style={{color:theme.textDim}}>RATING DI COERENZA</span>
-                        <span style={{color:theme.purple}}>{selectedMatch?.h2h_data?.bvs_match_index || '0.0'}</span>
+               
+                {/* 1. MATCH INDEX (RATING DI COERENZA: SFUMATURA + NEON) */}
+                <div style={{display:'flex', flexDirection:'column', gap:'4px', marginTop: '5px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'13px', fontWeight:'bold'}}>
+                        <span style={{fontSize:'11px', color: theme.textDim}}>RATING DI COERENZA</span>
+                        
+                        {/* Valore con 2 decimali e "Glow" sul testo */}
+                        <span style={{
+                            fontSize: '13px',
+                            fontWeight: '900',
+                            color: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? 'rgba(0, 255, 136, 1)' : 
+                                Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? 'rgba(255, 68, 68, 1)' : 'white',
+                            textShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 
+                                ? '0 0 10px rgba(0, 255, 136, 0.5)' 
+                                : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 
+                                ? '0 0 10px rgba(255, 68, 68, 0.5)' : 'none'
+                        }}>
+                            {Number(selectedMatch?.h2h_data?.bvs_match_index || 0).toFixed(2)}
+                        </span>
                     </div>
-                    <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
+
+                    {/* Contenitore Barra (6px - Sottile) */}
+                    <div style={{
+                        width:'100%', 
+                        height:'6px', 
+                        background:'rgba(255,255,255,0.05)', 
+                        borderRadius:'3px', 
+                        position: 'relative',
+                        overflow: 'visible' // Necessario per far vedere il bagliore neon che "esce" dalla barra
+                    }}>
+                        {/* Spartiacque dello ZERO (Sottile) */}
                         <div style={{
-                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_match_index || 0) + 6) / 13) * 100, 0), 100)}%`,
-                            height:'100%', background: theme.purple, transition: 'width 1s'
+                            position: 'absolute',
+                            left: '46.15%', 
+                            top: '-2px',
+                            width: '1px',
+                            height: '10px',
+                            background: 'rgba(255,255,255,0.4)',
+                            zIndex: 4
                         }} />
+
+                        {/* LA BARRA: SFUMATURA + NEON GLOW */}
+                        <div style={{
+                            position: 'absolute',
+                            left: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 ? '46.15%' : 'auto',
+                            right: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '53.85%' : 'auto',
+                            width: `${Math.abs(Number(selectedMatch?.h2h_data?.bvs_match_index || 0)) / 13 * 100}%`,
+                            height: '100%',
+                            
+                            // 1. EFFETTO SFUMATURA (Sullo sfondo della barra)
+                            background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 
+                            ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.4), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))' 
+                            : 'linear-gradient(270deg, rgba(217, 255, 0, 0.4), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
+                            
+                            // 2. EFFETTO NEON (Bagliore esterno che segue il colore dominante)
+                            boxShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 
+                                ? '0 0 10px rgba(51, 255, 0, 0.6)' 
+                                : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 
+                                ? '0 0 10px rgba(241, 0, 0, 0.6)' : 'none',
+                            
+                            borderRadius: '3px',
+                            zIndex: 2,
+                            transition: 'all 0.6s ease-out'
+                        }} />
+                    </div>
+                    
+                    {/* ETICHETTE DI RIFERIMENTO COLORATE NEON */}
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'9px', fontWeight:'bold', marginTop: '4px'}}>
+                        <span style={{
+                            color: 'rgba(255, 68, 68, 1)', 
+                            textShadow: '0 0 5px rgba(255, 68, 68, 0.4)'
+                        }}>-6.0 (WEAK)</span>
+                        
+                        <span style={{color: 'rgba(255,255,255,0.3)'}}>0.0</span>
+                        
+                        <span style={{
+                            color: 'rgba(0, 255, 136, 1)', 
+                            textShadow: '0 0 5px rgba(0, 255, 136, 0.4)'
+                        }}>+7.0 (STRONG)</span>
                     </div>
                 </div>
 
@@ -1123,8 +1213,8 @@ export default function AppDev() {
                     {/* Casa */}
                 <div>
                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
-                        <div style={{fontSize:'9px', color:'white'}}>{selectedMatch?.home}</div>
-                        <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
+                        <div style={{fontSize:'13px', color:'white'}}>{selectedMatch?.home}</div>
+                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
                     </div>
                     <div style={{width:'100%', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', overflow:'hidden'}}>
                         <div style={{
@@ -1138,8 +1228,8 @@ export default function AppDev() {
                 {/* Ospite */}
                 <div>
                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
-                        <div style={{fontSize:'9px', color:'white'}}>{selectedMatch?.away}</div>
-                        <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
+                        <div style={{fontSize:'13px', fontWeight:'9px', color:'white'}}>{selectedMatch?.away}</div>
+                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
                     </div>
                     <div style={{width:'100%', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', overflow:'hidden'}}>
                         <div style={{
@@ -1152,18 +1242,36 @@ export default function AppDev() {
             </div>
 
             {/* SEZIONE QUOTE: Allunga il box verso il basso */}
-            <div style={{borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:'10px', marginTop:'10px', display:'flex', justifyContent:'space-around'}}>
-                <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:'8px', color: theme.textDim}}>1</div>
-                    <div style={{fontSize:'12px', fontWeight:'bold', color:'white'}}>{selectedMatch?.h2h_data?.odds?.['1'] || '-'}</div>
+            <div style={{
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                paddingTop: '10px',
+                marginTop: '10px',
+                display: 'flex',
+                justifyContent: 'space-around',
+                alignItems: 'flex-end'
+            }}>
+                {/* QUOTA 1 */}
+                <div style={{ fontFamily: 'monospace', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: theme.textDim, marginBottom:'2px' }}>1</div>
+                    <div style={oddsBoxStyle}>
+                        {selectedMatch?.odds?.['1'] ? Number(selectedMatch.odds['1']).toFixed(2) : '-'}
+                    </div>
                 </div>
-                <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:'8px', color: theme.textDim}}>X</div>
-                    <div style={{fontSize:'12px', fontWeight:'bold', color:'white'}}>{selectedMatch?.h2h_data?.odds?.['X'] || '-'}</div>
+
+                {/* QUOTA X */}
+                <div style={{ fontFamily: 'monospace', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: theme.textDim, marginBottom:'2px' }}>X</div>
+                    <div style={oddsBoxStyle}>
+                        {selectedMatch?.odds?.['X'] ? Number(selectedMatch.odds['X']).toFixed(2) : '-'}
+                    </div>
                 </div>
-                <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:'8px', color: theme.textDim}}>2</div>
-                    <div style={{fontSize:'12px', fontWeight:'bold', color:'white'}}>{selectedMatch?.h2h_data?.odds?.['2'] || '-'}</div>
+
+                {/* QUOTA 2 */}
+                <div style={{ fontFamily: 'monospace', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: theme.textDim, marginBottom:'2px' }}>2</div>
+                    <div style={oddsBoxStyle}>
+                        {selectedMatch?.odds?.['2'] ? Number(selectedMatch.odds['2']).toFixed(2) : '-'}
+                    </div>
                 </div>
             </div>
             </div>

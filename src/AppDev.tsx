@@ -31,6 +31,7 @@ interface Match {
   id: string; home: string; away: string; 
   real_score?: string | null; match_time: string; 
   status: string; date_obj: string; h2h_data?: BvsData & any 
+  odds?: { [key: string]: any };
 }
 
 interface SimulationResult {
@@ -60,7 +61,6 @@ interface ChatMessage {
 }
 
 // --- CONFIGURAZIONE ---
-// --- CONFIGURAZIONE ---
 const API_BASE = 'http://127.0.0.1:5001/puppals-456c7/us-central1/api';
 
 // 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
@@ -79,22 +79,29 @@ const COUNTRIES = [
 
 const LEAGUES_MAP: League[] = [
     // ITALIA
-    { id: 'serie-a', name: 'Serie A', country: 'Italy' },
-    { id: 'serie-b', name: 'Serie B', country: 'Italy' },
-    { id: 'seriec-a', name: 'Serie C - Gir A', country: 'Italy' },
-    { id: 'seriec-b', name: 'Serie C - Gir B', country: 'Italy' },
-    { id: 'seriec-c', name: 'Serie C - Gir C', country: 'Italy' },
+    { id: 'SERIE_A', name: 'Serie A', country: 'Italy' },
+    { id: 'SERIE_B', name: 'Serie B', country: 'Italy' },
+    { id: 'SERIE_C_A', name: 'Serie C - Gir A', country: 'Italy' },
+    { id: 'SERIE_C_B', name: 'Serie C - Gir B', country: 'Italy' },
+    { id: 'SERIE_C_C', name: 'Serie C - Gir C', country: 'Italy' },
   
     // INGHILTERRA
-    { id: 'premier', name: 'Premier League', country: 'England' },
-    { id: 'championship', name: 'Championship', country: 'England' },
-  
-    // ALTRE NAZIONI
-    { id: 'laliga', name: 'La Liga', country: 'Spain' },
-    { id: 'bundes', name: 'Bundesliga', country: 'Germany' },
-    { id: 'ligue1', name: 'Ligue 1', country: 'France' },
-    { id: 'eredivisie', name: 'Eredivisie', country: 'Netherlands' },
-    { id: 'primeira', name: 'Primeira Liga', country: 'Portugal' },
+    { id: 'PREMIER_LEAGUE', name: 'Premier League', country: 'England' },
+    
+    // SPAGNA
+    { id: 'LA_LIGA', name: 'La Liga', country: 'Spain' },
+
+    // GERMANIA
+    { id: 'BUNDESLIGA', name: 'Bundesliga', country: 'Germany' },
+
+    // FRANCIA (Recuperata!)
+    { id: 'LIGUE_1', name: 'Ligue 1', country: 'France' },
+
+    // OLANDA (Recuperata!)
+    { id: 'EREDIVISIE', name: 'Eredivisie', country: 'Netherlands' },
+
+    // PORTOGALLO
+    { id: 'LIGA_PORTUGAL', name: 'Primeira Liga', country: 'Portugal' },
 ];
 
 // --- TEMA NEON / SCI-FI ---
@@ -434,8 +441,8 @@ export default function AppDev() {
       <div style={{ 
           display: 'flex', 
           background: 'rgba(18, 20, 35, 0.85)', 
-          marginBottom: '15px', 
-          marginTop: '-10px',
+          marginBottom: '10px', 
+          marginTop: '-20px',
           gap: '10px', 
           padding: '10px', 
           borderRadius: '30px', 
@@ -471,8 +478,21 @@ export default function AppDev() {
         const isFuture = selectedRound?.type === 'next';
         const showLucifero = !isFuture && match.h2h_data?.lucifero_home != null;
         
-        // Quote simulate (Placeholder)
-        const odds = { 1: '1.85', X: '3.40', 2: '4.20' }; 
+        // Recupero quote dal livello principale del match
+        const bkOdds = match.odds;
+
+        // Tipizziamo 'val' come any per accettare numeri o stringhe dal DB
+        const formatOdds = (val: any): string => {
+            if (val === undefined || val === null || val === '-') return '-';
+            const num = Number(val);
+            return isNaN(num) ? '-' : num.toFixed(2);
+        };
+
+        const odds = { 
+            1: formatOdds(bkOdds?.['1']), 
+            X: formatOdds(bkOdds?.['X']), 
+            2: formatOdds(bkOdds?.['2']) 
+        };
 
         return (
         <div 
@@ -510,73 +530,144 @@ export default function AppDev() {
              </div>
           </div>
 
-          {/* B. SQUADRE E BARRE (Centro) */}
-          <div style={{flex: 1, display:'flex', alignItems:'center', justifyContent:'center'}}>
-              
-              {/* CASA */}
-              <div style={{flex:1, display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'10px'}}>
-                 {showLucifero && (
-                    <div style={{display:'flex', alignItems:'center'}}>
-                        <span style={{fontSize:'10px', color:'rgb(5, 249, 182)', marginRight:'4px', fontWeight:'bold'}}>{Math.round((match.h2h_data.lucifero_home / 25) * 100)}%</span>
-                        <div style={{width:'35px', height:'5px', background:'rgba(255, 255, 255, 0.1)', borderRadius:'3px'}}>
-                            <div style={{
-                                width: `${Math.min((match.h2h_data.lucifero_home / 25) * 100, 100)}%`, 
-                                height:'100%', 
-                                background:'rgb(5, 249, 182)', 
-                                boxShadow:'0 0 8px rgb(5, 249, 182)', 
-                                borderRadius:'3px'
-                            }}></div>
-                        </div>
-                    </div>
-                 )}
-                 <div style={{fontWeight:'bold', fontSize:'16px', color:'white', textAlign:'right'}}>{match.home}</div>
-              </div>
-
-              {/* VS */}
-              <div style={{
-                  background: 'rgba(0, 0, 0, 0.4)', padding:'4px 12px', borderRadius:'8px', 
-                  fontSize:'12px', fontWeight:'bold', color:'rgb(139, 155, 180)',
-                  minWidth:'45px', textAlign:'center', margin:'0 20px'
+          {/* B. SQUADRE E BARRE (Centro - Allineamento Fisso) */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            
+            {/* CASA */}
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+              {showLucifero && (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: '10px', color: 'rgb(5, 249, 182)', marginRight: '6px', fontWeight: 'bold', width: '30px', textAlign: 'right' }}>
+                    {Math.round((match.h2h_data.lucifero_home / 25) * 100)}%
+                  </span>
+                  <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                    <div style={{
+                      width: `${Math.min((match.h2h_data.lucifero_home / 25) * 100, 100)}%`,
+                      height: '100%',
+                      background: 'rgb(5, 249, 182)',
+                      boxShadow: '0 0 8px rgb(5, 249, 182)',
+                      borderRadius: '3px'
+                    }}></div>
+                  </div>
+                </div>
+              )}
+              {/* Nome Squadra Casa con larghezza fissa */}
+              <div style={{ 
+                fontWeight: 'bold', 
+                fontSize: '15px', 
+                color: 'white', 
+                textAlign: 'right', 
+                width: '140px', 
+                whiteSpace: 'nowrap', 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis' 
               }}>
-                  {match.status === 'Finished' && match.real_score ? match.real_score : 'VS'}
+                {match.home}
               </div>
+            </div>
 
-              {/* OSPITE */}
-              <div style={{flex:1, display:'flex', justifyContent:'flex-start', alignItems:'center', gap:'10px'}}>
-                 <div style={{fontWeight:'bold', fontSize:'16px', color:'white', textAlign:'left'}}>{match.away}</div>
-                 {showLucifero && (
-                    <div style={{display:'flex', alignItems:'center'}}>
-                        <div style={{width:'35px', height:'5px', background:'rgba(255, 255, 255, 0.1)', borderRadius:'3px'}}>
-                            <div style={{
-                                width: `${Math.min((match.h2h_data.lucifero_away / 25) * 100, 100)}%`, 
-                                height:'100%', 
-                                background:'rgb(255, 159, 67)', 
-                                boxShadow:'0 0 8px rgb(255, 159, 67)', 
-                                borderRadius:'3px'
-                            }}></div>
-                        </div>
-                        <span style={{fontSize:'10px', color:'rgb(255, 159, 67)', marginLeft:'4px', fontWeight:'bold'}}>{Math.round((match.h2h_data.lucifero_away / 25) * 100)}%</span>
-                    </div>
-                 )}
+            {/* VS / SCORE */}
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.4)', padding: '4px 12px', borderRadius: '8px',
+              fontSize: '12px', fontWeight: 'bold', color: 'rgb(139, 155, 180)',
+              minWidth: '50px', textAlign: 'center', margin: '0 15px',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              {match.status === 'Finished' && match.real_score ? match.real_score : 'VS'}
+            </div>
+
+            {/* OSPITE */}
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '12px' }}>
+              {/* Nome Squadra Ospite con larghezza fissa */}
+              <div style={{ 
+                fontWeight: 'bold', 
+                fontSize: '15px', 
+                color: 'white', 
+                textAlign: 'left', 
+                width: '140px', 
+                whiteSpace: 'nowrap', 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis' 
+              }}>
+                {match.away}
               </div>
+              {showLucifero && (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                    <div style={{
+                      width: `${Math.min((match.h2h_data.lucifero_away / 25) * 100, 100)}%`,
+                      height: '100%',
+                      background: 'rgb(255, 159, 67)',
+                      boxShadow: '0 0 8px rgb(255, 159, 67)',
+                      borderRadius: '3px'
+                    }}></div>
+                  </div>
+                  <span style={{ fontSize: '10px', color: 'rgb(255, 159, 67)', marginLeft: '6px', fontWeight: 'bold', width: '30px', textAlign: 'left' }}>
+                    {Math.round((match.h2h_data.lucifero_away / 25) * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* C. QUOTE (Destra - Parametri esatti) */}
+          {/* C. QUOTE (Destra - Allineamento perfetto) */}
           <div style={{
-              display:'flex', gap:'8px', marginLeft:'20px', paddingLeft:'15px', 
-              borderLeft:'1px solid rgba(255, 255, 255, 0.1)'
+              display:'flex', 
+              gap:'8px', 
+              marginLeft:'20px', 
+              paddingLeft:'15px', 
+              borderLeft:'1px solid rgba(255, 255, 255, 0.1)',
+              alignItems: 'center'
           }}>
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center', minWidth:'30px'}}>
-                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px'}}>1</span>
-                  <span style={{fontSize:'12px', color:'rgb(221, 221, 221)', background:'rgba(255, 255, 255, 0.05)', padding:'3px 8px', borderRadius:'4px', width:'100%', textAlign:'center'}}>{odds[1]}</span>
+              {/* Colonna 1 */}
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
+                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px', fontWeight:'bold'}}>1</span>
+                  <span style={{
+                      fontSize:'12px', 
+                      color:'rgb(221, 221, 221)', 
+                      background:'rgba(255, 255, 255, 0.05)', 
+                      padding:'4px 0', 
+                      borderRadius:'4px', 
+                      width:'45px', 
+                      textAlign:'center',
+                      fontFamily:'monospace'
+                  }}>
+                      {odds['1']}
+                  </span>
               </div>
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center', minWidth:'30px'}}>
-                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px'}}>X</span>
-                  <span style={{fontSize:'12px', color:'rgb(221, 221, 221)', background:'rgba(255, 255, 255, 0.05)', padding:'3px 8px', borderRadius:'4px', width:'100%', textAlign:'center'}}>{odds.X}</span>
+
+              {/* Colonna X */}
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
+                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px', fontWeight:'bold'}}>X</span>
+                  <span style={{
+                      fontSize:'12px', 
+                      color:'rgb(221, 221, 221)', 
+                      background:'rgba(255, 255, 255, 0.05)', 
+                      padding:'4px 0', 
+                      borderRadius:'4px', 
+                      width:'45px', 
+                      textAlign:'center',
+                      fontFamily:'monospace'
+                  }}>
+                      {odds['X']}
+                  </span>
               </div>
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center', minWidth:'30px'}}>
-                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px'}}>2</span>
-                  <span style={{fontSize:'12px', color:'rgb(221, 221, 221)', background:'rgba(255, 255, 255, 0.05)', padding:'3px 8px', borderRadius:'4px', width:'100%', textAlign:'center'}}>{odds[2]}</span>
+
+              {/* Colonna 2 */}
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
+                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px', fontWeight:'bold'}}>2</span>
+                  <span style={{
+                      fontSize:'12px', 
+                      color:'rgb(221, 221, 221)', 
+                      background:'rgba(255, 255, 255, 0.05)', 
+                      padding:'4px 0', 
+                      borderRadius:'4px', 
+                      width:'45px', 
+                      textAlign:'center',
+                      fontFamily:'monospace'
+                  }}>
+                      {odds['2']}
+                  </span>
               </div>
           </div>
 
@@ -728,40 +819,48 @@ export default function AppDev() {
                 marginBottom: '-5px',
                 width: '100%', 
                 minHeight: '100px',
-                boxSizing: 'border-box' // <--- QUESTA È LA CHIAVE MAGICA
+                boxSizing: 'border-box'
             }}>
                 <div style={{fontSize:'11px', color: theme.cyan, marginBottom:'15px', fontWeight:'bold', letterSpacing:'2px', borderBottom:'1px solid rgba(0, 240, 255, 0.2)', paddingBottom:'5px'}}>
-                    ⚡ FORMA A.L.1  INDEX
+                    ⚡ FORMA A.L.1 INDEX
                 </div>
                 
                 {/* Casa */}
                 <div>
                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
                         <div style={{fontSize:'12px', color:'white'}}>{selectedMatch?.home}</div>
-                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
+                        {/* CAMBIATO DA bvs_index A lucifero_home */}
+                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>
+                            {selectedMatch?.h2h_data?.lucifero_home ? selectedMatch.h2h_data.lucifero_home.toFixed(1) : '0.0'}
+                        </div>
                     </div>
-                    {/* Altezza portata a 6px per matchare i led sopra */}
                     <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
                         <div style={{
-                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_index || 0) + 6) / 13) * 100, 0), 100)}%`, 
+                            /* FORMULA AGGIORNATA: usiamo la scala 25 come per le percentuali della lista */
+                            width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_home || 0) / 25) * 100, 100)}%`, 
                             height:'100%', 
-                            background: Number(selectedMatch?.h2h_data?.bvs_index || 0) > 0 ? theme.success : theme.danger
+                            background: theme.success,
+                            boxShadow: `0 0 10px ${theme.success}`
                         }} />
                     </div>
                 </div>
 
                 {/* Ospite */}
                 <div>
-                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px',marginTop: '15px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px', marginTop: '15px'}}>
                         <div style={{fontSize:'12px', color:'white'}}>{selectedMatch?.away}</div>
-                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
+                        {/* CAMBIATO DA bvs_away A lucifero_away */}
+                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>
+                            {selectedMatch?.h2h_data?.lucifero_away ? selectedMatch.h2h_data.lucifero_away.toFixed(1) : '0.0'}
+                        </div>
                     </div>
-                    {/* Altezza portata a 6px per matchare i led sopra */}
                     <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
                         <div style={{
-                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_away || 0) + 6) / 13) * 100, 0), 100)}%`, 
+                            /* FORMULA AGGIORNATA */
+                            width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_away || 0) / 25) * 100, 100)}%`, 
                             height:'100%', 
-                            background: Number(selectedMatch?.h2h_data?.bvs_away || 0) > 0 ? theme.success : theme.danger
+                            background: '#ff9f43', /* Colore arancio per l'ospite come nei trend */
+                            boxShadow: '0 0 10px #ff9f43'
                         }} />
                     </div>
                 </div>
@@ -773,7 +872,18 @@ export default function AppDev() {
                     <span style={{fontSize:'11px', color: theme.textDim, fontWeight:'bold', letterSpacing:'1px'}}>
                         📈 TREND INERZIA M.L.5 INDEX
                     </span>
-                    <span style={{fontSize:'14px', color: theme.cyan, fontWeight: 'bold'}}>⟶</span>
+                    <span style={{
+                        fontSize: '18px',           /* Aumentato per rendere l'asta più visibile */
+                        color: theme.cyan, 
+                        position: 'relative', 
+                        left: '-0px',              /* Il tuo posizionamento personalizzato */
+                        fontWeight: 'bold',
+                        textShadow: `0 0 8px ${theme.cyan}`, /* L'effetto "glow" che la rende uguale all'altra */
+                        lineHeight: '1',
+                        display: 'inline-block'
+                    }}>
+                        ⟶
+                    </span>
                 </div>
 
                 <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>

@@ -22,13 +22,13 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
 
   // --- LISTA CAMPIONATI AGGIORNATA (TUTTI E 7) ---
   const leagues = [
-    { id: 'serie-a', name: 'Serie A', country: '🇮🇹 Italia', matches: 10, color: theme.cyan },
-    { id: 'premier', name: 'Premier League', country: '🇬🇧 Inghilterra', matches: 8, color: '#ff0055' },
-    { id: 'laliga', name: 'La Liga', country: '🇪🇸 Spagna', matches: 9, color: '#ff9f43' },
-    { id: 'bundes', name: 'Bundesliga', country: '🇩🇪 Germania', matches: 6, color: '#ffffff' },
-    { id: 'primeira', name: 'Primeira Liga', country: '🇵🇹 Portogallo', matches: 5, color: '#00ff00' },
-    { id: 'eredivisie', name: 'Eredivisie', country: '🇳🇱 Olanda', matches: 4, color: '#FFA500' },
-    { id: 'ligue1', name: 'Ligue 1', country: '🇫🇷 Francia', matches: 7, color: '#0055ff' }, 
+    { id: 'SERIE_A', name: 'Serie A', country: '🇮🇹 Italia', matches: 10, color: theme.cyan },
+    { id: 'PREMIER_LEAGUE', name: 'Premier League', country: '🇬🇧 Inghilterra', matches: 8, color: '#ff0055' },
+    { id: 'LA_LIGA', name: 'La Liga', country: '🇪🇸 Spagna', matches: 9, color: '#ff9f43' },
+    { id: 'BUNDESLIGA', name: 'Bundesliga', country: '🇩🇪 Germania', matches: 6, color: '#ffffff' },
+    { id: 'LIGA_PORTUGAL', name: 'Primeira Liga', country: '🇵🇹 Portogallo', matches: 5, color: '#00ff00' },
+    { id: 'EREDIVISIE', name: 'Eredivisie', country: '🇳🇱 Olanda', matches: 4, color: '#FFA500' },
+    { id: 'LIGUE_1', name: 'Ligue 1', country: '🇫🇷 Francia', matches: 7, color: '#0055ff' }, 
   ];
 
   return (

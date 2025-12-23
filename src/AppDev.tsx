@@ -1061,27 +1061,27 @@ export default function AppDev() {
         {/* === COLONNA DESTRA: ANALISI COMPETITIVA VALORI CORE === */}
         <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
             
-            {/* === SEZIONE BVS: LOGICA UFFICIALE DA MANUALE === */}
-<div style={{
-    ...styles.card, 
-    width: '100%', 
-    padding:'8px 5px', // Padding verticale leggermente aumentato, laterale ridotto
-    borderLeft: `4px solid ${theme.purple}`, 
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    display: 'flex', 
-    flexDirection: 'column',
-    justifyContent: 'space-between', // Aiuta a distribuire lo spazio se avanza
-    height: '100%' // Tenta di occupare l'altezza disponibile (se il genitore lo permette)
-}}>
+        {/* === SEZIONE BVS: LOGICA UFFICIALE DA MANUALE === */}
+        <div style={{
+            ...styles.card, 
+            width: '100%', 
+            padding:'8px 5px', // Padding verticale leggermente aumentato, laterale ridotto
+            borderLeft: `4px solid ${theme.purple}`, 
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            display: 'flex', 
+            flexDirection: 'column',
+            justifyContent: 'space-between', // Aiuta a distribuire lo spazio se avanza
+            height: '100%' // Tenta di occupare l'altezza disponibile (se il genitore lo permette)
+        }}>
     
     {/* TITOLO CENTRATO (Ridotto margine) */}
-    <div style={{width: '100%', textAlign: 'center', marginBottom: '2px'}}>
-        <span style={{fontSize:'10px', color: theme.danger, fontWeight:'bold', letterSpacing:'1px'}}>BIAS C.O.R.E.</span>
+    <div style={{width: '100%', textAlign: 'center',marginTop: '-15px', marginBottom: '-10px'}}>
+        <span style={{fontSize:'10px', color: theme.cyan, fontWeight:'lighter', letterSpacing:'0.5px'}}>BIAS C.O.R.E.</span>
     </div>
 
     {/* SOTTO-SEZIONE DIVISA (Ridotto margine inferiore) */}
-    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px', width:'100%', alignItems:'center'}}>
+    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px', marginTop:'10px', width:'100%', alignItems:'center'}}>
         <div style={{display:'flex', flexDirection:'column', width: '55%', justifyContent:'center'}}>
             <span style={{
                 fontSize:'15px', // Ridotto da 16px per risparmiare spazio
@@ -1104,25 +1104,39 @@ export default function AppDev() {
 
     {/* BOX PROTOCOLLO OPERATIVO (Compattato drasticamente) */}
     <div style={{
-        background: 'rgba(188, 19, 254, 0.05)', 
-        padding:'6px 8px', // Ridotto padding da 12px a 6px
-        borderRadius:'6px', 
-        border:'1px solid rgba(188, 19, 254, 0.2)', 
-        marginBottom:'8px' // Ridotto margine da 15px a 8px
-    }}>
-        <div style={{fontSize:'9px', color: theme.purple, fontWeight:'bold', marginBottom:'2px', letterSpacing:'1px'}}>
-            PROTOCOLLO OPERATIVO
-        </div>
-        <div style={{fontSize:'13px', fontWeight:'900', color: 'rgb(235, 252, 0)'}}> {/* Font leggermente ridotto */}
-            {!selectedMatch?.h2h_data?.is_linear ? (
-                <span style={{color: '#ffcc00'}}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
-            ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
-                <span style={{color: '#ff4444'}}>⛔ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
-            ) : (
-                <span>🎯 B.T.R. :&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
-            )}
-        </div>
+    background: 'rgba(188, 19, 254, 0.05)', 
+    padding: '6px 8px', 
+    borderRadius: '6px', 
+    border: '1px solid rgba(188, 19, 254, 0.2)', 
+    marginBottom: '8px' 
+}}>
+    <div style={{fontSize: '9px', color: theme.purple, fontWeight: 'bold', marginBottom: '2px', letterSpacing: '1px'}}>
+        PROTOCOLLO OPERATIVO
     </div>
+    <div style={{fontSize: '13px', fontWeight: '900'}}>
+        {!selectedMatch?.h2h_data?.is_linear ? (
+            <span style={{color: '#ffcc00'}}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+        ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
+            <span style={{color: '#ff4444'}}>⛔ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+        ) : (
+            <span style={{
+                // EFFETTO SFUMATURA DINAMICA SUL TESTO
+                background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 
+                    ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.8), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))' 
+                    : 'linear-gradient(270deg, rgba(217, 255, 0, 0.8), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                // EFFETTO NEON (BAGLIORE)
+                filter: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0
+                    ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.4))'
+                    : 'drop-shadow(0 0 5px rgba(255, 68, 68, 0.4))',
+                display: 'inline-block'
+            }}>
+                🎯 B.T.R. :&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}
+            </span>
+        )}
+    </div>
+</div>
 
             {/* LE TRE BARRE DI INDICE */}
             <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
@@ -1244,7 +1258,7 @@ export default function AppDev() {
             {/* SEZIONE QUOTE: Allunga il box verso il basso */}
             <div style={{
                 borderTop: '1px solid rgba(255,255,255,0.05)',
-                paddingTop: '10px',
+                paddingTop: '0px',
                 marginTop: '10px',
                 display: 'flex',
                 justifyContent: 'space-around',

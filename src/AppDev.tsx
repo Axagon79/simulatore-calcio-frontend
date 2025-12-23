@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardHome from './DashboardHome';
+import './BadgeClassifica_pt_pos.css'
 
 // --- INTERFACCE & TIPI ---
 
@@ -271,6 +272,8 @@ export default function AppDev() {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const [hoveredRound, setHoveredRound] = React.useState<string | null>(null);
+
   // --- FETCH DATI ---
   useEffect(() => {
     fetch(`${API_BASE}/leagues?country=${country}`).then(r => r.json()).then(d => { setLeagues(d); if(d.length) setLeague(d[0].id); });
@@ -437,43 +440,80 @@ export default function AppDev() {
   const renderMatchList = () => (
     <div style={styles.arenaContent}>
       
-      {/* 1. NAVIGAZIONE STILE "CAPSULA NEON" (Esattamente i tuoi parametri) */}
-      <div style={{ 
-          display: 'flex', 
-          background: 'rgba(18, 20, 35, 0.85)', 
-          marginBottom: '10px', 
-          marginTop: '-20px',
-          gap: '10px', 
-          padding: '10px', 
-          borderRadius: '30px', 
-          border: '1px solid rgba(0, 240, 255, 0.2)' 
-      }}>
-        {rounds.map(r => (
-           <button 
-             key={r.name} 
-             onClick={() => setSelectedRound(r)}
-             style={{
-               flex: 1, 
-               padding: '8px', 
-               background: selectedRound?.name === r.name ? 'rgb(0, 240, 255)' : 'transparent',
-               border: 'none', 
-               cursor: 'pointer', 
-               fontWeight: 'bold', 
-               fontSize: '13px',
-               color: selectedRound?.name === r.name ? 'rgb(0, 0, 0)' : 'rgb(139, 155, 180)',
-               transition: 'background 0.2s',
-               borderRadius: '25px'
-             }}
-           >
-             {r.label}
-           </button>
-        ))}
-      </div>
+      {/* 1. NAVIGAZIONE A CAPSULE INDIPENDENTI - ALLINEAMENTO PROPORZIONALE */}
+<div 
+  key={rounds[0]?.name} 
+  style={{ 
+    display: 'flex', 
+    justifyContent: 'center', // Centra tutto il gruppo rispetto al VS
+    alignItems: 'center',
+    marginBottom: '20px', 
+    marginTop: '-10px',
+    gap: '80px', // <--- REGOLA QUESTO: Aumenta o diminuisci per centrare i tasti sulle barre
+    width: '100%',
+}}>
+  {rounds.map(r => {
+    const roundNumber = r.name.replace(/[^0-9]/g, ''); 
+    let displayText = roundNumber;
+    if (r.type === 'previous') displayText = `< ${roundNumber}`;
+    if (r.type === 'next') displayText = `${roundNumber} >`;
+
+    const isSelected = selectedRound?.name === r.name;
+    const isHovered = hoveredRound === r.name;
+
+    return (
+      <button 
+        key={r.name} 
+        onClick={() => setSelectedRound(r)}
+        onMouseEnter={() => setHoveredRound(r.name)}
+        onMouseLeave={() => setHoveredRound(null)}
+        style={{
+          // Dimensioni fisse per farli sembrare "pillole"
+          width: '85px', 
+          height: '38px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+
+          // Stile Capsula Indipendente
+          background: isSelected 
+            ? 'rgb(0, 240, 255)' 
+            : 'rgba(18, 20, 35, 0.9)',
+          
+          borderRadius: '20px',
+          border: isSelected 
+            ? 'none' 
+            : `1px solid ${isHovered ? 'rgb(0, 240, 255)' : 'rgba(0, 240, 255, 0.3)'}`,
+          
+          cursor: 'pointer', 
+          fontWeight: '900', 
+          fontSize: '15px',
+          
+          color: isSelected ? 'rgb(0, 0, 0)' : 'rgb(0, 240, 255)',
+          
+          // Effetto Glow
+          boxShadow: isSelected 
+            ? '0 0 15px rgba(0, 240, 255, 0.6)' 
+            : (isHovered ? '0 0 10px rgba(0, 240, 255, 0.4)' : 'none'),
+          
+          transition: 'all 0.3s ease', 
+          outline: 'none',
+          transform: isHovered ? 'scale(1.08)' : 'scale(1)',
+        }}
+      >
+        {displayText}
+      </button>
+    );
+  })}
+</div>
 
       {/* 2. LISTA PARTITE (Stile Card "Pixel Perfect") */}
       {matches.length === 0 ? (
         <div style={{textAlign:'center', padding:'40px', color: theme.textDim}}>Nessuna partita trovata</div> 
       ) : (
+
+        
+        
        matches.map(match => {
         const isFuture = selectedRound?.type === 'next';
         const showLucifero = !isFuture && match.h2h_data?.lucifero_home != null;
@@ -517,32 +557,74 @@ export default function AppDev() {
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
           }}
         >
-          {/* A. DATA (Sinistra - Parametri esatti) */}
-          <div style={{
-              display:'flex', flexDirection:'column', alignItems:'center', width:'45px', 
-              borderRight:'1px solid rgba(255, 255, 255, 0.1)', marginRight:'15px'
+          {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
+          <div style={{ 
+            width: '130px', // Leggermente più largo per ospitare il testo in linea
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'flex-start',
+            flexShrink: 0 
           }}>
-             <div style={{fontSize:'10px', color:'rgb(136, 136, 136)', fontWeight:'bold'}}>
-                {match.date_obj ? new Date(match.date_obj).toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit'}) : ''}
-             </div>
-             <div style={{fontSize:'11px', color:'rgb(0, 240, 255)', fontWeight:'bold'}}>
-                {match.match_time}
-             </div>
+            {/* Il Contenitore "Capsula" */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: '1px solid rgba(0, 240, 255, 0.1)', // Bordino ciano sottile
+            }}>
+              {/* DATA */}
+              <span style={{ 
+                fontSize: '11px', 
+                color: 'rgba(255, 255, 255, 0.5)', 
+                fontWeight: 'bold' 
+              }}>
+                {(match as any).date_obj 
+                  ? new Date((match as any).date_obj).toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit'}) 
+                  : '00/00'}
+              </span>
+
+              {/* Separatore verticale sottile */}
+              <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+
+              {/* ORA */}
+              <span style={{ 
+                fontSize: '11px', 
+                color: 'rgba(255, 255, 255, 0.5)', 
+                fontWeight: 'bold' 
+              }}>
+                {(match as any).match_time || '--:--'}
+              </span>
+            </div>
           </div>
 
-          {/* B. SQUADRE E BARRE (Centro - Allineamento Fisso) */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* B. SQUADRE E BARRE (Versione Finale: Classifica Reale) */}
+          <div style={{ 
+            flex: 1, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}>
             
             {/* CASA */}
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              flex: 1, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              alignItems: 'center', 
+              gap: '12px' 
+            }}>
+              {/* Barra Lucifero Casa */}
               {showLucifero && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <span style={{ fontSize: '10px', color: 'rgb(5, 249, 182)', marginRight: '6px', fontWeight: 'bold', width: '30px', textAlign: 'right' }}>
-                    {Math.round((match.h2h_data.lucifero_home / 25) * 100)}%
+                    {Math.round(((match as any).h2h_data?.lucifero_home / 25) * 100)}%
                   </span>
                   <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
                     <div style={{
-                      width: `${Math.min((match.h2h_data.lucifero_home / 25) * 100, 100)}%`,
+                      width: `${Math.min(((match as any).h2h_data?.lucifero_home / 25) * 100, 100)}%`,
                       height: '100%',
                       background: 'rgb(5, 249, 182)',
                       boxShadow: '0 0 8px rgb(5, 249, 182)',
@@ -551,18 +633,30 @@ export default function AppDev() {
                   </div>
                 </div>
               )}
-              {/* Nome Squadra Casa con larghezza fissa */}
-              <div style={{ 
-                fontWeight: 'bold', 
-                fontSize: '15px', 
-                color: 'white', 
-                textAlign: 'right', 
-                width: '140px', 
-                whiteSpace: 'nowrap', 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis' 
-              }}>
-                {match.home}
+              
+              {/* INFO SQUADRA CASA: Classifica + Nome */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* BADGE CLASSIFICA CASA */}
+                    {(match as any).h2h_data?.home_rank && (
+                    <span className="badge-classifica home">
+                        <span className="badge-rank">
+                        {(match as any).h2h_data.home_rank}°
+                        </span>
+                        {(match as any).h2h_data.home_points && (
+                        <span className="badge-points">
+                            {(match as any).h2h_data.home_points}pt
+                        </span>
+                        )}
+                    </span>
+                    )}
+                
+                <div style={{ 
+                  fontWeight: 'bold', fontSize: '15px', color: 'white', 
+                  textAlign: 'right', width: '130px', whiteSpace: 'nowrap', 
+                  overflow: 'hidden', textOverflow: 'ellipsis' 
+                }}>
+                  {match.home}
+                </div>
               </div>
             </div>
 
@@ -573,29 +667,48 @@ export default function AppDev() {
               minWidth: '50px', textAlign: 'center', margin: '0 15px',
               border: '1px solid rgba(255, 255, 255, 0.05)'
             }}>
-              {match.status === 'Finished' && match.real_score ? match.real_score : 'VS'}
+              {(match as any).status === 'Finished' && (match as any).real_score ? (match as any).real_score : 'VS'}
             </div>
 
             {/* OSPITE */}
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '12px' }}>
-              {/* Nome Squadra Ospite con larghezza fissa */}
-              <div style={{ 
-                fontWeight: 'bold', 
-                fontSize: '15px', 
-                color: 'white', 
-                textAlign: 'left', 
-                width: '140px', 
-                whiteSpace: 'nowrap', 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis' 
-              }}>
-                {match.away}
+            <div style={{ 
+              flex: 1, 
+              display: 'flex', 
+              justifyContent: 'flex-start', 
+              alignItems: 'center', 
+              gap: '12px' 
+            }}>
+              {/* INFO SQUADRA OSPITE: Nome + Classifica */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ 
+                  fontWeight: 'bold', fontSize: '15px', color: 'white', 
+                  textAlign: 'left', width: '130px', whiteSpace: 'nowrap', 
+                  overflow: 'hidden', textOverflow: 'ellipsis' 
+                }}>
+                  {match.away}
+                </div>
+
+                {/* BADGE CLASSIFICA OSPITE */}
+                    {(match as any).h2h_data?.away_rank && (
+                    <span className="badge-classifica away">
+                        <span className="badge-rank">
+                        {(match as any).h2h_data.away_rank}°
+                        </span>
+                        {(match as any).h2h_data.away_points && (
+                        <span className="badge-points">
+                            {(match as any).h2h_data.away_points}pt
+                        </span>
+                        )}
+                    </span>
+                    )}
               </div>
+
+              {/* Barra Lucifero Ospite */}
               {showLucifero && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
                     <div style={{
-                      width: `${Math.min((match.h2h_data.lucifero_away / 25) * 100, 100)}%`,
+                      width: `${Math.min(((match as any).h2h_data?.lucifero_away / 25) * 100, 100)}%`,
                       height: '100%',
                       background: 'rgb(255, 159, 67)',
                       boxShadow: '0 0 8px rgb(255, 159, 67)',
@@ -603,79 +716,78 @@ export default function AppDev() {
                     }}></div>
                   </div>
                   <span style={{ fontSize: '10px', color: 'rgb(255, 159, 67)', marginLeft: '6px', fontWeight: 'bold', width: '30px', textAlign: 'left' }}>
-                    {Math.round((match.h2h_data.lucifero_away / 25) * 100)}%
+                    {Math.round(((match as any).h2h_data?.lucifero_away / 25) * 100)}%
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* C. QUOTE (Destra - Allineamento perfetto) */}
+          {/* C. QUOTE (Destra - Senza bordi verticali e altezza ridotta) */}
           <div style={{
-              display:'flex', 
-              gap:'8px', 
-              marginLeft:'20px', 
-              paddingLeft:'15px', 
-              borderLeft:'1px solid rgba(255, 255, 255, 0.1)',
-              alignItems: 'center'
+              width: '130px',
+              display: 'flex', 
+              gap: '6px',
+              marginLeft: '10px', // Spazio tra squadre e quote
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              flexShrink: 0
           }}>
-              {/* Colonna 1 */}
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px', fontWeight:'bold'}}>1</span>
-                  <span style={{
-                      fontSize:'12px', 
-                      color:'rgb(221, 221, 221)', 
-                      background:'rgba(255, 255, 255, 0.05)', 
-                      padding:'4px 0', 
-                      borderRadius:'4px', 
-                      width:'45px', 
-                      textAlign:'center',
-                      fontFamily:'monospace'
-                  }}>
-                      {odds['1']}
-                  </span>
-              </div>
+              {['1', 'X', '2'].map(label => {
+                const val = (odds as any)[label];
+                const numVal = parseFloat(val);
+                
+                // Calcolo favorito
+                const allOdds = [parseFloat(odds['1']), parseFloat(odds['X']), parseFloat(odds['2'])].filter(n => !isNaN(n));
+                const minOdd = Math.min(...allOdds);
+                const isLowest = numVal === minOdd && allOdds.length > 0;
 
-              {/* Colonna X */}
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px', fontWeight:'bold'}}>X</span>
-                  <span style={{
-                      fontSize:'12px', 
-                      color:'rgb(221, 221, 221)', 
-                      background:'rgba(255, 255, 255, 0.05)', 
-                      padding:'4px 0', 
-                      borderRadius:'4px', 
-                      width:'45px', 
-                      textAlign:'center',
-                      fontFamily:'monospace'
+                return (
+                  <div key={label} style={{
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isLowest ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                    
+                    // ALTEZZA RIDOTTA: Usiamo gli stessi valori della capsula data
+                    padding: '3px 0', 
+                    height: '32px', // Altezza fissa per matchare perfettamente la data
+                    width: '38px',
+                    
+                    borderRadius: '8px',
+                    border: isLowest ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid transparent',
+                    transition: 'all 0.2s'
                   }}>
-                      {odds['X']}
-                  </span>
-              </div>
-
-              {/* Colonna 2 */}
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                  <span style={{fontSize:'9px', color:'rgb(102, 102, 102)', marginBottom:'2px', fontWeight:'bold'}}>2</span>
-                  <span style={{
-                      fontSize:'12px', 
-                      color:'rgb(221, 221, 221)', 
-                      background:'rgba(255, 255, 255, 0.05)', 
-                      padding:'4px 0', 
-                      borderRadius:'4px', 
-                      width:'45px', 
-                      textAlign:'center',
-                      fontFamily:'monospace'
-                  }}>
-                      {odds['2']}
-                  </span>
-              </div>
+                    <span style={{ 
+                      fontSize: '8px', 
+                      color: isLowest ? 'rgb(0, 240, 255)' : 'rgba(255,255,255,0.2)', 
+                      fontWeight: 'bold',
+                      lineHeight: '1'
+                    }}>
+                      {label}
+                    </span>
+                    <span style={{
+                      fontSize: '11px', 
+                      color: isLowest ? '#fff' : '#ddd', 
+                      fontWeight: isLowest ? '900' : 'normal',
+                      fontFamily: 'monospace',
+                      marginTop: '1px'
+                    }}>
+                      {val}
+                    </span>
+                  </div>
+                );
+              })}
           </div>
-
+           
         </div>
+         
       );
-      }))}
-    </div>
-  );
+      }) 
+  )}
+  </div>
+  ) 
 
     // --- FUNZIONE MANCANTE: ANIMAZIONE GRAFICA ---
   const renderAnimation = () => (

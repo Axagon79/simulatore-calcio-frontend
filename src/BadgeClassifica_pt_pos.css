@@ -1,0 +1,65 @@
+/* -------------------------------------------------------------------------
+   NOME FILE: BadgeClassifica_pt_pos.css
+   DESCRIZIONE: Stile "Soft Modern" - Delicato e Tondeggiante.
+   ORDINE: A SPECCHIO (La posizione è sempre sull'esterno).
+   -------------------------------------------------------------------------
+*/
+
+/* 1. IL CONTENITORE (Pillola Soft) */
+.badge-classifica {
+  /* Sfondo quasi invisibile, delicatissimo */
+  background-color: rgba(255, 255, 255, 0.04); 
+  
+  /* Bordo sottile e trasparente, appena accennato */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  
+  /* Arrotondamento massimo per fare la forma a pillola/ovale */
+  border-radius: 15px;
+  
+  /* Spaziatura ariosa */
+  padding: 3px 10px;
+  
+  /* Allineamento */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px; /* Spazio tra i due numeri */
+  
+  /* Altezza contenuta */
+  height: 26px;
+  
+  /* Margini laterali per staccarsi dai nomi */
+  margin: 0 10px;
+}
+
+/* 2. STILE OSPITE (Destra) - A SPECCHIO */
+.badge-classifica.away {
+  /* INVERSIONE PERFETTA: Mette i punti verso il centro e la posizione all'esterno */
+  flex-direction: row-reverse;
+}
+
+/* 3. NUMERO POSIZIONE (Il protagonista) */
+.badge-rank {
+  font-weight: 700; 
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+/* Colore specifico per il numero di CASA (Ciano Soft) */
+.badge-classifica.home .badge-rank {
+  color: #00f0ff; 
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.3); 
+}
+
+/* Colore specifico per il numero OSPITE (Arancione Soft) */
+.badge-classifica.away .badge-rank {
+  color: #ff9f43;
+  text-shadow: 0 0 10px rgba(255, 159, 67, 0.3); 
+}
+
+/* 4. NUMERO PUNTI (Secondario) */
+.badge-points {
+  color: rgba(255, 255, 255, 0.5); /* Bianco sporco semitrasparente */
+  font-size: 11px;
+  font-weight: 400; 
+}

@@ -1,0 +1,902 @@
+/* ========================================
+   VARIABILI CSS - THEME NEON/SCI-FI
+   ======================================== */
+   :root {
+    --theme-bg: #05070a;
+    --theme-panel: rgba(18, 20, 35, 0.85);
+    --theme-cyan: #00f0ff;
+    --theme-purple: #bc13fe;
+    --theme-text: #ffffff;
+    --theme-text-dim: #8b9bb4;
+    --theme-danger: #ff2a6d;
+    --theme-success: #05f9b6;
+    --theme-warning: #ff9f43;
+    --theme-font: "Inter", "Segoe UI", sans-serif;
+  }
+  
+  /* ========================================
+     LAYOUT PRINCIPALE - OTTIMIZZATO PER VIEWPORT
+     ======================================== */
+  .dashboard-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  
+  .colonna-sinistra-analisi,
+  .colonna-destra-analisi {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  /* RESPONSIVE: Mobile e Tablet */
+  @media (max-width: 1024px) {
+    .dashboard-main-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+  }
+  
+  /* ========================================
+     COLONNA SINISTRA - CARD FORMA (A.L.1 INDEX)
+     ======================================== */
+  .card-forma {
+    padding: 10px;
+    margin-bottom: 0px;
+    margin-top: 0px;
+    box-sizing: border-box;
+    height: 150px;
+    overflow: hidden;
+  }
+  
+  .card-forma .header-title {
+    font-size: 11px;
+    color: var(--theme-cyan);
+    margin-bottom: 15px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    padding-bottom: 5px;
+  }
+  
+  
+  
+  .card-forma .team-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+  }
+  
+  .card-forma .team-name {
+    font-size: 12px;
+    color: white;
+  }
+  
+  .card-forma .team-value {
+    font-size: 12px;
+    color: var(--theme-purple);
+    font-weight: bold;
+  }
+  
+  .card-forma .progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .card-forma .progress-bar {
+    height: 100%;
+    /* width e background applicati dinamicamente inline */
+  }
+  
+  .card-forma .progress-bar.home {
+    background: var(--theme-success);
+    box-shadow: 0 0 10px var(--theme-success);
+  }
+  
+  .card-forma .progress-bar.away {
+    background: #ff9f43;
+    box-shadow: 0 0 10px #ff9f43;
+  }
+  
+  .card-forma .away-section {
+    margin-top: 15px;
+  }
+  
+  /* ========================================
+     COLONNA SINISTRA - CARD TREND (M.L.5 INDEX)
+     ======================================== */
+  .card-trend {
+    padding: 10px;
+    margin-bottom: 0px;
+    margin-top: -20px;
+    width: 100%;
+    height: 150px;
+    box-sizing: border-box;
+    gap: 10px;
+    overflow: hidden;
+  }
+  
+  /* RESPONSIVE: Mobile - più spazio */
+  @media (max-width: 768px) {
+    .card-trend {
+      min-height: 180px;
+    }
+  }
+  
+  .card-trend .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 5px;
+  }
+  
+  .card-trend .header-title {
+    font-size: 11px;
+    color: var(--theme-text-dim);
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  
+  .card-trend .header-arrow {
+    font-size: 18px;
+    color: var(--theme-cyan);
+    position: relative;
+    left: -0px;
+    font-weight: bold;
+    text-shadow: 0 0 8px var(--theme-cyan);
+    line-height: 1;
+    display: inline-block;
+  }
+  
+  .card-trend .teams-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .card-trend .team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .card-trend .team-left-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .card-trend .team-name {
+    font-size: 14px;
+    color: white;
+    font-weight: bold;
+    width: 120px;
+    line-height: 1;
+    display: inline-block;
+    transform: translateY(4px);
+  }
+  
+  .card-trend .avg-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 80px;
+    justify-content: center;
+  }
+  
+  .card-trend .avg-value {
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1;
+    /* color applicato dinamicamente */
+  }
+  
+  .card-trend .avg-progress-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+  }
+  
+  .card-trend .avg-progress-bar {
+    height: 100%;
+    transition: width 0.8s ease-in-out;
+    /* width, background e box-shadow applicati dinamicamente */
+  }
+  
+  .card-trend .trend-right-section {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  
+  .card-trend .trend-boxes-container {
+    display: flex;
+    gap: 5px;
+  }
+  
+  .card-trend .trend-box {
+    width: 36px;
+    height: 14px;
+    border-radius: 2px;
+    opacity: 0.9;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* background e box-shadow applicati dinamicamente */
+  }
+  
+  .card-trend .trend-box-value {
+    font-size: 8px;
+    color: #000;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+  
+  .card-trend .trend-arrow {
+    font-size: 18px;
+    font-weight: bold;
+    /* color e text-shadow applicati dinamicamente */
+  }
+  
+  /* ========================================
+     COLONNA SINISTRA - CARD STORIA
+     ======================================== */
+  .card-storia {
+    height: auto;
+    padding: 8px;
+    margin-top: -20px;
+    margin-bottom: 0px;
+    overflow: hidden;
+  }
+  
+  .card-storia .header-title {
+    font-size: 9px;
+    color: var(--theme-cyan);
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  
+  .card-storia .content-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .card-storia .team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .card-storia .team-name {
+    font-size: 11px;
+    color: white;
+    width: 90px;
+  }
+  
+  .card-storia .progress-bar-container {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin: 0 10px;
+  }
+  
+  .card-storia .progress-bar {
+    height: 100%;
+  }
+  
+  .card-storia .progress-bar.home {
+    background: var(--theme-cyan);
+    box-shadow: 0 0 8px var(--theme-cyan);
+  }
+  
+  .card-storia .progress-bar.away {
+    background: var(--theme-cyan);
+    opacity: 0.4;
+  }
+  
+  .card-storia .team-percentage {
+    font-size: 11px;
+    width: 35px;
+  }
+  
+  .card-storia .team-percentage.home {
+    color: var(--theme-cyan);
+    font-weight: bold;
+  }
+  
+  .card-storia .team-percentage.away {
+    color: var(--theme-text-dim);
+  }
+  
+  /* ========================================
+     COLONNA SINISTRA - CARD CAMPO
+     ======================================== */
+  .card-campo {
+    padding: 8px;
+    margin-bottom: 0px;
+    margin-top: -20px;
+    height: auto;
+    overflow: hidden;
+  }
+  
+  .card-campo .header-title {
+    font-size: 9px;
+    color: var(--theme-success);
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  
+  .card-campo .content-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .card-campo .team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .card-campo .team-name {
+    font-size: 11px;
+    color: white;
+    width: 90px;
+  }
+  
+  .card-campo .progress-bar-container {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin: 0 10px;
+  }
+  
+  .card-campo .progress-bar {
+    height: 100%;
+  }
+  
+  .card-campo .progress-bar.home {
+    background: var(--theme-success);
+    box-shadow: 0 0 8px var(--theme-success);
+  }
+  
+  .card-campo .progress-bar.away {
+    background: var(--theme-danger);
+    box-shadow: 0 0 8px var(--theme-danger);
+  }
+  
+  .card-campo .team-percentage {
+    font-size: 11px;
+    font-weight: bold;
+    width: 35px;
+  }
+  
+  .card-campo .team-percentage.home {
+    color: var(--theme-success);
+  }
+  
+  .card-campo .team-percentage.away {
+    color: var(--theme-danger);
+  }
+  
+  /* ========================================
+     COLONNA SINISTRA - CARD AFFIDABILITÀ
+     ======================================== */
+  .card-affidabilita {
+    padding: 8px;
+    margin-bottom: 0px;
+    margin-top: -20px;
+    height: auto;
+    overflow: hidden;
+  }
+  
+  .card-affidabilita .header-title {
+    font-size: 9px;
+    color: var(--theme-warning);
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  
+  .card-affidabilita .content-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .card-affidabilita .team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .card-affidabilita .team-name {
+    font-size: 11px;
+    color: white;
+    width: 90px;
+  }
+  
+  .card-affidabilita .progress-bar-container {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin: 0 10px;
+  }
+  
+  .card-affidabilita .progress-bar {
+    height: 100%;
+  }
+  
+  .card-affidabilita .progress-bar.home {
+    background: var(--theme-warning);
+    box-shadow: 0 0 8px var(--theme-warning);
+  }
+  
+  .card-affidabilita .progress-bar.away {
+    background: var(--theme-danger);
+  }
+  
+  .card-affidabilita .team-percentage {
+    font-size: 11px;
+    font-weight: bold;
+    width: 35px;
+  }
+  
+  .card-affidabilita .team-percentage.home {
+    color: var(--theme-warning);
+  }
+  
+  .card-affidabilita .team-percentage.away {
+    color: var(--theme-danger);
+  }
+  
+  /* ========================================
+     COLONNA DESTRA - CARD BIAS C.O.R.E.
+     ======================================== */
+  .card-bias-core {
+    width: 100%;
+    height: 320px;
+    padding: 8px 5px;
+    border-left: 4px solid var(--theme-purple);
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  /* RESPONSIVE: Mobile - più padding */
+  @media (max-width: 768px) {
+    .card-bias-core {
+      min-height: 350px;
+      padding: 12px 8px;
+    }
+  }
+  
+  .card-bias-core .title-center {
+    width: 100%;
+    text-align: center;
+    margin-top: 0px;
+    margin-bottom: -10px;
+  }
+  
+  .card-bias-core .title-center span {
+    font-size: 10px;
+    color: var(--theme-cyan);
+    font-weight: lighter;
+    letter-spacing: 0.5px;
+  }
+  
+  .card-bias-core .subsection-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    margin-top: 10px;
+    width: 100%;
+    align-items: center;
+  }
+  
+  .card-bias-core .classification-section {
+    display: flex;
+    flex-direction: column;
+    width: 55%;
+    justify-content: center;
+  }
+  
+  .card-bias-core .classification-text {
+    font-size: 15px;
+    font-weight: 900;
+    /* color applicato dinamicamente */
+  }
+  
+  .card-bias-core .integrity-section {
+    text-align: right;
+  }
+  
+  .card-bias-core .integrity-label {
+    font-size: 9px;
+    color: var(--theme-text-dim);
+  }
+  
+  .card-bias-core .integrity-value {
+    font-size: 10px;
+    font-weight: bold;
+    /* color applicato dinamicamente */
+  }
+  
+  .card-bias-core .protocol-box {
+    background: rgba(188, 19, 254, 0.05);
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(188, 19, 254, 0.2);
+    margin-bottom: 8px;
+  }
+  
+  .card-bias-core .protocol-label {
+    font-size: 9px;
+    color: var(--theme-purple);
+    font-weight: bold;
+    margin-bottom: 2px;
+    letter-spacing: 1px;
+  }
+  
+  .card-bias-core .protocol-value {
+    font-size: 13px;
+    font-weight: 900;
+    /* Stili complessi applicati dinamicamente inline */
+  }
+  
+  .card-bias-core .rating-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .card-bias-core .rating-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 5px;
+  }
+  
+  .card-bias-core .rating-title-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  
+  .card-bias-core .rating-title {
+    font-size: 11px;
+    color: var(--theme-text-dim);
+  }
+  
+  .card-bias-core .rating-value {
+    font-size: 13px;
+    font-weight: 900;
+    /* color e text-shadow applicati dinamicamente */
+  }
+  
+  .card-bias-core .rating-bar-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    position: relative;
+    overflow: visible;
+  }
+  
+  .card-bias-core .rating-bar-center-line {
+    position: absolute;
+    left: 46.15%;
+    top: -2px;
+    width: 1px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.4);
+    z-index: 4;
+  }
+  
+  .card-bias-core .rating-bar {
+    position: absolute;
+    height: 100%;
+    border-radius: 3px;
+    z-index: 2;
+    transition: all 0.6s ease-out;
+    /* left/right, width, background, box-shadow applicati dinamicamente */
+  }
+  
+  .card-bias-core .rating-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    font-weight: bold;
+    margin-top: 4px;
+  }
+  
+  .card-bias-core .rating-label-weak {
+    color: rgba(255, 68, 68, 1);
+    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4);
+  }
+  
+  .card-bias-core .rating-label-neutral {
+    color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .card-bias-core .rating-label-strong {
+    color: rgba(0, 255, 136, 1);
+    text-shadow: 0 0 5px rgba(0, 255, 136, 0.4);
+  }
+  
+  .card-bias-core .teams-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 5px;
+  }
+  
+  
+  
+  .card-bias-core .team-item-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+  }
+  
+  .card-bias-core .team-item-name {
+    font-size: 13px;
+    color: white;
+  }
+  
+  .card-bias-core .team-item-value {
+    font-size: 12px;
+    color: var(--theme-purple);
+    font-weight: bold;
+  }
+  
+  .card-bias-core .team-item-bar-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  
+  .card-bias-core .team-item-bar {
+    height: 100%;
+    /* width e background applicati dinamicamente */
+  }
+  
+  .card-bias-core .odds-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 0px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+  }
+  
+  .card-bias-core .odds-item {
+    font-family: monospace;
+    text-align: center;
+  }
+  
+  .card-bias-core .odds-label {
+    font-size: 12px;
+    color: var(--theme-text-dim);
+    margin-bottom: 2px;
+  }
+  
+  .card-bias-core .odds-value {
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    font-size: 14px;
+    color: white;
+    font-weight: bold;
+  }
+  
+  /* ========================================
+     COLONNA DESTRA - RIGA ORIZZONTALE BOTTOM
+     ======================================== */
+  .riga-orizzontale-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  
+  /* RESPONSIVE: Mobile - DNA e CONFIG in verticale */
+  @media (max-width: 768px) {
+    .riga-orizzontale-bottom {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    
+    .card-dna,
+    .card-configurazione {
+      height: auto;
+      min-height: 250px;
+    }
+  }
+  
+  /* ========================================
+     COLONNA DESTRA - CARD DNA SYSTEM
+     ======================================== */
+  .card-dna {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: auto;
+    width: 85%;
+    overflow: hidden;
+  }
+  
+  .card-dna .header-section {
+    width: 100%;
+    border-bottom: 4px solid rgba(255, 255, 255, 0.05);
+    margin-top: -15px;
+    margin-bottom: 30px;
+    padding-bottom: 5px;
+    text-align: left;
+  }
+  
+  .card-dna .header-title {
+    font-size: 10px;
+    color: var(--theme-text-dim);
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 25px;
+  }
+  
+  .card-dna .legend-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .card-dna .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .card-dna .legend-item.home {
+    gap: 10px;
+  }
+  
+  .card-dna .legend-item.away {
+    gap: 4px;
+  }
+  
+  .card-dna .legend-box {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+  
+  .card-dna .legend-box.home {
+    background: var(--theme-cyan);
+    box-shadow: 0 0 5px var(--theme-cyan);
+  }
+  
+  .card-dna .legend-box.away {
+    background: var(--theme-danger);
+    box-shadow: 0 0 5px var(--theme-danger);
+  }
+  
+  .card-dna .legend-text {
+    color: white;
+  }
+  
+  .card-dna .radar-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .card-dna svg {
+    overflow: visible;
+  }
+  
+  /* ========================================
+     COLONNA DESTRA - CARD CONFIGURAZIONE
+     ======================================== */
+  .card-configurazione {
+    padding: 10px;
+    border: 1px solid var(--theme-cyan);
+    background: rgba(0, 240, 255, 0.05);
+    height: auto;
+    width: 85%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+  
+  .card-configurazione .header-title {
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--theme-cyan);
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+  }
+  
+  .card-configurazione select {
+    width: 100%;
+    padding: 6px;
+    background: #000;
+    color: white;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 10px;
+    outline: none;
+  }
+  
+  .card-configurazione .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  
+  
+  
+  .card-configurazione .control-label {
+    font-size: 9px;
+    color: var(--theme-text-dim);
+    margin-bottom: 3px;
+  }
+  
+  .card-configurazione .button-group {
+    display: flex;
+    gap: 2px;
+  }
+  
+  .card-configurazione .control-button {
+    flex: 1;
+    padding: 5px;
+    font-size: 9px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+    /* background e color applicati dinamicamente */
+  }
+  
+  /* Bottoni di controllo - stili applicati dinamicamente inline nel TSX */
+  
+  .card-configurazione .start-button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(90deg, var(--theme-cyan), var(--theme-purple));
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: 900;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+  }

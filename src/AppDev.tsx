@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardHome from './DashboardHome';
 import './BadgeClassifica_pt_pos.css'
+import './styles/AppDev-grid.css';
 
 // --- INTERFACCE & TIPI ---
 
@@ -454,9 +455,9 @@ export default function AppDev() {
 }}>
   {rounds.map(r => {
     const roundNumber = r.name.replace(/[^0-9]/g, ''); 
-    let displayText = roundNumber;
-    if (r.type === 'previous') displayText = `< ${roundNumber}`;
-    if (r.type === 'next') displayText = `${roundNumber} >`;
+    let displayText = `Giornata ${roundNumber}`; // roundNumber;
+    if (r.type === 'previous') displayText = `< Giornata ${roundNumber}`;
+    if (r.type === 'next') displayText = `Giornata ${roundNumber} >`;
 
     const isSelected = selectedRound?.name === r.name;
     const isHovered = hoveredRound === r.name;
@@ -469,7 +470,7 @@ export default function AppDev() {
         onMouseLeave={() => setHoveredRound(null)}
         style={{
           // Dimensioni fisse per farli sembrare "pillole"
-          width: '85px', 
+          width: '185px', 
           height: '38px',
           display: 'flex',
           alignItems: 'center',
@@ -662,10 +663,11 @@ export default function AppDev() {
 
             {/* VS / SCORE */}
             <div style={{
-              background: 'rgba(0, 0, 0, 0.4)', padding: '4px 12px', borderRadius: '8px',
-              fontSize: '12px', fontWeight: 'bold', color: 'rgb(139, 155, 180)',
-              minWidth: '50px', textAlign: 'center', margin: '0 15px',
-              border: '1px solid rgba(255, 255, 255, 0.05)'
+              background: 'rgba(0, 240, 255, 0.1)',  // ← STESSO SFONDO CIANO
+              border: '1px solid rgba(0, 240, 255, 0.3)',  // ← STESSO BORDO, padding: '4px 12px', borderRadius: '8px',
+              fontSize: '15px', fontWeight: 'bold', color: '#fff',
+              borderRadius: '8px',
+              minWidth: '50px', textAlign: 'center', margin: '0 15px',fontFamily: 'monospace'
             }}>
               {(match as any).status === 'Finished' && (match as any).real_score ? (match as any).real_score : 'VS'}
             </div>
@@ -723,63 +725,99 @@ export default function AppDev() {
             </div>
           </div>
 
-          {/* C. QUOTE (Destra - Senza bordi verticali e altezza ridotta) */}
-          <div style={{
-              width: '130px',
-              display: 'flex', 
-              gap: '6px',
-              marginLeft: '10px', // Spazio tra squadre e quote
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              flexShrink: 0
-          }}>
-              {['1', 'X', '2'].map(label => {
-                const val = (odds as any)[label];
-                const numVal = parseFloat(val);
-                
-                // Calcolo favorito
-                const allOdds = [parseFloat(odds['1']), parseFloat(odds['X']), parseFloat(odds['2'])].filter(n => !isNaN(n));
-                const minOdd = Math.min(...allOdds);
-                const isLowest = numVal === minOdd && allOdds.length > 0;
+          {/* C. QUOTE (Destra - Logic: Risultato > Favorita > Standard) */}
+            <div style={{
+                width: '130px',
+                display: 'flex', 
+                gap: '6px',
+                marginLeft: '10px', 
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                flexShrink: 0
+            }}>
+                {/* 1. Calcolo la quota minima tra le tre PRIMA del map */}
+                {(() => {
+                    const o1 = parseFloat((odds as any)['1']);
+                    const oX = parseFloat((odds as any)['X']);
+                    const o2 = parseFloat((odds as any)['2']);
+                    const minOdd = Math.min(o1, oX, o2);
 
-                return (
-                  <div key={label} style={{
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: isLowest ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                    
-                    // ALTEZZA RIDOTTA: Usiamo gli stessi valori della capsula data
-                    padding: '3px 0', 
-                    height: '32px', // Altezza fissa per matchare perfettamente la data
-                    width: '38px',
-                    
-                    borderRadius: '8px',
-                    border: isLowest ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid transparent',
-                    transition: 'all 0.2s'
-                  }}>
-                    <span style={{ 
-                      fontSize: '8px', 
-                      color: isLowest ? 'rgb(0, 240, 255)' : 'rgba(255,255,255,0.2)', 
-                      fontWeight: 'bold',
-                      lineHeight: '1'
-                    }}>
-                      {label}
-                    </span>
-                    <span style={{
-                      fontSize: '11px', 
-                      color: isLowest ? '#fff' : '#ddd', 
-                      fontWeight: isLowest ? '900' : 'normal',
-                      fontFamily: 'monospace',
-                      marginTop: '1px'
-                    }}>
-                      {val}
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
+                    return ['1', 'X', '2'].map(label => {
+                        const val = (odds as any)[label];
+                        const numVal = parseFloat(val);
+                        
+                        // 2. Determina l'esito reale della partita (LOGICA TUA)
+                        const score = match.real_score?.split(':');
+                        let resultOutcome = null;
+                        if (score && score.length === 2) {
+                            const homeGoals = parseInt(score[0]);
+                            const awayGoals = parseInt(score[1]);
+                            if (homeGoals > awayGoals) resultOutcome = '1';       
+                            else if (homeGoals < awayGoals) resultOutcome = '2';  
+                            else if (homeGoals === awayGoals) resultOutcome = 'X'; 
+                        }
+                        
+                        // 3. Controlli Booleani
+                        const isMatchResult = label === resultOutcome; // È il risultato vincente?
+                        const isLowest = numVal === minOdd;            // È la quota favorita?
+
+                        // 4. Logica Colori (Priorità: Risultato > Favorita > Base)
+                        let boxBg = 'rgba(255, 255, 255, 0.05)';     // Base (Grigio scuro)
+                        let boxBorder = '1px solid transparent';     // Base
+                        let numColor = '#ddd';                       // Base
+                        let labelColor = 'rgba(255,255,255,0.2)';    // Base
+
+                        if (isMatchResult) {
+                            // STILE RISULTATO VINCENTE (CIANO - Priorità massima)
+                            boxBg = 'rgba(0, 240, 255, 0.1)';
+                            boxBorder = '1px solid rgba(43, 255, 0, 0.22)';
+                            numColor = 'rgba(51, 255, 0, 0.53)';
+                            labelColor = 'rgb(0, 240, 255)';
+                        } else if (isLowest) {
+                            // STILE FAVORITA/QUOTA BASSA (GIALLO - Se non è già vincente)
+                            boxBg = 'rgba(251, 255, 0, 0.1)';
+                            boxBorder = '1px solid rgba(255, 230, 0, 0.18)';
+                            numColor = 'rgba(238, 255, 0, 0.43)';
+                            labelColor = 'rgba(255, 230, 0, 0.36)';
+                        }
+
+                        return (
+                            <div key={label} style={{
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: boxBg, // Uso le variabili calcolate sopra
+                                padding: '3px 0', 
+                                height: '32px',
+                                width: '38px',
+                                borderRadius: '8px',
+                                border: boxBorder, // Uso le variabili calcolate sopra
+                                transition: 'all 0.2s',
+                                boxShadow: isLowest && !isMatchResult ? '0 0 5px rgba(0, 255, 127, 0.1)' : 'none' // Glow solo se è verde
+                            }}>
+                                <span style={{ 
+                                    fontSize: '8px', 
+                                    color: labelColor, 
+                                    fontWeight: 'bold',
+                                    lineHeight: '1'
+                                }}>
+                                    {label}
+                                </span>
+                                <span style={{
+                                    fontSize: '11px', 
+                                    color: numColor, 
+                                    fontWeight: (isMatchResult || isLowest) ? '900' : 'normal',
+                                    fontFamily: 'monospace',
+                                    marginTop: '1px'
+                                }}>
+                                    {val}
+                                </span>
+                            </div>
+                        );
+                    });
+                })()}
+            </div>
            
         </div>
          
@@ -902,7 +940,7 @@ export default function AppDev() {
     };
 
     // INCOLLA QUESTO PEZZO PRIMA DEL 'return ('
-    const oddsBoxStyle = {
+    /*   const oddsBoxStyle = {
         backgroundColor: 'rgba(255, 255, 255, 0.08)', 
         borderRadius: '4px',                           
         padding: '0px 6px',                           
@@ -913,16 +951,35 @@ export default function AppDev() {
         color: 'white',
         border: '1px solid rgba(255, 255, 255, 0.05)', 
         display: 'inline-block'                        
-    };
+    };*/
 
-    // --- 3. RENDER ---
-    return (
+   // --- 3. RENDER ---
+return (
     <div style={styles.arenaContent}>
       
       {/* HEADER */}
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px', borderBottom:'1px solid rgba(255,255,255,0.1)', paddingBottom:'10px'}}>
-          <button onClick={() => setViewState('list')} style={{background:'transparent', border:'none', color: theme.textDim, cursor:'pointer', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
-            <span>←</span> LISTA
+          {/* TASTO INDIETRO ELEGANTE */}
+          <button 
+               onClick={() => setViewState('list')} 
+               style={{
+                 background: 'rgba(0, 240, 255, 0.1)', 
+                 border: '1px solid rgba(0, 240, 255, 0.3)', 
+                 color: '#00f0ff', 
+                 padding: '8px 16px', 
+                 borderRadius: '8px', 
+                 cursor: 'pointer', 
+                 fontWeight: 'bold',
+                 fontSize: '12px',
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: '6px',
+                 transition: 'all 0.2s'
+               }}
+               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
+               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
+             >
+               ⟵ Lista Partite
           </button>
           <div style={{textAlign:'center'}}>
             <div style={{fontSize:'10px', color: theme.cyan, letterSpacing:'2px'}}>ANALYSIS CORE</div>
@@ -933,595 +990,381 @@ export default function AppDev() {
           <div style={{width:'60px'}}></div>
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', alignItems: 'start'}}>
-        
-        {/* === COLONNA SINISTRA: DATI VISIVI === */}
-        <div style={{display:'flex', flexDirection:'column', gap:'15px'}}>
-           
-           {/* A1. LUCIFERO POWER (SOLO POTENZA ATTUALE) */}
-           <div style={{
-                ...styles.card, 
-                padding:'15px', 
-                marginBottom: '-5px',
-                width: '100%', 
-                minHeight: '100px',
-                boxSizing: 'border-box'
-            }}>
-                <div style={{fontSize:'11px', color: theme.cyan, marginBottom:'15px', fontWeight:'bold', letterSpacing:'2px', borderBottom:'1px solid rgba(0, 240, 255, 0.2)', paddingBottom:'5px'}}>
-                    ⚡ FORMA A.L.1 INDEX
-                </div>
+      {/* === GRIGLIA PRINCIPALE === */}
+      <div className="dashboard-main-grid">
+
+            {/* === COLONNA SINISTRA: DATI VISIVI (5 CARD VERTICALI) === */}
+            <div className="colonna-sinistra-analisi">
                 
-                {/* Casa */}
-                <div>
-                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
-                        <div style={{fontSize:'12px', color:'white'}}>{selectedMatch?.home}</div>
-                        {/* CAMBIATO DA bvs_index A lucifero_home */}
-                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>
-                            {selectedMatch?.h2h_data?.lucifero_home ? selectedMatch.h2h_data.lucifero_home.toFixed(1) : '0.0'}
+                {/* A1. LUCIFERO POWER */}
+                <div className="card-forma" style={styles.card}>
+                    <div className="header-title">⚡ FORMA A.L.1 INDEX</div>
+                    <div>
+                        <div className="team-row">
+                            <div className="team-name">{selectedMatch?.home}</div>
+                            <div className="team-value">
+                                {selectedMatch?.h2h_data?.lucifero_home ? selectedMatch.h2h_data.lucifero_home.toFixed(1) : '0.0'}
+                            </div>
+                        </div>
+                        <div className="progress-bar-container">
+                            <div className="progress-bar home" style={{ 
+                                width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_home || 0) / 25) * 100, 100)}%`
+                            }} />
                         </div>
                     </div>
-                    <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
-                        <div style={{
-                            /* FORMULA AGGIORNATA: usiamo la scala 25 come per le percentuali della lista */
-                            width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_home || 0) / 25) * 100, 100)}%`, 
-                            height:'100%', 
-                            background: theme.success,
-                            boxShadow: `0 0 10px ${theme.success}`
-                        }} />
-                    </div>
-                </div>
-
-                {/* Ospite */}
-                <div>
-                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px', marginTop: '15px'}}>
-                        <div style={{fontSize:'12px', color:'white'}}>{selectedMatch?.away}</div>
-                        {/* CAMBIATO DA bvs_away A lucifero_away */}
-                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>
-                            {selectedMatch?.h2h_data?.lucifero_away ? selectedMatch.h2h_data.lucifero_away.toFixed(1) : '0.0'}
+                    <div className="away-section">
+                        <div className="team-row">
+                            <div className="team-name">{selectedMatch?.away}</div>
+                            <div className="team-value">
+                                {selectedMatch?.h2h_data?.lucifero_away ? selectedMatch.h2h_data.lucifero_away.toFixed(1) : '0.0'}
+                            </div>
+                        </div>
+                        <div className="progress-bar-container">
+                            <div className="progress-bar away" style={{ 
+                                width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_away || 0) / 25) * 100, 100)}%`
+                            }} />
                         </div>
                     </div>
-                    <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
-                        <div style={{
-                            /* FORMULA AGGIORNATA */
-                            width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_away || 0) / 25) * 100, 100)}%`, 
-                            height:'100%', 
-                            background: '#ff9f43', /* Colore arancio per l'ospite come nei trend */
-                            boxShadow: '0 0 10px #ff9f43'
-                        }} />
+                </div>
+
+                {/* A2. TREND INERZIA */}
+                <div className="card-trend" style={styles.card}>
+                    <div className="header-container">
+                        <span className="header-title">📈 TREND INERZIA M.L.5 INDEX</span>
+                        <span className="header-arrow">⟶</span>
+                    </div>
+                    <div className="teams-container">
+                        <div className="team-row">
+                            <div className="team-left-section">
+                                <span className="team-name">{selectedMatch?.home}</span>
+                                <div className="avg-container">
+                                    <span className="avg-value" style={{ color: getTrendColor(Number(homeAvg)) }}>
+                                        {homeAvg}%
+                                    </span>
+                                    <div className="avg-progress-container">
+                                        <div className="avg-progress-bar" style={{ 
+                                            width: `${homeAvg}%`, 
+                                            background: getTrendColor(Number(homeAvg)), 
+                                            boxShadow: `0 0 8px ${getTrendColor(Number(homeAvg))}`
+                                        }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="trend-right-section">
+                                <div className="trend-boxes-container">
+                                    {[...homeTrend].reverse().map((val: number, i: number) => (
+                                        <div key={i} className="trend-box" style={{ 
+                                            background: getTrendColor(val), 
+                                            boxShadow: `0 0 8px ${getTrendColor(val)}`
+                                        }}>
+                                            <span className="trend-box-value">{Math.round(val)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <span className="trend-arrow" style={{ 
+                                    color: getTrendColor(homeTrend[0]), 
+                                    textShadow: `0 0 8px ${getTrendColor(homeTrend[0])}`
+                                }}>⟶</span>
+                            </div>
+                        </div>
+                        <div className="team-row">
+                            <div className="team-left-section">
+                                <span className="team-name">{selectedMatch?.away}</span>
+                                <div className="avg-container">
+                                    <span className="avg-value" style={{ color: getTrendColor(Number(awayAvg)) }}>
+                                        {awayAvg}%
+                                    </span>
+                                    <div className="avg-progress-container">
+                                        <div className="avg-progress-bar" style={{ 
+                                            width: `${awayAvg}%`, 
+                                            background: getTrendColor(Number(awayAvg)), 
+                                            boxShadow: `0 0 8px ${getTrendColor(Number(awayAvg))}`
+                                        }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="trend-right-section">
+                                <div className="trend-boxes-container">
+                                    {[...awayTrend].reverse().map((val: number, i: number) => (
+                                        <div key={i} className="trend-box" style={{ 
+                                            background: getTrendColor(val), 
+                                            boxShadow: `0 0 8px ${getTrendColor(val)}`
+                                        }}>
+                                            <span className="trend-box-value">{Math.round(val)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <span className="trend-arrow" style={{ 
+                                    color: getTrendColor(awayTrend[0]), 
+                                    textShadow: `0 0 8px ${getTrendColor(awayTrend[0])}`
+                                }}>⟶</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* A2. TREND INERZIA - SCALA 10 LIVELLI CON PERCENTUALI INTERNE (%) E FRECCIA */}
-            <div style={{...styles.card, padding:'15px', marginBottom: '15px', width: '100%', boxSizing: 'border-box'}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom:'15px', borderBottom:'1px solid rgba(255,255,255,0.05)', paddingBottom:'5px'}}>
-                    <span style={{fontSize:'11px', color: theme.textDim, fontWeight:'bold', letterSpacing:'1px'}}>
-                        📈 TREND INERZIA M.L.5 INDEX
-                    </span>
-                    <span style={{
-                        fontSize: '18px',           /* Aumentato per rendere l'asta più visibile */
-                        color: theme.cyan, 
-                        position: 'relative', 
-                        left: '-0px',              /* Il tuo posizionamento personalizzato */
-                        fontWeight: 'bold',
-                        textShadow: `0 0 8px ${theme.cyan}`, /* L'effetto "glow" che la rende uguale all'altra */
-                        lineHeight: '1',
-                        display: 'inline-block'
-                    }}>
-                        ⟶
-                    </span>
+                {/* A3. SEZIONE STORIA */}
+                <div className="card-storia" style={styles.card}>
+                    <div className="header-title">⚖️ STORIA (Precedenti)</div>
+                    <div className="content-container">
+                        <div className="team-row">
+                            <span className="team-name">{selectedMatch?.home}</span>
+                            <div className="progress-bar-container">
+                                <div className="progress-bar home" style={{ width: `${historyWeight}%` }} />
+                            </div>
+                            <span className="team-percentage home">{historyWeight}%</span>
+                        </div>
+                        <div className="team-row">
+                            <span className="team-name">{selectedMatch?.away}</span>
+                            <div className="progress-bar-container">
+                                <div className="progress-bar away" style={{ width: `${100 - historyWeight}%` }} />
+                            </div>
+                            <span className="team-percentage away">{100 - historyWeight}%</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                    
-                    {/* RIGA CASA */}
-                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                            <span style={{
-                                fontSize: '14px', color: 'white', fontWeight: 'bold', width: '120px', 
-                                lineHeight: '1', display: 'inline-block', transform: 'translateY(4px)' 
+                {/* A4. SEZIONE CAMPO */}
+                <div className="card-campo" style={styles.card}>
+                    <div className="header-title">🏟️ CAMPO (Fattore Stadio)</div>
+                    <div className="content-container">
+                        <div className="team-row">
+                            <span className="team-name">{selectedMatch?.home}</span>
+                            <div className="progress-bar-container">
+                                <div className="progress-bar home" style={{ width: `${homeFieldFactor}%` }} />
+                            </div>
+                            <span className="team-percentage home">{homeFieldFactor}%</span>
+                        </div>
+                        <div className="team-row">
+                            <span className="team-name">{selectedMatch?.away}</span>
+                            <div className="progress-bar-container">
+                                <div className="progress-bar away" style={{ width: `${awayFieldFactor}%` }} />
+                            </div>
+                            <span className="team-percentage away">{awayFieldFactor}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* A5. SEZIONE AFFIDABILITÀ */}
+                <div className="card-affidabilita" style={styles.card}>
+                    <div className="header-title">🧠 AFFIDABILITÀ (Stabilità)</div>
+                    <div className="content-container">
+                        <div className="team-row">
+                            <span className="team-name">{selectedMatch?.home}</span>
+                            <div className="progress-bar-container">
+                                <div className="progress-bar home" style={{ width: `${homeMotiv}%` }} />
+                            </div>
+                            <span className="team-percentage home">{homeMotiv}%</span>
+                        </div>
+                        <div className="team-row">
+                            <span className="team-name">{selectedMatch?.away}</span>
+                            <div className="progress-bar-container">
+                                <div className="progress-bar away" style={{ width: `${awayMotiv}%` }} />
+                            </div>
+                            <span className="team-percentage away">{awayMotiv}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+
+            {/* === COLONNA DESTRA: ANALISI COMPETITIVA VALORI CORE === */}
+            <div className="colonna-destra-analisi">
+
+                {/* 1. BIAS C.O.R.E. */}
+                <div className="card-bias-core" style={styles.card}>
+                    <div className="title-center">
+                        <span>BIAS C.O.R.E.</span>
+                    </div>
+
+                    <div className="subsection-container">
+                        <div className="classification-section">
+                            <span className="classification-text" style={{
+                                color: selectedMatch?.h2h_data?.classification === 'PURO' ? '#00ff88' : 
+                                       selectedMatch?.h2h_data?.classification === 'SEMI' ? '#ffd000' : '#ff4444' 
                             }}>
-                                {selectedMatch?.home}
+                                {selectedMatch?.h2h_data?.classification === 'PURO' ? '💎 FLUSSO COERENTE' : 
+                                 selectedMatch?.h2h_data?.classification === 'SEMI' ? '⚖️ FLUSSO INSTABILE' : '⚠️ FLUSSO DISCORDANTE'}
                             </span>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '80px', justifyContent: 'center' }}>
-                                <span style={{ fontSize: '11px', color: getTrendColor(Number(homeAvg)), fontWeight: 'bold', lineHeight: '1' }}>
-                                    {homeAvg}%
+                        </div>
+                        <div className="integrity-section">
+                            <div className="integrity-label">INTEGRITÀ DEL FLUSSO</div>
+                            <span className="integrity-value" style={{ 
+                                color: selectedMatch?.h2h_data?.is_linear ? '#00ff88' : '#ff4444' 
+                            }}>
+                                {selectedMatch?.h2h_data?.is_linear ? '✅ SINCRONIZZATO' : '❌ FUORI SINCRO'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="protocol-box">
+                        <div className="protocol-label">PROTOCOLLO OPERATIVO</div>
+                        <div className="protocol-value">
+                            {!selectedMatch?.h2h_data?.is_linear ? (
+                                <span style={{ color: '#ffcc00' }}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+                            ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
+                                <span style={{ color: '#ff4444' }}>⛔ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+                            ) : (
+                                <span style={{
+                                    background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 
+                                        ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.8), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))' 
+                                        : 'linear-gradient(270deg, rgba(217, 255, 0, 0.8), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
+                                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                                    filter: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.4))' : 'drop-shadow(0 0 5px rgba(255, 68, 68, 0.4))',
+                                    display: 'inline-block'
+                                }}>
+                                    🎯 B.T.R. :&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}
                                 </span>
-                                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
-                                    <div style={{ 
-                                        width: `${homeAvg}%`, height: '100%', 
-                                        background: getTrendColor(Number(homeAvg)),
-                                        boxShadow: `0 0 8px ${getTrendColor(Number(homeAvg))}`,
-                                        transition: 'width 0.8s ease-in-out' 
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="rating-section">
+                        <div className="rating-header">
+                            <div className="rating-title-row">
+                                <span className="rating-title">RATING DI COERENZA</span>
+                                <span className="rating-value" style={{
+                                    color: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? 'rgba(0, 255, 136, 1)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? 'rgba(255, 68, 68, 1)' : 'white',
+                                    textShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? '0 0 10px rgba(0, 255, 136, 0.5)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '0 0 10px rgba(255, 68, 68, 0.5)' : 'none'
+                                }}>{Number(selectedMatch?.h2h_data?.bvs_match_index || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="rating-bar-container">
+                                <div className="rating-bar-center-line" />
+                                <div className="rating-bar" style={{
+                                    left: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 ? '46.15%' : 'auto',
+                                    right: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '53.85%' : 'auto',
+                                    width: `${(Math.abs(Number(selectedMatch?.h2h_data?.bvs_match_index || 0)) / 13) * 100}%`,
+                                    background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 
+                                        ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.4), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))' 
+                                        : 'linear-gradient(270deg, rgba(217, 255, 0, 0.4), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
+                                    boxShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? '0 0 10px rgba(51, 255, 0, 0.6)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '0 0 10px rgba(241, 0, 0, 0.6)' : 'none'
+                                }} />
+                            </div>
+                            <div className="rating-labels">
+                                <span className="rating-label-weak">-6.0 (WEAK)</span>
+                                <span className="rating-label-neutral">0.0</span>
+                                <span className="rating-label-strong">+7.0 (STRONG)</span>
+                            </div>
+                        </div>
+                        
+                        <div className="teams-grid">
+                            <div className="team-item">
+                                <div className="team-item-header">
+                                    <div className="team-item-name">{selectedMatch?.home}</div>
+                                    <div className="team-item-value">{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
+                                </div>
+                                <div className="team-item-bar-container">
+                                    <div className="team-item-bar" style={{ 
+                                        width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_index || 0) + 6) / 13) * 100, 0), 100)}%`, 
+                                        background: Number(selectedMatch?.h2h_data?.bvs_index || 0) > 0 ? theme.success : theme.danger 
+                                    }} />
+                                </div>
+                            </div>
+                            <div className="team-item">
+                                <div className="team-item-header">
+                                    <div className="team-item-name">{selectedMatch?.away}</div>
+                                    <div className="team-item-value">{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
+                                </div>
+                                <div className="team-item-bar-container">
+                                    <div className="team-item-bar" style={{ 
+                                        width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_away || 0) + 6) / 13) * 100, 0), 100)}%`, 
+                                        background: Number(selectedMatch?.h2h_data?.bvs_away || 0) > 0 ? theme.success : theme.danger 
                                     }} />
                                 </div>
                             </div>
                         </div>
-                        
-                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                            <div style={{display: 'flex', gap: '5px'}}>
-                                {[...homeTrend].reverse().map((val: number, i: number) => (
-                                    <div key={i} style={{
-                                        width: '36px', height: '14px', borderRadius: '2px', 
-                                        background: getTrendColor(val),
-                                        opacity: 0.9,
-                                        boxShadow: `0 0 8px ${getTrendColor(val)}`,
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <span style={{ fontSize: '8px', color: '#000', fontWeight: '900', letterSpacing: '-0.5px' }}>
-                                            {Math.round(val)}%
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                            <span style={{ 
-                                fontSize: '18px', fontWeight: 'bold', 
-                                color: getTrendColor(homeTrend[0]), 
-                                textShadow: `0 0 8px ${getTrendColor(homeTrend[0])}`
-                            }}>
-                                ⟶
-                            </span>
-                        </div>
                     </div>
 
-                    {/* RIGA OSPITE */}
-                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                            <span style={{
-                                fontSize: '14px', color: 'white', fontWeight: 'bold', width: '120px', 
-                                lineHeight: '1', display: 'inline-block', transform: 'translateY(4px)'
-                            }}>
-                                {selectedMatch?.away}
-                            </span>
+                    <div className="odds-section">
+                        {['1', 'X', '2'].map((q) => (
+                            <div key={q} className="odds-item">
+                                <div className="odds-label">{q}</div>
+                                <div className="odds-value">
+                                    {selectedMatch?.odds?.[q] ? Number(selectedMatch.odds[q]).toFixed(2) : '-'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '80px', justifyContent: 'center' }}>
-                                <span style={{ fontSize: '11px', color: getTrendColor(Number(awayAvg)), fontWeight: 'bold', lineHeight: '1' }}>
-                                    {awayAvg}%
-                                </span>
-                                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
-                                    <div style={{ 
-                                        width: `${awayAvg}%`, height: '100%', 
-                                        background: getTrendColor(Number(awayAvg)),
-                                        boxShadow: `0 0 8px ${getTrendColor(Number(awayAvg))}`,
-                                        transition: 'width 0.8s ease-in-out' 
-                                    }} />
+                {/* 2. RIGA ORIZZONTALE BOTTOM (DNA E CONFIGURAZIONE AFFIANCATI) */}
+                <div className="riga-orizzontale-bottom">
+                    
+                    {/* DNA SYSTEM */}
+                    <div className="card-dna" style={styles.card}>
+                        <div className="header-section">
+                            <div className="header-title">🕸️ DNA SYSTEM</div>
+                            <div className="legend-container">
+                                <div className="legend-item home">
+                                    <div className="legend-box home"></div>
+                                    <span className="legend-text">{selectedMatch?.home.substring(0, 12)}</span>
+                                </div>
+                                <div className="legend-item away">
+                                    <div className="legend-box away"></div>
+                                    <span className="legend-text">{selectedMatch?.away.substring(0, 12)}</span>
                                 </div>
                             </div>
                         </div>
+                        <div className="radar-container">
+                            <svg width="180" height="180" viewBox="0 0 120 120">
+                                {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}
+                                <text x="60" y="5" fontSize="8" fill="#fff" textAnchor="middle" fontWeight="bold">ATT</text>
+                                <text x="115" y="45" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">TEC</text>
+                                <text x="95" y="115" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">DIF</text>
+                                <text x="25" y="115" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">VAL</text>
+                                <text x="5" y="45" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">FRM</text>
+                                {drawPentagramRadar(homeRadar, theme.cyan)}
+                                {drawPentagramRadar(awayRadar, theme.danger)}
+                            </svg>
+                        </div>
+                    </div>
 
-                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                            <div style={{display: 'flex', gap: '5px'}}>
-                                {[...awayTrend].reverse().map((val: number, i: number) => (
-                                    <div key={i} style={{
-                                        width: '36px', height: '14px', borderRadius: '2px',
-                                        background: getTrendColor(val),
-                                        opacity: 0.9,
-                                        boxShadow: `0 0 8px ${getTrendColor(val)}`,
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <span style={{ fontSize: '8px', color: '#000', fontWeight: '900', letterSpacing: '-0.5px' }}>
-                                            {Math.round(val)}%
-                                        </span>
-                                    </div>
-                                ))}
+                    {/* CONFIGURAZIONE SIMULAZIONE */}
+                    <div className="card-configurazione" style={styles.card}>
+                        <div className="header-title">⚙️ CONFIGURAZIONE SIMULAZIONE</div>
+                        <select>
+                            <option value="6">Lucifero V4 (Standard)</option>
+                            <option value="5">Neural Network Beta</option>
+                            <option value="1">Poisson Simple</option>
+                        </select>
+                        <div className="controls-grid">
+                            <div className="control-group">
+                                <div className="control-label">CICLI</div>
+                                <div className="button-group">
+                                    {['100', '500'].map((d) => (
+                                        <button key={d} onClick={() => setSimDepth(d === '100' ? 'quick' : 'normal')} className="control-button" style={{ 
+                                            background: (simDepth === 'quick' && d === '100') || (simDepth === 'normal' && d === '500') ? theme.cyan : '#222',
+                                            color: (simDepth === 'quick' && d === '100') || (simDepth === 'normal' && d === '500') ? 'black' : '#888'
+                                        }}>{d}</button>
+                                    ))}
+                                </div>
                             </div>
-                            <span style={{ 
-                                fontSize: '18px', fontWeight: 'bold', 
-                                color: getTrendColor(awayTrend[0]), 
-                                textShadow: `0 0 8px ${getTrendColor(awayTrend[0])}`
-                            }}>
-                                ⟶
-                            </span>
+                            <div className="control-group">
+                                <div className="control-label">MODO</div>
+                                <div className="button-group">
+                                    <button onClick={() => setSimMode('fast')} className="control-button" style={{ 
+                                        background: simMode === 'fast' ? theme.success : '#222', 
+                                        color: simMode === 'fast' ? 'black' : '#888'
+                                    }}>⚡</button>
+                                    <button onClick={() => setSimMode('animated')} className="control-button" style={{ 
+                                        background: simMode === 'animated' ? theme.purple : '#222', 
+                                        color: simMode === 'animated' ? 'white' : '#888'
+                                    }}>🎬</button>
+                                </div>
+                            </div>
                         </div>
+                        <button className="start-button" onClick={startSimulation}>
+                            AVVIA SIMULAZIONE
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            {/* B. DNA SYSTEM (SPOSTATO IN BASSO A SINISTRA) */}
-
-           <div style={{
-               ...styles.card, 
-               padding: '15px',
-               marginTop: '100px',    // Questa riga lo spinge in basso
-               marginBottom: '10px', 
-               display: 'flex', 
-               flexDirection: 'column', 
-               alignItems: 'center', 
-               justifyContent: 'center', 
-               width: '260px', 
-               height: '260px', 
-               alignSelf: 'flex-start' // Lo ancora tutto a sinistra
-           }}>
-               <div style={{width:'100%', borderBottom:'4px solid rgba(255,255,255,0.05)',marginTop:'-15px', marginBottom:'30px', paddingBottom:'5px', textAlign:'left'}}>
-                    <div style={{fontSize:'10px', color: theme.textDim, fontWeight:'bold', letterSpacing:'1px', marginBottom:'25px'}}>🕸️ DNA SYSTEM</div>
-                    
-                    <div style={{display:'flex', justifyContent:'center', gap:'12px', fontSize:'12px', fontWeight:'bold'}}>
-                       <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                           <div style={{width:'8px', height:'8px', background: theme.cyan, borderRadius:'2px', boxShadow:`0 0 5px ${theme.cyan}`}}></div>
-                           <span style={{color: 'white'}}>{selectedMatch?.home.substring(0,12)}</span>
-                       </div>
-                       <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
-                           <div style={{width:'8px', height:'8px', background: theme.danger, borderRadius:'2px', boxShadow:`0 0 5px ${theme.danger}`}}></div>
-                           <span style={{color: 'white'}}>{selectedMatch?.away.substring(0,12)}</span>
-                       </div>
-                    </div>
-               </div>
-               
-               <div style={{position:'relative', width:'170px', height:'170px', marginTop:'-5px'}}> 
-                   <svg width="180" height="180" viewBox="0 0 120 120" style={{overflow:'visible'}}>
-                       {drawPentagonGrid(45, 0.5)}  
-                       {drawPentagonGrid(30, 0.2)}  
-                       {drawPentagonGrid(15, 0.2)}  
-                       {drawPentagonAxes()}
-
-                       <text x="60" y="5" fontSize="8" fill="#fff" textAnchor="middle" fontWeight="bold">ATT</text> 
-                       <text x="115" y="45" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">TEC</text> 
-                       <text x="95" y="115" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">DIF</text> 
-                       <text x="25" y="115" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">VAL</text> 
-                       <text x="5" y="45" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">FRM</text> 
-
-                       {drawPentagramRadar(homeRadar, theme.cyan)}
-                       {drawPentagramRadar(awayRadar, theme.danger)}
-                   </svg>
-               </div>
-           </div>
-        </div>
-
-        {/* === COLONNA DESTRA: ANALISI COMPETITIVA VALORI CORE === */}
-        <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-            
-        {/* === SEZIONE BVS: LOGICA UFFICIALE DA MANUALE === */}
-        <div style={{
-            ...styles.card, 
-            width: '100%', 
-            padding:'8px 5px', // Padding verticale leggermente aumentato, laterale ridotto
-            borderLeft: `4px solid ${theme.purple}`, 
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-            display: 'flex', 
-            flexDirection: 'column',
-            justifyContent: 'space-between', // Aiuta a distribuire lo spazio se avanza
-            height: '100%' // Tenta di occupare l'altezza disponibile (se il genitore lo permette)
-        }}>
-    
-    {/* TITOLO CENTRATO (Ridotto margine) */}
-    <div style={{width: '100%', textAlign: 'center',marginTop: '-15px', marginBottom: '-10px'}}>
-        <span style={{fontSize:'10px', color: theme.cyan, fontWeight:'lighter', letterSpacing:'0.5px'}}>BIAS C.O.R.E.</span>
-    </div>
-
-    {/* SOTTO-SEZIONE DIVISA (Ridotto margine inferiore) */}
-    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px', marginTop:'10px', width:'100%', alignItems:'center'}}>
-        <div style={{display:'flex', flexDirection:'column', width: '55%', justifyContent:'center'}}>
-            <span style={{
-                fontSize:'15px', // Ridotto da 16px per risparmiare spazio
-                fontWeight:'900', 
-                color: selectedMatch?.h2h_data?.classification === 'PURO' ? '#00ff88' : 
-                       selectedMatch?.h2h_data?.classification === 'SEMI' ? '#ffd000' : 
-                       '#ff4444' 
-            }}>
-                {selectedMatch?.h2h_data?.classification === 'PURO' ? '💎 FLUSSO COERENTE' : 
-                 selectedMatch?.h2h_data?.classification === 'SEMI' ? '⚖️ FLUSSO INSTABILE' : '⚠️ FLUSSO DISCORDANTE'}
-            </span>
-        </div>
-        <div style={{textAlign:'right'}}>
-            <div style={{fontSize:'9px', color: theme.textDim}}>INTEGRITÀ DEL FLUSSO</div>
-            <span style={{fontSize:'10px', fontWeight:'bold', color: selectedMatch?.h2h_data?.is_linear ? '#00ff88' : '#ff4444'}}>
-                {selectedMatch?.h2h_data?.is_linear ? '✅ SINCRONIZZATO' : '❌ FUORI SINCRO'}
-            </span>
-        </div>
-    </div>
-
-    {/* BOX PROTOCOLLO OPERATIVO (Compattato drasticamente) */}
-    <div style={{
-    background: 'rgba(188, 19, 254, 0.05)', 
-    padding: '6px 8px', 
-    borderRadius: '6px', 
-    border: '1px solid rgba(188, 19, 254, 0.2)', 
-    marginBottom: '8px' 
-}}>
-    <div style={{fontSize: '9px', color: theme.purple, fontWeight: 'bold', marginBottom: '2px', letterSpacing: '1px'}}>
-        PROTOCOLLO OPERATIVO
-    </div>
-    <div style={{fontSize: '13px', fontWeight: '900'}}>
-        {!selectedMatch?.h2h_data?.is_linear ? (
-            <span style={{color: '#ffcc00'}}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
-        ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
-            <span style={{color: '#ff4444'}}>⛔ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
-        ) : (
-            <span style={{
-                // EFFETTO SFUMATURA DINAMICA SUL TESTO
-                background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 
-                    ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.8), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))' 
-                    : 'linear-gradient(270deg, rgba(217, 255, 0, 0.8), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                // EFFETTO NEON (BAGLIORE)
-                filter: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0
-                    ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.4))'
-                    : 'drop-shadow(0 0 5px rgba(255, 68, 68, 0.4))',
-                display: 'inline-block'
-            }}>
-                🎯 B.T.R. :&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}
-            </span>
-        )}
-    </div>
-</div>
-
-            {/* LE TRE BARRE DI INDICE */}
-            <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-               
-                {/* 1. MATCH INDEX (RATING DI COERENZA: SFUMATURA + NEON) */}
-                <div style={{display:'flex', flexDirection:'column', gap:'4px', marginTop: '5px'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'13px', fontWeight:'bold'}}>
-                        <span style={{fontSize:'11px', color: theme.textDim}}>RATING DI COERENZA</span>
-                        
-                        {/* Valore con 2 decimali e "Glow" sul testo */}
-                        <span style={{
-                            fontSize: '13px',
-                            fontWeight: '900',
-                            color: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? 'rgba(0, 255, 136, 1)' : 
-                                Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? 'rgba(255, 68, 68, 1)' : 'white',
-                            textShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 
-                                ? '0 0 10px rgba(0, 255, 136, 0.5)' 
-                                : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 
-                                ? '0 0 10px rgba(255, 68, 68, 0.5)' : 'none'
-                        }}>
-                            {Number(selectedMatch?.h2h_data?.bvs_match_index || 0).toFixed(2)}
-                        </span>
-                    </div>
-
-                    {/* Contenitore Barra (6px - Sottile) */}
-                    <div style={{
-                        width:'100%', 
-                        height:'6px', 
-                        background:'rgba(255,255,255,0.05)', 
-                        borderRadius:'3px', 
-                        position: 'relative',
-                        overflow: 'visible' // Necessario per far vedere il bagliore neon che "esce" dalla barra
-                    }}>
-                        {/* Spartiacque dello ZERO (Sottile) */}
-                        <div style={{
-                            position: 'absolute',
-                            left: '46.15%', 
-                            top: '-2px',
-                            width: '1px',
-                            height: '10px',
-                            background: 'rgba(255,255,255,0.4)',
-                            zIndex: 4
-                        }} />
-
-                        {/* LA BARRA: SFUMATURA + NEON GLOW */}
-                        <div style={{
-                            position: 'absolute',
-                            left: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 ? '46.15%' : 'auto',
-                            right: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '53.85%' : 'auto',
-                            width: `${Math.abs(Number(selectedMatch?.h2h_data?.bvs_match_index || 0)) / 13 * 100}%`,
-                            height: '100%',
-                            
-                            // 1. EFFETTO SFUMATURA (Sullo sfondo della barra)
-                            background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 
-                            ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.4), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))' 
-                            : 'linear-gradient(270deg, rgba(217, 255, 0, 0.4), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
-                            
-                            // 2. EFFETTO NEON (Bagliore esterno che segue il colore dominante)
-                            boxShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 
-                                ? '0 0 10px rgba(51, 255, 0, 0.6)' 
-                                : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 
-                                ? '0 0 10px rgba(241, 0, 0, 0.6)' : 'none',
-                            
-                            borderRadius: '3px',
-                            zIndex: 2,
-                            transition: 'all 0.6s ease-out'
-                        }} />
-                    </div>
-                    
-                    {/* ETICHETTE DI RIFERIMENTO COLORATE NEON */}
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'9px', fontWeight:'bold', marginTop: '4px'}}>
-                        <span style={{
-                            color: 'rgba(255, 68, 68, 1)', 
-                            textShadow: '0 0 5px rgba(255, 68, 68, 0.4)'
-                        }}>-6.0 (WEAK)</span>
-                        
-                        <span style={{color: 'rgba(255,255,255,0.3)'}}>0.0</span>
-                        
-                        <span style={{
-                            color: 'rgba(0, 255, 136, 1)', 
-                            textShadow: '0 0 5px rgba(0, 255, 136, 0.4)'
-                        }}>+7.0 (STRONG)</span>
-                    </div>
-                </div>
-
-                {/* 2. BARRE TEAM (VALORE INDIVIDUALE) */}
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px', marginTop:'5px'}}>
-                    {/* Casa */}
-                <div>
-                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
-                        <div style={{fontSize:'13px', color:'white'}}>{selectedMatch?.home}</div>
-                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_index || '0.0'}</div>
-                    </div>
-                    <div style={{width:'100%', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', overflow:'hidden'}}>
-                        <div style={{
-                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_index || 0) + 6) / 13) * 100, 0), 100)}%`, 
-                            height:'100%', 
-                            background: Number(selectedMatch?.h2h_data?.bvs_index || 0) > 0 ? theme.success : theme.danger
-                        }} />
-                    </div>
-                </div>
-
-                {/* Ospite */}
-                <div>
-                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'3px'}}>
-                        <div style={{fontSize:'13px', fontWeight:'9px', color:'white'}}>{selectedMatch?.away}</div>
-                        <div style={{fontSize:'12px', color: theme.purple, fontWeight:'bold'}}>{selectedMatch?.h2h_data?.bvs_away || '0.0'}</div>
-                    </div>
-                    <div style={{width:'100%', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', overflow:'hidden'}}>
-                        <div style={{
-                            width: `${Math.min(Math.max(((Number(selectedMatch?.h2h_data?.bvs_away || 0) + 6) / 13) * 100, 0), 100)}%`, 
-                            height:'100%', 
-                            background: Number(selectedMatch?.h2h_data?.bvs_away || 0) > 0 ? theme.success : theme.danger
-                        }} />
-                    </div>
-                </div>
-            </div>
-
-            {/* SEZIONE QUOTE: Allunga il box verso il basso */}
-            <div style={{
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-                paddingTop: '0px',
-                marginTop: '10px',
-                display: 'flex',
-                justifyContent: 'space-around',
-                alignItems: 'flex-end'
-            }}>
-                {/* QUOTA 1 */}
-                <div style={{ fontFamily: 'monospace', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: theme.textDim, marginBottom:'2px' }}>1</div>
-                    <div style={oddsBoxStyle}>
-                        {selectedMatch?.odds?.['1'] ? Number(selectedMatch.odds['1']).toFixed(2) : '-'}
-                    </div>
-                </div>
-
-                {/* QUOTA X */}
-                <div style={{ fontFamily: 'monospace', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: theme.textDim, marginBottom:'2px' }}>X</div>
-                    <div style={oddsBoxStyle}>
-                        {selectedMatch?.odds?.['X'] ? Number(selectedMatch.odds['X']).toFixed(2) : '-'}
-                    </div>
-                </div>
-
-                {/* QUOTA 2 */}
-                <div style={{ fontFamily: 'monospace', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: theme.textDim, marginBottom:'2px' }}>2</div>
-                    <div style={oddsBoxStyle}>
-                        {selectedMatch?.odds?.['2'] ? Number(selectedMatch.odds['2']).toFixed(2) : '-'}
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
-
-            {/* 2. SEZIONE STORIA (PRECEDENTI) */}
-            <div style={{...styles.card, padding:'12px', marginBottom: 0}}>
-                <div style={{fontSize:'9px', color: theme.cyan, fontWeight:'bold', letterSpacing:'1px', marginBottom:'10px', textTransform:'uppercase'}}>⚖️ STORIA (Precedenti)</div>
-                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.home}</span>
-                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
-                            <div style={{width:`${historyWeight}%`, height:'100%', background:theme.cyan, boxShadow:`0 0 8px ${theme.cyan}`}} />
-                        </div>
-                        <span style={{fontSize:'11px', color:theme.cyan, fontWeight:'bold', width:'35px'}}>{historyWeight}%</span>
-                    </div>
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.away}</span>
-                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
-                            <div style={{width:`${100 - historyWeight}%`, height:'100%', background:theme.cyan, opacity:0.4}} />
-                        </div>
-                        <span style={{fontSize:'11px', color:theme.textDim, width:'35px'}}>{100 - historyWeight}%</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* 3. SEZIONE CAMPO (FATTORI AMBIENTALI) */}
-            <div style={{...styles.card, padding:'12px', marginBottom: 0}}>
-                <div style={{fontSize:'9px', color: theme.success, fontWeight:'bold', letterSpacing:'1px', marginBottom:'10px', textTransform:'uppercase'}}>🏟️ CAMPO (Fattore Stadio)</div>
-                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.home}</span>
-                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
-                            <div style={{width:`${homeFieldFactor}%`, height:'100%', background:theme.success, boxShadow:`0 0 8px ${theme.success}`}} />
-                        </div>
-                        <span style={{fontSize:'11px', color:theme.success, fontWeight:'bold', width:'35px'}}>{homeFieldFactor}%</span>
-                    </div>
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.away}</span>
-                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
-                            <div style={{width:`${awayFieldFactor}%`, height:'100%', background:theme.danger, boxShadow:`0 0 8px ${theme.danger}`}} />
-                        </div>
-                        <span style={{fontSize:'11px', color:theme.danger, fontWeight:'bold', width:'35px'}}>{awayFieldFactor}%</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* 4. SEZIONE AFFIDABILITÀ (PSICOLOGIA) */}
-            <div style={{...styles.card, padding:'12px', marginBottom: 0}}>
-                <div style={{fontSize:'9px', color: theme.warning, fontWeight:'bold', letterSpacing:'1px', marginBottom:'10px', textTransform:'uppercase'}}>🧠 AFFIDABILITÀ (Stabilità)</div>
-                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.home}</span>
-                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
-                            <div style={{width:`${homeMotiv}%`, height:'100%', background:theme.warning, boxShadow:`0 0 8px ${theme.warning}`}} />
-                        </div>
-                        <span style={{fontSize:'11px', color:theme.warning, fontWeight:'bold', width:'35px'}}>{homeMotiv}%</span>
-                    </div>
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                        <span style={{fontSize:'11px', color:'white', width:'90px'}}>{selectedMatch?.away}</span>
-                        <div style={{flex:1, height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'2px', margin:'0 10px'}}>
-                            <div style={{width:`${awayMotiv}%`, height:'100%', background:theme.danger}} />
-                        </div>
-                        <span style={{fontSize:'11px', color:theme.danger, fontWeight:'bold', width:'35px'}}>{awayMotiv}%</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* 3. CONFIGURAZIONE (ECCOLI TORNATI!) */}
-            <div style={{...styles.card, padding:'15px', border:`1px solid ${theme.cyan}`, background:'rgba(0, 240, 255, 0.05)'}}>
-                <div style={{fontSize:'10px', fontWeight:'bold', color: theme.cyan, borderBottom:'1px solid rgba(0,240,255,0.2)', paddingBottom:'5px', marginBottom:'10px'}}>
-                    ⚙️ CONFIGURAZIONE SIMULAZIONE
-                </div>
-
-                {/* ALGORITMO */}
-                <div style={{marginBottom:'10px'}}>
-                    <select style={{width:'100%', padding:'6px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'4px', fontSize:'10px', outline:'none'}}>
-                        <option value="6">Lucifero V4 (Standard)</option>
-                        <option value="5">Neural Network Beta</option>
-                        <option value="1">Poisson Simple</option>
-                    </select>
-                </div>
-
-                {/* CICLI & MODE GRID */}
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'15px'}}>
-                    <div>
-                        <div style={{fontSize:'9px', color: theme.textDim, marginBottom:'3px'}}>CICLI</div>
-                        <div style={{display:'flex', gap:'2px'}}>
-                            {['100', '500'].map((d: any) => (
-                                <button key={d} onClick={() => setSimDepth(d==='100'?'quick':'normal')} style={{
-                                    flex:1, padding:'5px', fontSize:'9px', cursor:'pointer',
-                                    background: (simDepth==='quick'&&d==='100')||(simDepth==='normal'&&d==='500') ? theme.cyan : '#222',
-                                    color: (simDepth==='quick'&&d==='100')||(simDepth==='normal'&&d==='500') ? 'black' : '#888',
-                                    border: 'none', borderRadius:'3px'
-                                }}>{d}</button>
-                            ))}
-                        </div>
-                    </div>
-                    <div>
-                        <div style={{fontSize:'9px', color: theme.textDim, marginBottom:'3px'}}>MODO</div>
-                        <div style={{display:'flex', gap:'2px'}}>
-                            <button onClick={() => setSimMode('fast')} style={{flex:1, padding:'5px', fontSize:'9px', background: simMode==='fast'?theme.success:'#222', color:simMode==='fast'?'black':'#888', border:'none', borderRadius:'3px'}}>⚡</button>
-                            <button onClick={() => setSimMode('animated')} style={{flex:1, padding:'5px', fontSize:'9px', background: simMode==='animated'?theme.purple:'#222', color:simMode==='animated'?'white':'#888', border:'none', borderRadius:'3px'}}>🎬</button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* TASTO AVVIO */}
-                <button 
-                     onClick={startSimulation}
-                     style={{
-                       width:'100%', padding:'12px', background: `linear-gradient(90deg, ${theme.cyan}, ${theme.purple})`,
-                       border:'none', borderRadius:'6px', color:'white', fontWeight:'900', fontSize:'12px',
-                       cursor:'pointer', letterSpacing:'1px', boxShadow: `0 0 15px rgba(0, 240, 255, 0.3)`
-                     }}
-                   >
-                     AVVIA SIMULAZIONE
-                </button>
             </div>
         </div>
       </div>
-    </div>
-    );
-  };
+    
+);
+};
+
+ 
 
   const renderResult = () => (
     <div style={styles.arenaContent}>
@@ -1640,7 +1483,7 @@ export default function AppDev() {
                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
              >
-               ← DASHBOARD
+               ⟵ DASHBOARD
              </button>
 
              {/* LOGO CON PALLONE ILLUMINATO */}

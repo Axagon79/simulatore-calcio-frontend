@@ -893,8 +893,25 @@ export default function AppDev() {
     const awayAvg = (awayTrend.reduce((a: number, b: number) => a + b, 0) / 5).toFixed(1);
     
     // Pentagono (5 Assi)
-    const homeRadar = [88, 85, 70, 90, 95]; 
-    const awayRadar = [60, 50, 45, 55, 40];
+    const homeDNA = selectedMatch?.h2h_data?.h2h_dna?.home_dna;
+    const awayDNA = selectedMatch?.h2h_data?.h2h_dna?.away_dna;
+
+
+    // La mappatura corretta basata sul tuo screenshot
+    const homeRadar = [
+        homeDNA?.att || 0, // 1. ATT (In alto)
+        homeDNA?.tec || 0, // 2. TEC (A destra)
+        homeDNA?.def || 0, // 3. DIF (In basso a destra)
+        homeDNA?.val || 0, // 4. VAL (In basso a sinistra)
+        Number(homeAvg)    // 5. FRM  MEDIA TREND (Forma)
+   ];
+      const awayRadar = [
+        awayDNA?.att || 0, // 1. ATT (In alto)
+        awayDNA?.tec || 0, // 2. TEC (A destra) 
+        awayDNA?.def || 0, // 3. DIF (In basso a destra)
+        awayDNA?.val || 0, // 4. VAL (In basso a sinistra)
+        Number(awayAvg)    // 5. FRM  MEDIA TREND (Forma)
+      ];
 
     // Psicologia
     const homeMotiv = 90; const awayMotiv = 45;
@@ -1307,11 +1324,37 @@ return (
                         <div className="radar-container">
                             <svg width="180" height="180" viewBox="0 0 120 120">
                                 {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}
+                                
+                                {/* ETICHETTE ASSI */}
                                 <text x="60" y="5" fontSize="8" fill="#fff" textAnchor="middle" fontWeight="bold">ATT</text>
                                 <text x="115" y="45" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">TEC</text>
                                 <text x="95" y="115" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">DIF</text>
                                 <text x="25" y="115" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">VAL</text>
                                 <text x="5" y="45" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">FRM</text>
+
+                                {/* VALORI PERCENTUALI SULLE 5 PUNTE */}
+                                
+                                {/* 1. ATT (In alto) */}
+                                {homeRadar[0] > 0 && <text x="72" y="5" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[0])}%</text>}
+                                {awayRadar[0] > 0 && <text x="48" y="5" fontSize="7" fill={theme.danger} textAnchor="end" fontWeight="bold">{Math.round(awayRadar[0])}%</text>}
+
+                                {/* 2. TEC (A destra) */}
+                                {homeRadar[1] > 0 && <text x="115" y="54" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[1])}%</text>}
+                                {awayRadar[1] > 0 && <text x="115" y="62" fontSize="7" fill={theme.danger} fontWeight="bold">{Math.round(awayRadar[1])}%</text>}
+
+                                {/* 3. DIF (In basso a destra) */}
+                                {homeRadar[2] > 0 && <text x="95" y="124" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[2])}%</text>}
+                                {awayRadar[2] > 0 && <text x="110" y="124" fontSize="7" fill={theme.danger} fontWeight="bold">{Math.round(awayRadar[2])}%</text>}
+
+                                {/* 4. VAL (In basso a sinistra) */}
+                                {homeRadar[3] > 0 && <text x="10" y="124" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[3])}%</text>}
+                                {awayRadar[3] > 0 && <text x="25" y="124" fontSize="7" fill={theme.danger} fontWeight="bold">{Math.round(awayRadar[3])}%</text>}
+
+                                {/* 5. FRM (A sinistra) */}
+                                {homeRadar[4] > 0 && <text x="5" y="54" fontSize="7" fill={theme.cyan} textAnchor="end" fontWeight="bold">{Math.round(homeRadar[4])}%</text>}
+                                {awayRadar[4] > 0 && <text x="5" y="62" fontSize="7" fill={theme.danger} textAnchor="end" fontWeight="bold">{Math.round(awayRadar[4])}%</text>}
+
+                                {/* DISEGNO RADAR */}
                                 {drawPentagramRadar(homeRadar, theme.cyan)}
                                 {drawPentagramRadar(awayRadar, theme.danger)}
                             </svg>

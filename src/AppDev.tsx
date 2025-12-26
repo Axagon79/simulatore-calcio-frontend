@@ -284,6 +284,12 @@ export default function AppDev() {
   const [timer, setTimer] = useState(0);
   const [animEvents, setAnimEvents] = useState<string[]>([]);
   const [momentum, setMomentum] = useState(50); // 0 = Away domina, 100 = Home domina
+
+  // Stato per gestire quale radar è visibile: 'all' (tutti), 'home' (solo casa), 'away' (solo ospite)
+  const [radarFocus, setRadarFocus] = useState<'all' | 'home' | 'away'>('all');
+
+  // Stato per il tooltip del singolo punto (quando passi sulle punte)
+  const [pointTooltip, setPointTooltip] = useState<{x: number, y: number, val: number, color: string} | null>(null);
   
   // STATO CHATBOT (Ora inizializzato a FALSE = Chiuso)
   const [chatOpen, setChatOpen] = useState(false);
@@ -1223,17 +1229,61 @@ export default function AppDev() {
     // --- 2. HELPER GRAFICI ---
 
     const drawPentagramRadar = (stats: number[], color: string) => {
-        const center = 60; // Centro ridotto
-        const radius = 45; // Raggio ridotto (meno ingombrante)
-        const totalPoints = 5;
-        const points = stats.map((v, i) => {
-            const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
-            const x = center + (v / 100) * radius * Math.cos(angle);
-            const y = center + (v / 100) * radius * Math.sin(angle);
-            return `${x},${y}`;
-        }).join(' ');
-        return <polygon points={points} fill={color} fillOpacity={0.4} stroke={color} strokeWidth="2" />;
-    };
+      const center = 60; 
+      const radius = 45; 
+      const totalPoints = 5;
+
+      // Calcolo coordinate
+      const pointsData = stats.map((v, i) => {
+          const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
+          const x = center + (v / 100) * radius * Math.cos(angle);
+          const y = center + (v / 100) * radius * Math.sin(angle);
+          return { x, y, val: v };
+      });
+
+      const pointsString = pointsData.map(p => `${p.x},${p.y}`).join(' ');
+
+      return (
+          <g>
+              {/* IL POLIGONO DI SFONDO */}
+              <polygon 
+                  points={pointsString} 
+                  fill={color} 
+                  fillOpacity={radarFocus === 'all' ? 0.4 : 0.6} 
+                  stroke={color} 
+                  strokeWidth="1" 
+                  // MODIFICA FONDAMENTALE: Ignora il mouse sul colore pieno, così non blocca le punte sotto
+                  style={{ transition: 'all 0.3s ease', pointerEvents: 'none' }} 
+              />
+
+              {/* PUNTI INTERATTIVI (Cerchi Invisibili) */}
+              {pointsData.map((p, i) => (
+                  <circle
+                      key={i}
+                      cx={p.x}
+                      cy={p.y}
+                      r={3} // <--- MODIFICA QUI: Ridotto da 8 a 3.5 per massima precisione
+                      fill="transparent"
+                      style={{ cursor: 'pointer' }}
+                      onMouseEnter={() => setPointTooltip({ x: p.x, y: p.y, val: p.val, color: color })}
+                      onMouseLeave={() => setPointTooltip(null)}
+                  />
+              ))}
+
+              {/* PALLINI VISIBILI (Decorazione) */}
+              {pointsData.map((p, i) => (
+                  <circle
+                      key={`dot-${i}`}
+                      cx={p.x}
+                      cy={p.y}
+                      r={1.5}
+                      fill={color}
+                      pointerEvents="none" // Importante: non deve interferire col mouse
+                  />
+              ))}
+          </g>
+      );
+  };
 
     const drawPentagonGrid = (radius: number, opacity: number) => {
         const center = 60;
@@ -1662,53 +1712,50 @@ return (
                             <div className="header-title" style={{ fontSize: '10px', opacity: 0.8, marginTop: '10px' }}>🕸️ DNA SYSTEM</div>
                             
                             {/* Container Legenda - Altezza fissa per non spingere il grafico */}
-                            <div className="legend-container" style={{ display: 'flex', gap: '20px', height: '30px', alignItems: 'flex-end', position: 'relative' }}>
+                            {/* Container Legenda INTERATTIVA */}
+                            <div className="legend-container" style={{ display: 'flex', gap: '20px', height: '30px', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
                                 
-                                {/* SQUADRA CASA */}
-                                <div className="legend-item home" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative' }}>
-                                    {/* BARRA POSIZIONATA IN MODO DA NON SPOSTARE IL TESTO */}
+                                {/* SQUADRA CASA (Cliccabile) */}
+                                <div 
+                                    className="legend-item home" 
+                                    onClick={() => setRadarFocus(prev => prev === 'home' ? 'all' : 'home')} // Toggle
+                                    style={{ 
+                                        display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', cursor: 'pointer',
+                                        opacity: radarFocus === 'away' ? 0.2 : 1, // Diventa trasparente se è selezionato l'altro
+                                        transition: 'opacity 0.3s'
+                                    }}
+                                >
                                     <div style={{ position: 'absolute', top: '-25px', left: 0, right: 0, display: 'flex', alignItems: 'center' }}>
                                         <div style={{ flex: 1, height: '3px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                            <div style={{ 
-                                                width: `${Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%`, 
-                                                height: '100%', 
-                                                backgroundColor: theme.cyan,
-                                                boxShadow: `0 0 5px ${theme.cyan}`
-                                            }}></div>
+                                            <div style={{ width: `${Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%`, height: '100%', backgroundColor: theme.cyan, boxShadow: `0 0 5px ${theme.cyan}`}}></div>
                                         </div>
-                                        <span style={{ marginLeft: '4px', color: theme.cyan, fontSize: '9px', fontWeight: 'bold' }}>
-                                            {Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%
-                                        </span>
+                                        <span style={{ marginLeft: '4px', color: theme.cyan, fontSize: '9px', fontWeight: 'bold' }}>{Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%</span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <div className="legend-box home" style={{ width: '8px', height: '8px', backgroundColor: theme.cyan, marginRight: '4px' }}></div>
-                                        <span className="legend-text" style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                                            {selectedMatch?.home.substring(0, 12)}
-                                        </span>
+                                        <span className="legend-text" style={{ fontSize: '11px', fontWeight: 'bold' }}>{selectedMatch?.home.substring(0, 12)}</span>
                                     </div>
                                 </div>
 
-                                {/* SQUADRA TRASFERTA */}
-                                <div className="legend-item away" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative' }}>
-                                    {/* BARRA POSIZIONATA IN MODO DA NON SPOSTARE IL TESTO */}
+                                {/* SQUADRA TRASFERTA (Cliccabile) */}
+                                <div 
+                                    className="legend-item away" 
+                                    onClick={() => setRadarFocus(prev => prev === 'away' ? 'all' : 'away')} // Toggle
+                                    style={{ 
+                                        display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', cursor: 'pointer',
+                                        opacity: radarFocus === 'home' ? 0.2 : 1, // Diventa trasparente se è selezionato l'altro
+                                        transition: 'opacity 0.3s'
+                                    }}
+                                >
                                     <div style={{ position: 'absolute', top: '-25px', left: 0, right: 0, display: 'flex', alignItems: 'center' }}>
                                         <div style={{ flex: 1, height: '3px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                            <div style={{ 
-                                                width: `${Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%`, 
-                                                height: '100%', 
-                                                backgroundColor: theme.danger,
-                                                boxShadow: `0 0 5px ${theme.danger}`
-                                            }}></div>
+                                            <div style={{ width: `${Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%`, height: '100%', backgroundColor: theme.danger, boxShadow: `0 0 5px ${theme.danger}`}}></div>
                                         </div>
-                                        <span style={{ marginLeft: '4px', color: theme.danger, fontSize: '9px', fontWeight: 'bold' }}>
-                                            {Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%
-                                        </span>
+                                        <span style={{ marginLeft: '4px', color: theme.danger, fontSize: '9px', fontWeight: 'bold' }}>{Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%</span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <div className="legend-box away" style={{ width: '8px', height: '8px', backgroundColor: theme.danger, marginRight: '4px' }}></div>
-                                        <span className="legend-text" style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                                            {selectedMatch?.away.substring(0, 12)}
-                                        </span>
+                                        <span className="legend-text" style={{ fontSize: '11px', fontWeight: 'bold' }}>{selectedMatch?.away.substring(0, 12)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1717,14 +1764,35 @@ return (
                         {/* Contenitore Radar - Rimane bloccato dove l'avevi messo tu */}
                         <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', padding: '5px' }}>
                             <svg width="250" height="250" viewBox="9 11 105 105">
+                                {/* Griglie di sfondo */}
                                 {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}
+                                
+                                {/* Etichette fisse (ATT, TEC...) - Le lasciamo non interattive qui, usiamo i punti */}
                                 <text x="60" y="13" fontSize="5" fill="#aaa" textAnchor="middle">ATT</text>
                                 <text x="105" y="50" fontSize="5" fill="#aaa" textAnchor="start">TEC</text>
                                 <text x="88" y="102" fontSize="5" fill="#aaa" textAnchor="start">DIF</text>
                                 <text x="32" y="102" fontSize="5" fill="#aaa" textAnchor="end">VAL</text>
                                 <text x="15" y="50" fontSize="5" fill="#aaa" textAnchor="end">FRM</text>
-                                {drawPentagramRadar(homeRadar, theme.cyan)}
-                                {drawPentagramRadar(awayRadar, theme.danger)}
+                                
+                                {/* LOGICA DI VISUALIZZAZIONE CONDIZIONALE */}
+                                {(radarFocus === 'all' || radarFocus === 'home') && drawPentagramRadar(homeRadar, theme.cyan, )}
+                                {(radarFocus === 'all' || radarFocus === 'away') && drawPentagramRadar(awayRadar, theme.danger, )}
+
+                                {/* TOOLTIP DEL PUNTO (Appare quando passi sulle punte) */}
+                                {/* TOOLTIP DEL PUNTO (Appare quando passi sulle punte) */}
+                                {pointTooltip && (
+                                    <g transform={`translate(${pointTooltip.x}, ${pointTooltip.y - 8})`} style={{ pointerEvents: 'none', transition: 'all 0.1s ease' }}>
+                                        {/* Rettangolo leggermente più largo per ospitare il % */}
+                                        <rect 
+                                            x="-12" y="-6" width="24" height="10" rx="3" 
+                                            fill="rgba(0,0,0,0.9)" stroke={pointTooltip.color} strokeWidth="0.5"
+                                        />
+                                        {/* Testo con il simbolo % aggiunto */}
+                                        <text x="0" y="1" fontSize="5" fontWeight="bold" fill="#fff" textAnchor="middle">
+                                            {Math.round(pointTooltip.val)}%
+                                        </text>
+                                    </g>
+                                )}
                             </svg>
                         </div>
                     </div>

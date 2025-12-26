@@ -53,7 +53,14 @@ function App() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const API_BASE = 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
+  // Sostituisci la vecchia riga 54 (const API_BASE = ...) con questa:
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const API_BASE = isLocalhost 
+  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api' 
+  : 'https://api-6b34yfzjia-uc.a.run.app';
+
+console.log("🚀 API connessa a:", API_BASE);
 
   useEffect(() => {
     fetchLeagues()

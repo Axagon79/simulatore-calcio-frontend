@@ -919,7 +919,7 @@ export default function AppDev() {
 
     
     
-    const historyWeight = 85; 
+     
 
     // --- 2. HELPER GRAFICI ---
 
@@ -1121,23 +1121,74 @@ return (
                 </div>
 
                 {/* A3. SEZIONE STORIA */}
-                <div className="card-storia" style={styles.card}>
-                    <div className="header-title">⚖️ STORIA (Precedenti)</div>
-                    <div className="content-container">
-                        <div className="team-row">
-                            <span className="team-name">{selectedMatch?.home}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar home" style={{ width: `${historyWeight}%` }} />
+                <div className="card-storia" style={{ ...styles.card, padding: '15px' }}>
+                    <div className="header-title" style={{ fontSize: '12px', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>⚖️</span> STORIA (PRECEDENTI)
+                    </div>
+                    
+                    <div className="content-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* SQUADRA CASA */}
+                        <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                                {selectedMatch?.home}
+                            </span>
+                            <div className="progress-bar-container" style={{ flex: '2', height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div 
+                                    className="progress-bar home" 
+                                    style={{ 
+                                        width: `${(selectedMatch?.h2h_data?.home_score || 0) * 10}%`, 
+                                        height: '100%', 
+                                        backgroundColor: theme.cyan,
+                                        boxShadow: `0 0 8px ${theme.cyan}`,
+                                        transition: 'width 0.5s ease-out'
+                                    }} 
+                                />
                             </div>
-                            <span className="team-percentage home">{historyWeight}%</span>
+                            <span className="team-percentage home" style={{ minWidth: '35px', fontSize: '11px', fontWeight: 'bold', color: theme.cyan, textAlign: 'right' }}>
+                                {Math.round((selectedMatch?.h2h_data?.home_score || 0) * 10)}%
+                            </span>
                         </div>
-                        <div className="team-row">
-                            <span className="team-name">{selectedMatch?.away}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar away" style={{ width: `${100 - historyWeight}%` }} />
+
+                        {/* SQUADRA TRASFERTA */}
+                        <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                                {selectedMatch?.away}
+                            </span>
+                            <div className="progress-bar-container" style={{ flex: '2', height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div 
+                                    className="progress-bar away" 
+                                    style={{ 
+                                        width: `${(selectedMatch?.h2h_data?.away_score || 0) * 10}%`, 
+                                        height: '100%', 
+                                        backgroundColor: theme.danger,
+                                        boxShadow: `0 0 8px ${theme.danger}`,
+                                        transition: 'width 0.5s ease-out'
+                                    }} 
+                                />
                             </div>
-                            <span className="team-percentage away">{100 - historyWeight}%</span>
+                            <span className="team-percentage away" style={{ minWidth: '35px', fontSize: '11px', fontWeight: 'bold', color: theme.danger, textAlign: 'right' }}>
+                                {Math.round((selectedMatch?.h2h_data?.away_score || 0) * 10)}%
+                            </span>
                         </div>
+
+                        {/* RIASSUNTO STORICO STILIZZATO */}
+                        {selectedMatch?.h2h_data?.history_summary && (
+                            <div className="history-summary-box" style={{ 
+                                marginTop: '8px', 
+                                padding: '5px 12px', 
+                                backgroundColor: 'rgba(82, 64, 117, 0.16)', 
+                                borderRadius: '6px',
+                                borderLeft: `2px solid rgba(32, 238, 245, 0.6)`,
+                                borderRight: `2px solid rgba(32, 238, 245, 0.6)`,
+                                fontSize: '12px',
+                                color: 'rgb(201, 250, 252)',
+                                fontStyle: 'italic',
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}>
+                                {selectedMatch.h2h_data.history_summary}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1307,54 +1358,72 @@ return (
                 <div className="riga-orizzontale-bottom">
                     
                     {/* DNA SYSTEM */}
-                    <div className="card-dna" style={styles.card}>
-                        <div className="header-section">
-                            <div className="header-title">🕸️ DNA SYSTEM</div>
-                            <div className="legend-container">
-                                <div className="legend-item home">
-                                    <div className="legend-box home"></div>
-                                    <span className="legend-text">{selectedMatch?.home.substring(0, 12)}</span>
+                    <div className="card-dna" style={{ ...styles.card, padding: '10px', marginTop: '-20px', position: 'relative', overflow: 'hidden' }}>
+                        <div className="header-section" style={{ marginBottom: '5px', position: 'relative' }}>
+                            <div className="header-title" style={{ fontSize: '10px', opacity: 0.8, marginTop: '10px' }}>🕸️ DNA SYSTEM</div>
+                            
+                            {/* Container Legenda - Altezza fissa per non spingere il grafico */}
+                            <div className="legend-container" style={{ display: 'flex', gap: '20px', height: '30px', alignItems: 'flex-end', position: 'relative' }}>
+                                
+                                {/* SQUADRA CASA */}
+                                <div className="legend-item home" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative' }}>
+                                    {/* BARRA POSIZIONATA IN MODO DA NON SPOSTARE IL TESTO */}
+                                    <div style={{ position: 'absolute', top: '-25px', left: 0, right: 0, display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ flex: 1, height: '3px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                            <div style={{ 
+                                                width: `${Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%`, 
+                                                height: '100%', 
+                                                backgroundColor: theme.cyan,
+                                                boxShadow: `0 0 5px ${theme.cyan}`
+                                            }}></div>
+                                        </div>
+                                        <span style={{ marginLeft: '4px', color: theme.cyan, fontSize: '9px', fontWeight: 'bold' }}>
+                                            {Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div className="legend-box home" style={{ width: '8px', height: '8px', backgroundColor: theme.cyan, marginRight: '4px' }}></div>
+                                        <span className="legend-text" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                                            {selectedMatch?.home.substring(0, 12)}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="legend-item away">
-                                    <div className="legend-box away"></div>
-                                    <span className="legend-text">{selectedMatch?.away.substring(0, 12)}</span>
+
+                                {/* SQUADRA TRASFERTA */}
+                                <div className="legend-item away" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative' }}>
+                                    {/* BARRA POSIZIONATA IN MODO DA NON SPOSTARE IL TESTO */}
+                                    <div style={{ position: 'absolute', top: '-25px', left: 0, right: 0, display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ flex: 1, height: '3px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                            <div style={{ 
+                                                width: `${Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%`, 
+                                                height: '100%', 
+                                                backgroundColor: theme.danger,
+                                                boxShadow: `0 0 5px ${theme.danger}`
+                                            }}></div>
+                                        </div>
+                                        <span style={{ marginLeft: '4px', color: theme.danger, fontSize: '9px', fontWeight: 'bold' }}>
+                                            {Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div className="legend-box away" style={{ width: '8px', height: '8px', backgroundColor: theme.danger, marginRight: '4px' }}></div>
+                                        <span className="legend-text" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                                            {selectedMatch?.away.substring(0, 12)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div className="radar-container">
-                            <svg width="180" height="180" viewBox="0 0 120 120">
+
+                        {/* Contenitore Radar - Rimane bloccato dove l'avevi messo tu */}
+                        <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', padding: '5px' }}>
+                            <svg width="250" height="250" viewBox="9 11 105 105">
                                 {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}
-                                
-                                {/* ETICHETTE ASSI */}
-                                <text x="60" y="5" fontSize="8" fill="#fff" textAnchor="middle" fontWeight="bold">ATT</text>
-                                <text x="115" y="45" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">TEC</text>
-                                <text x="95" y="115" fontSize="8" fill="#fff" textAnchor="start" fontWeight="bold">DIF</text>
-                                <text x="25" y="115" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">VAL</text>
-                                <text x="5" y="45" fontSize="8" fill="#fff" textAnchor="end" fontWeight="bold">FRM</text>
-
-                                {/* VALORI PERCENTUALI SULLE 5 PUNTE */}
-                                
-                                {/* 1. ATT (In alto) */}
-                                {homeRadar[0] > 0 && <text x="72" y="5" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[0])}%</text>}
-                                {awayRadar[0] > 0 && <text x="48" y="5" fontSize="7" fill={theme.danger} textAnchor="end" fontWeight="bold">{Math.round(awayRadar[0])}%</text>}
-
-                                {/* 2. TEC (A destra) */}
-                                {homeRadar[1] > 0 && <text x="115" y="54" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[1])}%</text>}
-                                {awayRadar[1] > 0 && <text x="115" y="62" fontSize="7" fill={theme.danger} fontWeight="bold">{Math.round(awayRadar[1])}%</text>}
-
-                                {/* 3. DIF (In basso a destra) */}
-                                {homeRadar[2] > 0 && <text x="95" y="124" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[2])}%</text>}
-                                {awayRadar[2] > 0 && <text x="110" y="124" fontSize="7" fill={theme.danger} fontWeight="bold">{Math.round(awayRadar[2])}%</text>}
-
-                                {/* 4. VAL (In basso a sinistra) */}
-                                {homeRadar[3] > 0 && <text x="10" y="124" fontSize="7" fill={theme.cyan} fontWeight="bold">{Math.round(homeRadar[3])}%</text>}
-                                {awayRadar[3] > 0 && <text x="25" y="124" fontSize="7" fill={theme.danger} fontWeight="bold">{Math.round(awayRadar[3])}%</text>}
-
-                                {/* 5. FRM (A sinistra) */}
-                                {homeRadar[4] > 0 && <text x="5" y="54" fontSize="7" fill={theme.cyan} textAnchor="end" fontWeight="bold">{Math.round(homeRadar[4])}%</text>}
-                                {awayRadar[4] > 0 && <text x="5" y="62" fontSize="7" fill={theme.danger} textAnchor="end" fontWeight="bold">{Math.round(awayRadar[4])}%</text>}
-
-                                {/* DISEGNO RADAR */}
+                                <text x="60" y="13" fontSize="5" fill="#aaa" textAnchor="middle">ATT</text>
+                                <text x="105" y="50" fontSize="5" fill="#aaa" textAnchor="start">TEC</text>
+                                <text x="88" y="102" fontSize="5" fill="#aaa" textAnchor="start">DIF</text>
+                                <text x="32" y="102" fontSize="5" fill="#aaa" textAnchor="end">VAL</text>
+                                <text x="15" y="50" fontSize="5" fill="#aaa" textAnchor="end">FRM</text>
                                 {drawPentagramRadar(homeRadar, theme.cyan)}
                                 {drawPentagramRadar(awayRadar, theme.danger)}
                             </svg>

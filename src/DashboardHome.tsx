@@ -1,5 +1,3 @@
-
-
 // --- CONFIGURAZIONE ---
 const IS_ADMIN = true; 
 
@@ -32,13 +30,12 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
   ];
 
   return (
-    // CONTENITORE PRINCIPALE (FIXED PER COPRIRE TUTTO, MA SCROLLABILE)
     <div style={{ 
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
         backgroundColor: theme.bg,
         backgroundImage: 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
         zIndex: 9999,
-        overflowY: 'auto',       // Permette di scorrere su smartphone
+        overflowY: 'auto',
         overflowX: 'hidden',     
         padding: '20px',         
         display: 'flex', flexDirection: 'column', alignItems: 'center'
@@ -86,7 +83,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
             </div>
         )}
 
-        {/* GRIGLIA RESPONSIVA */}
+        {/* GRIGLIA RESPONSIVA - DESKTOP RIMANE UGUALE, MOBILE PIÙ COMPATTO */}
         <div style={{
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
@@ -103,39 +100,85 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                      borderRadius: '20px', 
                      padding: '25px',
                      cursor: 'pointer', 
-                     transition: 'transform 0.2s', 
+                     transition: 'all 0.3s ease', 
                      position: 'relative', 
                      height: '180px', 
-                     display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                     display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                     // MOBILE: Card più compatte e moderne
+                     ...window.innerWidth < 768 && {
+                       height: '120px',
+                       padding: '18px',
+                       borderRadius: '16px',
+                       gap: '8px'
+                     }
                  }}
                  onMouseEnter={(e) => {
                      e.currentTarget.style.borderColor = league.color;
                      e.currentTarget.style.background = 'rgba(30, 35, 50, 0.8)';
+                     e.currentTarget.style.transform = 'translateY(-3px)';
                  }}
                  onMouseLeave={(e) => {
                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
                      e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
+                     e.currentTarget.style.transform = 'translateY(0)';
+                 }}
+                 onTouchStart={(e) => {
+                     e.currentTarget.style.borderColor = league.color;
+                     e.currentTarget.style.background = 'rgba(30, 35, 50, 0.9)';
+                     e.currentTarget.style.transform = 'scale(0.98)';
+                 }}
+                 onTouchEnd={(e) => {
+                     setTimeout(() => {
+                         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                         e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
+                         e.currentTarget.style.transform = 'scale(1)';
+                     }, 200);
                  }}
                >
                    <div>
-                      <div style={{fontSize: '12px', color: theme.textDim, textTransform:'uppercase', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px'}}>
+                      <div style={{
+                          fontSize: window.innerWidth < 768 ? '10px' : '12px', 
+                          color: theme.textDim, 
+                          textTransform:'uppercase', 
+                          fontWeight:'bold', 
+                          display:'flex', 
+                          alignItems:'center', 
+                          gap:'6px'
+                      }}>
                           {league.country}
                       </div>
-                      <div style={{fontSize: '28px', fontWeight: '800', color: 'white', marginTop:'5px'}}>
+                      <div style={{
+                          fontSize: window.innerWidth < 768 ? '22px' : '28px', 
+                          fontWeight: '800', 
+                          color: 'white', 
+                          marginTop: window.innerWidth < 768 ? '3px' : '5px',
+                          lineHeight: '1.1'
+                      }}>
                           {league.name}
                       </div>
                    </div>
                    
                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
-                      <div style={{fontSize: '12px', color: league.color, fontWeight:'bold', background: 'rgba(0,0,0,0.3)', padding:'4px 10px', borderRadius:'6px'}}>
+                      <div style={{
+                          fontSize: window.innerWidth < 768 ? '10px' : '12px', 
+                          color: league.color, 
+                          fontWeight:'bold', 
+                          background: 'rgba(0,0,0,0.3)', 
+                          padding: window.innerWidth < 768 ? '3px 8px' : '4px 10px', 
+                          borderRadius:'6px',
+                          whiteSpace: 'nowrap'
+                      }}>
                         ● {league.matches} LIVE
                       </div>
                       
                       <div style={{
-                          width: '35px', height: '35px', borderRadius: '50%', 
+                          width: window.innerWidth < 768 ? '30px' : '35px', 
+                          height: window.innerWidth < 768 ? '30px' : '35px', 
+                          borderRadius: '50%', 
                           background: 'white', color: 'black',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '18px', fontWeight:'bold'
+                          fontSize: window.innerWidth < 768 ? '16px' : '18px', 
+                          fontWeight:'bold'
                       }}>
                         ➜
                       </div>

@@ -153,7 +153,26 @@ const styles: Record<string, React.CSSProperties> = {
   // SIDEBAR NAVIGAZIONE
   sidebar: {
     width: '280px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px',
-    borderRight: theme.panelBorder, background: 'rgba(0,0,0,0.3)', overflowY: 'auto'
+    borderRight: theme.panelBorder, background: 'rgba(0,0,0,0.3)', overflowY: 'auto',
+    transition: 'transform 0.3s ease'
+  },
+  sidebarMobile: {
+    position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px',
+    background: 'rgba(5, 7, 10, 0.98)', backdropFilter: 'blur(20px)',
+    zIndex: 1000, padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px',
+    overflowY: 'auto', transform: 'translateX(-100%)', transition: 'transform 0.3s ease',
+    boxShadow: '4px 0 20px rgba(0,0,0,0.5)'
+  },
+  sidebarMobileOpen: {
+    transform: 'translateX(0)'
+  },
+  mobileOverlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.7)', zIndex: 999, opacity: 0,
+    pointerEvents: 'none', transition: 'opacity 0.3s ease'
+  },
+  mobileOverlayVisible: {
+    opacity: 1, pointerEvents: 'auto'
   },
   
   // ARENA CENTRALE
@@ -162,8 +181,6 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto', padding: '0' 
   },
   arenaContent: {
-    // Ho cambiato il padding: 30px sopra/lati, ma 0px sotto.
-    // Questo elimina lo spazio morto in fondo.
     padding: '30px 30px 0px 30px', 
     maxWidth: '1200px', 
     margin: '0 auto', 
@@ -254,6 +271,7 @@ export default function AppDev() {
   const [activeLeague, setActiveLeague] = useState<string | null>(null);
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result'>('list');
   
   // PREFERENZE SIMULAZIONE
@@ -269,6 +287,8 @@ export default function AppDev() {
   
   // STATO CHATBOT (Ora inizializzato a FALSE = Chiuso)
   const [chatOpen, setChatOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: '1', sender: 'bot', text: 'Ciao! Sono il tuo Football AI Coach. Seleziona una partita per iniziare.', timestamp: new Date() }
   ]);
@@ -300,6 +320,18 @@ export default function AppDev() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, chatOpen]);
+
+  // Detect mobile resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // --- LOGICA SIMULAZIONE ---
 
@@ -441,7 +473,13 @@ export default function AppDev() {
   // --- COMPONENTI UI RENDER ---
 
   const renderMatchList = () => (
-    <div style={styles.arenaContent}>
+    <div style={{
+      ...styles.arenaContent,
+      padding: isMobile ? '20px 10px 0 10px' : '30px 30px 0px 30px',
+      maxWidth: isMobile ? '100vw' : '1200px',
+      boxSizing: 'border-box',
+      overflowX: 'hidden'
+    }}>
       
       {/* 1. NAVIGAZIONE A CAPSULE INDIPENDENTI - ALLINEAMENTO PROPORZIONALE */}
 <div 
@@ -452,7 +490,7 @@ export default function AppDev() {
     alignItems: 'center',
     marginBottom: '20px', 
     marginTop: '-10px',
-    gap: '80px', // <--- REGOLA QUESTO: Aumenta o diminuisci per centrare i tasti sulle barre
+    gap: isMobile ? '8px' : '80px',// <--- REGOLA QUESTO: Aumenta o diminuisci per centrare i tasti sulle barre
     width: '100%',
 }}>
   {rounds.map(r => {
@@ -471,12 +509,15 @@ export default function AppDev() {
         onMouseEnter={() => setHoveredRound(r.name)}
         onMouseLeave={() => setHoveredRound(null)}
         style={{
-          // Dimensioni fisse per farli sembrare "pillole"
-          width: '185px', 
-          height: '38px',
+          // Dimensioni responsive
+          width: isMobile ? 'auto' : '185px',
+          minWidth: isMobile ? '90px' : '185px',
+          height: isMobile ? '32px' : '38px',
+          padding: isMobile ? '0 12px' : '0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          
 
           // Stile Capsula Indipendente
           background: isSelected 
@@ -490,7 +531,7 @@ export default function AppDev() {
           
           cursor: 'pointer', 
           fontWeight: '900', 
-          fontSize: '15px',
+          fontSize: isMobile ? '11px' : '15px',
           
           color: isSelected ? 'rgb(0, 0, 0)' : 'rgb(0, 240, 255)',
           
@@ -520,6 +561,7 @@ export default function AppDev() {
        matches.map(match => {
         const isFuture = selectedRound?.type === 'next';
         const showLucifero = !isFuture && match.h2h_data?.lucifero_home != null;
+        const isExpanded = expandedMatch === match.id;
         
         // Recupero quote dal livello principale del match
         const bkOdds = match.odds;
@@ -540,18 +582,29 @@ export default function AppDev() {
         return (
         <div 
           key={match.id}
-          onClick={() => prepareSimulation(match)}
+          onClick={() => {
+            if (isMobile) {
+              setExpandedMatch(isExpanded ? null : match.id);
+            } else {
+              prepareSimulation(match);
+            }
+          }}
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
             borderRadius: '20px',
-            padding: '10.2px 15px',
+            overflow: 'hidden',
+            padding: isMobile ? '12px 10px' : '10.2px 15px',
+            maxWidth: isMobile ? '95%' : '100%',
+            minHeight: isMobile ? '33px' : 'auto',
+            margin: isMobile ? '0 auto 5px auto' : '0 0 5px 0',
             marginBottom: '5px',
             cursor: 'pointer',
             border: '1px solid rgba(255, 255, 255, 0.05)',
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: isMobile && isExpanded ? 'column' : 'row',
+            alignItems: isMobile && isExpanded ? 'stretch' : 'center',
             justifyContent: 'space-between',
-            transition: 'background 0.2s'
+            transition: 'all 0.3s ease'
           }}
           onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
@@ -562,11 +615,11 @@ export default function AppDev() {
         >
           {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
           <div style={{ 
-            width: '130px', // Leggermente più largo per ospitare il testo in linea
+            width: isMobile ? '30px' : '130px',
+            flexShrink: 0, // Leggermente più largo per ospitare il testo in linea
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'flex-start',
-            flexShrink: 0 
           }}>
             {/* Il Contenitore "Capsula" */}
             <div style={{
@@ -574,7 +627,7 @@ export default function AppDev() {
               alignItems: 'center',
               gap: '8px',
               background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
-              padding: '5px 10px',
+              padding: isMobile ? '4px 8px' : '5px 10px',
               borderRadius: '8px',
               border: '1px solid rgba(0, 240, 255, 0.1)', // Bordino ciano sottile
             }}>
@@ -603,129 +656,142 @@ export default function AppDev() {
             </div>
           </div>
 
-          {/* B. SQUADRE E BARRE (Versione Finale: Classifica Reale) */}
+          {/* VERSIONE MOBILE COMPATTA */}
+          {isMobile && !isExpanded ? (
           <div style={{ 
             flex: 1, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
+            textAlign: 'center',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: 'white',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            padding: '0 5px',
+            maxWidth: '180px'
           }}>
-            
-            {/* CASA */}
-            <div style={{ 
-              flex: 1, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              alignItems: 'center', 
-              gap: '12px' 
-            }}>
-              {/* Barra Lucifero Casa */}
-              {showLucifero && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <span style={{ fontSize: '10px', color: 'rgb(5, 249, 182)', marginRight: '6px', fontWeight: 'bold', width: '30px', textAlign: 'right' }}>
-                    {Math.round(((match as any).h2h_data?.lucifero_home / 25) * 100)}%
-                  </span>
-                  <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
-                    <div style={{
-                      width: `${Math.min(((match as any).h2h_data?.lucifero_home / 25) * 100, 100)}%`,
-                      height: '100%',
-                      background: 'rgb(5, 249, 182)',
-                      boxShadow: '0 0 8px rgb(5, 249, 182)',
-                      borderRadius: '3px'
-                    }}></div>
-                  </div>
-                </div>
-              )}
-              
-              {/* INFO SQUADRA CASA: Classifica + Nome */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* BADGE CLASSIFICA CASA */}
-                    {(match as any).h2h_data?.home_rank && (
-                    <span className="badge-classifica home">
-                        <span className="badge-rank">
-                        {(match as any).h2h_data.home_rank}°
-                        </span>
-                        {(match as any).h2h_data.home_points && (
-                        <span className="badge-points">
-                            {(match as any).h2h_data.home_points}pt
-                        </span>
-                        )}
-                    </span>
-                    )}
-                
-                <div style={{ 
-                  fontWeight: 'bold', fontSize: '15px', color: 'white', 
-                  textAlign: 'right', width: '130px', whiteSpace: 'nowrap', 
-                  overflow: 'hidden', textOverflow: 'ellipsis' 
-                }}>
-                  {match.home}
-                </div>
-              </div>
-            </div>
-
-            {/* VS / SCORE */}
-            <div style={{
-              background: 'rgba(0, 240, 255, 0.1)',  // ← STESSO SFONDO CIANO
-              border: '1px solid rgba(0, 240, 255, 0.3)',  // ← STESSO BORDO, padding: '4px 12px', borderRadius: '8px',
-              fontSize: '15px', fontWeight: 'bold', color: '#fff',
-              borderRadius: '8px',
-              minWidth: '50px', textAlign: 'center', margin: '0 15px',fontFamily: 'monospace'
-            }}>
-              {(match as any).status === 'Finished' && (match as any).real_score ? (match as any).real_score : 'VS'}
-            </div>
-
-            {/* OSPITE */}
-            <div style={{ 
-              flex: 1, 
-              display: 'flex', 
-              justifyContent: 'flex-start', 
-              alignItems: 'center', 
-              gap: '12px' 
-            }}>
-              {/* INFO SQUADRA OSPITE: Nome + Classifica */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ 
-                  fontWeight: 'bold', fontSize: '15px', color: 'white', 
-                  textAlign: 'left', width: '130px', whiteSpace: 'nowrap', 
-                  overflow: 'hidden', textOverflow: 'ellipsis' 
-                }}>
-                  {match.away}
-                </div>
-
-                {/* BADGE CLASSIFICA OSPITE */}
-                    {(match as any).h2h_data?.away_rank && (
-                    <span className="badge-classifica away">
-                        <span className="badge-rank">
-                        {(match as any).h2h_data.away_rank}°
-                        </span>
-                        {(match as any).h2h_data.away_points && (
-                        <span className="badge-points">
-                            {(match as any).h2h_data.away_points}pt
-                        </span>
-                        )}
-                    </span>
-                    )}
-              </div>
-
-              {/* Barra Lucifero Ospite */}
-              {showLucifero && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
-                    <div style={{
-                      width: `${Math.min(((match as any).h2h_data?.lucifero_away / 25) * 100, 100)}%`,
-                      height: '100%',
-                      background: 'rgb(255, 159, 67)',
-                      boxShadow: '0 0 8px rgb(255, 159, 67)',
-                      borderRadius: '3px'
-                    }}></div>
-                  </div>
-                  <span style={{ fontSize: '10px', color: 'rgb(255, 159, 67)', marginLeft: '6px', fontWeight: 'bold', width: '30px', textAlign: 'left' }}>
-                    {Math.round(((match as any).h2h_data?.lucifero_away / 25) * 100)}%
-                  </span>
-                </div>
-              )}
-            </div>
+            {match.home.substring(0, 12)} vs {match.away.substring(0, 12)}
           </div>
+          ) : !isMobile ? (
+            // VERSIONE DESKTOP COMPLETA (mantieni tutto come prima)
+            <>
+              <div style={{ 
+                flex: 1, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                
+                {/* CASA */}
+                <div style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  justifyContent: 'flex-end', 
+                  alignItems: 'center', 
+                  gap: '12px' 
+                }}>
+                  {showLucifero && (
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <span style={{ fontSize: '10px', color: 'rgb(5, 249, 182)', marginRight: '6px', fontWeight: 'bold', width: '30px', textAlign: 'right' }}>
+                        {Math.round(((match as any).h2h_data?.lucifero_home / 25) * 100)}%
+                      </span>
+                      <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                        <div style={{
+                          width: `${Math.min(((match as any).h2h_data?.lucifero_home / 25) * 100, 100)}%`,
+                          height: '100%',
+                          background: 'rgb(5, 249, 182)',
+                          boxShadow: '0 0 8px rgb(5, 249, 182)',
+                          borderRadius: '3px'
+                        }}></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {(match as any).h2h_data?.home_rank && (
+                      <span className="badge-classifica home">
+                        <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
+                        {(match as any).h2h_data.home_points && (
+                          <span className="badge-points">{(match as any).h2h_data.home_points}pt</span>
+                        )}
+                      </span>
+                    )}
+                    <div style={{ 
+                      fontWeight: 'bold', fontSize: '15px', color: 'white', 
+                      textAlign: 'right', width: '130px', whiteSpace: 'nowrap', 
+                      overflow: 'hidden', textOverflow: 'ellipsis' 
+                    }}>
+                      {match.home}
+                    </div>
+                  </div>
+                </div>
+
+                {/* VS / SCORE */}
+                <div style={{
+                  background: 'rgba(0, 240, 255, 0.1)',
+                  border: '1px solid rgba(0, 240, 255, 0.3)',
+                  fontSize: '15px', fontWeight: 'bold', color: '#fff',
+                  borderRadius: '8px',
+                  minWidth: '50px', textAlign: 'center', margin: '0 15px', fontFamily: 'monospace'
+                }}>
+                  {(match as any).status === 'Finished' && (match as any).real_score ? (match as any).real_score : 'VS'}
+                </div>
+
+                {/* OSPITE */}
+                <div style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  justifyContent: 'flex-start', 
+                  alignItems: 'center', 
+                  gap: '12px' 
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ 
+                      fontWeight: 'bold', fontSize: '15px', color: 'white', 
+                      textAlign: 'left', width: '130px', whiteSpace: 'nowrap', 
+                      overflow: 'hidden', textOverflow: 'ellipsis' 
+                    }}>
+                      {match.away}
+                    </div>
+                    {(match as any).h2h_data?.away_rank && (
+                      <span className="badge-classifica away">
+                        <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
+                        {(match as any).h2h_data.away_points && (
+                          <span className="badge-points">{(match as any).h2h_data.away_points}pt</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {showLucifero && (
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                        <div style={{
+                          width: `${Math.min(((match as any).h2h_data?.lucifero_away / 25) * 100, 100)}%`,
+                          height: '100%',
+                          background: 'rgb(255, 159, 67)',
+                          boxShadow: '0 0 8px rgb(255, 159, 67)',
+                          borderRadius: '3px'
+                        }}></div>
+                      </div>
+                      <span style={{ fontSize: '10px', color: 'rgb(255, 159, 67)', marginLeft: '6px', fontWeight: 'bold', width: '30px', textAlign: 'left' }}>
+                        {Math.round(((match as any).h2h_data?.lucifero_away / 25) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* C. QUOTE (Desktop) */}
+              <div style={{
+                  width: '130px',
+                  display: 'flex', 
+                  gap: '6px',
+                  marginLeft: '10px', 
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  flexShrink: 0
+              }}>
+
 
           {/* C. QUOTE (Destra - Logic: Risultato > Favorita > Standard) */}
             <div style={{
@@ -820,6 +886,170 @@ export default function AppDev() {
                     });
                 })()}
             </div>
+            </div>
+            </>
+          ) : null}
+            {/* ICONA EXPAND (Solo Mobile) */}
+          {isMobile && (
+            <div style={{
+              fontSize: '18px',
+              color: theme.cyan,
+              transition: 'transform 0.3s',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              marginLeft: '10px',
+              flexShrink: 0
+            }}>
+              ▼
+              
+            </div>
+          )}
+
+          {/* SEZIONE ESPANDIBILE (Solo Mobile) */}
+          {isMobile && isExpanded && (
+            <div style={{
+              marginTop: '15px',
+              paddingTop: '15px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              
+              {/* SQUADRA CASA */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  {(match as any).h2h_data?.home_rank && (
+                    <span className="badge-classifica home">
+                      <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
+                      {(match as any).h2h_data.home_points && (
+                        <span className="badge-points">{(match as any).h2h_data.home_points}pt</span>
+                      )}
+                    </span>
+                  )}
+                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
+                    {match.home}
+                  </span>
+                </div>
+                {showLucifero && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                      <div style={{
+                        width: `${Math.min(((match as any).h2h_data?.lucifero_home / 25) * 100, 100)}%`,
+                        height: '100%',
+                        background: 'rgb(5, 249, 182)',
+                        boxShadow: '0 0 8px rgb(5, 249, 182)',
+                        borderRadius: '3px'
+                      }}></div>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'rgb(5, 249, 182)', fontWeight: 'bold', minWidth: '40px' }}>
+                      {Math.round(((match as any).h2h_data?.lucifero_home / 25) * 100)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* VS */}
+              <div style={{
+                textAlign: 'center',
+                background: 'rgba(0, 240, 255, 0.1)',
+                border: '1px solid rgba(0, 240, 255, 0.3)',
+                padding: '6px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: '#fff',
+                margin: '10px 0',
+                fontFamily: 'monospace'
+              }}>
+                {(match as any).status === 'Finished' && (match as any).real_score ? (match as any).real_score : 'VS'}
+              </div>
+
+              {/* SQUADRA OSPITE */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
+                    {match.away}
+                  </span>
+                  {(match as any).h2h_data?.away_rank && (
+                    <span className="badge-classifica away">
+                      <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
+                      {(match as any).h2h_data.away_points && (
+                        <span className="badge-points">{(match as any).h2h_data.away_points}pt</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                {showLucifero && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                      <div style={{
+                        width: `${Math.min(((match as any).h2h_data?.lucifero_away / 25) * 100, 100)}%`,
+                        height: '100%',
+                        background: 'rgb(255, 159, 67)',
+                        boxShadow: '0 0 8px rgb(255, 159, 67)',
+                        borderRadius: '3px'
+                      }}></div>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'rgb(255, 159, 67)', fontWeight: 'bold', minWidth: '40px' }}>
+                      {Math.round(((match as any).h2h_data?.lucifero_away / 25) * 100)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* QUOTE */}
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '15px',
+                paddingTop: '12px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+              }}>
+                {['1', 'X', '2'].map((label) => {
+                  const val = (odds as any)[label];
+                  return (
+                    <div key={label} style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                      <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', marginBottom: '4px' }}>
+                        {label}
+                      </span>
+                      <span style={{ fontSize: '16px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                        {val}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* BOTTONE ANALIZZA */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prepareSimulation(match);
+                }}
+                style={{
+                  width: '100%',
+                  marginTop: '15px',
+                  padding: '12px',
+                  background: `linear-gradient(90deg, ${theme.cyan}, ${theme.purple})`,
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  boxShadow: `0 0 15px rgba(0, 240, 255, 0.3)`
+                }}
+              >
+                👁️ ANALIZZA PARTITA
+              </button>
+            </div>
+          )}
            
         </div>
          
@@ -1573,94 +1803,189 @@ return (
 
       {/* TOP BAR UNIFICATA */}
       <div style={styles.topBar}>
-        
-        {/* GRUPPO SINISTRA: Tasto Indietro + Logo */}
-        <div style={{display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px'}}> 
-             
-             {/* TASTO INDIETRO ELEGANTE */}
-             <button 
-               onClick={() => setActiveLeague(null)} 
-               style={{
-                 background: 'rgba(0, 240, 255, 0.1)', 
-                 border: '1px solid rgba(0, 240, 255, 0.3)', 
-                 color: '#00f0ff', 
-                 padding: '8px 16px', 
-                 borderRadius: '8px', 
-                 cursor: 'pointer', 
-                 fontWeight: 'bold',
-                 fontSize: '12px',
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: '6px',
-                 transition: 'all 0.2s'
-               }}
-               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
-               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
-             >
-               ⟵ DASHBOARD
-             </button>
+  
+        {/* HAMBURGER MENU (Solo Mobile) */}
+        {isMobile && (
+          <button 
+            onClick={() => setMobileMenuOpen(true)}
+            style={{
+              background: 'rgba(0, 240, 255, 0.1)',
+              border: '1px solid rgba(0, 240, 255, 0.3)',
+              color: '#00f0ff',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            ☰
+          </button>
+        )}
 
-             {/* LOGO CON PALLONE ILLUMINATO */}
-             <div style={{...styles.logo, display: 'flex', alignItems: 'center'}}>
-                <img 
-                  src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png" 
-                  alt="Logo" 
-                  style={{
-                    height: '28px', 
-                    width: 'auto', 
-                    marginRight: '15px', 
-                    // MODIFICA QUI: brightness(1.5) lo rende molto più chiaro e acceso
-                    filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)' 
-                  }} 
-                />
-                AI SIMULATOR PRO
-             </div>
-        </div>
+        {/* GRUPPO SINISTRA: Tasto Indietro + Logo (Desktop) */}
+        {!isMobile && (
+          <div style={{display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px'}}> 
+            <button 
+              onClick={() => setActiveLeague(null)} 
+              style={{
+                background: 'rgba(0, 240, 255, 0.1)', 
+                border: '1px solid rgba(0, 240, 255, 0.3)', 
+                color: '#00f0ff', 
+                padding: '8px 16px', 
+                borderRadius: '8px', 
+                cursor: 'pointer', 
+                fontWeight: 'bold',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
+            >
+              ⟵ DASHBOARD
+            </button>
 
-        {/* PARTE DESTRA (Crediti, Utente...) */}
-        <div style={{display:'flex', gap:'20px', alignItems:'center'}}>
-          <div style={{fontSize:'12px', color: theme.textDim}}>Crediti: <span style={{color: theme.success}}>∞</span></div>
-          <button onClick={() => alert('Tema toggle')} style={{background:'none', border:'none', fontSize:'18px', cursor:'pointer'}}>🌙</button>
-          <div style={{width:'32px', height:'32px', borderRadius:'50%', background: theme.purple, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', boxShadow: `0 0 10px ${theme.purple}`}}>U</div>
+            <div style={{...styles.logo, display: 'flex', alignItems: 'center'}}>
+              <img 
+                src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png" 
+                alt="Logo" 
+                style={{
+                  height: '28px', 
+                  width: 'auto', 
+                  marginRight: '15px', 
+                  filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)' 
+                }} 
+              />
+              AI SIMULATOR PRO
+            </div>
+          </div>
+        )}
+
+        {/* LOGO CENTRATO (Solo Mobile) */}
+        {isMobile && (
+          <div style={{
+            ...styles.logo, 
+            fontSize: '18px',
+            display: 'flex', 
+            alignItems: 'center',
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)'
+          }}>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png" 
+              alt="Logo" 
+              style={{
+                height: '24px', 
+                width: 'auto', 
+                marginRight: '8px', 
+                filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)' 
+              }} 
+            />
+            <span style={{display: isMobile ? 'none' : 'inline'}}>AI SIMULATOR</span>
+          </div>
+        )}
+
+        {/* PARTE DESTRA */}
+        <div style={{display:'flex', gap: isMobile ? '10px' : '20px', alignItems:'center', marginLeft: 'auto'}}>
+          {!isMobile && (
+            <div style={{fontSize:'12px', color: theme.textDim}}>
+              Crediti: <span style={{color: theme.success}}>∞</span>
+            </div>
+          )}
+          {!isMobile && (
+            <button onClick={() => alert('Tema toggle')} style={{background:'none', border:'none', fontSize:'18px', cursor:'pointer'}}>🌙</button>
+          )}
+          <div style={{
+            width: isMobile ? '28px' : '32px', 
+            height: isMobile ? '28px' : '32px', 
+            borderRadius:'50%', 
+            background: theme.purple, 
+            display:'flex', 
+            alignItems:'center', 
+            justifyContent:'center', 
+            fontWeight:'bold', 
+            boxShadow: `0 0 10px ${theme.purple}`,
+            fontSize: isMobile ? '14px' : '16px'
+          }}>U</div>
         </div>
       </div>
 
-      <div style={styles.mainContent}>
-        {/* SIDEBAR */}
-        <div style={styles.sidebar}>
-          <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold'}}>NAZIONE</div>
-          <select 
-            value={country} onChange={e => setCountry(e.target.value)}
-            style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px', width: '100%'}}
-          >
-            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
-          </select>
+        <div style={styles.mainContent}>
+          
+          {/* OVERLAY MOBILE (quando menu aperto) */}
+          {isMobile && (
+            <div 
+              style={{
+                ...styles.mobileOverlay,
+                ...(mobileMenuOpen ? styles.mobileOverlayVisible : {})
+              }}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
 
-          <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold', marginTop:'15px'}}>CAMPIONATO</div>
-          <select 
-             value={league} onChange={e => setLeague(e.target.value)}
-             style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px', width: '100%'}}
-          >
-            {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          {/* SIDEBAR (Desktop sempre visibile, Mobile drawer) */}
+          <div style={{
+            ...(isMobile ? styles.sidebarMobile : styles.sidebar),
+            ...(isMobile && mobileMenuOpen ? styles.sidebarMobileOpen : {})
+          }}>
+            {/* Bottone chiudi (solo mobile) */}
+            {isMobile && (
+              <button 
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  alignSelf: 'flex-end',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  marginBottom: '10px'
+                }}
+              >
+                ✕
+              </button>
+            )}
+            <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold'}}>NAZIONE</div>
+            <select 
+              value={country} onChange={e => setCountry(e.target.value)}
+              style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px', width: '100%'}}
+            >
+              {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+            </select>
 
-          {/* Widget Highlights */}
-          <div style={{marginTop:'auto'}}>
-            <div style={{fontSize:'12px', color: theme.textDim, marginBottom:'10px'}}>HIGHLIGHTS</div>
-            <div style={{...styles.card, padding:'15px', position:'relative', overflow:'hidden', cursor:'pointer'}}>
-               <div style={getWidgetGlow(theme.success)} />
-               <div style={{fontSize:'11px', color: theme.textDim}}>BEST BET</div>
-               <div style={{fontWeight:'bold', marginTop:'5px'}}>Napoli vs Roma</div>
-               <div style={{color: theme.success, fontSize:'12px'}}>1 + Over 1.5</div>
-            </div>
-            <div style={{...styles.card, padding:'15px', position:'relative', overflow:'hidden', cursor:'pointer', marginTop:'10px'}}>
-               <div style={getWidgetGlow(theme.danger)} />
-               <div style={{fontSize:'11px', color: theme.textDim}}>RISCHIO ALTO</div>
-               <div style={{fontWeight:'bold', marginTop:'5px'}}>Lecce vs Verona</div>
-               <div style={{color: theme.danger, fontSize:'12px'}}>Possibile X</div>
+            <div style={{fontSize:'12px', color: theme.textDim, fontWeight:'bold', marginTop:'15px'}}>CAMPIONATO</div>
+            <select 
+              value={league} onChange={e => setLeague(e.target.value)}
+              style={{padding:'10px', background:'#000', color:'white', border:'1px solid #333', borderRadius:'6px', width: '100%'}}
+            >
+              {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+
+            {/* Widget Highlights */}
+            <div style={{marginTop:'auto'}}>
+              <div style={{fontSize:'12px', color: theme.textDim, marginBottom:'10px'}}>HIGHLIGHTS</div>
+              <div style={{...styles.card, padding:'15px', position:'relative', overflow:'hidden', cursor:'pointer'}}>
+                <div style={getWidgetGlow(theme.success)} />
+                <div style={{fontSize:'11px', color: theme.textDim}}>BEST BET</div>
+                <div style={{fontWeight:'bold', marginTop:'5px'}}>Napoli vs Roma</div>
+                <div style={{color: theme.success, fontSize:'12px'}}>1 + Over 1.5</div>
+              </div>
+              <div style={{...styles.card, padding:'15px', position:'relative', overflow:'hidden', cursor:'pointer', marginTop:'10px'}}>
+                <div style={getWidgetGlow(theme.danger)} />
+                <div style={{fontSize:'11px', color: theme.textDim}}>RISCHIO ALTO</div>
+                <div style={{fontWeight:'bold', marginTop:'5px'}}>Lecce vs Verona</div>
+                <div style={{color: theme.danger, fontSize:'12px'}}>Possibile X</div>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* MAIN ARENA */}
         <div style={styles.arena}>

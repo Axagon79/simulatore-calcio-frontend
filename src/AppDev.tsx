@@ -63,7 +63,9 @@ interface ChatMessage {
 }
 
 // --- CONFIGURAZIONE ---
-const API_BASE = 'http://127.0.0.1:5001/puppals-456c7/us-central1/api';
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api' 
+  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 // 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
 const COUNTRIES = [

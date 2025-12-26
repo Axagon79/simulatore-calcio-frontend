@@ -63,3 +63,21 @@
   font-size: 11px;
   font-weight: 400; 
 }
+/* --- CORREZIONE MOBILE PER BADGE OSPITE --- */
+@media (max-width: 768px) {
+  .badge-classifica.away {
+      /* Forza l'ordine naturale (Rank -> Punti) invece di invertirlo */
+      flex-direction: row !important; 
+      
+      /* Se necessario, aggiusta i margini che si rompono girando l'ordine */
+      gap: 4px; 
+  }
+
+  /* Opzionale: se i colori del rank e dei punti sono invertiti, puoi forzarli qui */
+  .badge-classifica.away .badge-rank {
+      order: 1; /* Assicura che il numero (es. 7°) stia a sinistra */
+  }
+  .badge-classifica.away .badge-points {
+      order: 2; /* Assicura che i punti (es. 25pt) stiano a destra */
+  }
+}

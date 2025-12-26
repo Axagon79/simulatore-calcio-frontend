@@ -944,19 +944,38 @@ export default function AppDev() {
               
               {/* SQUADRA CASA */}
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                {/* Contenitore con position: relative per permettere l'absolute del badge */}
+                <div style={{ 
+                    position: 'relative', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', // Questo centra il NOME
+                    marginBottom: '12px',
+                    minHeight: '24px' // Altezza minima per il badge
+                }}>
+                  
+                  {/* IL BADGE: Posizionato in 'absolute' a sinistra */}
                   {(match as any).h2h_data?.home_rank && (
-                    <span className="badge-classifica home">
+                    <span className="badge-classifica home" style={{
+                        position: 'absolute', // Esce dal flusso
+                        left: 0,              // Inchiodato a sinistra
+                        top: '50%',           // Centrato verticalmente
+                        transform: 'translateY(-50%)'
+                    }}>
                       <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
                       {(match as any).h2h_data.home_points && (
                         <span className="badge-points">{(match as any).h2h_data.home_points}pt</span>
                       )}
                     </span>
                   )}
+
+                  {/* IL NOME: Ora si centra perfettamente rispetto al contenitore padre */}
                   <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
                     {match.home}
                   </span>
                 </div>
+
+                {/* BARRA LUCIFERO (Rimasta uguale) */}
                 {showLucifero && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
@@ -993,19 +1012,37 @@ export default function AppDev() {
 
               {/* SQUADRA OSPITE */}
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <div style={{ 
+                    position: 'relative', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', // Centra il NOME
+                    marginBottom: '12px',
+                    minHeight: '24px'
+                }}>
+                  
+                  {/* BADGE OSPITE: Anche questo in absolute a sinistra */}
                   {(match as any).h2h_data?.away_rank && (
-                    <span className="badge-classifica away">
+                    <span className="badge-classifica away" style={{
+                        position: 'absolute',
+                        left: 0, 
+                        top: '50%',
+                        transform: 'translateY(-50%)'
+                    }}>
+                      {/* Qui mantengo l'ordine standard, il CSS farà il resto se necessario */}
                       <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
                       {(match as any).h2h_data.away_points && (
                         <span className="badge-points">{(match as any).h2h_data.away_points}pt</span>
                       )}
                     </span>
                   )}
+
                   <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
                     {match.away}
                   </span>
                 </div>
+
+                {/* BARRA LUCIFERO OSPITE (Rimasta uguale) */}
                 {showLucifero && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>

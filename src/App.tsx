@@ -58,8 +58,7 @@ const isLocalhost = window.location.hostname === 'localhost' || window.location.
 
 const API_BASE = isLocalhost 
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api' 
-  : 'https://api-6b34yfzjia-uc.a.run.app';
-
+  : 'https://api-6b34yfzjia-uc.a.run.app'; // <--- ASSICURATI CHE SIA ESATTAMENTE QUESTO
 console.log("🚀 API connessa a:", API_BASE);
 
   useEffect(() => {

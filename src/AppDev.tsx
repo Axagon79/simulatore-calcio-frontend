@@ -625,7 +625,7 @@ export default function AppDev() {
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '2px',
               background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
               padding: isMobile ? '4px 8px' : '5px 10px',
               borderRadius: '8px',
@@ -658,20 +658,50 @@ export default function AppDev() {
 
           {/* VERSIONE MOBILE COMPATTA */}
           {isMobile && !isExpanded ? (
-          <div style={{ 
-            flex: 1, 
-            textAlign: 'center',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: 'white',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            padding: '0 5px',
-            maxWidth: '180px'
-          }}>
-            {match.home.substring(0, 12)} vs {match.away.substring(0, 12)}
-          </div>
+          <>
+            {/* 1. NOME SQUADRE */}
+            <div style={{ 
+              flex: 1, 
+              textAlign: 'center', // Manteniamo centrato
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: 'white',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              padding: '0 20px',
+              maxWidth: '200px',
+              marginRight: '0px',
+              marginLeft: '50px' // <--- QUESTA È LA MODIFICA: Spinge i nomi a destra
+            }}>
+              {match.home.substring(0, 12)} vs {match.away.substring(0, 12)}
+            </div>
+
+            {/* 2. CAPSULA RISULTATO */}
+            <div style={{
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               background: 'rgba(111, 149, 170, 0.13)', 
+               border: '1px solid rgba(0, 240, 255, 0.1)',
+               borderRadius: '8px',
+               padding: '2px 8px',
+               height: '24px',
+               marginLeft: '0px', 
+               marginRight: '0px'
+            }}>
+               <span style={{ 
+                  fontSize: '11px', 
+                  color: '#fff', 
+                  fontWeight: 'bold',
+                  fontFamily: 'monospace'
+               }}>
+                  {(match as any).status === 'Finished' && (match as any).real_score 
+                     ? (match as any).real_score 
+                     : '-:-'}
+               </span>
+            </div>
+          </>
           ) : !isMobile ? (
             // VERSIONE DESKTOP COMPLETA (mantieni tutto come prima)
             <>
@@ -964,9 +994,6 @@ export default function AppDev() {
               {/* SQUADRA OSPITE */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
-                    {match.away}
-                  </span>
                   {(match as any).h2h_data?.away_rank && (
                     <span className="badge-classifica away">
                       <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
@@ -975,6 +1002,9 @@ export default function AppDev() {
                       )}
                     </span>
                   )}
+                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
+                    {match.away}
+                  </span>
                 </div>
                 {showLucifero && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

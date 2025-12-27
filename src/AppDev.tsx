@@ -1206,9 +1206,14 @@ export default function AppDev() {
         Number(awayAvg)    // 5. FRM  MEDIA TREND (Forma)
       ];
 
-    // Psicologia
+    // --- 2. PSICOLOGIA (AFFIDABILITÀ) ---
+    // Usiamo selectedMatch invece di match per evitare l'errore di TypeScript
+    const rawHomeAff = selectedMatch?.h2h_data?.affidabilità?.affidabilità_casa || 0;
+    const rawAwayAff = selectedMatch?.h2h_data?.affidabilità?.affidabilità_trasferta || 0;
 
-    const homeMotiv = 90; const awayMotiv = 45;
+    // Trasformiamo 0-10 in 0-100 per le barre grafiche
+    const homeAff = Math.round(rawHomeAff * 10);
+    const awayAff = Math.round(rawAwayAff * 10);
 
 
     // --- ESTRAZIONE DATI FATTORE CAMPO (Nuova Struttura DB) ---
@@ -1866,8 +1871,8 @@ return (
                           )`;
 
                           // 2. Preparo i valori (Safety check per evitare NaN)
-                          const valHome = Number(homeMotiv || 0);
-                          const valAway = Number(awayMotiv || 0);
+                          const valHome = Number(homeAff || 0);
+                          const valAway = Number(awayAff || 0);
 
                           // 3. Calcolo Colori Punta
                           const colHome = getTrendColor(valHome);

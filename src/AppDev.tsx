@@ -1175,19 +1175,7 @@ export default function AppDev() {
   const renderPreMatch = () => {
 
     // --- 1. FUNZIONE COLORI LED ---
-    const getTrendColor = (valore: number) => {
-        // SCALA 10 LIVELLI - COLORI SOLIDI E VIVIDI
-        if (valore >= 90) return 'rgba(0, 255, 100, 1)';   // Verde Smeraldo
-        if (valore >= 80) return 'rgba(0, 255, 0, 1)';     // Verde Puro
-        if (valore >= 70) return 'rgba(150, 255, 0, 1)';   // Verde Prato
-        if (valore >= 60) return 'rgba(210, 255, 0, 1)';   // Lime
-        if (valore >= 50) return 'rgba(255, 255, 0, 1)';   // Giallo
-        if (valore >= 40) return 'rgba(255, 200, 0, 1)';   // Arancio Chiaro
-        if (valore >= 30) return 'rgba(255, 140, 0, 1)';   // Arancione
-        if (valore >= 20) return 'rgba(255, 80, 0, 1)';    // Arancio Scuro
-        if (valore >= 10) return 'rgba(255, 30, 0, 1)';    // Rosso Vivo
-        return 'rgba(255, 0, 0, 1)';                       // Rosso Assoluto
-    };
+    
     
     // INCOLLA QUESTE (Dati reali dal DB):
     const homeTrend = selectedMatch?.h2h_data?.lucifero_trend_home || [0,0,0,0,0]; 
@@ -1219,10 +1207,40 @@ export default function AppDev() {
       ];
 
     // Psicologia
+
     const homeMotiv = 90; const awayMotiv = 45;
-    const homeFieldFactor = 85; const awayFieldFactor = 20;
+
+
+    // --- ESTRAZIONE DATI FATTORE CAMPO (Nuova Struttura DB) ---
+    // Se il dato esiste nel DB lo usa, altrimenti mette 50% di default
+    const factorData = selectedMatch?.h2h_data?.fattore_campo;
+    const homeFieldFactor = factorData?.field_home ?? 50; 
+    const awayFieldFactor = factorData?.field_away ?? 50;
 
     
+
+    const getTrendColor = (valore: number) => {
+      // SCALA 10 LIVELLI - COLORI SOLIDI E VIVIDI
+      if (valore >= 90) return 'rgba(0, 255, 100, 1)';   // Verde Smeraldo
+      if (valore >= 80) return 'rgba(0, 255, 0, 1)';     // Verde Puro
+      if (valore >= 70) return 'rgba(150, 255, 0, 1)';   // Verde Prato
+      if (valore >= 60) return 'rgba(210, 255, 0, 1)';   // Lime
+      if (valore >= 50) return 'rgba(255, 255, 0, 1)';   // Giallo
+      if (valore >= 40) return 'rgba(255, 200, 0, 1)';   // Arancio Chiaro
+      if (valore >= 30) return 'rgba(255, 140, 0, 1)';   // Arancione
+      if (valore >= 20) return 'rgba(255, 80, 0, 1)';    // Arancio Scuro
+      if (valore >= 10) return 'rgba(255, 30, 0, 1)';    // Rosso Vivo
+      return 'rgba(255, 0, 0, 1)';                       // Rosso Assoluto
+  };
+
+    // --- 2. CALCOLO COLORI ---
+    // Usiamo la tua funzione per ottenere il colore esatto
+   // const homeColor = getTrendColor(homeFieldFactor);
+   // const awayColor = getTrendColor(awayFieldFactor);
+
+    // Trucco per l'ombra: rendiamo l'ombra leggermente trasparente (0.6) per un effetto neon più realistico
+    //const homeShadow = homeColor.replace(', 1)', ', 0.2)');
+    //const awayShadow = awayColor.replace(', 1)', ', 0.2)');
     
      
 
@@ -1365,31 +1383,101 @@ return (
                 {/* A1. LUCIFERO POWER */}
                 <div className="card-forma" style={styles.card}>
                     <div className="header-title">⚡ FORMA A.L.1 INDEX</div>
-                    <div>
-                        <div className="team-row">
-                            <div className="team-name">{selectedMatch?.home}</div>
-                            <div className="team-value">
-                                {selectedMatch?.h2h_data?.lucifero_home ? selectedMatch.h2h_data.lucifero_home.toFixed(1) : '0.0'}
-                            </div>
-                        </div>
-                        <div className="progress-bar-container">
-                            <div className="progress-bar home" style={{ 
-                                width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_home || 0) / 25) * 100, 100)}%`
-                            }} />
-                        </div>
-                    </div>
-                    <div className="away-section">
-                        <div className="team-row">
-                            <div className="team-name">{selectedMatch?.away}</div>
-                            <div className="team-value">
-                                {selectedMatch?.h2h_data?.lucifero_away ? selectedMatch.h2h_data.lucifero_away.toFixed(1) : '0.0'}
-                            </div>
-                        </div>
-                        <div className="progress-bar-container">
-                            <div className="progress-bar away" style={{ 
-                                width: `${Math.min((Number(selectedMatch?.h2h_data?.lucifero_away || 0) / 25) * 100, 100)}%`
-                            }} />
-                        </div>
+                    <div className="content-container">
+                        
+                        {/* --- LOGICA COLORI AVANZATA --- */}
+                        {(() => {
+                            // 1. Recupero valori (0-25)
+                            const valHome = Number(selectedMatch?.h2h_data?.lucifero_home || 0);
+                            const valAway = Number(selectedMatch?.h2h_data?.lucifero_away || 0);
+
+                            // 2. Converto in % (0-100) per la larghezza della barra
+                            const pctHome = Math.min((valHome / 25) * 100, 100);
+                            const pctAway = Math.min((valAway / 25) * 100, 100);
+
+                            // 3. I TUOI 10 COLORI (Ordinati da 0% a 100% -> Rosso -> Verde)
+                            // Ho copiato esattamente i tuoi rgba, messi in ordine progressivo
+                            const fullScaleGradient = `linear-gradient(90deg, 
+                                rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
+                                rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
+                                rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
+                                rgba(255, 140, 0, 1) 33%,   /* Arancione */
+                                rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
+                                rgba(255, 255, 0, 1) 55%,   /* Giallo */
+                                rgba(210, 255, 0, 1) 66%,   /* Lime */
+                                rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
+                                rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
+                                rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
+                            )`;
+
+                            // 4. Calcolo il colore della "Punta" per il testo e l'ombra neon
+                            const colHome = getTrendColor(pctHome);
+                            const colAway = getTrendColor(pctAway);
+                            
+                            const shadowHome = colHome.replace(', 1)', ', 0.2)');
+                            const shadowAway = colAway.replace(', 1)', ', 0.2)');
+
+                            return (
+                                <>
+                                    {/* SQUADRA CASA */}
+                                    <div className="team-row">
+                                        <div className="team-name">{selectedMatch?.home}</div>
+                                        <div 
+                                            className="team-value"
+                                            style={{ 
+                                                color: colHome, 
+                                                textShadow: `0 0 10px ${shadowHome}`,
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            {valHome.toFixed(1)}
+                                        </div>
+                                    </div>
+                                    <div className="progress-bar-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                                        <div className="progress-bar home" style={{ 
+                                            width: `${pctHome}%`,
+                                            height: '100%',
+                                            borderRadius: '3px',
+                                            // APPLICO IL GRADIENTE COMPLETO
+                                            backgroundImage: fullScaleGradient,
+                                            // TRUCCO: La dimensione dello sfondo è inversa alla larghezza.
+                                            // Se la barra è al 50%, lo sfondo è al 200% (così vedo solo metà arcobaleno).
+                                            backgroundSize: `${pctHome > 0 ? (10000 / pctHome) : 100}% 100%`,
+                                            boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadowHome}`
+                                        }} />
+                                    </div>
+
+                                    {/* SQUADRA OSPITE */}
+                                    <div className="away-section" style={{ marginTop: '10px' }}>
+                                        <div className="team-row">
+                                            <div className="team-name">{selectedMatch?.away}</div>
+                                            <div 
+                                                className="team-value"
+                                                style={{ 
+                                                    color: colAway,
+                                                    textShadow: `0 0 10px ${shadowAway}`,
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {valAway.toFixed(1)}
+                                            </div>
+                                        </div>
+                                        <div className="progress-bar-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                                            <div className="progress-bar away" style={{ 
+                                                width: `${pctAway}%`,
+                                                height: '100%',
+                                                borderRadius: '3px',
+                                                // APPLICO IL GRADIENTE COMPLETO
+                                                backgroundImage: fullScaleGradient,
+                                                // TRUCCO BACKGROUND SIZE
+                                                backgroundSize: `${pctAway > 0 ? (10000 / pctAway) : 100}% 100%`,
+                                                boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadowAway}`
+                                            }} />
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -1399,73 +1487,135 @@ return (
                         <span className="header-title">📈 TREND INERZIA M.L.5 INDEX</span>
                         <span className="header-arrow">⟶</span>
                     </div>
+                    
                     <div className="teams-container">
-                        <div className="team-row">
-                            <div className="team-left-section">
-                                <span className="team-name">{selectedMatch?.home}</span>
-                                <div className="avg-container">
-                                    <span className="avg-value" style={{ color: getTrendColor(Number(homeAvg)) }}>
-                                        {homeAvg}%
-                                    </span>
-                                    <div className="avg-progress-container">
-                                        <div className="avg-progress-bar" style={{ 
-                                            width: `${homeAvg}%`, 
-                                            background: getTrendColor(Number(homeAvg)), 
-                                            boxShadow: `0 0 8px ${getTrendColor(Number(homeAvg))}`
-                                        }} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="trend-right-section">
-                                <div className="trend-boxes-container">
-                                    {[...homeTrend].reverse().map((val: number, i: number) => (
-                                        <div key={i} className="trend-box" style={{ 
-                                            background: getTrendColor(val), 
-                                            boxShadow: `0 0 8px ${getTrendColor(val)}`
-                                        }}>
-                                            <span className="trend-box-value">{Math.round(val)}%</span>
+                        
+                        {/* --- LOGICA VISIVA AVANZATA --- */}
+                        {(() => {
+                            // 1. Definisco il Gradiente completo (10 Colori)
+                            const fullScaleGradient = `linear-gradient(90deg, 
+                                rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
+                                rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
+                                rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
+                                rgba(255, 140, 0, 1) 33%,   /* Arancione */
+                                rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
+                                rgba(255, 255, 0, 1) 55%,   /* Giallo */
+                                rgba(210, 255, 0, 1) 66%,   /* Lime */
+                                rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
+                                rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
+                                rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
+                            )`;
+
+                            // 2. Preparo i colori per CASA
+                            const valHome = Number(homeAvg);
+                            const colHome = getTrendColor(valHome);
+                            const shadHome = colHome.replace(', 1)', ', 0.2)');
+
+                            // 3. Preparo i colori per OSPITE
+                            const valAway = Number(awayAvg);
+                            const colAway = getTrendColor(valAway);
+                            const shadAway = colAway.replace(', 1)', ', 0.2)');
+
+                            return (
+                                <>
+                                    {/* --- RIGA SQUADRA CASA --- */}
+                                    <div className="team-row">
+                                        <div className="team-left-section">
+                                            <span className="team-name">{selectedMatch?.home}</span>
+                                            <div className="avg-container">
+                                                {/* VALORE NEON */}
+                                                <span className="avg-value" style={{ 
+                                                    color: colHome,
+                                                    textShadow: `0 0 8px ${shadHome}`,
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {homeAvg}%
+                                                </span>
+                                                {/* BARRA SOTTILE CON GRADIENTE MASCHERATO */}
+                                                <div className="avg-progress-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                                                    <div className="avg-progress-bar" style={{ 
+                                                        width: `${valHome}%`, 
+                                                        height: '100%',
+                                                        borderRadius: '3px',
+                                                        backgroundImage: fullScaleGradient,
+                                                        backgroundSize: `${valHome > 0 ? (10000 / valHome) : 100}% 100%`,
+                                                        boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadHome}`
+                                                    }} />
+                                                </div>
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                                <span className="trend-arrow" style={{ 
-                                    color: getTrendColor(homeTrend[0]), 
-                                    textShadow: `0 0 8px ${getTrendColor(homeTrend[0])}`
-                                }}>⟶</span>
-                            </div>
-                        </div>
-                        <div className="team-row">
-                            <div className="team-left-section">
-                                <span className="team-name">{selectedMatch?.away}</span>
-                                <div className="avg-container">
-                                    <span className="avg-value" style={{ color: getTrendColor(Number(awayAvg)) }}>
-                                        {awayAvg}%
-                                    </span>
-                                    <div className="avg-progress-container">
-                                        <div className="avg-progress-bar" style={{ 
-                                            width: `${awayAvg}%`, 
-                                            background: getTrendColor(Number(awayAvg)), 
-                                            boxShadow: `0 0 8px ${getTrendColor(Number(awayAvg))}`
-                                        }} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="trend-right-section">
-                                <div className="trend-boxes-container">
-                                    {[...awayTrend].reverse().map((val: number, i: number) => (
-                                        <div key={i} className="trend-box" style={{ 
-                                            background: getTrendColor(val), 
-                                            boxShadow: `0 0 8px ${getTrendColor(val)}`
-                                        }}>
-                                            <span className="trend-box-value">{Math.round(val)}%</span>
+                                        {/* BOX QUADRATINI (Restano solidi ma con ombra soft) */}
+                                        <div className="trend-right-section">
+                                            <div className="trend-boxes-container">
+                                                {[...homeTrend].reverse().map((val: number, i: number) => {
+                                                    const boxCol = getTrendColor(val);
+                                                    return (
+                                                        <div key={i} className="trend-box" style={{ 
+                                                            background: boxCol, 
+                                                            boxShadow: `0 0 8px ${boxCol.replace(', 1)', ', 0.5)')}` 
+                                                        }}>
+                                                            <span className="trend-box-value">{Math.round(val)}%</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <span className="trend-arrow" style={{ 
+                                                color: getTrendColor(homeTrend[0]), 
+                                                textShadow: `0 0 8px ${getTrendColor(homeTrend[0]).replace(', 1)', ', 0.5)')}`
+                                            }}>⟶</span>
                                         </div>
-                                    ))}
-                                </div>
-                                <span className="trend-arrow" style={{ 
-                                    color: getTrendColor(awayTrend[0]), 
-                                    textShadow: `0 0 8px ${getTrendColor(awayTrend[0])}`
-                                }}>⟶</span>
-                            </div>
-                        </div>
+                                    </div>
+
+                                    {/* --- RIGA SQUADRA OSPITE --- */}
+                                    <div className="team-row">
+                                        <div className="team-left-section">
+                                            <span className="team-name">{selectedMatch?.away}</span>
+                                            <div className="avg-container">
+                                                {/* VALORE NEON */}
+                                                <span className="avg-value" style={{ 
+                                                    color: colAway,
+                                                    textShadow: `0 0 8px ${shadAway}`,
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {awayAvg}%
+                                                </span>
+                                                {/* BARRA SOTTILE CON GRADIENTE MASCHERATO */}
+                                                <div className="avg-progress-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                                                    <div className="avg-progress-bar" style={{ 
+                                                        width: `${valAway}%`, 
+                                                        height: '100%',
+                                                        borderRadius: '3px',
+                                                        backgroundImage: fullScaleGradient,
+                                                        backgroundSize: `${valAway > 0 ? (10000 / valAway) : 100}% 100%`,
+                                                        boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadAway}`
+                                                    }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* BOX QUADRATINI */}
+                                        <div className="trend-right-section">
+                                            <div className="trend-boxes-container">
+                                                {[...awayTrend].reverse().map((val: number, i: number) => {
+                                                    const boxCol = getTrendColor(val);
+                                                    return (
+                                                        <div key={i} className="trend-box" style={{ 
+                                                            background: boxCol, 
+                                                            boxShadow: `0 0 8px ${boxCol.replace(', 1)', ', 0.2)')}` 
+                                                        }}>
+                                                            <span className="trend-box-value">{Math.round(val)}%</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <span className="trend-arrow" style={{ 
+                                                color: getTrendColor(awayTrend[0]), 
+                                                textShadow: `0 0 8px ${getTrendColor(awayTrend[0]).replace(', 1)', ', 0.2)')}`
+                                            }}>⟶</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -1476,49 +1626,105 @@ return (
                     </div>
                     
                     <div className="content-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* SQUADRA CASA */}
-                        <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
-                                {selectedMatch?.home}
-                            </span>
-                            <div className="progress-bar-container" style={{ flex: '2', height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div 
-                                    className="progress-bar home" 
-                                    style={{ 
-                                        width: `${(selectedMatch?.h2h_data?.home_score || 0) * 10}%`, 
-                                        height: '100%', 
-                                        backgroundColor: theme.cyan,
-                                        boxShadow: `0 0 8px ${theme.cyan}`,
-                                        transition: 'width 0.5s ease-out'
-                                    }} 
-                                />
-                            </div>
-                            <span className="team-percentage home" style={{ minWidth: '35px', fontSize: '11px', fontWeight: 'bold', color: theme.cyan, textAlign: 'right' }}>
-                                {Math.round((selectedMatch?.h2h_data?.home_score || 0) * 10)}%
-                            </span>
-                        </div>
+                        
+                        {/* --- LOGICA VISIVA AVANZATA --- */}
+                        {(() => {
+                            // 1. Definisco il Gradiente completo (10 Colori)
+                            const fullScaleGradient = `linear-gradient(90deg, 
+                                rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
+                                rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
+                                rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
+                                rgba(255, 140, 0, 1) 33%,   /* Arancione */
+                                rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
+                                rgba(255, 255, 0, 1) 55%,   /* Giallo */
+                                rgba(210, 255, 0, 1) 66%,   /* Lime */
+                                rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
+                                rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
+                                rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
+                            )`;
 
-                        {/* SQUADRA TRASFERTA */}
-                        <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
-                                {selectedMatch?.away}
-                            </span>
-                            <div className="progress-bar-container" style={{ flex: '2', height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div 
-                                    className="progress-bar away" 
-                                    style={{ 
-                                        width: `${(selectedMatch?.h2h_data?.away_score || 0) * 10}%`, 
-                                        height: '100%', 
-                                        backgroundColor: theme.danger,
-                                        boxShadow: `0 0 8px ${theme.danger}`,
-                                        transition: 'width 0.5s ease-out'
-                                    }} 
-                                />
-                            </div>
-                            <span className="team-percentage away" style={{ minWidth: '35px', fontSize: '11px', fontWeight: 'bold', color: theme.danger, textAlign: 'right' }}>
-                                {Math.round((selectedMatch?.h2h_data?.away_score || 0) * 10)}%
-                            </span>
-                        </div>
+                            // 2. Calcolo Percentuali (Score 0-10 -> 0-100%)
+                            const scoreHome = (selectedMatch?.h2h_data?.home_score || 0) * 10;
+                            const scoreAway = (selectedMatch?.h2h_data?.away_score || 0) * 10;
+
+                            const pctHome = Math.min(scoreHome, 100);
+                            const pctAway = Math.min(scoreAway, 100);
+
+                            // 3. Calcolo Colori Punta
+                            const colHome = getTrendColor(pctHome);
+                            const shadHome = colHome.replace(', 1)', ', 0.2)');
+
+                            const colAway = getTrendColor(pctAway);
+                            const shadAway = colAway.replace(', 1)', ', 0.2)');
+
+                            return (
+                                <>
+                                    {/* SQUADRA CASA */}
+                                    <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                                            {selectedMatch?.home}
+                                        </span>
+                                        <div className="progress-bar-container" style={{ flex: '2', height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                                            <div 
+                                                className="progress-bar home" 
+                                                style={{ 
+                                                    width: `${pctHome}%`, 
+                                                    height: '100%', 
+                                                    borderRadius: '3px',
+                                                    backgroundImage: fullScaleGradient,
+                                                    backgroundSize: `${pctHome > 0 ? (10000 / pctHome) : 100}% 100%`,
+                                                    boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadHome}`,
+                                                    transition: 'width 0.5s ease-out'
+                                                }} 
+                                            />
+                                        </div>
+                                        <span className="team-percentage home" style={{ 
+                                            minWidth: '35px', 
+                                            fontSize: '11px', 
+                                            fontWeight: 'bold', 
+                                            color: colHome, 
+                                            textShadow: `0 0 8px ${shadHome}`,
+                                            textAlign: 'right' 
+                                        }}>
+                                            {Math.round(scoreHome)}%
+                                        </span>
+                                    </div>
+
+                                    {/* SQUADRA TRASFERTA */}
+                                    <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                                            {selectedMatch?.away}
+                                        </span>
+                                        <div className="progress-bar-container" style={{ flex: '2', height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                                            <div 
+                                                className="progress-bar away" 
+                                                style={{ 
+                                                    width: `${pctAway}%`, 
+                                                    height: '100%', 
+                                                    borderRadius: '3px',
+                                                    backgroundImage: fullScaleGradient,
+                                                    backgroundSize: `${pctAway > 0 ? (10000 / pctAway) : 100}% 100%`,
+                                                    boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadAway}`,
+                                                    transition: 'width 0.5s ease-out'
+                                                }} 
+                                            />
+                                        </div>
+                                        <span className="team-percentage away" style={{ 
+                                            minWidth: '35px', 
+                                            fontSize: '11px', 
+                                            fontWeight: 'bold', 
+                                            color: colAway, 
+                                            textShadow: `0 0 8px ${shadAway}`,
+                                            textAlign: 'right' 
+                                        }}>
+                                            {Math.round(scoreAway)}%
+                                        </span>
+                                    </div>
+                                </>
+                            );
+                        })()}
+    
+
 
                         {/* RIASSUNTO STORICO STILIZZATO */}
                         {selectedMatch?.h2h_data?.history_summary && (
@@ -1545,44 +1751,199 @@ return (
                 <div className="card-campo" style={styles.card}>
                     <div className="header-title">🏟️ CAMPO (Fattore Stadio)</div>
                     <div className="content-container">
-                        <div className="team-row">
-                            <span className="team-name">{selectedMatch?.home}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar home" style={{ width: `${homeFieldFactor}%` }} />
-                            </div>
-                            <span className="team-percentage home">{homeFieldFactor}%</span>
-                        </div>
-                        <div className="team-row">
-                            <span className="team-name">{selectedMatch?.away}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar away" style={{ width: `${awayFieldFactor}%` }} />
-                            </div>
-                            <span className="team-percentage away">{awayFieldFactor}%</span>
-                        </div>
+
+                        {/* --- LOGICA VISIVA AVANZATA (GRADIENTE + NEON) --- */}
+                        {(() => {
+                            // 1. Definisco il Gradiente completo (10 Colori)
+                            const fullScaleGradient = `linear-gradient(90deg, 
+                                rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
+                                rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
+                                rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
+                                rgba(255, 140, 0, 1) 33%,   /* Arancione */
+                                rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
+                                rgba(255, 255, 0, 1) 55%,   /* Giallo */
+                                rgba(210, 255, 0, 1) 66%,   /* Lime */
+                                rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
+                                rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
+                                rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
+                            )`;
+
+                            // 2. Calcolo Colori per la "Punta" (Testo e Ombra)
+                            // homeFieldFactor e awayFieldFactor sono già calcolati fuori (0-100)
+                            const colHome = getTrendColor(homeFieldFactor);
+                            const shadHome = colHome.replace(', 1)', ', 0.2)');
+
+                            const colAway = getTrendColor(awayFieldFactor);
+                            const shadAway = colAway.replace(', 1)', ', 0.2)');
+
+                            return (
+                                <>
+                                    {/* Riga SQUADRA CASA */}
+                                    <div className="team-row" style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                                        <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.home}</span>
+                                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                                            <div 
+                                                className="progress-bar home" 
+                                                style={{ 
+                                                    width: `${homeFieldFactor}%`, 
+                                                    height: '100%',
+                                                    borderRadius: '3px',
+                                                    // GRADIENTE MASCHERATO
+                                                    backgroundImage: fullScaleGradient,
+                                                    backgroundSize: `${homeFieldFactor > 0 ? (10000 / homeFieldFactor) : 100}% 100%`,
+                                                    // NEON
+                                                    boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadHome}`,
+                                                    transition: 'width 0.5s ease-in-out'
+                                                }} 
+                                            />
+                                        </div>
+                                        <span className="team-percentage home" style={{ 
+                                            width: '40px', 
+                                            textAlign: 'right', 
+                                            fontWeight: 'bold', 
+                                            color: colHome, 
+                                            textShadow: `0 0 8px ${shadHome}`
+                                        }}>
+                                            {homeFieldFactor}%
+                                        </span>
+                                    </div>
+
+                                    {/* Riga SQUADRA OSPITE */}
+                                    <div className="team-row" style={{ display: 'flex', alignItems: 'center' }}>
+                                        <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.away}</span>
+                                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                                            <div 
+                                                className="progress-bar away" 
+                                                style={{ 
+                                                    width: `${awayFieldFactor}%`, 
+                                                    height: '100%',
+                                                    borderRadius: '3px',
+                                                    // GRADIENTE MASCHERATO
+                                                    backgroundImage: fullScaleGradient,
+                                                    backgroundSize: `${awayFieldFactor > 0 ? (10000 / awayFieldFactor) : 100}% 100%`,
+                                                    // NEON
+                                                    boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadAway}`,
+                                                    transition: 'width 0.5s ease-in-out'
+                                                }} 
+                                            />
+                                        </div>
+                                        <span className="team-percentage away" style={{ 
+                                            width: '40px', 
+                                            textAlign: 'right', 
+                                            fontWeight: 'bold', 
+                                            color: colAway,
+                                            textShadow: `0 0 8px ${shadAway}`
+                                        }}>
+                                            {awayFieldFactor}%
+                                        </span>
+                                    </div>
+                                </>
+                            );
+                        })()}
+
                     </div>
                 </div>
 
                 {/* A5. SEZIONE AFFIDABILITÀ */}
-                <div className="card-affidabilita" style={styles.card}>
-                    <div className="header-title">🧠 AFFIDABILITÀ (Stabilità)</div>
-                    <div className="content-container">
-                        <div className="team-row">
-                            <span className="team-name">{selectedMatch?.home}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar home" style={{ width: `${homeMotiv}%` }} />
-                            </div>
-                            <span className="team-percentage home">{homeMotiv}%</span>
-                        </div>
-                        <div className="team-row">
-                            <span className="team-name">{selectedMatch?.away}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar away" style={{ width: `${awayMotiv}%` }} />
-                            </div>
-                            <span className="team-percentage away">{awayMotiv}%</span>
-                        </div>
-                    </div>
-                </div>
-            </div> 
+              <div className="card-affidabilita" style={styles.card}>
+                  <div className="header-title">🧠 AFFIDABILITÀ (Stabilità)</div>
+                  <div className="content-container">
+
+                      {/* --- LOGICA VISIVA AVANZATA (GRADIENTE + NEON) --- */}
+                      {(() => {
+                          // 1. Definisco il Gradiente completo (10 Colori)
+                          const fullScaleGradient = `linear-gradient(90deg, 
+                              rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
+                              rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
+                              rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
+                              rgba(255, 140, 0, 1) 33%,   /* Arancione */
+                              rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
+                              rgba(255, 255, 0, 1) 55%,   /* Giallo */
+                              rgba(210, 255, 0, 1) 66%,   /* Lime */
+                              rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
+                              rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
+                              rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
+                          )`;
+
+                          // 2. Preparo i valori (Safety check per evitare NaN)
+                          const valHome = Number(homeMotiv || 0);
+                          const valAway = Number(awayMotiv || 0);
+
+                          // 3. Calcolo Colori Punta
+                          const colHome = getTrendColor(valHome);
+                          const shadHome = colHome.replace(', 1)', ', 0.2)');
+
+                          const colAway = getTrendColor(valAway);
+                          const shadAway = colAway.replace(', 1)', ', 0.2)');
+
+                          return (
+                              <>
+                                  {/* Riga SQUADRA CASA */}
+                                  <div className="team-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                      <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.home}</span>
+                                      <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                                          <div 
+                                              className="progress-bar home" 
+                                              style={{ 
+                                                  width: `${valHome}%`, 
+                                                  height: '100%',
+                                                  borderRadius: '3px',
+                                                  // GRADIENTE MASCHERATO
+                                                  backgroundImage: fullScaleGradient,
+                                                  backgroundSize: `${valHome > 0 ? (10000 / valHome) : 100}% 100%`,
+                                                  // NEON
+                                                  boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadHome}`,
+                                                  transition: 'width 0.5s ease-in-out'
+                                              }} 
+                                          />
+                                      </div>
+                                      <span className="team-percentage home" style={{ 
+                                          width: '40px', 
+                                          textAlign: 'right', 
+                                          fontWeight: 'bold', 
+                                          color: colHome,
+                                          textShadow: `0 0 8px ${shadHome}`
+                                      }}>
+                                          {valHome}%
+                                      </span>
+                                  </div>
+
+                                  {/* Riga SQUADRA OSPITE */}
+                                  <div className="team-row" style={{ display: 'flex', alignItems: 'center' }}>
+                                      <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.away}</span>
+                                      <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                                          <div 
+                                              className="progress-bar away" 
+                                              style={{ 
+                                                  width: `${valAway}%`, 
+                                                  height: '100%',
+                                                  borderRadius: '3px',
+                                                  // GRADIENTE MASCHERATO
+                                                  backgroundImage: fullScaleGradient,
+                                                  backgroundSize: `${valAway > 0 ? (10000 / valAway) : 100}% 100%`,
+                                                  // NEON
+                                                  boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadAway}`,
+                                                  transition: 'width 0.5s ease-in-out'
+                                              }} 
+                                          />
+                                      </div>
+                                      <span className="team-percentage away" style={{ 
+                                          width: '40px', 
+                                          textAlign: 'right', 
+                                          fontWeight: 'bold', 
+                                          color: colAway,
+                                          textShadow: `0 0 8px ${shadAway}`
+                                      }}>
+                                          {valAway}%
+                                      </span>
+                                  </div>
+                              </>
+                          );
+                      })()}
+
+                  </div>
+              </div>
+            </div>
 
             {/* === COLONNA DESTRA: ANALISI COMPETITIVA VALORI CORE === */}
             <div className="colonna-destra-analisi">

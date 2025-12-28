@@ -63,9 +63,15 @@ interface ChatMessage {
 }
 
 // --- CONFIGURAZIONE ---
+
+// 1. API Node.js (Questa puoi lasciarla così se l'emulatore Node funziona, o forzala al cloud anche lei)
 const API_BASE = window.location.hostname === 'localhost' 
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api' 
   : 'https://api-6b34yfzjia-uc.a.run.app';
+
+// 2. NUOVA API PYTHON AI -> FORZIAMO IL CLOUD!
+// Usiamo sempre il link di produzione perché l'emulatore Python locale è rognoso da configurare con tutte le librerie.
+const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
 
 // 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
 const COUNTRIES = [
@@ -303,6 +309,8 @@ export default function AppDev() {
 
   const [hoveredRound, setHoveredRound] = React.useState<string | null>(null);
 
+  
+
   // --- FETCH DATI ---
   useEffect(() => {
     fetch(`${API_BASE}/leagues?country=${country}`).then(r => r.json()).then(d => { setLeagues(d); if(d.length) setLeague(d[0].id); });
@@ -355,28 +363,44 @@ export default function AppDev() {
     if (!selectedMatch) return;
     setViewState('simulating');
 
-    const cyclesMap = { 'quick': 100, 'normal': 500, 'deep': 2000 };
+    const cyclesMap: Record<string, number> = { 'quick': 100, 'normal': 500, 'deep': 2000 };
     const cycles = cyclesMap[simDepth];
 
     try {
-      const res = await fetch(`${API_BASE}/simulation/simulate-match`, {
+      // --- CHIAMATA DIRETTA AL CLOUD RUN PYTHON ---
+      const res = await fetch(AI_ENGINE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          main_mode: 4,
+          main_mode: 4,               // Era mainmode, ora main_mode (Python standard)
           nation: country.toUpperCase(),
           league: league,
           home: selectedMatch.home,
           away: selectedMatch.away,
           round: selectedRound?.name,
-          algo_id: 6,
-          cycles: cycles
+          algo_id: 6,                 // Era algoid, ora algo_id
+          cycles: cycles,
+          save_db: false              // Aggiunto explicit snake_case
         })
       });
-      const data = await res.json();
-      
+
+      const responseJson = await res.json();
+
+      // Controllo errori specifico per il nuovo backend Python
+      if (!responseJson.success || !responseJson.result) {
+        throw new Error(responseJson.error || 'Risposta del server incompleta');
+      }
+
+      // Estraiamo i dati veri dall'oggetto "result"
+      const data = responseJson.result;
+
+      // Adattiamo i dati Python (snake_case) al Frontend (se necessario)
+      // Il Python restituisce "predicted_score", "gh", "ga", "sign", ecc.
       const enrichedData = {
         ...data,
+        // Mappiamo predicted_score (Python) a predictedscore (Frontend, se lo usi così altrove)
+        predictedscore: data.predicted_score, 
+        
         events: generateMockEvents(data.gh, data.ga, selectedMatch.home, selectedMatch.away)
       };
 
@@ -390,12 +414,13 @@ export default function AppDev() {
         runAnimation(enrichedData);
       }
 
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Errore Simulazione:", e);
       setViewState('pre-match');
-      alert('Errore simulazione');
+      alert(`Errore simulazione: ${e.message || 'Errore sconosciuto'}`);
     }
   };
+
 
   const runAnimation = (finalData: SimulationResult) => {
     let t = 0;

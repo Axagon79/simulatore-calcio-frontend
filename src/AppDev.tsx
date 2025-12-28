@@ -1346,38 +1346,170 @@ export default function AppDev() {
 return (
     <div style={styles.arenaContent}>
       
-      {/* HEADER */}
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px', borderBottom:'1px solid rgba(255,255,255,0.1)', paddingBottom:'10px'}}>
-          {/* TASTO INDIETRO ELEGANTE */}
-          <button 
-               onClick={() => setViewState('list')} 
-               style={{
-                 background: 'rgba(0, 240, 255, 0.1)', 
-                 border: '1px solid rgba(0, 240, 255, 0.3)', 
-                 color: '#00f0ff', 
-                 padding: '8px 16px', 
-                 borderRadius: '8px', 
-                 cursor: 'pointer', 
-                 fontWeight: 'bold',
-                 fontSize: '12px',
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: '6px',
-                 transition: 'all 0.2s'
-               }}
-               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
-               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
-             >
-               ⟵ Lista Partite
-          </button>
-          <div style={{textAlign:'center'}}>
-            <div style={{fontSize:'10px', color: theme.cyan, letterSpacing:'2px'}}>ANALYSIS CORE</div>
-            <div style={{fontSize:'18px', fontWeight:'bold'}}>
-                {selectedMatch?.home} <span style={{color:theme.textDim, fontSize:'14px'}}>vs</span> {selectedMatch?.away}
+      {/* HEADER - SIMMETRIA ASSOLUTA PRO */}
+<div style={{
+    display: 'flex', 
+    flexDirection: isMobile ? 'column' : 'row',
+    alignItems: 'center', 
+    justifyContent: isMobile ? 'center' : 'space-between', 
+    marginBottom: '30px', 
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)', 
+    paddingBottom: '8px',
+    paddingTop: isMobile ? '0' : '0px', 
+    position: 'relative'
+}}>
+    
+    {/* 1. SINISTRA: Tasto Indietro (Bilanciato con il lato destro del monitor) */}
+    <div style={{ width: isMobile ? '100%' : '200px', display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', zIndex: 10 }}>
+        <button 
+            onClick={() => setViewState('list')} 
+            style={{
+                height: '35px',
+                background: 'rgba(0, 240, 255, 0.05)', 
+                border: '1px solid rgba(0, 240, 255, 0.2)', 
+                color: '#00f0ff', 
+                padding: '0 16px', 
+                borderRadius: '6px', 
+                fontSize: '11px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                textTransform: 'uppercase'
+            }}
+        >
+            <span>←</span> Lista
+        </button>
+    </div>
+
+    {/* 2. BLOCCO CENTRALE ASSOLUTO (Ancorato al centro dello schermo) */}
+    <div style={{ 
+        position: isMobile ? 'static' : 'absolute',
+        left: '50%',
+        transform: isMobile ? 'none' : 'translateX(-50%)', // Centratura matematica perfetta rispetto allo schermo
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row', 
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: isMobile ? '15px' : '30px',
+        pointerEvents: 'none',
+        width: isMobile ? '100%' : 'auto'
+    }}>
+        
+        {/* A. BOX DATA (Larghezza fissa per non sbilanciare) */}
+        <div style={{
+            width: isMobile ? 'auto' : '110px', // FISSO per simmetria con il Risultato
+            height: '35px', 
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            background: 'rgba(111, 149, 170, 0.1)', 
+            padding: '0 10px',
+            borderRadius: '6px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            fontSize: '15px',
+            fontWeight: '600',
+            color: 'rgba(255, 255, 255, 0.6)',
+            order: isMobile ? 2 : 1,
+            pointerEvents: 'auto'
+        }}>
+            <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).date_obj ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'}) : '27/12'}</span>
+            <span style={{ opacity: 0.2 }}>|</span>
+            <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).match_time || '18:00'}</span>
+        </div>
+
+        {/* B. NOMI SQUADRE (Il perno centrale) */}
+        <div style={{ 
+            order: isMobile ? 1 : 2,
+            position: 'relative',
+            pointerEvents: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+        }}>
+            {/* Analysis Core */}
+            <div style={{ 
+                position: isMobile ? 'static' : 'absolute',
+                top: isMobile ? '0' : '-22px',
+                fontSize: '10px', 
+                marginTop: isMobile ? '10px' : '0',
+                color: theme.cyan, 
+                letterSpacing: '3px', 
+                textTransform: 'uppercase', 
+                opacity: 0.8,
+                whiteSpace: 'nowrap'
+            }}>
+                Analysis Core
             </div>
-          </div>
-          <div style={{width:'60px'}}></div>
-      </div>
+
+            {/* GRID DI SIMMETRIA SPECCHIATA */}
+            <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '125px 35px 125px' : '250px 50px 250px', // DUE BLOCCHI IDENTICI DA 250PX
+                alignItems: 'center',
+                fontSize: isMobile ? '15px' : '25px', 
+                fontWeight: '900', 
+                color: '#fff',
+                lineHeight: '35px'
+            }}>
+                {/* Casa - Allineata a destra verso il VS */}
+                <div style={{textAlign: isMobile ? 'right' : 'center',
+                   overflow: 'hidden',
+                   textOverflow: 'ellipsis',
+                   whiteSpace: 'nowrap'
+                   }}>
+
+                    {selectedMatch?.home}
+                </div>
+
+                {/* VS - IL CENTRO ASSOLUTO */}
+                <div style={{ 
+                    textAlign: 'center',
+                    color: theme.textDim, 
+                    fontSize: '16px', 
+                    fontWeight: '400', 
+                    textTransform: 'lowercase',
+                }}>
+                    vs
+                </div>
+
+                {/* Ospite - Allineata a sinistra verso il VS */}
+                <div style={{ textAlign: isMobile ? 'left' : 'center',
+                   overflow: 'hidden',
+                   textOverflow: 'ellipsis',
+                   whiteSpace: 'nowrap'
+                  }}>
+                    {selectedMatch?.away}
+                </div>
+            </div>
+        </div>
+
+        {/* C. BOX RISULTATO (Larghezza fissa identica alla Data) */}
+        <div style={{ 
+            width: isMobile ? '75px' : '130px', // FISSO come la Data per bilanciare il VS al centro
+            height: '35px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            fontSize: '19px', 
+            fontWeight: '900', 
+            background: selectedMatch?.real_score ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+            color: selectedMatch?.real_score ? '#22c55e' : 'rgba(255, 255, 255, 0.2)',
+            border: selectedMatch?.real_score ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+            order: 3,
+            pointerEvents: 'auto',
+            fontFamily: 'monospace'
+        }}>
+            {selectedMatch?.real_score ? selectedMatch.real_score : "- : -"}
+        </div>
+    </div> 
+
+    {/* BILANCIAMENTO DESTRA (Invisibile) */}
+    <div style={{ width: isMobile ? '0' : '200px' }}></div>
+</div>
 
       {/* === GRIGLIA PRINCIPALE === */}
       <div className="dashboard-main-grid">

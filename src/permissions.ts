@@ -97,7 +97,7 @@ export const PERMISSIONS = {
     // ========================================
     // 🔑 AMMINISTRAZIONE
     // ========================================
-    ADMIN_KEY: "?admin=000128",
+    ADMIN_KEY: "000128",
     SHOW_ADMIN_BADGE: true,
     ENABLE_DEBUG_LOGS: false,              // Stampa debug verbose
 };
@@ -107,13 +107,46 @@ export const PERMISSIONS = {
 // ========================================
 
 export const checkAdmin = (): boolean => {
-    // 🔥 Su localhost sei SEMPRE admin automaticamente
+    // Sviluppo: localhost sempre admin
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         console.log('🔑 Admin Mode: Localhost Detected');
         return true;
     }
+
+    // Non usiamo più localStorage per ricordare l'admin:
+    // const savedAdmin = localStorage.getItem('isAdmin');
+    // if (savedAdmin === 'true') { ... }  <-- rimosso per richiedere la password ogni volta
+
+    // Controllo password come ultimo segmento del path
+    // Esempio: https://tuosito.it/000128  -> lastSegment = "000128"
+    try {
+        const path = window.location.pathname.replace(/\/+$/,''); // rimuove slash finali
+        const lastSegment = path.split('/').pop() || '';
+        const urlAdmin = lastSegment === PERMISSIONS.ADMIN_KEY;
+
+        if (urlAdmin) {
+            console.log('🔑 Admin Mode: Path Segment Password Detected');
+            // NON salviamo nulla in localStorage: accesso valido solo per questa richiesta
+            return true;
+        }
+    } catch (e) {
+        console.warn('checkAdmin: errore parsing URL', e);
+    }
+
+    // Opzionale: supporto anche per hash (es. /#000128)
+    try {
+        const hash = window.location.hash.replace(/^#/, '');
+        if (hash && hash === PERMISSIONS.ADMIN_KEY) {
+            console.log('🔑 Admin Mode: Hash Password Detected');
+            return true;
+        }
+    } catch (e) {
+        // ignore
+    }
+
     return false;
 };
+
 
 export const getPermissions = () => {
     const isAdmin = checkAdmin();

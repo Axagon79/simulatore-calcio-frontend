@@ -112,24 +112,6 @@ export const checkAdmin = (): boolean => {
         console.log('🔑 Admin Mode: Localhost Detected');
         return true;
     }
-    
-    // 🔥 Controlla se hai già fatto login precedentemente
-    const savedAdmin = localStorage.getItem('isAdmin');
-    if (savedAdmin === 'true') {
-        console.log('🔑 Admin Mode: Saved Session');
-        return true;
-    }
-    
-    // 🔥 Controlla URL parameter (primo accesso)
-    const params = new URLSearchParams(window.location.search);
-    const urlAdmin = params.get('admin') === PERMISSIONS.ADMIN_KEY;
-    
-    if (urlAdmin) {
-        localStorage.setItem('isAdmin', 'false');
-        console.log('🔑 Admin Mode: URL Parameter');
-        return true;
-    }
-    
     return false;
 };
 

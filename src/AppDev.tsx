@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import DashboardHome from './DashboardHome';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
+import { PERMISSIONS, checkAdmin } from './permissions'; // (Adatta il percorso se necessario)
+
 
 // --- INTERFACCE & TIPI ---
 
@@ -72,6 +74,7 @@ const API_BASE = window.location.hostname === 'localhost'
 // 2. NUOVA API PYTHON AI -> FORZIAMO IL CLOUD!
 // Usiamo sempre il link di produzione perché l'emulatore Python locale è rognoso da configurare con tutte le librerie.
 const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
+
 
 // 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
 const COUNTRIES = [
@@ -278,7 +281,15 @@ export default function AppDev() {
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
-  const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result'>('list');
+  const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
+
+
+  // Legge se sei admin usando la funzione che hai importato
+  const [isAdmin, setIsAdmin] = useState(checkAdmin()); 
+
+  // AGGIUNGI QUESTA RIGA:
+  const [configMode, setConfigMode] = useState(4); // 4 = Default (Singola Match)
+
   
   // PREFERENZE SIMULAZIONE
   const [simMode, setSimMode] = useState<'fast' | 'animated'>('fast');
@@ -308,6 +319,35 @@ export default function AppDev() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const [hoveredRound, setHoveredRound] = React.useState<string | null>(null);
+
+
+    // --- STATI SETTINGS ENGINE ---
+    const [configAlgo, setConfigAlgo] = useState(6);         // Default Monte Carlo
+    const [configCycles, setConfigCycles] = useState(500);   // Default 500
+    const [configSaveDb, setConfigSaveDb] = useState(false); // Salva su DB? (Checkbox)
+    const [configDebug, setConfigDebug] = useState(true);    // Debug Mode? (Checkbox)
+    const [configUseRealOdds, setConfigUseRealOdds] = useState(true); // Usa quote reali?
+
+      // --- INCOLLA QUESTO BLOCCO INSIEME AGLI ALTRI useState ---
+  
+      // 1. Definiamo i preset di velocità (serve per il menu Master/MonteCarlo)
+      const SPEED_PRESETS = [
+        { id: 1, label: '⚡ TURBO', cycles: 100, desc: '~3 sec/match' },
+        { id: 2, label: '🏃 RAPIDO', cycles: 250, desc: '~6 sec/match' },
+        { id: 3, label: '🚶 VELOCE', cycles: 500, desc: '~12 sec/match' },
+        { id: 4, label: '⚖️ STANDARD', cycles: 1250, desc: '~30 sec/match' }, 
+        { id: 5, label: '🎯 ACCURATO', cycles: 2500, desc: '~60 sec/match' },
+        { id: 6, label: '🔬 PRECISO', cycles: 5000, desc: '~2 min/match' },
+        { id: 7, label: '💎 ULTRA', cycles: 12500, desc: '~5 min/match' },
+        { id: 8, label: '✏️ CUSTOM', cycles: 0, desc: 'Manuale' },
+    ];
+
+    // 2. Definiamo lo stato per memorizzare la scelta
+    const [selectedSpeed, setSelectedSpeed] = useState(4); // Default Standard
+    const [customCycles, setCustomCycles] = useState(50);  // Valore manuale
+    // ---------------------------------------------------------
+
+  
 
   
 
@@ -385,6 +425,9 @@ export default function AppDev() {
       });
 
       const responseJson = await res.json();
+
+      console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson); // <--- AGGIUNGI QUESTO
+
 
       // Controllo errori specifico per il nuovo backend Python
       if (!responseJson.success || !responseJson.result) {
@@ -2320,44 +2363,67 @@ return (
                         </div>
                     </div>
 
-                    {/* CONFIGURAZIONE SIMULAZIONE */}
+                                                            {/* CONFIGURAZIONE SIMULAZIONE - VERSIONE MINIMAL */}
                     <div className="card-configurazione" style={styles.card}>
-                        <div className="header-title">⚙️ CONFIGURAZIONE SIMULAZIONE</div>
-                        <select>
-                            <option value="6">Lucifero V4 (Standard)</option>
-                            <option value="5">Neural Network Beta</option>
-                            <option value="1">Poisson Simple</option>
-                        </select>
-                        <div className="controls-grid">
-                            <div className="control-group">
-                                <div className="control-label">CICLI</div>
-                                <div className="button-group">
-                                    {['100', '500'].map((d) => (
-                                        <button key={d} onClick={() => setSimDepth(d === '100' ? 'quick' : 'normal')} className="control-button" style={{ 
-                                            background: (simDepth === 'quick' && d === '100') || (simDepth === 'normal' && d === '500') ? theme.cyan : '#222',
-                                            color: (simDepth === 'quick' && d === '100') || (simDepth === 'normal' && d === '500') ? 'black' : '#888'
-                                        }}>{d}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="control-group">
-                                <div className="control-label">MODO</div>
-                                <div className="button-group">
-                                    <button onClick={() => setSimMode('fast')} className="control-button" style={{ 
+                        
+                        {/* HEADER: TITOLO + TASTO AVANZATE */}
+                        <div className="header-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 'bold' }}>CONFIGURAZIONE RAPIDA</span>
+                            <button 
+                                onClick={() => setViewState('settings')}
+                                style={{ 
+                                    background: 'transparent', border: '1px solid #444', 
+                                    color: '#888', cursor: 'pointer', borderRadius: '4px',
+                                    padding: '4px 8px', fontSize: '10px', textTransform: 'uppercase'
+                                }}
+                                title="Apri Impostazioni Complete"
+                            >
+                                🔧 Avanzate
+                            </button>
+                        </div>
+
+                        {/* INFO STATO CORRENTE (Solo testo, non modificabile qui) */}
+                        <div style={{ marginBottom: '15px', fontSize: '11px', color: '#666', lineHeight: '1.4' }}>
+                            <div>Engine: <span style={{ color: theme.cyan }}>{configAlgo === 6 ? 'Monte Carlo (Default)' : 'Custom'}</span></div>
+                            <div>Cicli: <span style={{ color: theme.cyan }}>{configCycles}</span></div>
+                        </div>
+
+                        {/* UNICO CONTROLLO: MODO VISIVO */}
+                        <div className="control-group" style={{ marginBottom: '20px' }}>
+                            <div className="control-label" style={{ marginBottom: '8px', color: '#aaa' }}>MODALITÀ VISUALIZZAZIONE</div>
+                            <div className="button-group" style={{ display: 'flex', gap: '10px' }}>
+                                <button 
+                                    onClick={() => setSimMode('fast')} 
+                                    style={{ 
+                                        flex: 1, padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                                         background: simMode === 'fast' ? theme.success : '#222', 
-                                        color: simMode === 'fast' ? 'black' : '#888'
-                                    }}>⚡</button>
-                                    <button onClick={() => setSimMode('animated')} className="control-button" style={{ 
+                                        color: simMode === 'fast' ? 'black' : '#666',
+                                        fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+                                    }}
+                                >
+                                    ⚡ FLASH
+                                </button>
+                                <button 
+                                    onClick={() => setSimMode('animated')} 
+                                    style={{ 
+                                        flex: 1, padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                                         background: simMode === 'animated' ? theme.purple : '#222', 
-                                        color: simMode === 'animated' ? 'white' : '#888'
-                                    }}>🎬</button>
-                                </div>
+                                        color: simMode === 'animated' ? 'white' : '#666',
+                                        fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+                                    }}
+                                >
+                                    🎬 ANIMATA
+                                </button>
                             </div>
                         </div>
+                        
+                        {/* TASTO AVVIA */}
                         <button className="start-button" onClick={startSimulation}>
-                            AVVIA SIMULAZIONE
+                            LANCIA ANALISI
                         </button>
                     </div>
+
+
                 </div>
             </div>
         </div>
@@ -2365,6 +2431,305 @@ return (
     
 );
 };
+
+
+
+      // --- NUOVO RENDERER: PANNELLO CONFIGURAZIONE (ENGINE ROOM) ---
+      const renderSettingsPanel = () => (
+        <div style={{ 
+          height: '100%', 
+          padding: '30px', 
+          background: 'rgba(0,0,0,0.9)', 
+          overflowY: 'auto',
+          color: 'white',
+          fontFamily: 'monospace'
+        }}>
+          
+          {/* HEADER */}
+          <div style={{ 
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+            borderBottom: `1px solid ${theme.cyan}`, paddingBottom: '20px', marginBottom: '30px' 
+          }}>
+            <div>
+              <h2 style={{ margin: 0, color: theme.cyan, fontSize: '22px', letterSpacing: '1px' }}>
+              {'>'} SYSTEM_CONFIGURATION
+              </h2>
+              <div style={{ color: theme.textDim, fontSize: '12px', marginTop: '5px' }}>
+                Target Mode: <span style={{color: 'white'}}>
+                    {configMode === 0 ? 'TOTAL SIMULATION' : 
+                    configMode === 4 ? 'SINGLE MATCH' : 'MASSIVE ANALYSIS'}
+                </span>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setViewState('pre-match')}
+              style={{ 
+                background: 'transparent', border: `1px solid ${theme.textDim}`, 
+                color: theme.textDim, padding: '8px 20px', borderRadius: '4px', cursor: 'pointer',
+                fontSize: '12px', textTransform: 'uppercase'
+              }}
+            >
+              [ ESC ] Back to Dashboard
+            </button>
+          </div>
+
+          {/* GRIGLIA PRINCIPALE */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' }}>
+            
+            {/* --- COLONNA 1: OPERATION MODE --- */}
+            <div>
+              <h3 style={{ color: theme.purple, fontSize: '14px', borderLeft: `3px solid ${theme.purple}`, paddingLeft: '10px', marginBottom: '20px' }}>
+                01. OPERATION_MODE
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                    { id: 0, label: '[0] TOTAL SIMULATION', sub: 'Tutti i camp. (Finite)' },
+                    { id: 1, label: '[1] MASSIVO PREV', sub: 'Giornata Precedente' },
+                    { id: 2, label: '[2] MASSIVO CURR', sub: 'Giornata In Corso' },
+                    { id: 3, label: '[3] MASSIVO NEXT', sub: 'Giornata Successiva' },
+                    { id: 4, label: '[4] SINGOLA MATCH', sub: 'Analisi Dettagliata' },
+                ]
+                .filter((opt: any) => isAdmin || PERMISSIONS.ALLOWED_MODES.includes(opt.id))
+                .map((opt: any) => (
+                  <div 
+                    key={opt.id}
+                    onClick={() => setConfigMode(opt.id)}
+                    style={{
+                      padding: '12px', 
+                      background: configMode === opt.id ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.05)',
+                      borderLeft: configMode === opt.id ? `4px solid ${theme.cyan}` : '4px solid transparent',
+                      cursor: 'pointer', marginBottom: '5px'
+                    }}
+                  >
+                    <div style={{ color: configMode === opt.id ? 'white' : '#aaa', fontWeight: 'bold', fontSize: '13px' }}>
+                      {opt.label}
+                    </div>
+                    <div style={{ color: '#666', fontSize: '11px' }}>{opt.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+                    {/* --- COLONNA 2: TARGET / SCOPE (USA I DATI REALI) --- */}
+                    <div>
+                      <h3 style={{ color: theme.purple, fontSize: '14px', borderLeft: `3px solid ${theme.purple}`, paddingLeft: '10px', marginBottom: '20px' }}>
+                        02. TARGET / SCOPE
+                      </h3>
+                      
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '4px', height: '100%', border: '1px solid #333' }}>
+                          
+                          {/* CASO 0: TOTAL SIMULATION */}
+                          {configMode === 0 && (
+                              <div style={{textAlign:'center', padding:'20px'}}>
+                                <div style={{fontSize:'40px', marginBottom:'10px'}}>💎</div>
+                                <div style={{color: theme.cyan, fontWeight:'bold', marginBottom:'10px'}}>TOTAL SIMULATION</div>
+                                <div style={{color: '#aaa', fontSize:'12px', lineHeight:'1.5'}}>
+                                    Analisi globale su <b>{COUNTRIES.length} Nazioni</b>.<br/>
+                                    Processa solo partite <u>FINITE</u>.
+                                </div>
+                              </div>
+                          )}
+
+                          {/* CASO MASSIVO (1, 2, 3) O SINGOLA (4) */}
+                          {configMode >= 1 && (
+                              <>
+                       {/* 1. SELETTORE NAZIONE (CORRETTO CON ID) */}
+                    <label style={{display:'block', color: theme.cyan, fontSize:'11px', fontWeight:'bold', marginBottom:'5px', textTransform:'uppercase'}}>
+                        1. SELEZIONA NAZIONE
+                    </label>
+                    <select 
+                        value={country} 
+                        onChange={(e) => { 
+                            const newCountry = e.target.value;
+                            setCountry(newCountry);
+                            
+                            // QUI ERA L'ERRORE: ORA PRENDIAMO L'ID (.id), NON IL NOME!
+                            const firstLeagueID = LEAGUES_MAP.find(l => l.country === newCountry)?.id || '';
+                            
+                            console.log("Cambio Nazione:", newCountry, "-> Auto-Select Lega ID:", firstLeagueID);
+                            setLeague(firstLeagueID); 
+                        }}
+                        style={{ width: '100%', padding: '10px', background: '#111', color: 'white', border: '1px solid #444', marginBottom: '20px', borderRadius:'4px' }}
+                    >
+                        <option value="">-- Seleziona Nazione --</option>
+                        {COUNTRIES.filter(c => c.code !== 'ALL').map(c => (
+                            <option key={c.code} value={c.code}>
+                                {c.flag} {c.name.toUpperCase()}
+                            </option>
+                        ))}
+                    </select>
+
+
+
+                                                    {/* 2. SELETTORE LEGA (USA GLI ID CORRETTI) */}
+                    <label style={{display:'block', color: theme.cyan, fontSize:'11px', fontWeight:'bold', marginBottom:'5px', textTransform:'uppercase'}}>
+                        2. SELEZIONA CAMPIONATO
+                    </label>
+                    <select 
+                        value={league} // Qui ora ci sarà l'ID (es. 'SERIE_B')
+                        onChange={(e) => {
+                            const newLeagueID = e.target.value;
+                            console.log("Nuova Lega Selezionata:", newLeagueID); // Debug
+                            setLeague(newLeagueID);
+                        }}
+                        disabled={!country}
+                        style={{ 
+                            width: '100%', padding: '10px', marginBottom: '20px', borderRadius:'4px',
+                            background: country ? '#111' : '#222', 
+                            color: country ? 'white' : '#555', 
+                            border: '1px solid #444',
+                            cursor: country ? 'pointer' : 'not-allowed'
+                        }}
+                    >
+                        <option value="">
+                             {country ? `-- Scegli Campionato --` : '-- Prima scegli Nazione --'}
+                        </option>
+                        
+                        {/* MAPPA GLI ID COME VALUE */}
+                        {LEAGUES_MAP
+                            .filter(lg => lg.country === country)
+                            .map(lg => (
+                                <option key={lg.id} value={lg.id}> {/* <--- IMPORTANTE: value={lg.id} non lg.name */}
+                                    {lg.name}
+                                </option>
+                            ))
+                        }
+                    </select>
+
+
+
+                                {/* 3. INPUT ID PER SINGOLA (Solo modo 4) */}
+                                {configMode === 4 && (
+                                    <div style={{marginTop:'20px', borderTop:'1px solid #333', paddingTop:'15px'}}>
+                                        <label style={{display:'block', color: '#ff0055', fontSize:'11px', fontWeight:'bold', marginBottom:'5px'}}>
+                                            3. ID PARTITA (TARGET MATCH)
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Es. 123456" 
+                                            style={{
+                                                width:'100%', background:'#111', color:'#fff', 
+                                                border:'1px solid #ff0055', padding:'10px', borderRadius:'4px'
+                                            }} 
+                                        />
+                                    </div>
+                                )}
+                              </>
+                          )}
+                      </div>
+                    </div>
+
+
+            {/* --- COLONNA 3: ALGO & TUNING --- */}
+            <div>
+              <h3 style={{ color: theme.purple, fontSize: '14px', borderLeft: `3px solid ${theme.purple}`, paddingLeft: '10px', marginBottom: '20px' }}>
+                03. ALGORITHM & TUNING
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                {[
+                    { id: 0, label: '[0] TUTTI', sub: 'Report Completo' },
+                    { id: 1, label: '[1] Statistico Puro', sub: 'Poisson/Elo' },
+                    { id: 2, label: '[2] Dinamico', sub: 'Trend' },
+                    { id: 3, label: '[3] Tattico', sub: 'Formations' },
+                    { id: 4, label: '[4] Caos', sub: 'Entropy' },
+                    { id: 5, label: '[5] Master', sub: 'AI Ensemble' },
+                    { id: 6, label: '[6] MonteCarlo', sub: 'Stochastic' },
+                ]
+                .filter((opt: any) => isAdmin || PERMISSIONS.VISIBLE_ALGOS.includes(opt.id))
+                .map((opt: any) => (
+                  <div 
+                    key={opt.id}
+                    onClick={() => setConfigAlgo(opt.id)}
+                    style={{
+                      padding: '8px 12px', 
+                      background: configAlgo === opt.id ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+                      border: configAlgo === opt.id ? `1px solid ${theme.cyan}` : '1px solid #333',
+                      cursor: 'pointer', borderRadius: '4px'
+                    }}
+                  >
+                    <span style={{ color: configAlgo === opt.id ? 'white' : '#888', fontWeight: 'bold' }}>{opt.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* VELOCITÀ */}
+              {(configAlgo === 5 || configAlgo === 6) && (
+                  <div style={{ borderTop: '1px dashed #444', paddingTop: '15px' }}>
+                      <div style={{color: '#ffd700', fontSize:'12px', marginBottom:'10px'}}>📊 PRESET VELOCITÀ</div>
+                      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px'}}>
+                          {SPEED_PRESETS.map((spd: any) => (
+                              <div 
+                                key={spd.id}
+                                onClick={() => setSelectedSpeed(spd.id)}
+                                style={{
+                                    padding:'5px', cursor:'pointer', fontSize:'11px', textAlign:'center',
+                                    background: selectedSpeed === spd.id ? '#ffd700' : '#222',
+                                    color: selectedSpeed === spd.id ? 'black' : 'white',
+                                    borderRadius: '3px'
+                                }}
+                              >
+                                  {spd.label}
+                              </div>
+                          ))}
+                      </div>
+
+                      {selectedSpeed === 8 && (
+                          <div style={{marginTop:'10px'}}>
+                              <label style={{color:'#0f0', fontSize:'11px'}}>CICLI MANUALI:</label>
+                              <input 
+                                  type="number" 
+                                  value={customCycles} 
+                                  onChange={e => setCustomCycles(Number(e.target.value))}
+                                  style={{width:'100%', background:'#000', color:'#0f0', border:'1px solid #0f0', padding:'5px', marginTop:'5px'}} 
+                              />
+                          </div>
+                      )}
+                  </div>
+              )}
+
+              {/* FLAGS */}
+              <div style={{ marginTop: '20px', borderTop: '1px solid #333', paddingTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {(isAdmin || PERMISSIONS.CAN_SAVE_DB) && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={configSaveDb} onChange={e => setConfigSaveDb(e.target.checked)} />
+                        <span style={{ fontSize: '12px', color: configSaveDb ? 'white' : '#777' }}>ENABLE DB SAVE (--save)</span>
+                      </label>
+                  )}
+                  
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={configDebug} onChange={e => setConfigDebug(e.target.checked)} />
+                    <span style={{ fontSize: '12px', color: configDebug ? 'white' : '#777' }}>DEBUG MODE (--verbose)</span>
+                  </label>
+              </div>
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div style={{ marginTop: '40px', borderTop: `1px solid ${theme.panelBorder}`, paddingTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              onClick={() => {
+                  // Logica di conferma
+                  const finalCycles = selectedSpeed === 8 ? customCycles : SPEED_PRESETS.find(s => s.id === selectedSpeed)?.cycles || 1250;
+                  console.log("AVVIO:", { configMode, country, league, configAlgo, finalCycles });
+                  setViewState('pre-match'); 
+              }} 
+              style={{
+                background: theme.cyan, color: '#000', padding: '14px 40px', 
+                fontWeight: 'bold', fontSize: '14px', border: 'none', borderRadius: '4px',
+                cursor: 'pointer', boxShadow: '0 0 25px rgba(0,240,255,0.3)', letterSpacing: '1px'
+              }}
+            >
+              [ EXECUTE SEQUENCE ]
+            </button>
+          </div>
+
+        </div>
+      );
+
+  
+
 
  
 
@@ -2650,6 +3015,7 @@ return (
           {viewState === 'list' && renderMatchList()}
           {viewState === 'pre-match' && renderPreMatch()}
           {viewState === 'simulating' && (simMode === 'animated' ? renderAnimation() : <div style={{display:'flex', height:'100%', alignItems:'center', justifyContent:'center', fontSize:'20px'}}>Calcolo Veloce in corso...</div>)}
+          {viewState === 'settings' && renderSettingsPanel()}
           {viewState === 'result' && renderResult()}
         </div>
       </div>

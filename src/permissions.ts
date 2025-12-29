@@ -97,7 +97,7 @@ export const PERMISSIONS = {
     // ========================================
     // 🔑 AMMINISTRAZIONE
     // ========================================
-    ADMIN_KEY: "000128",
+    ADMIN_KEY: "?admin=000128",
     SHOW_ADMIN_BADGE: true,
     ENABLE_DEBUG_LOGS: false,              // Stampa debug verbose
 };
@@ -112,13 +112,6 @@ export const checkAdmin = (): boolean => {
         console.log('🔑 Admin Mode: Localhost Detected');
         return true;
     }
-    
-    // 🔥 Controlla se hai già fatto login precedentemente
-    const savedAdmin = localStorage.getItem('isAdmin');
-    if (savedAdmin === 'true') {
-        console.log('🔑 Admin Mode: Saved Session');
-        return true;
-    } 
     return false;
 };
 

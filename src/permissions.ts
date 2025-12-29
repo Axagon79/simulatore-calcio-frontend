@@ -97,7 +97,7 @@ export const PERMISSIONS = {
     // ========================================
     // 🔑 AMMINISTRAZIONE
     // ========================================
-    ADMIN_KEY: "GodMode2025",
+    ADMIN_KEY: "000128",
     SHOW_ADMIN_BADGE: true,
     ENABLE_DEBUG_LOGS: false,              // Stampa debug verbose
 };
@@ -125,7 +125,7 @@ export const checkAdmin = (): boolean => {
     const urlAdmin = params.get('admin') === PERMISSIONS.ADMIN_KEY;
     
     if (urlAdmin) {
-        localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('isAdmin', 'false');
         console.log('🔑 Admin Mode: URL Parameter');
         return true;
     }

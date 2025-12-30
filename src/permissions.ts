@@ -11,7 +11,7 @@ export const PERMISSIONS = {
     // 🧠 ALGORITMI
     // ========================================
     VISIBLE_ALGOS: [0, 1, 2, 3, 4, 5, 6], // 0=Tutti, 1-6=Singoli
-    DEFAULT_ALGO: 6,                       // Default MonteCarlo
+    DEFAULT_ALGO: 3,                       // Default MonteCarlo
     CAN_USE_CUSTOM_ALGO: false,            // [7] CUSTOM (Algo+Cicli)
     
     // ========================================
@@ -20,7 +20,7 @@ export const PERMISSIONS = {
     
     // --- Preset Velocità (Algoritmi 1-5) ---
     ALLOWED_SPEED_PRESETS_SINGLE: [1,2,3,4,5,6,7,8], // IDs preset
-    DEFAULT_SPEED_SINGLE: 1,               // Default VELOCE (500 cicli)
+    DEFAULT_SPEED_SINGLE: 8,               // Default VELOCE (500 cicli)
     
     // Limiti cicli personalizzati (Preset 8)
     MIN_CYCLES_SINGLE: 5,
@@ -29,7 +29,7 @@ export const PERMISSIONS = {
     
     // --- Preset Monte Carlo (Algo 6) ---
     ALLOWED_SPEED_PRESETS_MC: [1,2,3,4,5,6,7,8], // IDs preset MC
-    DEFAULT_SPEED_MC: 4,                   // Default STANDARD (5000 tot)
+    DEFAULT_SPEED_MC: 8,                   // Default STANDARD (5000 tot)
     
     // Limiti cicli Monte Carlo (Preset 8)
     MIN_CYCLES_MC: 5,

@@ -337,7 +337,7 @@ export default function AppDev() {
     { id: 1, label: '⚡ TURBO', cycles: 100, desc: '~3 sec/match' },
     { id: 2, label: '🏃 RAPIDO', cycles: 250, desc: '~6 sec/match' },
     { id: 3, label: '🚶 VELOCE', cycles: 500, desc: '~12 sec/match' },
-    { id: 4, label: '⚖️ STANDARD', cycles: 1250, desc: '~30 sec/match' },
+    { id: 4, label: '⚖️ STANDARD', cycles: 20, desc: '🚀 RAPIDO' },
     { id: 5, label: '🎯 ACCURATO', cycles: 2500, desc: '~60 sec/match' },
     { id: 6, label: '🔬 PRECISO', cycles: 5000, desc: '~2 min/match' },
     { id: 7, label: '💎 ULTRA', cycles: 12500, desc: '~5 min/match' },

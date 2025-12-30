@@ -20,19 +20,19 @@ export const PERMISSIONS = {
     
     // --- Preset Velocità (Algoritmi 1-5) ---
     ALLOWED_SPEED_PRESETS_SINGLE: [1,2,3,4,5,6,7,8], // IDs preset
-    DEFAULT_SPEED_SINGLE: 3,               // Default VELOCE (500 cicli)
+    DEFAULT_SPEED_SINGLE: 1,               // Default VELOCE (500 cicli)
     
     // Limiti cicli personalizzati (Preset 8)
-    MIN_CYCLES_SINGLE: 50,
+    MIN_CYCLES_SINGLE: 5,
     MAX_CYCLES_SINGLE: 20000,
-    CAN_USE_CUSTOM_CYCLES_SINGLE: false,   // Abilita input manuale
+    CAN_USE_CUSTOM_CYCLES_SINGLE: true,   // Abilita input manuale
     
     // --- Preset Monte Carlo (Algo 6) ---
     ALLOWED_SPEED_PRESETS_MC: [1,2,3,4,5,6,7,8], // IDs preset MC
     DEFAULT_SPEED_MC: 4,                   // Default STANDARD (5000 tot)
     
     // Limiti cicli Monte Carlo (Preset 8)
-    MIN_CYCLES_MC: 40,
+    MIN_CYCLES_MC: 5,
     MAX_CYCLES_MC: 100000,
     CAN_USE_CUSTOM_CYCLES_MC: false,       // Abilita input manuale MC
     

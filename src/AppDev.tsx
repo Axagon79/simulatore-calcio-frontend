@@ -77,7 +77,7 @@ const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
 
 
 // 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
-const COUNTRIES = [
+/*const COUNTRIES = [
   { code: 'ALL', name: 'Tutto il Mondo', flag: '🌍' },
   { code: 'Italy', name: 'Italia', flag: '🇮🇹' },
   { code: 'England', name: 'Inghilterra', flag: '🇬🇧' },
@@ -87,6 +87,7 @@ const COUNTRIES = [
   { code: 'Netherlands', name: 'Olanda', flag: '🇳🇱' },
   { code: 'Portugal', name: 'Portogallo', flag: '🇵🇹' }
 ];
+*/
 
 // 2. AGGIORNIAMO LA LISTA CAMPIONATI PER USARE GLI STESSI CODICI
 
@@ -271,7 +272,7 @@ const styles: Record<string, React.CSSProperties> = {
 
 export default function AppDev() {
   // --- STATO APPLICAZIONE ---
-  const [country, setCountry] = useState('Italy');
+  const [country, setCountry] = useState('');
   const [leagues, setLeagues] = useState<League[]>([]);
   const [league, setLeague] = useState('');
   const [rounds, setRounds] = useState<RoundInfo[]>([]);
@@ -282,6 +283,10 @@ export default function AppDev() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
+
+
+  const [availableCountries, setAvailableCountries] = useState<{code: string, name: string, flag: string}[]>([]);
+  const [isLoadingNations, setIsLoadingNations] = useState(true); // Consigliato: per mostrare un caricamento
 
 
   // Legge se sei admin usando la funzione che hai importato
@@ -349,6 +354,40 @@ export default function AppDev() {
   // ---------------------------------------------------------
 
   const [selectedPeriod, setSelectedPeriod] = useState<'previous' | 'current' | 'next'>('current');
+
+  // --- LOGICA DI CARICAMENTO NAZIONI DINAMICHE ---
+  useEffect(() => {
+  const fetchNations = async () => {
+    setIsLoadingNations(true); // Risolve errore 6133: ora la funzione viene letta
+    try {
+      // Sostituisci con il tuo URL reale di Firebase
+      const response = await fetch('https://get-nations-6b34yfzjia-uc.a.run.app');
+      const nationsFromDb = await response.json(); // Risolve errore 2304: 'data' non trovato (usiamo nationsFromDb)
+      
+      if (Array.isArray(nationsFromDb)) {
+        // Specifichiamo (n: string) per risolvere errore 7006 (tipo any)
+        const formatted = nationsFromDb.map((n: string) => ({
+          code: n,
+          name: n,
+          flag: n === 'Italy' ? '🇮🇹' : n === 'Spain' ? '🇪🇸' : '🌍'
+        }));
+        
+        setAvailableCountries(formatted); // Risolve errore 6133: ora lo stato viene aggiornato
+        
+        // Imposta la prima nazione trovata come scelta predefinita
+        if (formatted.length > 0) {
+          setCountry(formatted[0].code);
+        }
+      }
+    } catch (err) {
+      console.error("Errore API nazioni:", err);
+    } finally {
+      setIsLoadingNations(false);
+    }
+  };
+
+  fetchNations();
+}, []);
 
 
   // ✅ AGGIUNGI QUESTA FUNZIONE (dopo tutti gli useState)
@@ -2825,21 +2864,17 @@ export default function AppDev() {
                 }}>
                   TOTAL SIMULATION
                 </div>
-                <div style={{
-                  color: '#aaa',
-                  fontSize: '12px',
-                  lineHeight: '1.5'
-                }}>
-                  Analisi globale su <b>{COUNTRIES.length} Nazioni</b>.<br />
-                  Processa solo partite <u>FINITE</u>.
-                </div>
+                <div style={{ color: '#aaa', fontSize: '12px', lineHeight: '1.5' }}>
+                Analisi globale su <b>{availableCountries.length} Nazioni</b>.<br />
+                Processa solo partite <u>FINITE</u>.
+              </div>
               </div>
             )}
 
             {/* CASO MASSIVO (1, 2, 3) O SINGOLA (4) */}
             {configMode >= 1 && (
               <>
-                {/* 1. SELETTORE NAZIONE */}
+                {/* 1. SELEZIONA NAZIONE DINAMICA PER ADMIN */}
                 <label style={{
                   display: 'block',
                   color: theme.cyan,
@@ -2850,34 +2885,39 @@ export default function AppDev() {
                 }}>
                   1. SELEZIONA NAZIONE
                 </label>
-                <select
-                  value={country}
-                  onChange={(e) => {
-                    const newCountry = e.target.value;
-                    setCountry(newCountry);
 
-                    const firstLeagueID = LEAGUES_MAP.find(l => l.country === newCountry)?.id || '';
-                    console.log("Cambio Nazione:", newCountry, "-> Auto-Select Lega ID:", firstLeagueID);
-                    setLeague(firstLeagueID);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: '#111',
-                    color: 'white',
-                    border: '1px solid #444',
-                    marginBottom: '20px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="">-- Seleziona Nazione --</option>
-                  {COUNTRIES.filter(c => c.code !== 'ALL').map(c => (
-                    <option key={c.code} value={c.code}>
-                      {c.flag} {c.name.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
+                {isLoadingNations ? (
+                  <div style={{ color: theme.cyan, fontSize: '12px', padding: '10px', background: '#111', borderRadius: '4px' }}>
+                    ⏳ Sincronizzazione nazioni...
+                  </div>
+                ) : (
+                  <select
+                    value={country}
+                    onChange={(e) => {
+                      const newCountry = e.target.value;
+                      setCountry(newCountry);
+                      const firstLeagueID = LEAGUES_MAP.find(l => l.country === newCountry)?.id || '';
+                      setLeague(firstLeagueID);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: '#111',
+                      color: 'white',
+                      border: '1px solid #444',
+                      marginBottom: '20px',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">-- Seleziona Nazione --</option>
+                    {availableCountries.filter(c => c.code !== 'ALL').map(c => (
+                      <option key={c.code} value={c.code}>
+                        {c.flag} {c.name.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
                 {/* 2. SELETTORE LEGA */}
                 <label style={{
@@ -3774,12 +3814,33 @@ export default function AppDev() {
             </button>
           )}
           <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold' }}>NAZIONE</div>
-          <select
-            value={country} onChange={e => setCountry(e.target.value)}
-            style={{ padding: '10px', background: '#000', color: 'white', border: '1px solid #333', borderRadius: '6px', width: '100%' }}
-          >
-            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
-          </select>
+
+          {/* 1. Inseriamo il controllo isLoadingNations per risolvere l'errore 6133 */}
+          {isLoadingNations ? (
+            <div style={{ 
+              padding: '10px', 
+              color: theme.cyan, 
+              fontSize: '11px', 
+              fontStyle: 'italic',
+              background: 'rgba(0, 240, 255, 0.05)',
+              borderRadius: '6px'
+            }}>
+              ⏳ Caricamento nazioni...
+            </div>
+          ) : (
+            /* 2. Mostriamo la select solo quando i dati sono pronti */
+            <select
+              value={country} 
+              onChange={e => setCountry(e.target.value)}
+              style={{ padding: '10px', background: '#000', color: 'white', border: '1px solid #333', borderRadius: '6px', width: '100%' }}
+            >
+              {availableCountries.map(c => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} {c.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>CAMPIONATO</div>
           <select

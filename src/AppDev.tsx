@@ -361,7 +361,8 @@ export default function AppDev() {
     setIsLoadingNations(true); // Risolve errore 6133: ora la funzione viene letta
     try {
       // Sostituisci con il tuo URL reale di Firebase
-      const response = await fetch('https://get-nations-6b34yfzjia-uc.a.run.app');
+      // Cerca questo punto nel tuo useEffect
+      const response = await fetch('https://us-central1-puppals-456c7.cloudfunctions.net/get_nations');
       const nationsFromDb = await response.json(); // Risolve errore 2304: 'data' non trovato (usiamo nationsFromDb)
       
       if (Array.isArray(nationsFromDb)) {

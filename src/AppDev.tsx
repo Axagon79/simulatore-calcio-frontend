@@ -3,7 +3,9 @@ import DashboardHome from './DashboardHome';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
 import { checkAdmin, PERMISSIONS } from './permissions';
+import SimulationResultView from './components/SimulationResultView';
 
+import { ArrowLeft, /* altre icone */ } from 'lucide-react'; //
 
 // --- INTERFACCE & TIPI ---
 
@@ -40,6 +42,10 @@ interface Match {
 
 interface SimulationResult {
   predicted_score: string;
+  success: boolean;
+  result: any;
+  timestamp?: string;
+  execution_time?: number;
   sign: string;
   gh: number;
   ga: number;
@@ -284,6 +290,24 @@ export default function AppDev() {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
 
+  const [showBettingModal, setShowBettingModal] = useState(false);
+
+  const handleAskAI = (matchData: any) => {
+    // Prepariamo un riassunto tecnico per l'IA
+    const promptTecnico = `
+      Analizza questa partita finita ${matchData.predicted_score}. 
+      Confidence: ${matchData.report_scommesse.Analisi_Profonda.Confidence_Globale}.
+      Deviazione Standard: ${matchData.report_scommesse.Analisi_Profonda.Deviazione_Standard_Totale}.
+      Spiega all'utente il motivo di questo pronostico basandoti sui dati.
+    `;
+  
+    // Inviamo il messaggio al sistema di chat che hai già
+    addBotMessage("Sto analizzando i dati del DeepAnalyzer per spiegarti il pronostico..."); //
+    
+    // In futuro, qui chiamerai la tua API di Gemini o GPT passando 'promptTecnico'
+    console.log("Dati inviati all'IA:", promptTecnico);
+  };
+
 
   const [availableCountries, setAvailableCountries] = useState<{code: string, name: string, flag: string}[]>([]);
   const [isLoadingNations, setIsLoadingNations] = useState(true); // Consigliato: per mostrare un caricamento
@@ -434,6 +458,9 @@ export default function AppDev() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+
+  
 
   // --- LOGICA SIMULAZIONE ---
 
@@ -1365,7 +1392,7 @@ export default function AppDev() {
     //const homeShadow = homeColor.replace(', 1)', ', 0.2)');
     //const awayShadow = awayColor.replace(', 1)', ', 0.2)');
 
-
+     
 
     // --- 2. HELPER GRAFICI ---
 
@@ -3553,56 +3580,52 @@ export default function AppDev() {
 
 
 
+   // --- AGGIORNAMENTO LOGICA DI VISUALIZZAZIONE IN AppDev.tsx ---
 
+// Trova il punto in cui è definita la funzione renderResult (attorno alla riga 3560)
+// e sostituisci l'intero blocco con questo:
 
-  const renderResult = () => (
+const renderResult = () => {
+  // Verifichiamo che i dati esistano e siano validi
+  if (!simResult || !simResult.success) return null;
+
+  // 'data' contiene statistiche, cronaca e report scommesse dal Python
+  const data = simResult.result;
+
+  return (
     <div style={styles.arenaContent}>
-      <button onClick={() => setViewState('list')} style={{ background: 'transparent', border: 'none', color: theme.textDim, cursor: 'pointer', marginBottom: '10px' }}>← Torna alla lista</button>
+      {/* Tasto Ritorno con icona ArrowLeft */}
+      <button 
+        onClick={() => setViewState('list')} 
+        style={{ 
+          background: 'transparent', 
+          border: 'none', 
+          color: theme.textDim, 
+          cursor: 'pointer', 
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+      >
+        <ArrowLeft size={16} /> Torna alla lista
+      </button>
 
-      <div style={{ textAlign: 'center', padding: '40px 0' }}>
-        <div style={{ fontSize: '14px', color: theme.success, letterSpacing: '2px', marginBottom: '10px' }}>SIMULAZIONE COMPLETATA</div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '40px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{selectedMatch?.home}</div>
-          </div>
-
-          <div style={{
-            fontSize: '64px', fontWeight: '900', color: theme.cyan,
-            textShadow: `0 0 40px ${theme.cyan}`,
-            background: 'rgba(0,0,0,0.5)', padding: '10px 40px', borderRadius: '20px', border: `1px solid ${theme.cyan}`
-          }}>
-            {simResult?.predicted_score}
-          </div>
-
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{selectedMatch?.away}</div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '30px' }}>
-          <div style={{ padding: '8px 20px', background: theme.panel, borderRadius: '20px', border: theme.panelBorder }}>
-            Segno: <span style={{ color: theme.purple, fontWeight: 'bold' }}>{simResult?.sign}</span>
-          </div>
-          <div style={{ padding: '8px 20px', background: theme.panel, borderRadius: '20px', border: theme.panelBorder }}>
-            Affidabilità: <span style={{ color: theme.success, fontWeight: 'bold' }}>Alta</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '20px' }}>
-        <button onClick={() => addBotMessage("Spiegami nel dettaglio questo pronostico.")} style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>
-          🤖 Spiegami il pronostico
-        </button>
-        <button onClick={() => addBotMessage("Trovami partite simili a questa per una multipla.")} style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>
-          🔍 Partite Simili
-        </button>
-        <button onClick={() => alert('Feature "Consiglio Scommessa" in arrivo...')} style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>
-          💰 Consiglio Scommessa
-        </button>
-      </div>
+      {/* Componente Dinamico: Visualizza statistiche neon e cronaca */}
+      <SimulationResultView 
+        data={data} 
+        onOpenBettingDetails={() => {
+          // Apre la modale scientifica (risolve l'errore 6133)
+          setShowBettingModal(true); 
+        }}
+        onOpenAIExplanation={() => {
+          // Chiama la funzione IA definita alla riga 295
+          handleAskAI(data);
+        }}
+      />
     </div>
   );
+};
 
   // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta) ---
   if (!activeLeague) {
@@ -4095,6 +4118,50 @@ export default function AppDev() {
           </button>
         )}
       </div>
+      {/* Modale Scommesse Scientifica */}
+      {showBettingModal && simResult?.result && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#0f172a', border: '1px solid #334155',
+            borderRadius: '24px', padding: '30px', maxWidth: '500px', width: '100%',
+            boxShadow: '0 0 50px rgba(0,0,0,0.5)'
+          }}>
+            <h3 style={{ color: '#fbbf24', fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
+              Analisi Profonda Scommesse
+            </h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ background: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
+                <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Confidence</div>
+                <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#10b981' }}>
+                  {simResult.result.report_scommesse.Analisi_Profonda.Confidence_Globale}
+                </div>
+              </div>
+              <div style={{ background: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
+                <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Std Dev</div>
+                <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#60a5fa' }}>
+                  {simResult.result.report_scommesse.Analisi_Profonda.Deviazione_Standard_Totale}
+                </div>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowBettingModal(false)}
+              style={{
+                marginTop: '25px', width: '100%', padding: '14px',
+                borderRadius: '14px', background: '#334155', color: 'white',
+                fontWeight: 'bold', border: 'none', cursor: 'pointer'
+              }}
+            >
+              Chiudi Analisi
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

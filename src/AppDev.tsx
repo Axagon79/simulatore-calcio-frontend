@@ -3586,15 +3586,14 @@ export default function AppDev() {
 // e sostituisci l'intero blocco con questo:
 
 const renderResult = () => {
-  // Verifichiamo che i dati esistano e siano validi
+  // Se non c'è risultato, non mostrare nulla
   if (!simResult || !simResult.success) return null;
 
-  // 'data' contiene statistiche, cronaca e report scommesse dal Python
   const data = simResult.result;
 
   return (
     <div style={styles.arenaContent}>
-      {/* Tasto Ritorno con icona ArrowLeft */}
+      {/* Tasto per tornare indietro */}
       <button 
         onClick={() => setViewState('list')} 
         style={{ 
@@ -3611,17 +3610,13 @@ const renderResult = () => {
         <ArrowLeft size={16} /> Torna alla lista
       </button>
 
-      {/* Componente Dinamico: Visualizza statistiche neon e cronaca */}
+      {/* QUI C'ERA L'ERRORE: Ora passiamo homeName e awayName presi da selectedMatch */}
       <SimulationResultView 
         data={data} 
-        onOpenBettingDetails={() => {
-          // Apre la modale scientifica (risolve l'errore 6133)
-          setShowBettingModal(true); 
-        }}
-        onOpenAIExplanation={() => {
-          // Chiama la funzione IA definita alla riga 295
-          handleAskAI(data);
-        }}
+        homeName={selectedMatch?.home || 'CASA'}   // Risolve l'errore TypeScript
+        awayName={selectedMatch?.away || 'OSPITE'} // Risolve l'errore TypeScript
+        onOpenBettingDetails={() => setShowBettingModal(true)}
+        onOpenAIExplanation={() => handleAskAI(data)}
       />
     </div>
   );

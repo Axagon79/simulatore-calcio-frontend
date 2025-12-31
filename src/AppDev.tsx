@@ -69,6 +69,27 @@ interface SimulationResult {
     };
   };
 
+  // NUOVO: Modulo Scommesse Professionale (Dati da Universal Simulator)
+  report_scommesse_pro?: {
+    analisi_dispersione: {
+      std_dev: number;           // Deviazione Standard reale
+      score_imprevedibilita: number; // 0-100 (più è alto, più è rischiosa)
+      is_dispersed: boolean;     // Se true, attiva l'allarme giallo
+      warning: string | null;    // Il messaggio di raccomandazione
+    };
+    probabilita_1x2: Record<string, number>; // Percentuali esatte (es. 43.5)
+    value_bets: Record<string, {
+      ia_prob: number;
+      book_prob: number;
+      diff: number;
+      is_value: boolean;         // Se true, attiva la stella dorata ⭐
+    }>;
+    scommessa_consigliata: string; // "CONSIGLIATA", "RISCHIOSA", ecc.
+    under_over: Record<string, number>;
+    gol_nogol: Record<string, number>;
+    top_risultati: Array<{ score: string; prob: number }>; // I 5 risultati del terminale
+  };
+
   // Informazioni di contesto
   info_extra?: {
     valore_mercato: string;

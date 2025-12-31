@@ -4155,13 +4155,13 @@ const renderResult = () => {
               <div style={{ background: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
                 <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Confidence</div>
                 <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#10b981' }}>
-                  {simResult.result.report_scommesse.Analisi_Profonda.Confidence_Globale}
+                  {simResult.report_scommesse.Analisi_Profonda.Confidence_Globale}
                 </div>
               </div>
               <div style={{ background: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
                 <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Std Dev</div>
                 <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#60a5fa' }}>
-                  {simResult.result.report_scommesse.Analisi_Profonda.Deviazione_Standard_Totale}
+                  {simResult.report_scommesse.Analisi_Profonda.Deviazione_Standard_Totale}
                 </div>
               </div>
             </div>

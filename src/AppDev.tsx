@@ -41,26 +41,45 @@ interface Match {
 }
 
 interface SimulationResult {
-  predicted_score: string;
+  // Dati identificativi e stato
   success: boolean;
-  result: any;
-  timestamp?: string;
-  execution_time?: number;
-  sign: string;
+  predicted_score: string;
   gh: number;
   ga: number;
-  top3: string[];
+  sign: string;
   algo_name: string;
-  match?: any;
-  // Dati extra per l'animazione e statistiche
-  stats?: {
-    possession_home: number;
-    shots_home: number;
-    shots_away: number;
-    xg_home: number;
-    xg_away: number;
+  top3: string[];
+  
+  // Dati per la visualizzazione (devono combaciare con SimulationResultView)
+  statistiche: Record<string, any[]>; 
+  cronaca: { 
+    minuto: number; 
+    squadra?: 'casa' | 'ospite'; 
+    tipo: 'gol' | 'cartellino' | 'cambio' | string; 
+    testo: string 
+  }[];
+
+  // Modulo Scommesse (Indispensabile per il componente)
+  report_scommesse: {
+    Bookmaker: Record<string, string>;
+    Analisi_Profonda: {
+      Confidence_Globale: string;
+      Deviazione_Standard_Totale: number;
+      Affidabilita_Previsione: string;
+    };
   };
-  events?: { minute: number; team: 'home' | 'away'; type: 'goal' | 'card' | 'attack'; text: string }[];
+
+  // Informazioni di contesto
+  info_extra?: {
+    valore_mercato: string;
+    motivazione: string;
+  };
+
+  // Metadati tecnici
+  result?: any;
+  timestamp?: string;
+  execution_time?: number;
+  match?: any;
 }
 
 interface ChatMessage {
@@ -557,13 +576,13 @@ export default function AppDev() {
         return next;
       });
 
-      if (finalData.events) {
+      if (finalData.cronaca) {
         const currentMinute = Math.floor(t);
-        const event = finalData.events.find(e => e.minute === currentMinute);
-        if (event && !animEvents.includes(event.text)) {
-          setAnimEvents(prev => [event.text, ...prev]);
-          if (event.type === 'goal') {
-            setMomentum(event.team === 'home' ? 90 : 10);
+        const event = finalData.cronaca.find(e => e.minuto === currentMinute);
+        if (event && !animEvents.includes(event.testo)) {
+          setAnimEvents(prev => [event.testo, ...prev]);
+          if (event.tipo === 'goal') {
+            setMomentum(event.squadra === 'casa' ? 90 : 10);
           }
         }
       }
@@ -3589,7 +3608,7 @@ const renderResult = () => {
   // Se non c'è risultato, non mostrare nulla
   if (!simResult || !simResult.success) return null;
 
-  const data = simResult.result;
+  const data = simResult.result
 
   return (
     <div style={styles.arenaContent}>

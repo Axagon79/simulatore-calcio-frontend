@@ -1,3 +1,7 @@
+@import "tailwindcss/theme";
+@import "tailwindcss/utilities";
+
+/* ... tutto il resto del tuo codice che hai mandato sopra rimane identico ... */
 /* ========================================
    VARIABILI CSS - THEME NEON/SCI-FI
    ======================================== */

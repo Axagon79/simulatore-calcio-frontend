@@ -516,12 +516,9 @@ export default function AppDev() {
   };
   const startSimulation = async () => {
     if (!selectedMatch) return;
-    setViewState('simulating');
-
-
-
+    setViewState('simulating'); // ✅ Imposta simulazione in corso
+  
     try {
-      // --- CHIAMATA DIRETTA AL CLOUD RUN PYTHON ---
       const res = await fetch(AI_ENGINE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -533,48 +530,53 @@ export default function AppDev() {
           away: selectedMatch.away,
           round: selectedRound?.name,
           algo_id: configAlgo,
-          cycles: getCycles(), // ✅ Usa la funzione
+          cycles: getCycles(),
           save_db: configSaveDb
         })
       });
-
+  
       const responseJson = await res.json();
-
-      console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson); // <--- AGGIUNGI QUESTO
-
-
-      // 1. Cambiamo il controllo: togliamo .result
+      console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
+  
+      // Controllo validità risposta
       if (!responseJson.success || !responseJson.algo_name) {
         throw new Error(responseJson.error || 'Risposta del server incompleta');
       }
-
-      // 2. IMPORTANTISSIMO: Ora salviamo tutto l'oggetto 'responseJson'
-      // perché non c'è più la sottocartella .result
-      setSimResult(responseJson);
-
-      // Estraiamo i dati veri dall'oggetto "result"
-      const data = responseJson;
-
-      // Adattiamo i dati Python (snake_case) al Frontend (se necessario)
-      // Il Python restituisce "predicted_score", "gh", "ga", "sign", ecc.
+  
+      // ✅ Prepara i dati arricchiti (aggiungi eventi mock)
       const enrichedData = {
-        ...data,
-        // Mappiamo predicted_score (Python) a predictedscore (Frontend, se lo usi così altrove)
-        predictedscore: data.predicted_score,
-
-        events: generateMockEvents(data.gh, data.ga, selectedMatch.home, selectedMatch.away)
+        ...responseJson,
+        predictedscore: responseJson.predicted_score,
+        events: generateMockEvents(
+          responseJson.gh, 
+          responseJson.ga, 
+          selectedMatch.home, 
+          selectedMatch.away
+        ),
+        // ✅ AGGIUNGI IL CAMPO report_scommesse SE MANCA
+        report_scommesse: responseJson.report_scommesse || {
+          Bookmaker: {},
+          Analisi_Profonda: {
+            Confidence_Globale: "N/D",
+            Deviazione_Standard_Totale: 0,
+            Affidabilita_Previsione: "N/D"
+          }
+        }
       };
-
+  
+      // ✅ LOGICA CORRETTA: Controlla modalità PRIMA di impostare result
       if (simMode === 'fast') {
+        // Modalità veloce: mostra risultato dopo 1.5 secondi
         setTimeout(() => {
           setSimResult(enrichedData);
-          setViewState('result');
-          addBotMessage(`Analisi completata! Risultato previsto: ${data.predicted_score}. Chiedimi pure spiegazioni.`);
+          setViewState('result'); // ✅ Solo qui per FAST
+          addBotMessage(`Analisi completata! Risultato previsto: ${responseJson.predicted_score}. Chiedimi pure spiegazioni.`);
         }, 1500);
       } else {
+        // Modalità animata: avvia animazione (che imposterà 'result' alla fine)
         runAnimation(enrichedData);
       }
-
+  
     } catch (e: any) {
       console.error("Errore Simulazione:", e);
       setViewState('pre-match');
@@ -3622,48 +3624,60 @@ export default function AppDev() {
   };
 
 
+  const renderResult = () => {
+    console.log("🎯 renderResult chiamata! viewState:", viewState);
+    console.log("🎯 simResult:", simResult);
+    
+    if (!simResult || !simResult.success) {
+      console.log("❌ simResult non valido!");
+      return (
+        <div style={{...styles.arenaContent, textAlign: 'center', padding: '40px'}}>
+          <p style={{color: theme.textDim}}>Nessun risultato disponibile</p>
+        </div>
+      );
+    }
+    
+    console.log("✅ Rendering SimulationResultView...");
 
-
-   // --- AGGIORNAMENTO LOGICA DI VISUALIZZAZIONE IN AppDev.tsx ---
-
-// Trova il punto in cui è definita la funzione renderResult (attorno alla riga 3560)
-// e sostituisci l'intero blocco con questo:
-
-const renderResult = () => {
-  if (!simResult || !simResult.success) return null;
-
-  // MODIFICA QUI: simResult è già il nostro oggetto con algo_name, gh, ga, ecc.
-  const data = simResult; 
-
-  return (
-    <div style={styles.arenaContent}>
-      {/* Tasto per tornare indietro */}
-      <button 
-        onClick={() => setViewState('list')} 
-        style={{ 
-          background: 'transparent', 
-          border: 'none', 
-          color: theme.textDim, 
-          cursor: 'pointer', 
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}
-      >
-        <ArrowLeft size={16} /> Torna alla lista
-      </button>
-
-      <SimulationResultView 
-        data={data} 
-        homeName={selectedMatch?.home || 'CASA'} 
-        awayName={selectedMatch?.away || 'OSPITE'} 
-        onOpenBettingDetails={() => setShowBettingModal(true)}
-        onOpenAIExplanation={() => handleAskAI(data)}
-      />
-    </div>
-  );
-};
+  
+    // ✅ VERIFICA CHE I DATI ESSENZIALI ESISTANO
+    if (simResult.gh === undefined || simResult.gh === null) {
+      console.error("Dati simulazione incompleti:", simResult);
+      return (
+        <div style={{...styles.arenaContent, textAlign: 'center', padding: '40px'}}>
+          <p style={{color: theme.danger}}>❌ Errore: Dati simulazione non validi</p>
+        </div>
+      );
+    }
+  
+    return (
+      <div style={styles.arenaContent}>
+        <button 
+          onClick={() => setViewState('list')} 
+          style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            color: theme.textDim, 
+            cursor: 'pointer', 
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <ArrowLeft size={16} /> Torna alla lista
+        </button>
+  
+        <SimulationResultView 
+          data={simResult}
+          homeName={selectedMatch?.home || 'Team Casa'} 
+          awayName={selectedMatch?.away || 'Team Ospite'} 
+          onOpenBettingDetails={() => setShowBettingModal(true)}
+          onOpenAIExplanation={() => handleAskAI(simResult)}
+        />
+      </div>
+    );
+  };
 
   // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta) ---
   if (!activeLeague) {

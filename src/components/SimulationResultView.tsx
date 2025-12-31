@@ -53,7 +53,7 @@ interface Props {
 const SimulationResultView: React.FC<Props> = ({ data, homeName, awayName, onOpenBettingDetails, onOpenAIExplanation }) => {
   
   // Protezione contro caricamenti parziali
-  if (!data) return <div className="text-white p-10 text-center font-bold animate-pulse">TEST CONNESSIONE ATTIVA!!!</div>;
+  //if (!data) return <div className="text-white p-10 text-center font-bold animate-pulse">ANALISI DATI IN CORSO...</div>;
 
   // Calcolo dinamico larghezza barre
   const calculateWidth = (home: any, away: any) => {

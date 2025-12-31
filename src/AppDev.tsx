@@ -51,11 +51,11 @@ interface SimulationResult {
   top3: string[];
   
   // Dati per la visualizzazione (devono combaciare con SimulationResultView)
-  statistiche: Record<string, any[]>; 
+  statistiche: Record<string, [string | number, string | number]>;
   cronaca: { 
     minuto: number; 
     squadra?: 'casa' | 'ospite'; 
-    tipo: 'gol' | 'cartellino' | 'cambio' | string; 
+    tipo: 'gol' | 'cartellino' | 'cambio' ; 
     testo: string 
   }[];
 
@@ -581,7 +581,7 @@ export default function AppDev() {
         const event = finalData.cronaca.find(e => e.minuto === currentMinute);
         if (event && !animEvents.includes(event.testo)) {
           setAnimEvents(prev => [event.testo, ...prev]);
-          if (event.tipo === 'goal') {
+          if (event.tipo === 'gol') {
             setMomentum(event.squadra === 'casa' ? 90 : 10);
           }
         }
@@ -3605,10 +3605,10 @@ export default function AppDev() {
 // e sostituisci l'intero blocco con questo:
 
 const renderResult = () => {
-  // Se non c'è risultato, non mostrare nulla
   if (!simResult || !simResult.success) return null;
 
-  const data = simResult.result
+  // MODIFICA QUI: simResult è già il nostro oggetto con algo_name, gh, ga, ecc.
+  const data = simResult; 
 
   return (
     <div style={styles.arenaContent}>
@@ -3629,11 +3629,10 @@ const renderResult = () => {
         <ArrowLeft size={16} /> Torna alla lista
       </button>
 
-      {/* QUI C'ERA L'ERRORE: Ora passiamo homeName e awayName presi da selectedMatch */}
       <SimulationResultView 
         data={data} 
-        homeName={selectedMatch?.home || 'CASA'}   // Risolve l'errore TypeScript
-        awayName={selectedMatch?.away || 'OSPITE'} // Risolve l'errore TypeScript
+        homeName={selectedMatch?.home || 'CASA'} 
+        awayName={selectedMatch?.away || 'OSPITE'} 
         onOpenBettingDetails={() => setShowBettingModal(true)}
         onOpenAIExplanation={() => handleAskAI(data)}
       />

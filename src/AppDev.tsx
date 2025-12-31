@@ -733,8 +733,8 @@ export default function AppDev() {
 
 
         matches.map(match => {
-          const isFuture = selectedRound?.type === 'next';
-          const showLucifero = !isFuture && match.h2h_data?.lucifero_home != null;
+        //  const isFuture = selectedRound?.type === 'next';
+          const showLucifero = match.h2h_data?.lucifero_home != null;
           const isExpanded = expandedMatch === match.id;
 
           // Recupero quote dal livello principale del match

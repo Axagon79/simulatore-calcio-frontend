@@ -522,10 +522,14 @@ export default function AppDev() {
       console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson); // <--- AGGIUNGI QUESTO
 
 
-      // Controllo errori specifico per il nuovo backend Python
-      if (!responseJson.success || !responseJson.result) {
+      // 1. Cambiamo il controllo: togliamo .result
+      if (!responseJson.success || !responseJson.algo_name) {
         throw new Error(responseJson.error || 'Risposta del server incompleta');
       }
+
+      // 2. IMPORTANTISSIMO: Ora salviamo tutto l'oggetto 'responseJson'
+      // perché non c'è più la sottocartella .result
+      setSimResult(responseJson);
 
       // Estraiamo i dati veri dall'oggetto "result"
       const data = responseJson.result;

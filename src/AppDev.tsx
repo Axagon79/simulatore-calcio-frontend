@@ -394,7 +394,7 @@ export default function AppDev() {
         const formatted = nationsFromDb.map((n: string) => ({
           code: n,
           name: n,
-          flag: n === 'Italy' ? '🇮🇹' : n === 'Spain' ? '🇪🇸' : '🌍'
+          flag: n === 'Italy' ? '🇮🇹' : n === 'Spain' ? '🇪🇸' : n=== 'England' ? '🇬🇧' : n === 'Germany' ? '🇩🇪' : n === 'France' ? '🇫🇷' : n === 'Netherlands' ? '🇳🇱' : n === 'Portugal' ? '🇵🇹' : ''
         }));
         
         setAvailableCountries(formatted); // Risolve errore 6133: ora lo stato viene aggiornato

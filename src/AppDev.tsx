@@ -532,7 +532,7 @@ export default function AppDev() {
       setSimResult(responseJson);
 
       // Estraiamo i dati veri dall'oggetto "result"
-      const data = responseJson.result;
+      const data = responseJson;
 
       // Adattiamo i dati Python (snake_case) al Frontend (se necessario)
       // Il Python restituisce "predicted_score", "gh", "ga", "sign", ecc.
@@ -4136,7 +4136,7 @@ const renderResult = () => {
         )}
       </div>
       {/* Modale Scommesse Scientifica */}
-      {showBettingModal && simResult?.result && (
+      {showBettingModal && simResult && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,

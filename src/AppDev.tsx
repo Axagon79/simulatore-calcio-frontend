@@ -693,12 +693,23 @@ export default function AppDev() {
                 away: event.squadra === 'ospite' ? prev.away + 1 : prev.away
               }));
               
-              // ✅ MOMENTUM FLUIDO (non blocca agli estremi)
+              // ✅ MOMENTUM FLUIDO CON OSCILLAZIONE NATURALE
+            if (event.tipo === 'gol') {
               setMomentum(prev => 
-                event.squadra === 'casa' 
-                  ? Math.min(prev + 15, 80)
-                  : Math.max(prev - 15, 20)
+                  event.squadra === 'casa' 
+                      ? Math.min(prev + 20, 85)  // Sposta ma non blocca
+                      : Math.max(prev - 20, 15)
               );
+            }
+
+            // ✅ RITORNO GRADUALE AL CENTRO
+            if (currentMinForEvents % 3 === 0) {
+              setMomentum(prev => {
+                  if (prev > 55) return prev - 1.5;
+                  if (prev < 45) return prev + 1.5;
+                  return prev;
+              });
+            }
             } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
               setMomentum(prev => 
                 event.squadra === 'casa' 
@@ -1681,7 +1692,7 @@ export default function AppDev() {
             const isCasa = e.includes(`[${homeUpper}]`);
             const isOspite = e.includes(`[${awayUpper}]`);
             const isSistema = e.includes('[SISTEMA]');
-  
+            
             return (
               <div 
                 key={i} 

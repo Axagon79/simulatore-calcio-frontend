@@ -621,6 +621,9 @@ export default function AppDev() {
     const recuperoPT = Math.floor(Math.random() * 3) + 1; 
     const recuperoST = Math.floor(Math.random() * 5) + 2;
     
+    // ✅ NUOVO: Set per tracciare eventi già mostrati (usa l'ID unico del minuto + testo)
+    const eventiMostrati = new Set<string>();
+    
     // ✅ RESET PUNTEGGIO ALL'INIZIO
     setLiveScore({home: 0, away: 0});
   
@@ -674,49 +677,59 @@ export default function AppDev() {
         }
       }
   
-      // --- LOGICA EVENTI E AGGIORNAMENTO PUNTEGGIO ---
+      // ✅ LOGICA EVENTI - FIX DUPLICATI
       if (finalData.cronaca) {
-        const event = finalData.cronaca.find(e => e.minuto === currentMinForEvents);
-        if (event && !animEvents.includes(event.testo)) {
-          setAnimEvents(prev => [event.testo, ...prev]);
-      
-          // ✅ AGGIORNA PUNTEGGIO LIVE QUANDO C'È UN GOL
-          if (event.tipo === 'gol') {
-            setLiveScore(prev => ({
-              home: event.squadra === 'casa' ? prev.home + 1 : prev.home,
-              away: event.squadra === 'ospite' ? prev.away + 1 : prev.away
-            }));
-            
-            setMomentum(event.squadra === 'casa' ? 90 : 10);
-          } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
-            setMomentum(prev => event.squadra === 'casa' ? Math.min(85, prev + 20) : Math.max(15, prev - 20));
+        // Trova TUTTI gli eventi del minuto corrente
+        const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === currentMinForEvents);
+        
+        eventiDelMinuto.forEach(event => {
+          // ✅ CREA UN ID UNICO per ogni evento (minuto + tipo + testo)
+          const eventoId = `${event.minuto}-${event.tipo}-${event.testo}`;
+          
+          // ✅ MOSTRA SOLO SE NON È STATO GIÀ MOSTRATO
+          if (!eventiMostrati.has(eventoId)) {
+            eventiMostrati.add(eventoId);
+            setAnimEvents(prev => [event.testo, ...prev]);
+          
+            // AGGIORNA PUNTEGGIO LIVE
+            if (event.tipo === 'gol') {
+              setLiveScore(prev => ({
+                home: event.squadra === 'casa' ? prev.home + 1 : prev.home,
+                away: event.squadra === 'ospite' ? prev.away + 1 : prev.away
+              }));
+              
+              setMomentum(event.squadra === 'casa' ? 90 : 10);
+            } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
+              setMomentum(prev => event.squadra === 'casa' ? Math.min(85, prev + 20) : Math.max(15, prev - 20));
+            }
+          
+            // SCRITTE SUL CAMPO
+            if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
+              let msg = '';
+              let col = '';
+              
+              if (event.tipo === 'gol') { 
+                msg = 'GOOOL!'; 
+                col = event.squadra === 'casa' ? theme.cyan : theme.danger; 
+              }
+              else if (event.tipo === 'rigore_fischio') { 
+                msg = 'RIGORE!'; 
+                col = '#ff9f43'; 
+              }
+              else if (event.tipo === 'rigore_sbagliato') { 
+                msg = 'RIGORE PARATO!'; 
+                col = '#ffffff'; 
+              }
+              else if (event.tipo === 'rosso') { 
+                msg = 'ROSSO!'; 
+                col = theme.danger; 
+              }
+          
+              setPitchMsg({ testo: msg, colore: col });
+              setTimeout(() => setPitchMsg(null), 3000);
+            }
           }
-      
-          if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
-            let msg = '';
-            let col = '';
-            
-            if (event.tipo === 'gol') { 
-              msg = 'GOOOL!'; 
-              col = event.squadra === 'casa' ? theme.cyan : theme.danger; 
-            }
-            else if (event.tipo === 'rigore_fischio') { 
-              msg = 'RIGORE!'; 
-              col = '#ff9f43'; 
-            }
-            else if (event.tipo === 'rigore_sbagliato') { 
-              msg = 'RIGORE PARATO!'; 
-              col = '#ffffff'; 
-            }
-            else if (event.tipo === 'rosso') { 
-              msg = 'ROSSO!'; 
-              col = theme.danger; 
-            }
-      
-            setPitchMsg({ testo: msg, colore: col });
-            setTimeout(() => setPitchMsg(null), 3000);
-          }
-        }
+        });
       }
     }, intervalMs);
   };

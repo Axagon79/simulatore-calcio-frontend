@@ -422,6 +422,15 @@ export default function AppDev() {
 
   const [selectedPeriod, setSelectedPeriod] = useState<'previous' | 'current' | 'next'>('current');
 
+  // ✅ NUOVO STATE PER METADATA REALE
+  const [simulationMeta, setSimulationMeta] = useState<{
+    algoName: string;
+    algoId: number;
+    cyclesRequested: number;
+    cyclesExecuted: number;
+    executionTime: number;
+  } | null>(null);
+
   // --- LOGICA DI CARICAMENTO NAZIONI DINAMICHE ---
   useEffect(() => {
   const fetchNations = async () => {
@@ -525,7 +534,7 @@ export default function AppDev() {
   };
   const startSimulation = async () => {
     if (!selectedMatch) return;
-    setViewState('simulating'); // ✅ Imposta simulazione in corso
+    setViewState('simulating');
   
     try {
       const res = await fetch(AI_ENGINE_URL, {
@@ -547,22 +556,28 @@ export default function AppDev() {
       const responseJson = await res.json();
       console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
   
-      // Controllo validità risposta
       if (!responseJson.success || !responseJson.algo_name) {
         throw new Error(responseJson.error || 'Risposta del server incompleta');
       }
   
-      // ✅ Prepara i dati arricchiti (aggiungi eventi mock)
+      // ✅ SALVA I METADATA REALI
+      setSimulationMeta({
+        algoName: responseJson.algo_name,
+        algoId: responseJson.algo_id,
+        cyclesRequested: responseJson.cycles_requested,
+        cyclesExecuted: responseJson.cycles_executed,
+        executionTime: responseJson.execution_time
+      });
+  
       const enrichedData = {
         ...responseJson,
-        predictedscore: responseJson.predicted_score,
+        predicted_score: responseJson.predicted_score,
         events: generateMockEvents(
           responseJson.gh, 
           responseJson.ga, 
           selectedMatch.home, 
           selectedMatch.away
         ),
-        // ✅ AGGIUNGI IL CAMPO report_scommesse SE MANCA
         report_scommesse: responseJson.report_scommesse || {
           Bookmaker: {},
           Analisi_Profonda: {
@@ -573,16 +588,13 @@ export default function AppDev() {
         }
       };
   
-      // ✅ LOGICA CORRETTA: Controlla modalità PRIMA di impostare result
       if (simMode === 'fast') {
-        // Modalità veloce: mostra risultato dopo 1.5 secondi
         setTimeout(() => {
           setSimResult(enrichedData);
-          setViewState('result'); // ✅ Solo qui per FAST
+          setViewState('result');
           addBotMessage(`Analisi completata! Risultato previsto: ${responseJson.predicted_score}. Chiedimi pure spiegazioni.`);
         }, 1500);
       } else {
-        // Modalità animata: avvia animazione (che imposterà 'result' alla fine)
         runAnimation(enrichedData);
       }
   
@@ -606,7 +618,6 @@ export default function AppDev() {
     const intervalMs = 100;
     const regularStep = 90 / (totalDurationMs / intervalMs);
     
-    // Recupero casuale (puoi anche metterlo fisso se preferisci)
     const recuperoPT = Math.floor(Math.random() * 3) + 1; 
     const recuperoST = Math.floor(Math.random() * 5) + 2; 
   
@@ -626,18 +637,19 @@ export default function AppDev() {
           injuryTimeCounter = 0;
         }
       } else {
-        // --- TEMPO DI RECUPERO (3 volte più lento della partita) ---
+        // --- TEMPO DI RECUPERO ---
         injuryTimeCounter += (regularStep / 3); 
         const displayExtra = Math.floor(injuryTimeCounter);
         const baseMin = t < 60 ? 45 : 90;
         
         setTimer(`${baseMin}+${displayExtra}`); 
   
-        // Fine recupero 1° tempo
+        // ✅ FIX: Fine recupero 1° tempo
         if (baseMin === 45 && displayExtra >= recuperoPT) {
           isPaused = true;
           isInjuryTime = false;
-          t = 45.1; // Saltiamo il 45 per ripartire dal secondo tempo
+          injuryTimeCounter = 0;  // ✅ RESET CONTATORE
+          t = 46;  // ✅ Passa al secondo tempo
           
           const goalsHome = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'casa').length;
           const goalsAway = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'ospite').length;
@@ -649,7 +661,7 @@ export default function AppDev() {
           }, 3000);
         }
         
-        // Fine partita
+        // ✅ FIX: Fine partita
         if (baseMin === 90 && displayExtra >= recuperoST) {
           clearInterval(interval);
           setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
@@ -661,22 +673,20 @@ export default function AppDev() {
         }
       }
   
-      // --- LOGICA SCRITTE SUL CAMPO ED EVENTI ---
+      // --- LOGICA EVENTI ---
       if (finalData.cronaca) {
         const event = finalData.cronaca.find(e => e.minuto === currentMinForEvents);
         if (event && !animEvents.includes(event.testo)) {
           setAnimEvents(prev => [event.testo, ...prev]);
       
-          // --- LOGICA MOMENTUM DINAMICO ---
+          // Momentum dinamico
           if (event.tipo === 'gol') {
-            // Il gol sposta tutto il peso verso chi ha segnato
             setMomentum(event.squadra === 'casa' ? 90 : 10);
           } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
-            // Un rigore o un rosso spostano il momentum in modo significativo
             setMomentum(prev => event.squadra === 'casa' ? Math.min(85, prev + 20) : Math.max(15, prev - 20));
           }
       
-          // --- LOGICA SCRITTE GIGANTI SUL CAMPO ---
+          // Scritte sul campo
           if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
             let msg = '';
             let col = '';
@@ -699,8 +709,6 @@ export default function AppDev() {
             }
       
             setPitchMsg({ testo: msg, colore: col });
-            
-            // La scritta sparisce dopo 3 secondi
             setTimeout(() => setPitchMsg(null), 3000);
           }
         }
@@ -713,10 +721,9 @@ export default function AppDev() {
     const h = home.toUpperCase();
     const a = away.toUpperCase();
   
-    // --- HELPER RANDOM ---
     const rand = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
   
-    // SERBATOI GENERICI (Senza nomi di giocatori o squadre fisse)
+    // ✅ I TUOI POOL ORIGINALI
     const poolAttacco = [
       "tenta la magia in rovesciata, il pallone viene bloccato dal portiere.",
       "scappa sulla fascia e mette un cross teso: la difesa libera in affanno.",
@@ -768,93 +775,96 @@ export default function AppDev() {
       "gioco momentaneamente fermo per un contrasto a centrocampo."
     ];
   
-    // --- 1. MOMENTI CHIAVE (Milestones) ---
-  events.push({ minuto: 0, squadra: 'casa', tipo: 'info', testo: `🏁 [SISTEMA] FISCHIO D'INIZIO! Inizia ${h} vs ${a}!` });
-  
-  const recuperoPT = Math.floor(Math.random() * 4) + 1;
-  events.push({ minuto: 45, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Segnalati ${recuperoPT} minuti di recupero nel primo tempo.` });
-  events.push({ minuto: 45 + recuperoPT, squadra: 'casa', tipo: 'info', testo: `☕ [SISTEMA] FINE PRIMO TEMPO. Squadre negli spogliatoi.` });
-  
-  const recuperoST = Math.floor(Math.random() * 6) + 2;
-  events.push({ minuto: 90, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Il quarto uomo indica ${recuperoST} minuti di recupero.` });
-
-
-  // --- 2. LOGICA GOL / RIGORI / AUTOGOL (Sincronizzati col Master) ---
-
-  // --- GOL SQUADRA DI CASA ---
-  for (let i = 0; i < gh; i++) {
-    const min = Math.floor(Math.random() * 80) + 5; // Stiamo larghi con i minuti per la sequenza
-    const isPenalty = Math.random() > 0.85;
-    const isOwnGoal = Math.random() > 0.95;
-
-    if (isOwnGoal) {
-      events.push({ minuto: min, squadra: 'casa', tipo: 'gol', testo: `❌ [${h}] AUTOGOL! Sfortunata deviazione nella propria porta!` });
-    } 
-    else if (isPenalty) {
-      // --- QUI CREIAMO LA SEQUENZA ---
-      // 1. Il fischio (attiva la scritta "RIGORE!" sul campo)
-      events.push({ minuto: min, squadra: 'casa', tipo: 'rigore_fischio', testo: `📢 [${h}] CALCIO DI RIGORE! Il direttore di gara indica il dischetto!` });
-      // 2. Il gol (arriva 1 minuto dopo e attiva la scritta "GOOOL!")
-      events.push({ minuto: min + 1, squadra: 'casa', tipo: 'gol', testo: `🎯 [${h}] GOAL SU RIGORE! Esecuzione perfetta dal dischetto!` });
-    } 
-    else {
-      events.push({ minuto: min, squadra: 'casa', tipo: 'gol', testo: `⚽ [${h}] GOOOL! ${rand(["Conclusione potente!", "Di testa su cross!", "Azione corale!", "Tap-in vincente!"])}` });
-    }
-  }
-
-  // --- GOL SQUADRA OSPITE (Stessa logica) ---
-  for (let i = 0; i < ga; i++) {
-    const min = Math.floor(Math.random() * 80) + 5;
-    const isPenalty = Math.random() > 0.85;
-
-    if (isPenalty) {
-      events.push({ minuto: min, squadra: 'ospite', tipo: 'rigore_fischio', testo: `📢 [${a}] CALCIO DI RIGORE! Massima punizione per gli ospiti!` });
-      events.push({ minuto: min + 1, squadra: 'ospite', tipo: 'gol', testo: `🎯 [${a}] GOAL SU RIGORE! Freddissimo dagli undici metri!` });
-    } else {
-      events.push({ minuto: min, squadra: 'ospite', tipo: 'gol', testo: `⚽ [${a}] GOOOL! ${rand(["Zittisce lo stadio!", "Contropiede micidiale!", "Incredibile girata!", "Palla nel sette!"])}` });
-    }
-  }
-
-  // --- RIGORE SBAGLIATO (Evento extra che non cambia il punteggio) ---
-  if (Math.random() > 0.90) {
-    const min = Math.floor(Math.random() * 70) + 10;
-    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-    const name = sq === 'casa' ? h : a;
+    // ✅ 1. EVENTI SISTEMA (Milestone)
+    events.push({ minuto: 0, squadra: 'casa', tipo: 'info', testo: `🏁 [SISTEMA] FISCHIO D'INIZIO! Inizia ${h} vs ${a}!` });
     
-    events.push({ minuto: min, squadra: sq, tipo: 'rigore_fischio', testo: `📢 [${name}] RIGORE! Occasione d'oro per segnare!` });
-    events.push({ minuto: min + 1, squadra: sq, tipo: 'info', testo: `😱 [${name}] RIGORE SBAGLIATO! Il portiere para o la palla finisce fuori!` });
-  }
-
-  // --- 3. EVENTI EXTRA (Rigori sbagliati, Rossi, Gialli) ---
-  if (Math.random() > 0.8) {
-    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-    events.push({ minuto: Math.floor(Math.random() * 80), squadra: sq, tipo: 'info', testo: `😱 [${sq === 'casa' ? h : a}] RIGORE PARATO! Il portiere ipnotizza l'attaccante!` });
-  }
-  if (Math.random() > 0.9) {
-    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-    events.push({ minuto: Math.floor(Math.random() * 85), squadra: sq, tipo: 'rosso', testo: `🟥 [${sq === 'casa' ? h : a}] CARTELLINO ROSSO! Intervento killer, squadra in 10!` });
-  }
-  const numGialli = Math.floor(Math.random() * 4); 
-  for (let i = 0; i < numGialli; i++) {
-    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-    events.push({ minuto: Math.floor(Math.random() * 85) + 5, squadra: sq, tipo: 'cartellino', testo: `🟨 [${sq === 'casa' ? h : a}] Giallo per un fallo tattico a centrocampo.` });
-  }
-
-  // --- 4. RIEMPIMENTO CRONACA (Varietà Random da 200 combinazioni) ---
-  for (let i = 0; i < 15; i++) {
-    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-    const roll = Math.random();
-    let txt = "";
-    if (roll > 0.75) txt = rand(poolPortiere);
-    else if (roll > 0.50) txt = rand(poolAttacco);
-    else if (roll > 0.25) txt = rand(poolDifesa);
-    else txt = rand(poolAtmosfera);
-
-    events.push({ minuto: Math.floor(Math.random() * 89) + 1, squadra: sq, tipo: 'info', testo: `[${sq === 'casa' ? h : a}] ${txt}` });
-  }
-
-  return events.sort((a, b) => a.minuto - b.minuto);
-};
+    const recuperoPT = Math.floor(Math.random() * 4) + 1;
+    events.push({ minuto: 45, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Segnalati ${recuperoPT} minuti di recupero nel primo tempo.` });
+    events.push({ minuto: 45 + recuperoPT, squadra: 'casa', tipo: 'info', testo: `☕ [SISTEMA] FINE PRIMO TEMPO. Squadre negli spogliatoi.` });
+    
+    const recuperoST = Math.floor(Math.random() * 6) + 2;
+    events.push({ minuto: 90, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Il quarto uomo indica ${recuperoST} minuti di recupero.` });
+  
+    // ✅ 2. GOL SINCRONIZZATI (gh per casa, ga per ospite)
+    const minutiUsati = new Set<number>();
+    
+    // GOL CASA
+    for (let i = 0; i < gh; i++) {
+      let min = Math.floor(Math.random() * 85) + 3;
+      while (minutiUsati.has(min)) min = Math.floor(Math.random() * 85) + 3;
+      minutiUsati.add(min);
+      
+      const isPenalty = Math.random() > 0.85;
+      
+      if (isPenalty) {
+        events.push({ minuto: min, squadra: 'casa', tipo: 'rigore_fischio', testo: `📢 [${h}] CALCIO DI RIGORE! Il direttore di gara indica il dischetto!` });
+        events.push({ minuto: min + 1, squadra: 'casa', tipo: 'gol', testo: `🎯 [${h}] GOAL SU RIGORE! Esecuzione perfetta dal dischetto!` });
+      } else {
+        const tipoGol = rand(["Conclusione potente!", "Di testa su cross!", "Azione corale!", "Tap-in vincente!"]);
+        events.push({ minuto: min, squadra: 'casa', tipo: 'gol', testo: `⚽ [${h}] GOOOL! ${tipoGol}` });
+      }
+    }
+  
+    // GOL OSPITE
+    for (let i = 0; i < ga; i++) {
+      let min = Math.floor(Math.random() * 85) + 3;
+      while (minutiUsati.has(min)) min = Math.floor(Math.random() * 85) + 3;
+      minutiUsati.add(min);
+      
+      const isPenalty = Math.random() > 0.85;
+      
+      if (isPenalty) {
+        events.push({ minuto: min, squadra: 'ospite', tipo: 'rigore_fischio', testo: `📢 [${a}] CALCIO DI RIGORE! Massima punizione per gli ospiti!` });
+        events.push({ minuto: min + 1, squadra: 'ospite', tipo: 'gol', testo: `🎯 [${a}] GOAL SU RIGORE! Freddissimo dagli undici metri!` });
+      } else {
+        const tipoGol = rand(["Zittisce lo stadio!", "Contropiede micidiale!", "Incredibile girata!", "Palla nel sette!"]);
+        events.push({ minuto: min, squadra: 'ospite', tipo: 'gol', testo: `⚽ [${a}] GOOOL! ${tipoGol}` });
+      }
+    }
+  
+    // ✅ 3. CARTELLINI (2-5 casuali)
+    const numGialli = Math.floor(Math.random() * 4) + 2;
+    for (let i = 0; i < numGialli; i++) {
+      let min = Math.floor(Math.random() * 85) + 5;
+      while (minutiUsati.has(min)) min++;
+      minutiUsati.add(min);
+      
+      const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+      const team = sq === 'casa' ? h : a;
+      events.push({ minuto: min, squadra: sq, tipo: 'cartellino', testo: `🟨 [${team}] Giallo per un fallo tattico a centrocampo.` });
+    }
+  
+    // ✅ 4. EVENTI DAI POOL (35-40 eventi distribuiti uniformemente)
+    const numEventiPerTempo = 18; // ~1 ogni 2.5 minuti
+    
+    for (let tempo = 1; tempo <= 2; tempo++) {
+      const minBase = tempo === 1 ? 1 : 46;
+      const minMax = tempo === 1 ? 45 : 90;
+      const intervallo = (minMax - minBase) / numEventiPerTempo;
+      
+      for (let i = 0; i < numEventiPerTempo; i++) {
+        const min = Math.floor(minBase + (i * intervallo) + Math.random() * (intervallo - 1));
+        
+        if (minutiUsati.has(min)) continue;
+        minutiUsati.add(min);
+        
+        const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+        const team = sq === 'casa' ? h : a;
+        
+        // Scelta pool con distribuzione equilibrata
+        const roll = Math.random();
+        let txt = "";
+        if (roll > 0.75) txt = rand(poolPortiere);
+        else if (roll > 0.50) txt = rand(poolAttacco);
+        else if (roll > 0.25) txt = rand(poolDifesa);
+        else txt = rand(poolAtmosfera);
+        
+        events.push({ minuto: min, squadra: sq, tipo: 'info', testo: `[${team}] ${txt}` });
+      }
+    }
+  
+    return events.sort((a, b) => a.minuto - b.minuto);
+  };
   // --- CHAT LOGIC ---
   const addBotMessage = (text: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text, timestamp: new Date() }]);
@@ -1549,62 +1559,142 @@ export default function AppDev() {
   // --- FUNZIONE MANCANTE: ANIMAZIONE GRAFICA ---
   const renderAnimation = () => (
     <div style={styles.animContainer}>
-      <div style={styles.timerDisplay}>{timer}'</div>
-
-      {/* Campo da Gioco Neon */}
-      <div style={styles.pitch}>
-
-          {pitchMsg && (
+      
+      {/* ✅ NUOVO: PANNELLO METADATA IN ALTO A DESTRA */}
+      {simulationMeta && (
         <div style={{
           position: 'absolute',
-          top: 0, left: 0, right: 0, bottom: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.3)',
-          zIndex: 100,
-          pointerEvents: 'none'
+          top: '20px',
+          right: '20px',
+          background: 'rgba(0, 0, 0, 0.9)',
+          backdropFilter: 'blur(10px)',
+          padding: '15px 20px',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 240, 255, 0.3)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+          fontSize: '11px',
+          color: theme.cyan,
+          textAlign: 'right',
+          minWidth: '200px',
+          zIndex: 100
         }}>
-          <div style={{
-            fontSize: '60px',
-            fontWeight: '900',
-            color: pitchMsg.colore,
-            textShadow: `0 0 20px ${pitchMsg.colore}`,
-            textTransform: 'uppercase',
-            transform: 'rotate(-5deg)',
-            animation: 'pulse 0.6s infinite alternate'
-          }}>
-            {pitchMsg.testo}
+          <div style={{ marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid rgba(0, 240, 255, 0.2)' }}>
+            <div style={{ fontSize: '9px', color: '#666', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Motore AI
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.cyan }}>
+              {simulationMeta.algoName}
+            </div>
+            <div style={{ fontSize: '8px', color: '#888', marginTop: '2px' }}>
+              ID: {simulationMeta.algoId}
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ fontSize: '9px', color: '#666', marginBottom: '4px' }}>
+              Cicli Eseguiti
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.success }}>
+              {simulationMeta.cyclesExecuted}
+            </div>
+            <div style={{ fontSize: '8px', color: '#888', marginTop: '2px' }}>
+              Richiesti: {simulationMeta.cyclesRequested}
+            </div>
+          </div>
+          
+          <div>
+            <div style={{ fontSize: '9px', color: '#666', marginBottom: '4px' }}>
+              Tempo Elaborazione
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.warning }}>
+              {simulationMeta.executionTime.toFixed(2)}s
+            </div>
           </div>
         </div>
       )}
+  
+      <div style={styles.timerDisplay}>{timer}'</div>
+  
+      {/* Campo da Gioco Neon */}
+      <div style={styles.pitch}>
+        {pitchMsg && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            zIndex: 100,
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              fontSize: '60px',
+              fontWeight: '900',
+              color: pitchMsg.colore,
+              textShadow: `0 0 20px ${pitchMsg.colore}`,
+              textTransform: 'uppercase',
+              transform: 'rotate(-5deg)',
+              animation: 'pulse 0.6s infinite alternate'
+            }}>
+              {pitchMsg.testo}
+            </div>
+          </div>
+        )}
         
         {/* Linea di metà campo */}
         <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
-
-        {/* Barra Momentum (La lancetta della partita) */}
+  
+        {/* Barra Momentum */}
         <div style={{
           ...styles.momentumBar,
           left: `${momentum}%`,
           width: '4px',
           boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
         }} />
-
-        {/* Nomi Squadre in basso */}
+  
+        {/* Nomi Squadre */}
         <div style={{ position: 'absolute', bottom: '10px', left: '10px', fontSize: '12px', fontWeight: 'bold', color: theme.cyan }}>{selectedMatch?.home}</div>
         <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '12px', fontWeight: 'bold', color: theme.danger }}>{selectedMatch?.away}</div>
       </div>
-
-      {/* Feed Eventi (Gol, Cartellini...) */}
+  
+      {/* ✅ NUOVO: Feed Eventi con Allineamento Sinistra/Destra */}
       <div style={styles.eventFeed}>
-        {animEvents.length === 0 ? <div style={{ color: '#666', textAlign: 'center', marginTop: '10px', fontSize: '12px' }}>Fischio d'inizio...</div> :
-          animEvents.map((e, i) => (
-            <div key={i} style={{ marginBottom: '5px', fontSize: '13px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '2px', color: 'white' }}>
-              {e}
-            </div>
-          ))
-        }
+        {animEvents.length === 0 ? (
+          <div style={{ color: '#666', textAlign: 'center', marginTop: '10px', fontSize: '12px' }}>
+            Fischio d'inizio...
+          </div>
+        ) : (
+          animEvents.map((e, i) => {
+            // Estrai la squadra dal testo
+            const homeUpper = selectedMatch?.home.toUpperCase() || '';
+            const awayUpper = selectedMatch?.away.toUpperCase() || '';
+            
+            const isCasa = e.includes(`[${homeUpper}]`);
+            const isOspite = e.includes(`[${awayUpper}]`);
+            const isSistema = e.includes('[SISTEMA]');
+  
+            return (
+              <div 
+                key={i} 
+                style={{
+                  marginBottom: '5px',
+                  fontSize: '13px',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  paddingBottom: '2px',
+                  // ✅ ALLINEAMENTO CONDIZIONALE
+                  textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
+                  // ✅ COLORI CONDIZIONALI
+                  color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
+                  fontWeight: isSistema ? 'bold' : 'normal'
+                }}
+              >
+                {e}
+              </div>
+            );
+          })
+        )}
       </div>
-
+  
       <div style={{ marginTop: '20px', color: theme.cyan, letterSpacing: '2px', fontSize: '10px', animation: 'pulse 2s infinite' }}>
         SIMULAZIONE LIVE DAL CORE AI
       </div>

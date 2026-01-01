@@ -580,7 +580,6 @@ const loadFormations = async (home: string, away: string, league: string) => {
   }
 };
 
-// ✅ MAPPA POSIZIONI GIOCATORI PER MODULO
 // ✅ TIPO PER POSIZIONI FORMAZIONE
 type FormationPositions = {
   GK: {x: number; y: number}[];
@@ -589,9 +588,8 @@ type FormationPositions = {
   ATT: {x: number; y: number}[];
 };
 
-// ✅ MAPPA POSIZIONI GIOCATORI PER MODULO
+// ✅ MAPPA POSIZIONI GIOCATORI PER MODULO (CAMPO ORIZZONTALE)
 const getFormationPositions = (modulo: string, isHome: boolean): FormationPositions => {
-  // Converti moduli a 4 cifre in 3 cifre
   const FORMATION_MAPPING: {[key: string]: string} = {
     "3-4-2-1": "3-4-3",
     "4-2-2-2": "4-4-2",
@@ -601,61 +599,62 @@ const getFormationPositions = (modulo: string, isHome: boolean): FormationPositi
   
   const moduloNorm = FORMATION_MAPPING[modulo] || modulo;
   
-  // Posizioni in percentuale (x, y) - y=0 è la porta, y=100 è l'attacco
+  // CAMPO ORIZZONTALE: x = posizione orizzontale (0=porta, 100=attacco), y = posizione verticale
+  // Squadra CASA: porta a sinistra (x basso), attacco verso destra (x alto)
   const positions: {[key: string]: FormationPositions} = {
     "3-4-3": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 25, y: 25}, {x: 50, y: 25}, {x: 75, y: 25}],
-      MID: [{x: 15, y: 50}, {x: 38, y: 50}, {x: 62, y: 50}, {x: 85, y: 50}],
-      ATT: [{x: 25, y: 75}, {x: 50, y: 75}, {x: 75, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 25}, {x: 20, y: 50}, {x: 20, y: 75}],
+      MID: [{x: 35, y: 15}, {x: 35, y: 38}, {x: 35, y: 62}, {x: 35, y: 85}],
+      ATT: [{x: 48, y: 25}, {x: 48, y: 50}, {x: 48, y: 75}]
     },
     "3-5-2": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 25, y: 25}, {x: 50, y: 25}, {x: 75, y: 25}],
-      MID: [{x: 10, y: 50}, {x: 30, y: 50}, {x: 50, y: 50}, {x: 70, y: 50}, {x: 90, y: 50}],
-      ATT: [{x: 35, y: 75}, {x: 65, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 25}, {x: 20, y: 50}, {x: 20, y: 75}],
+      MID: [{x: 35, y: 10}, {x: 35, y: 30}, {x: 35, y: 50}, {x: 35, y: 70}, {x: 35, y: 90}],
+      ATT: [{x: 48, y: 35}, {x: 48, y: 65}]
     },
     "4-3-3": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 15, y: 25}, {x: 38, y: 25}, {x: 62, y: 25}, {x: 85, y: 25}],
-      MID: [{x: 25, y: 50}, {x: 50, y: 50}, {x: 75, y: 50}],
-      ATT: [{x: 25, y: 75}, {x: 50, y: 75}, {x: 75, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 15}, {x: 20, y: 38}, {x: 20, y: 62}, {x: 20, y: 85}],
+      MID: [{x: 35, y: 25}, {x: 35, y: 50}, {x: 35, y: 75}],
+      ATT: [{x: 48, y: 25}, {x: 48, y: 50}, {x: 48, y: 75}]
     },
     "4-4-2": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 15, y: 25}, {x: 38, y: 25}, {x: 62, y: 25}, {x: 85, y: 25}],
-      MID: [{x: 15, y: 50}, {x: 38, y: 50}, {x: 62, y: 50}, {x: 85, y: 50}],
-      ATT: [{x: 35, y: 75}, {x: 65, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 15}, {x: 20, y: 38}, {x: 20, y: 62}, {x: 20, y: 85}],
+      MID: [{x: 35, y: 15}, {x: 35, y: 38}, {x: 35, y: 62}, {x: 35, y: 85}],
+      ATT: [{x: 48, y: 35}, {x: 48, y: 65}]
     },
     "4-5-1": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 15, y: 25}, {x: 38, y: 25}, {x: 62, y: 25}, {x: 85, y: 25}],
-      MID: [{x: 10, y: 50}, {x: 30, y: 50}, {x: 50, y: 50}, {x: 70, y: 50}, {x: 90, y: 50}],
-      ATT: [{x: 50, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 15}, {x: 20, y: 38}, {x: 20, y: 62}, {x: 20, y: 85}],
+      MID: [{x: 35, y: 10}, {x: 35, y: 30}, {x: 35, y: 50}, {x: 35, y: 70}, {x: 35, y: 90}],
+      ATT: [{x: 48, y: 50}]
     },
     "5-3-2": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 10, y: 25}, {x: 30, y: 25}, {x: 50, y: 25}, {x: 70, y: 25}, {x: 90, y: 25}],
-      MID: [{x: 25, y: 50}, {x: 50, y: 50}, {x: 75, y: 50}],
-      ATT: [{x: 35, y: 75}, {x: 65, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 10}, {x: 20, y: 30}, {x: 20, y: 50}, {x: 20, y: 70}, {x: 20, y: 90}],
+      MID: [{x: 35, y: 25}, {x: 35, y: 50}, {x: 35, y: 75}],
+      ATT: [{x: 48, y: 35}, {x: 48, y: 65}]
     },
     "5-4-1": {
-      GK: [{x: 50, y: 8}],
-      DEF: [{x: 10, y: 25}, {x: 30, y: 25}, {x: 50, y: 25}, {x: 70, y: 25}, {x: 90, y: 25}],
-      MID: [{x: 15, y: 50}, {x: 38, y: 50}, {x: 62, y: 50}, {x: 85, y: 50}],
-      ATT: [{x: 50, y: 75}]
+      GK: [{x: 5, y: 50}],
+      DEF: [{x: 20, y: 10}, {x: 20, y: 30}, {x: 20, y: 50}, {x: 20, y: 70}, {x: 20, y: 90}],
+      MID: [{x: 35, y: 15}, {x: 35, y: 38}, {x: 35, y: 62}, {x: 35, y: 85}],
+      ATT: [{x: 48, y: 50}]
     }
   };
   
   const formation = positions[moduloNorm] || positions["4-3-3"];
   
-  // Per la squadra ospite, inverti le posizioni Y (specchia verticalmente)
+  // Per squadra OSPITE: specchia orizzontalmente (porta a destra)
   if (!isHome) {
     return {
-      GK: formation.GK.map(p => ({ x: p.x, y: 100 - p.y })),
-      DEF: formation.DEF.map(p => ({ x: p.x, y: 100 - p.y })),
-      MID: formation.MID.map(p => ({ x: p.x, y: 100 - p.y })),
-      ATT: formation.ATT.map(p => ({ x: p.x, y: 100 - p.y }))
+      GK: formation.GK.map(p => ({ x: 100 - p.x, y: p.y })),
+      DEF: formation.DEF.map(p => ({ x: 100 - p.x, y: p.y })),
+      MID: formation.MID.map(p => ({ x: 100 - p.x, y: p.y })),
+      ATT: formation.ATT.map(p => ({ x: 100 - p.x, y: p.y }))
     };
   }
   
@@ -1850,69 +1849,49 @@ const startSimulation = async () => {
         {/* ✅ PALLINI GIOCATORI DURANTE RISCALDAMENTO */}
         {isWarmingUp && formations && (
           <>
-            {/* Squadra CASA (sinistra) */}
+            {/* Squadra CASA (sinistra - cyan) */}
             {(() => {
-              const positions = getFormationPositions(formations.home_formation.modulo, true);
-              const allPositions: {x: number; y: number; role: string}[] = [];
-              
-              // GK
-              positions.GK?.forEach(p => allPositions.push({...p, role: 'GK'}));
-              // DEF
-              positions.DEF?.forEach(p => allPositions.push({...p, role: 'DIF'}));
-              // MID
-              positions.MID?.forEach(p => allPositions.push({...p, role: 'MID'}));
-              // ATT
-              positions.ATT?.forEach(p => allPositions.push({...p, role: 'ATT'}));
-              
-              return allPositions.map((pos, idx) => (
+              const pos = getFormationPositions(formations.home_formation?.modulo || '4-3-3', true);
+              const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
+              return allPos.map((p, idx) => (
                 <div
                   key={`home-${idx}`}
                   style={{
                     position: 'absolute',
-                    left: `${pos.x / 2}%`,  // Metà sinistra del campo
-                    top: `${pos.y}%`,
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
                     transform: 'translate(-50%, -50%)',
-                    width: '16px',
-                    height: '16px',
+                    width: '14px',
+                    height: '14px',
                     borderRadius: '50%',
                     backgroundColor: theme.cyan,
-                    boxShadow: `0 0 10px ${theme.cyan}`,
-                    opacity: 1 - (warmupProgress / 150),  // Fade out graduale
-                    transition: 'opacity 0.5s ease'
+                    boxShadow: `0 0 8px ${theme.cyan}`,
+                    opacity: Math.max(0, 1 - (warmupProgress / 120)),
+                    transition: 'opacity 0.3s ease'
                   }}
                 />
               ));
             })()}
             
-            {/* Squadra OSPITE (destra) */}
+            {/* Squadra OSPITE (destra - rosso/magenta) */}
             {(() => {
-              const positions = getFormationPositions(formations.away_formation.modulo, false);
-              const allPositions: {x: number; y: number; role: string}[] = [];
-              
-              // GK
-              positions.GK?.forEach(p => allPositions.push({...p, role: 'GK'}));
-              // DEF
-              positions.DEF?.forEach(p => allPositions.push({...p, role: 'DIF'}));
-              // MID
-              positions.MID?.forEach(p => allPositions.push({...p, role: 'MID'}));
-              // ATT
-              positions.ATT?.forEach(p => allPositions.push({...p, role: 'ATT'}));
-              
-              return allPositions.map((pos, idx) => (
+              const pos = getFormationPositions(formations.away_formation?.modulo || '4-3-3', false);
+              const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
+              return allPos.map((p, idx) => (
                 <div
                   key={`away-${idx}`}
                   style={{
                     position: 'absolute',
-                    left: `${50 + pos.x / 2}%`,  // Metà destra del campo
-                    top: `${100 - pos.y}%`,  // Inverti Y per ospiti
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
                     transform: 'translate(-50%, -50%)',
-                    width: '16px',
-                    height: '16px',
+                    width: '14px',
+                    height: '14px',
                     borderRadius: '50%',
                     backgroundColor: theme.danger,
-                    boxShadow: `0 0 10px ${theme.danger}`,
-                    opacity: 1 - (warmupProgress / 150),
-                    transition: 'opacity 0.5s ease'
+                    boxShadow: `0 0 8px ${theme.danger}`,
+                    opacity: Math.max(0, 1 - (warmupProgress / 120)),
+                    transition: 'opacity 0.3s ease'
                   }}
                 />
               ));
@@ -1942,7 +1921,7 @@ const startSimulation = async () => {
               🏃 RISCALDAMENTO PRE-PARTITA
             </span>
             <span style={{ color: theme.text, fontSize: '14px' }}>
-              {warmupProgress}%
+              {Math.round(warmupProgress)}%
             </span>
           </div>
           <div style={{

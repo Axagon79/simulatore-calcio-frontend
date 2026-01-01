@@ -710,13 +710,20 @@ export default function AppDev() {
                   return prev;
               });
             }
-            } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
-              setMomentum(prev => 
-                event.squadra === 'casa' 
-                  ? Math.min(prev + 12, 75) 
-                  : Math.max(prev - 12, 25)
-              );
-            }
+          } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
+            setMomentum(prev => 
+              event.squadra === 'casa' 
+                ? Math.min(prev + 12, 75) 
+                : Math.max(prev - 12, 25)
+            );
+          } else if (event.tipo === 'cartellino') {
+            // Giallo: piccolo vantaggio all'avversario
+            setMomentum(prev => 
+              event.squadra === 'casa' 
+                ? Math.max(prev - 5, 20)  // Casa prende giallo: ospite avvantaggiato
+                : Math.min(prev + 5, 80)  // Ospite prende giallo: casa avvantaggiata
+            );
+          }
           
             // SCRITTE SUL CAMPO
             if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
@@ -747,10 +754,30 @@ export default function AppDev() {
         });
       }
       
-      // ✅ RITORNO GRADUALE AL CENTRO (momentum torna a 50 quando non ci sono eventi)
-      if (currentMinForEvents % 5 === 0) { // Ogni 5 minuti ricentra leggermente
-        setMomentum(prev => prev > 50 ? prev - 2 : prev < 50 ? prev + 2 : prev);
-      }
+      // ✅ OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
+      setMomentum(prev => {
+        // Micro-oscillazione casuale sempre attiva (-2 a +2)
+        const microMove = (Math.random() - 0.5) * 4;
+        
+        // Ogni tanto (20% probabilità) crea un "momento di pressione"
+        const pressione = Math.random();
+        let nuovoMomentum = prev + microMove;
+        
+        if (pressione < 0.08) {
+          // 8% probabilità: pressione CASA (sposta verso destra ma oscilla)
+          nuovoMomentum = prev + (Math.random() * 6) + 2; // +2 a +8
+        } else if (pressione < 0.16) {
+          // 8% probabilità: pressione OSPITE (sposta verso sinistra ma oscilla)
+          nuovoMomentum = prev - (Math.random() * 6) - 2; // -2 a -8
+        } else if (pressione < 0.25) {
+          // 9% probabilità: ritorno graduale verso centro
+          if (prev > 55) nuovoMomentum = prev - (Math.random() * 3) - 1;
+          else if (prev < 45) nuovoMomentum = prev + (Math.random() * 3) + 1;
+        }
+        
+        // Limiti: non va mai sotto 15 o sopra 85
+        return Math.max(15, Math.min(85, nuovoMomentum));
+      });
       
     }, intervalMs);
   };
@@ -3064,11 +3091,12 @@ export default function AppDev() {
                     cursor: 'pointer'
                   }}
                 >
-                  <option value={1}>ALGO 1: BASE</option>
-                  <option value={2}>ALGO 2: STATISTICO</option>
-                  <option value={3}>ALGO 3: DINAMICO</option>
-                  <option value={4}>ALGO 4: PREDITTIVO</option>
+                  <option value={1}>ALGO 1: STATISTICO PURO</option>
+                  <option value={2}>ALGO 2: DINAMICO</option>
+                  <option value={3}>ALGO 3: TATTICO</option>
+                  <option value={4}>ALGO 4: CAOS</option>
                   <option value={5}>ALGO 5: MASTER AI</option>
+                  <option value={6}>ALGO 6: M.C. AI</option>
                 </select>
 
                 {/* RIGA 4: TASTI MODALITÀ */}

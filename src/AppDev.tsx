@@ -2738,6 +2738,20 @@ export default function AppDev() {
               {/* CONFIGURAZIONE SIMULAZIONE - VERSIONE RISTRUTTURATA */}
               <div className="card-configurazione" style={styles.card}>
 
+                {/* STILE CSS PER LE FRECCIOLINE (Nascondi questo "trucco" qui dentro) */}
+                <style>
+                  {`
+                    input[type=number]::-webkit-inner-spin-button, 
+                    input[type=number]::-webkit-outer-spin-button {
+                      background-color: #333 !important;
+                      filter: invert(1);
+                      cursor: pointer;
+                      opacity: 1;
+                    }
+                    input[type=number] { -moz-appearance: textfield; }
+                  `}
+                </style>
+
               {/* HEADER: TITOLO + TASTO AVANZATE */}
               <div className="header-title" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '-10px', alignItems: 'center', marginBottom: '5px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 'bold' }}>CONFIGURAZIONE RAPIDA</span>

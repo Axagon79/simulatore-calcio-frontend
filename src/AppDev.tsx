@@ -55,7 +55,7 @@ interface SimulationResult {
   cronaca: { 
     minuto: number; 
     squadra?: 'casa' | 'ospite'; 
-    tipo: 'gol' | 'cartellino' | 'cambio' ; 
+    tipo: 'gol' | 'cartellino' | 'cambio' | 'info' | 'rigore_fischio' | 'rigore_sbagliato' | 'rosso';
     testo: string 
   }[];
 
@@ -369,9 +369,12 @@ export default function AppDev() {
   const [simResult, setSimResult] = useState<SimulationResult | null>(null);
 
   // STATO ANIMAZIONE
-  const [timer, setTimer] = useState(0);
+  // E cambiala in questa (così accetta sia numeri che scritte):
+  const [timer, setTimer] = useState<number | string>(0);
   const [animEvents, setAnimEvents] = useState<string[]>([]);
   const [momentum, setMomentum] = useState(50); // 0 = Away domina, 100 = Home domina
+
+  const [pitchMsg, setPitchMsg] = useState<{testo: string, colore: string} | null>(null);
 
   // Stato per gestire quale radar è visibile: 'all' (tutti), 'home' (solo casa), 'away' (solo ospite)
   const [radarFocus, setRadarFocus] = useState<'all' | 'home' | 'away'>('all');
@@ -393,7 +396,7 @@ export default function AppDev() {
 
 
   // --- STATI SETTINGS ENGINE ---
-  const [configAlgo, setConfigAlgo] = useState(6);         // Default Monte Carlo
+  const [configAlgo, setConfigAlgo] = useState(5);         // Default Monte Carlo
 
   const [configSaveDb, setConfigSaveDb] = useState(false); // Salva su DB? (Checkbox)
   const [configDebug, setConfigDebug] = useState(true);    // Debug Mode? (Checkbox)
@@ -455,12 +458,18 @@ export default function AppDev() {
 }, []);
 
 
-  // ✅ AGGIUNGI QUESTA FUNZIONE (dopo tutti gli useState)
-  const getCycles = (): number => {
-    if (selectedSpeed === 8) return customCycles;
-    const preset = SPEED_PRESETS.find(s => s.id === selectedSpeed);
-    return preset ? preset.cycles : 1250;
-  };
+    // --- 2. FUNZIONE getCycles (Sostituisci quella vecchia con questa) ---
+    // Questa versione è "pulita": restituisce semplicemente il numero scelto dall'utente.
+    const getCycles = (): number => {
+      return customCycles;
+    };
+
+    // --- 3. FUNZIONE RESET DEFAULT ---
+    // Da collegare al tastino nel pannello di controllo
+    const handleSetDefault = () => {
+      setConfigAlgo(5);      // Torna al Master AI
+      setCustomCycles(50); // Torna a 50 cicli (ottimale per Algo 5)
+    };
 
 
   // --- FETCH DATI ---
@@ -585,53 +594,267 @@ export default function AppDev() {
   };
 
 
+  // Trova la funzione runAnimation dentro AppDev.tsx e sostituiscila con questa:
+
   const runAnimation = (finalData: SimulationResult) => {
     let t = 0;
-    const totalDurationMs = 10000;
+    let injuryTimeCounter = 0; 
+    let isInjuryTime = false;  
+    let isPaused = false;
+    
+    const totalDurationMs = 30000; 
     const intervalMs = 100;
-    const step = 90 / (totalDurationMs / intervalMs);
-
+    const regularStep = 90 / (totalDurationMs / intervalMs);
+    
+    // Recupero casuale (puoi anche metterlo fisso se preferisci)
+    const recuperoPT = Math.floor(Math.random() * 3) + 1; 
+    const recuperoST = Math.floor(Math.random() * 5) + 2; 
+  
     const interval = setInterval(() => {
-      t += step;
-      setTimer(Math.min(90, Math.floor(t)));
-
-      setMomentum(prev => {
-        const delta = (Math.random() - 0.5) * 20;
-        let next = prev + delta;
-        if (next < 10) next = 10;
-        if (next > 90) next = 90;
-        return next;
-      });
-
-      if (finalData.cronaca) {
-        const currentMinute = Math.floor(t);
-        const event = finalData.cronaca.find(e => e.minuto === currentMinute);
-        if (event && !animEvents.includes(event.testo)) {
-          setAnimEvents(prev => [event.testo, ...prev]);
-          if (event.tipo === 'gol') {
-            setMomentum(event.squadra === 'casa' ? 90 : 10);
-          }
+      if (isPaused) return;
+  
+      let currentMinForEvents = Math.floor(t);
+  
+      if (!isInjuryTime) {
+        // --- TEMPO REGOLARE ---
+        t += regularStep;
+        currentMinForEvents = Math.floor(t);
+        setTimer(Math.min(90, currentMinForEvents));
+  
+        if (currentMinForEvents === 45 || currentMinForEvents === 90) {
+          isInjuryTime = true;
+          injuryTimeCounter = 0;
+        }
+      } else {
+        // --- TEMPO DI RECUPERO (3 volte più lento della partita) ---
+        injuryTimeCounter += (regularStep / 3); 
+        const displayExtra = Math.floor(injuryTimeCounter);
+        const baseMin = t < 60 ? 45 : 90;
+        
+        setTimer(`${baseMin}+${displayExtra}`); 
+  
+        // Fine recupero 1° tempo
+        if (baseMin === 45 && displayExtra >= recuperoPT) {
+          isPaused = true;
+          isInjuryTime = false;
+          t = 45.1; // Saltiamo il 45 per ripartire dal secondo tempo
+          
+          const goalsHome = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'casa').length;
+          const goalsAway = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'ospite').length;
+  
+          setPitchMsg({ testo: `INTERVALLO: ${goalsHome}-${goalsAway}`, colore: '#fff' });
+          setTimeout(() => {
+            setPitchMsg(null);
+            isPaused = false;
+          }, 3000);
+        }
+        
+        // Fine partita
+        if (baseMin === 90 && displayExtra >= recuperoST) {
+          clearInterval(interval);
+          setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
+          setTimeout(() => {
+            setPitchMsg(null);
+            setSimResult(finalData);
+            setViewState('result');
+          }, 4000);
         }
       }
-
-      if (t >= 90) {
-        clearInterval(interval);
-        setSimResult(finalData);
-        setViewState('result');
-        addBotMessage(`Partita terminata! Risultato finale ${finalData.predicted_score}. Vuoi sapere perché?`);
+  
+      // --- LOGICA SCRITTE SUL CAMPO ED EVENTI ---
+      if (finalData.cronaca) {
+        const event = finalData.cronaca.find(e => e.minuto === currentMinForEvents);
+        if (event && !animEvents.includes(event.testo)) {
+          setAnimEvents(prev => [event.testo, ...prev]);
+      
+          // --- LOGICA MOMENTUM DINAMICO ---
+          if (event.tipo === 'gol') {
+            // Il gol sposta tutto il peso verso chi ha segnato
+            setMomentum(event.squadra === 'casa' ? 90 : 10);
+          } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
+            // Un rigore o un rosso spostano il momentum in modo significativo
+            setMomentum(prev => event.squadra === 'casa' ? Math.min(85, prev + 20) : Math.max(15, prev - 20));
+          }
+      
+          // --- LOGICA SCRITTE GIGANTI SUL CAMPO ---
+          if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
+            let msg = '';
+            let col = '';
+            
+            if (event.tipo === 'gol') { 
+              msg = 'GOOOL!'; 
+              col = event.squadra === 'casa' ? theme.cyan : theme.danger; 
+            }
+            else if (event.tipo === 'rigore_fischio') { 
+              msg = 'RIGORE!'; 
+              col = '#ff9f43'; 
+            }
+            else if (event.tipo === 'rigore_sbagliato') { 
+              msg = 'RIGORE PARATO!'; 
+              col = '#ffffff'; 
+            }
+            else if (event.tipo === 'rosso') { 
+              msg = 'ROSSO!'; 
+              col = theme.danger; 
+            }
+      
+            setPitchMsg({ testo: msg, colore: col });
+            
+            // La scritta sparisce dopo 3 secondi
+            setTimeout(() => setPitchMsg(null), 3000);
+          }
+        }
       }
     }, intervalMs);
   };
 
   const generateMockEvents = (gh: number, ga: number, home: string, away: string) => {
     const events: any[] = [];
-    for (let i = 0; i < gh; i++) events.push({ minute: Math.floor(Math.random() * 85) + 1, team: 'home', type: 'goal', text: `⚽ GOAL! ${home} in vantaggio!` });
-    for (let i = 0; i < ga; i++) events.push({ minute: Math.floor(Math.random() * 85) + 1, team: 'away', type: 'goal', text: `⚽ GOAL! ${away} segna!` });
-    events.push({ minute: 15, team: 'home', type: 'attack', text: `🔥 ${home} vicino al gol!` });
-    events.push({ minute: 60, team: 'away', type: 'card', text: `🟨 Cartellino giallo per ${away}` });
-    return events.sort((a, b) => a.minute - b.minute);
-  };
+    const h = home.toUpperCase();
+    const a = away.toUpperCase();
+  
+    // --- HELPER RANDOM ---
+    const rand = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  
+    // SERBATOI GENERICI (Senza nomi di giocatori o squadre fisse)
+    const poolAttacco = [
+      "tenta la magia in rovesciata, il pallone viene bloccato dal portiere.",
+      "scappa sulla fascia e mette un cross teso: la difesa libera in affanno.",
+      "grande azione personale, si incunea in area ma viene murato al momento del tiro.",
+      "cerca la palla filtrante per la punta, ma il passaggio è leggermente lungo.",
+      "prova la conclusione dalla distanza: palla che sibila sopra la traversa.",
+      "duello vinto sulla trequarti, palla a rimorchio ma nessuno arriva per il tap-in.",
+      "serie di batti e ribatti nell'area piccola, alla fine il portiere blocca a terra.",
+      "parte in contropiede fulmineo, ma l'ultimo tocco è impreciso.",
+      "palla filtrante geniale! L'attaccante controlla male e sfuma l'occasione.",
+      "colpo di testa imperioso su azione d'angolo: palla fuori di un soffio.",
+      "scambio stretto al limite dell'area, tiro a giro che non inquadra lo specchio.",
+      "insiste nella pressione offensiva, costringendo gli avversari al rinvio lungo.",
+      "si libera bene per il tiro, ma la conclusione è debole e centrale.",
+      "schema su punizione che libera l'ala, il cross è però troppo alto per tutti."
+    ];
+  
+    const poolDifesa = [
+      "grande intervento in scivolata! Il difensore legge benissimo la traiettoria.",
+      "muro difensivo invalicabile: respinta la conclusione a botta sicura.",
+      "chiusura provvidenziale in diagonale, l'attaccante era già pronto a calciare.",
+      "anticipo netto a centrocampo, la squadra può ripartire in transizione.",
+      "fa buona guardia sul cross da destra, svettando più in alto di tutti.",
+      "riesce a proteggere l'uscita del pallone sul fondo nonostante la pressione.",
+      "vince il duello fisico spalla a spalla e riconquista il possesso.",
+      "intervento pulito sul pallone, sventata una ripartenza pericolosissima.",
+      "chiusura millimetrica in area di rigore, brivido per i tifosi."
+    ];
+  
+    const poolPortiere = [
+      "grande intervento! Il portiere si allunga alla sua sinistra e mette in corner.",
+      "salva sulla linea! Riflesso felino su un colpo di testa ravvicinato.",
+      "attento in uscita bassa, anticipa la punta lanciata a rete con coraggio.",
+      "si oppone con i pugni a una botta violenta dal limite. Sicurezza tra i pali.",
+      "vola all'incrocio dei pali! Parata incredibile che salva il risultato.",
+      "blocca in due tempi un tiro velenoso che era rimbalzato davanti a lui.",
+      "esce con tempismo perfetto fuori dall'area per sventare il lancio lungo.",
+      "deviazione d'istinto su una deviazione improvvisa, corner per gli avversari."
+    ];
+  
+    const poolAtmosfera = [
+      "ritmi ora altissimi, le squadre si allungano e i ribaltamenti sono continui.",
+      "gara ora su ritmi bassissimi, si avverte la stanchezza in campo.",
+      "atmosfera elettrica sugli spalti, i tifosi spingono i propri beniamini.",
+      "fraseggio prolungato a centrocampo, le squadre cercano il varco giusto.",
+      "si intensifica il riscaldamento sulla panchina, pronti nuovi cambi tattici.",
+      "errore banale in fase di impostazione, brivido per l'allenatore in panchina.",
+      "il pressing alto inizia a dare i suoi frutti, avversari chiusi nella propria metà campo.",
+      "gioco momentaneamente fermo per un contrasto a centrocampo."
+    ];
+  
+    // --- 1. MOMENTI CHIAVE (Milestones) ---
+  events.push({ minuto: 0, squadra: 'casa', tipo: 'info', testo: `🏁 [SISTEMA] FISCHIO D'INIZIO! Inizia ${h} vs ${a}!` });
+  
+  const recuperoPT = Math.floor(Math.random() * 4) + 1;
+  events.push({ minuto: 45, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Segnalati ${recuperoPT} minuti di recupero nel primo tempo.` });
+  events.push({ minuto: 45 + recuperoPT, squadra: 'casa', tipo: 'info', testo: `☕ [SISTEMA] FINE PRIMO TEMPO. Squadre negli spogliatoi.` });
+  
+  const recuperoST = Math.floor(Math.random() * 6) + 2;
+  events.push({ minuto: 90, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Il quarto uomo indica ${recuperoST} minuti di recupero.` });
 
+
+  // --- 2. LOGICA GOL / RIGORI / AUTOGOL (Sincronizzati col Master) ---
+
+  // --- GOL SQUADRA DI CASA ---
+  for (let i = 0; i < gh; i++) {
+    const min = Math.floor(Math.random() * 80) + 5; // Stiamo larghi con i minuti per la sequenza
+    const isPenalty = Math.random() > 0.85;
+    const isOwnGoal = Math.random() > 0.95;
+
+    if (isOwnGoal) {
+      events.push({ minuto: min, squadra: 'casa', tipo: 'gol', testo: `❌ [${h}] AUTOGOL! Sfortunata deviazione nella propria porta!` });
+    } 
+    else if (isPenalty) {
+      // --- QUI CREIAMO LA SEQUENZA ---
+      // 1. Il fischio (attiva la scritta "RIGORE!" sul campo)
+      events.push({ minuto: min, squadra: 'casa', tipo: 'rigore_fischio', testo: `📢 [${h}] CALCIO DI RIGORE! Il direttore di gara indica il dischetto!` });
+      // 2. Il gol (arriva 1 minuto dopo e attiva la scritta "GOOOL!")
+      events.push({ minuto: min + 1, squadra: 'casa', tipo: 'gol', testo: `🎯 [${h}] GOAL SU RIGORE! Esecuzione perfetta dal dischetto!` });
+    } 
+    else {
+      events.push({ minuto: min, squadra: 'casa', tipo: 'gol', testo: `⚽ [${h}] GOOOL! ${rand(["Conclusione potente!", "Di testa su cross!", "Azione corale!", "Tap-in vincente!"])}` });
+    }
+  }
+
+  // --- GOL SQUADRA OSPITE (Stessa logica) ---
+  for (let i = 0; i < ga; i++) {
+    const min = Math.floor(Math.random() * 80) + 5;
+    const isPenalty = Math.random() > 0.85;
+
+    if (isPenalty) {
+      events.push({ minuto: min, squadra: 'ospite', tipo: 'rigore_fischio', testo: `📢 [${a}] CALCIO DI RIGORE! Massima punizione per gli ospiti!` });
+      events.push({ minuto: min + 1, squadra: 'ospite', tipo: 'gol', testo: `🎯 [${a}] GOAL SU RIGORE! Freddissimo dagli undici metri!` });
+    } else {
+      events.push({ minuto: min, squadra: 'ospite', tipo: 'gol', testo: `⚽ [${a}] GOOOL! ${rand(["Zittisce lo stadio!", "Contropiede micidiale!", "Incredibile girata!", "Palla nel sette!"])}` });
+    }
+  }
+
+  // --- RIGORE SBAGLIATO (Evento extra che non cambia il punteggio) ---
+  if (Math.random() > 0.90) {
+    const min = Math.floor(Math.random() * 70) + 10;
+    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+    const name = sq === 'casa' ? h : a;
+    
+    events.push({ minuto: min, squadra: sq, tipo: 'rigore_fischio', testo: `📢 [${name}] RIGORE! Occasione d'oro per segnare!` });
+    events.push({ minuto: min + 1, squadra: sq, tipo: 'info', testo: `😱 [${name}] RIGORE SBAGLIATO! Il portiere para o la palla finisce fuori!` });
+  }
+
+  // --- 3. EVENTI EXTRA (Rigori sbagliati, Rossi, Gialli) ---
+  if (Math.random() > 0.8) {
+    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+    events.push({ minuto: Math.floor(Math.random() * 80), squadra: sq, tipo: 'info', testo: `😱 [${sq === 'casa' ? h : a}] RIGORE PARATO! Il portiere ipnotizza l'attaccante!` });
+  }
+  if (Math.random() > 0.9) {
+    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+    events.push({ minuto: Math.floor(Math.random() * 85), squadra: sq, tipo: 'rosso', testo: `🟥 [${sq === 'casa' ? h : a}] CARTELLINO ROSSO! Intervento killer, squadra in 10!` });
+  }
+  const numGialli = Math.floor(Math.random() * 4); 
+  for (let i = 0; i < numGialli; i++) {
+    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+    events.push({ minuto: Math.floor(Math.random() * 85) + 5, squadra: sq, tipo: 'cartellino', testo: `🟨 [${sq === 'casa' ? h : a}] Giallo per un fallo tattico a centrocampo.` });
+  }
+
+  // --- 4. RIEMPIMENTO CRONACA (Varietà Random da 200 combinazioni) ---
+  for (let i = 0; i < 15; i++) {
+    const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
+    const roll = Math.random();
+    let txt = "";
+    if (roll > 0.75) txt = rand(poolPortiere);
+    else if (roll > 0.50) txt = rand(poolAttacco);
+    else if (roll > 0.25) txt = rand(poolDifesa);
+    else txt = rand(poolAtmosfera);
+
+    events.push({ minuto: Math.floor(Math.random() * 89) + 1, squadra: sq, tipo: 'info', testo: `[${sq === 'casa' ? h : a}] ${txt}` });
+  }
+
+  return events.sort((a, b) => a.minuto - b.minuto);
+};
   // --- CHAT LOGIC ---
   const addBotMessage = (text: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text, timestamp: new Date() }]);
@@ -1330,6 +1553,30 @@ export default function AppDev() {
 
       {/* Campo da Gioco Neon */}
       <div style={styles.pitch}>
+
+          {pitchMsg && (
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          zIndex: 100,
+          pointerEvents: 'none'
+        }}>
+          <div style={{
+            fontSize: '60px',
+            fontWeight: '900',
+            color: pitchMsg.colore,
+            textShadow: `0 0 20px ${pitchMsg.colore}`,
+            textTransform: 'uppercase',
+            transform: 'rotate(-5deg)',
+            animation: 'pulse 0.6s infinite alternate'
+          }}>
+            {pitchMsg.testo}
+          </div>
+        </div>
+      )}
+        
         {/* Linea di metà campo */}
         <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
@@ -2488,67 +2735,192 @@ export default function AppDev() {
                 </div>
               </div>
 
-              {/* CONFIGURAZIONE SIMULAZIONE - VERSIONE MINIMAL */}
+              {/* CONFIGURAZIONE SIMULAZIONE - VERSIONE RISTRUTTURATA */}
               <div className="card-configurazione" style={styles.card}>
 
-                {/* HEADER: TITOLO + TASTO AVANZATE */}
-                <div className="header-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 'bold' }}>CONFIGURAZIONE RAPIDA</span>
-                  <button
-                    onClick={() => setViewState('settings')}
-                    style={{
-                      background: 'transparent', border: '1px solid #444',
-                      color: '#888', cursor: 'pointer', borderRadius: '4px',
-                      padding: '4px 8px', fontSize: '10px', textTransform: 'uppercase'
-                    }}
-                    title="Apri Impostazioni Complete"
-                  >
-                    🔧 Avanzate
-                  </button>
+              {/* HEADER: TITOLO + TASTO AVANZATE */}
+              <div className="header-title" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '-10px', alignItems: 'center', marginBottom: '5px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>CONFIGURAZIONE RAPIDA</span>
+                <button
+                  onClick={() => setViewState('settings')}
+                  style={{
+                    background: 'transparent', border: '1px solid #444',
+                    color: '#888', cursor: 'pointer', borderRadius: '4px',
+                    padding: '4px 8px', fontSize: '10px', textTransform: 'uppercase'
+                  }}
+                  title="Apri Impostazioni Complete"
+                >
+                  🔧 Avanzate
+                </button>
+              </div>
+                
+              {/* PANNELLO DI CONFIGURAZIONE RAPIDA */}
+              <div style={{
+                background: '#0a0a0a', 
+                padding: '10px', 
+                borderRadius: '10px', 
+                border: '1px solid #222',
+                marginBottom: '10px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px' 
+              }}>
+                
+                {/* RIGA 1: ENGINE E CICLI SULLA STESSA LINEA */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  gap: '15px',
+                  paddingLeft: '5px'
+                }}>
+                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                    ENGINE: <span style={{ color: theme.cyan }}>CUSTOM</span>
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                    CICLI ATTUALI: <span style={{ color: theme.cyan, fontSize: '14px' }}>{customCycles}</span>
+                  </div>
                 </div>
-
-                {/* INFO STATO CORRENTE (Solo testo, non modificabile qui) */}
-                <div style={{ marginBottom: '15px', fontSize: '11px', color: '#666', lineHeight: '1.4' }}>
-                  <div>Engine: <span style={{ color: theme.cyan }}>{configAlgo === 6 ? 'Monte Carlo (Default)' : 'Custom'}</span></div>
-                  <div>Cicli: <span style={{ color: theme.cyan }}>{getCycles()}</span></div>
-                </div>
-
-                {/* UNICO CONTROLLO: MODO VISIVO */}
-                <div className="control-group" style={{ marginBottom: '20px' }}>
-                  <div className="control-label" style={{ marginBottom: '8px', color: '#aaa' }}>MODALITÀ VISUALIZZAZIONE</div>
-                  <div className="button-group" style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      onClick={() => setSimMode('fast')}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                        background: simMode === 'fast' ? theme.success : '#222',
-                        color: simMode === 'fast' ? 'black' : '#666',
-                        fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+                  
+                {/* RIGA 2: INPUT CICLI E TASTO DEFAULT */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  background: '#111',
+                  borderRadius: '8px',
+                  border: '1px solid #1a1a1a'
+                }}>
+                  <label style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>
+                    Cicli:
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <input 
+                      type="number" 
+                      value={customCycles}
+                      onChange={(e) => setCustomCycles(Number(e.target.value))}
+                      style={{ 
+                        width: '60px', 
+                        background: '#000', 
+                        color: theme.cyan, 
+                        border: `1px solid ${theme.cyan}40`, 
+                        padding: '5px', 
+                        borderRadius: '6px',
+                        fontSize: '12px', 
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        outline: 'none',
+                        MozAppearance: 'textfield' 
+                      }}
+                    />
+                    <button 
+                      onClick={handleSetDefault}
+                      style={{ 
+                        background: '#1a1a1a', 
+                        border: '1px solid #333', 
+                        color: '#aaa', 
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        padding: '5px 12px', 
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: '0.2s'
                       }}
                     >
-                      ⚡ FLASH
-                    </button>
-                    <button
-                      onClick={() => setSimMode('animated')}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                        background: simMode === 'animated' ? theme.purple : '#222',
-                        color: simMode === 'animated' ? 'white' : '#666',
-                        fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
-                      }}
-                    >
-                      🎬 ANIMATA
+                      DEFAULT
                     </button>
                   </div>
                 </div>
 
-                {/* TASTO AVVIA */}
-                <button className="start-button" onClick={startSimulation}>
-                  LANCIA ANALISI
+                {/* RIGA 3: SELETTORE ALGORITMO (Lungo e Stretto) */}
+                <select 
+                  value={configAlgo} 
+                  onChange={(e) => setConfigAlgo(Number(e.target.value))}
+                  style={{ 
+                    width: '100%',
+                    height: '30px', // Più stretto
+                    background: '#111', 
+                    color: '#fff', 
+                    border: '1px solid #333', 
+                    padding: '0 10px', 
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value={1}>ALGO 1: BASE</option>
+                  <option value={2}>ALGO 2: STATISTICO</option>
+                  <option value={3}>ALGO 3: DINAMICO</option>
+                  <option value={4}>ALGO 4: PREDITTIVO</option>
+                  <option value={5}>ALGO 5: MASTER AI</option>
+                </select>
+
+                {/* RIGA 4: TASTI MODALITÀ */}
+                <div style={{ display: 'flex', gap: '5px', marginTop: '2px' }}>
+                  <button 
+                    onClick={() => setSimMode('fast')}
+                    style={{
+                      flex: '1',
+                      height: '36px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: `1px solid ${simMode === 'fast' ? theme.cyan : '#333'}`,
+                      background: simMode === 'fast' ? theme.cyan : '#111',
+                      color: simMode === 'fast' ? '#000' : '#888',
+                      transition: '0.2s'
+                    }}
+                  >
+                    FLASH ⚡
+                  </button>
+                  <button 
+                    onClick={() => setSimMode('animated')}
+                    style={{
+                      flex: '1',
+                      height: '36px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: `1px solid ${simMode === 'animated' ? theme.cyan : '#333'}`,
+                      background: simMode === 'animated' ? theme.cyan : '#111',
+                      color: simMode === 'animated' ? '#000' : '#888',
+                      transition: '0.2s'
+                    }}
+                  >
+                    ANIMATA 🎬
+                  </button>
+                </div>
+
+                {/* RIGA 5: TASTO AVVIO */}
+                <button 
+                  onClick={startSimulation}
+                  style={{
+                    width: '100%',
+                    background: `linear-gradient(180deg, ${theme.cyan} 0%, #008b8b 100%)`,
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '900',
+                    fontSize: '16px',
+                    letterSpacing: '1px',
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    marginTop: '5px',
+                    boxShadow: `0 4px 15px ${theme.cyan}40`,
+                    transition: 'transform 0.1s',
+                  }}
+                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  AVVIA SIMULAZIONE
                 </button>
               </div>
-
-
+              </div>
             </div>
           </div>
         </div>

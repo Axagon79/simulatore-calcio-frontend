@@ -8,7 +8,7 @@ import {
 interface MatchEvent {
   minuto: number;
   squadra?: 'casa' | 'ospite';
-  tipo: 'gol' | 'cartellino' | 'cambio';
+  tipo: "gol" | "cartellino" | "cambio" | "info" | "rigore_fischio" | "rigore_sbagliato" | "rosso";
   testo: string;
 }
 

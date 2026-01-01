@@ -266,7 +266,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center', justifyContent: 'center', position: 'relative'
   },
   pitch: {
-    width: '80%', maxWidth: '700px', height: '150px',
+    width: '80%', maxWidth: '700px', height: '280px',
     border: `2px solid ${theme.cyan}`, borderRadius: '10px',
     position: 'relative', overflow: 'hidden', background: 'rgba(0, 240, 255, 0.05)',
     boxShadow: `0 0 30px rgba(0,240,255,0.1)`
@@ -367,6 +367,26 @@ export default function AppDev() {
 
 
   const [simResult, setSimResult] = useState<SimulationResult | null>(null);
+
+  // ✅ STATI PER FORMAZIONI E RISCALDAMENTO
+  const [formations, setFormations] = useState<{
+    home_team: string;
+    away_team: string;
+    home_formation: { modulo: string; titolari: Array<{role: string; player: string; rating: number}> };
+    away_formation: { modulo: string; titolari: Array<{role: string; player: string; rating: number}> };
+    home_rank?: number;
+    away_rank?: number;
+    home_points?: number;
+    away_points?: number;
+  } | null>(null);
+  const [isWarmingUp, setIsWarmingUp] = useState(false);
+  const [warmupProgress, setWarmupProgress] = useState(0);
+  const [showFormationsPopup, setShowFormationsPopup] = useState(false);
+  const [playerEvents, setPlayerEvents] = useState<{[playerName: string]: {goals: number; yellow: boolean; red: boolean}}>({});
+
+  // Temporary usage to avoid warnings (will be used in popup later)
+  void showFormationsPopup;
+  void playerEvents;
 
   // STATO ANIMAZIONE
   // E cambiala in questa (così accetta sia numeri che scritte):
@@ -539,71 +559,207 @@ export default function AppDev() {
   
     addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
   };
-  const startSimulation = async () => {
-    if (!selectedMatch) return;
-    setViewState('simulating');
+
+// ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
+const loadFormations = async (home: string, away: string, league: string) => {
+  try {
+    const response = await fetch('https://us-central1-pronosticiai.cloudfunctions.net/get_formations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ home, away, league })
+    });
+    const data = await response.json();
+    if (data.success) {
+      setFormations(data);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Errore caricamento formazioni:', error);
+    return false;
+  }
+};
+
+// ✅ MAPPA POSIZIONI GIOCATORI PER MODULO
+// ✅ TIPO PER POSIZIONI FORMAZIONE
+type FormationPositions = {
+  GK: {x: number; y: number}[];
+  DEF: {x: number; y: number}[];
+  MID: {x: number; y: number}[];
+  ATT: {x: number; y: number}[];
+};
+
+// ✅ MAPPA POSIZIONI GIOCATORI PER MODULO
+const getFormationPositions = (modulo: string, isHome: boolean): FormationPositions => {
+  // Converti moduli a 4 cifre in 3 cifre
+  const FORMATION_MAPPING: {[key: string]: string} = {
+    "3-4-2-1": "3-4-3",
+    "4-2-2-2": "4-4-2",
+    "4-2-3-1": "4-5-1",
+    "4-3-1-2": "4-3-3",
+  };
   
-    try {
-      const res = await fetch(AI_ENGINE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          main_mode: 4,
-          nation: country.toUpperCase(),
-          league: league,
-          home: selectedMatch.home,
-          away: selectedMatch.away,
-          round: selectedRound?.name,
-          algo_id: configAlgo,
-          cycles: getCycles(),
-          save_db: configSaveDb
-        })
-      });
+  const moduloNorm = FORMATION_MAPPING[modulo] || modulo;
   
-      const responseJson = await res.json();
-      console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
-  
-      if (!responseJson.success || !responseJson.algo_name) {
-        throw new Error(responseJson.error || 'Risposta del server incompleta');
-      }
-  
-      // ✅ SALVA I METADATA REALI
-      setSimulationMeta({
-        algoName: responseJson.algo_name,
-        algoId: responseJson.algo_id,
-        cyclesRequested: responseJson.cycles_requested,
-        cyclesExecuted: responseJson.cycles_executed,
-        executionTime: responseJson.execution_time
-      });
-  
-      const enrichedData = {
-        ...responseJson,
-        report_scommesse: responseJson.report_scommesse || {
-          Bookmaker: {},
-          Analisi_Profonda: {
-            Confidence_Globale: "N/D",
-            Deviazione_Standard_Totale: 0,
-            Affidabilita_Previsione: "N/D"
-          }
-        }
-      };
-  
-      if (simMode === 'fast') {
-        setTimeout(() => {
-          setSimResult(enrichedData);
-          setViewState('result');
-          addBotMessage(`Analisi completata! Risultato previsto: ${responseJson.predicted_score}. Chiedimi pure spiegazioni.`);
-        }, 1500);
-      } else {
-        runAnimation(enrichedData);
-      }
-  
-    } catch (e: any) {
-      console.error("Errore Simulazione:", e);
-      setViewState('pre-match');
-      alert(`Errore simulazione: ${e.message || 'Errore sconosciuto'}`);
+  // Posizioni in percentuale (x, y) - y=0 è la porta, y=100 è l'attacco
+  const positions: {[key: string]: FormationPositions} = {
+    "3-4-3": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 25, y: 25}, {x: 50, y: 25}, {x: 75, y: 25}],
+      MID: [{x: 15, y: 50}, {x: 38, y: 50}, {x: 62, y: 50}, {x: 85, y: 50}],
+      ATT: [{x: 25, y: 75}, {x: 50, y: 75}, {x: 75, y: 75}]
+    },
+    "3-5-2": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 25, y: 25}, {x: 50, y: 25}, {x: 75, y: 25}],
+      MID: [{x: 10, y: 50}, {x: 30, y: 50}, {x: 50, y: 50}, {x: 70, y: 50}, {x: 90, y: 50}],
+      ATT: [{x: 35, y: 75}, {x: 65, y: 75}]
+    },
+    "4-3-3": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 15, y: 25}, {x: 38, y: 25}, {x: 62, y: 25}, {x: 85, y: 25}],
+      MID: [{x: 25, y: 50}, {x: 50, y: 50}, {x: 75, y: 50}],
+      ATT: [{x: 25, y: 75}, {x: 50, y: 75}, {x: 75, y: 75}]
+    },
+    "4-4-2": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 15, y: 25}, {x: 38, y: 25}, {x: 62, y: 25}, {x: 85, y: 25}],
+      MID: [{x: 15, y: 50}, {x: 38, y: 50}, {x: 62, y: 50}, {x: 85, y: 50}],
+      ATT: [{x: 35, y: 75}, {x: 65, y: 75}]
+    },
+    "4-5-1": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 15, y: 25}, {x: 38, y: 25}, {x: 62, y: 25}, {x: 85, y: 25}],
+      MID: [{x: 10, y: 50}, {x: 30, y: 50}, {x: 50, y: 50}, {x: 70, y: 50}, {x: 90, y: 50}],
+      ATT: [{x: 50, y: 75}]
+    },
+    "5-3-2": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 10, y: 25}, {x: 30, y: 25}, {x: 50, y: 25}, {x: 70, y: 25}, {x: 90, y: 25}],
+      MID: [{x: 25, y: 50}, {x: 50, y: 50}, {x: 75, y: 50}],
+      ATT: [{x: 35, y: 75}, {x: 65, y: 75}]
+    },
+    "5-4-1": {
+      GK: [{x: 50, y: 8}],
+      DEF: [{x: 10, y: 25}, {x: 30, y: 25}, {x: 50, y: 25}, {x: 70, y: 25}, {x: 90, y: 25}],
+      MID: [{x: 15, y: 50}, {x: 38, y: 50}, {x: 62, y: 50}, {x: 85, y: 50}],
+      ATT: [{x: 50, y: 75}]
     }
   };
+  
+  const formation = positions[moduloNorm] || positions["4-3-3"];
+  
+  // Per la squadra ospite, inverti le posizioni Y (specchia verticalmente)
+  if (!isHome) {
+    return {
+      GK: formation.GK.map(p => ({ x: p.x, y: 100 - p.y })),
+      DEF: formation.DEF.map(p => ({ x: p.x, y: 100 - p.y })),
+      MID: formation.MID.map(p => ({ x: p.x, y: 100 - p.y })),
+      ATT: formation.ATT.map(p => ({ x: p.x, y: 100 - p.y }))
+    };
+  }
+  
+  return formation;
+};
+
+const startSimulation = async () => {
+  if (!selectedMatch) return;
+  
+  // ✅ FASE 1: Carica subito le formazioni (veloce, ~1 secondo)
+  setViewState('simulating');
+  setIsWarmingUp(true);
+  setWarmupProgress(0);
+  setFormations(null);
+  setPlayerEvents({});
+  
+  // Avvia barra di progresso animata
+  const warmupInterval = setInterval(() => {
+    setWarmupProgress(prev => {
+      if (prev >= 95) return prev; // Ferma al 95% finché non arriva la simulazione
+      return prev + Math.random() * 3 + 1;
+    });
+  }, 200);
+  
+  try {
+    // ✅ CARICA FORMAZIONI (parallelo alla simulazione)
+    loadFormations(selectedMatch.home, selectedMatch.away, league).then(success => {
+      if (success) {
+        console.log("✅ Formazioni caricate!");
+      }
+    });
+    
+    // ✅ FASE 2: Lancia simulazione (lenta, ~9 secondi)
+    const res = await fetch(AI_ENGINE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        main_mode: 4,
+        nation: country.toUpperCase(),
+        league: league,
+        home: selectedMatch.home,
+        away: selectedMatch.away,
+        round: selectedRound?.name,
+        algo_id: configAlgo,
+        cycles: getCycles(),
+        save_db: configSaveDb
+      })
+    });
+
+    const responseJson = await res.json();
+    console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
+
+    if (!responseJson.success || !responseJson.algo_name) {
+      throw new Error(responseJson.error || 'Risposta del server incompleta');
+    }
+    
+    // ✅ FASE 3: Simulazione completata - ferma riscaldamento
+    clearInterval(warmupInterval);
+    setWarmupProgress(100);
+    
+    // Breve pausa per mostrare 100%
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setIsWarmingUp(false);
+
+    // ✅ SALVA I METADATA REALI
+    setSimulationMeta({
+      algoName: responseJson.algo_name,
+      algoId: responseJson.algo_id,
+      cyclesRequested: responseJson.cycles_requested,
+      cyclesExecuted: responseJson.cycles_executed,
+      executionTime: responseJson.execution_time
+    });
+
+    const enrichedData = {
+      ...responseJson,
+      report_scommesse: responseJson.report_scommesse || {
+        Bookmaker: {},
+        Analisi_Profonda: {
+          Confidence_Globale: "N/D",
+          Deviazione_Standard_Totale: 0,
+          Affidabilita_Previsione: "N/D"
+        }
+      }
+    };
+
+    if (simMode === 'fast') {
+      setTimeout(() => {
+        setSimResult(enrichedData);
+        setViewState('result');
+        addBotMessage(`Analisi completata! Risultato previsto: ${responseJson.predicted_score}. Chiedimi pure spiegazioni.`);
+      }, 1500);
+    } else {
+      runAnimation(enrichedData);
+    }
+
+  } catch (e: any) {
+    console.error("Errore Simulazione:", e);
+    clearInterval(warmupInterval);
+    setIsWarmingUp(false);
+    setViewState('pre-match');
+    alert(`Errore simulazione: ${e.message || 'Errore sconosciuto'}`);
+  }
+};
 
 
   // Trova la funzione runAnimation dentro AppDev.tsx e sostituiscila con questa:
@@ -1690,6 +1846,79 @@ export default function AppDev() {
         {/* Linea di metà campo */}
         <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
+        
+        {/* ✅ PALLINI GIOCATORI DURANTE RISCALDAMENTO */}
+        {isWarmingUp && formations && (
+          <>
+            {/* Squadra CASA (sinistra) */}
+            {(() => {
+              const positions = getFormationPositions(formations.home_formation.modulo, true);
+              const allPositions: {x: number; y: number; role: string}[] = [];
+              
+              // GK
+              positions.GK?.forEach(p => allPositions.push({...p, role: 'GK'}));
+              // DEF
+              positions.DEF?.forEach(p => allPositions.push({...p, role: 'DIF'}));
+              // MID
+              positions.MID?.forEach(p => allPositions.push({...p, role: 'MID'}));
+              // ATT
+              positions.ATT?.forEach(p => allPositions.push({...p, role: 'ATT'}));
+              
+              return allPositions.map((pos, idx) => (
+                <div
+                  key={`home-${idx}`}
+                  style={{
+                    position: 'absolute',
+                    left: `${pos.x / 2}%`,  // Metà sinistra del campo
+                    top: `${pos.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    backgroundColor: theme.cyan,
+                    boxShadow: `0 0 10px ${theme.cyan}`,
+                    opacity: 1 - (warmupProgress / 150),  // Fade out graduale
+                    transition: 'opacity 0.5s ease'
+                  }}
+                />
+              ));
+            })()}
+            
+            {/* Squadra OSPITE (destra) */}
+            {(() => {
+              const positions = getFormationPositions(formations.away_formation.modulo, false);
+              const allPositions: {x: number; y: number; role: string}[] = [];
+              
+              // GK
+              positions.GK?.forEach(p => allPositions.push({...p, role: 'GK'}));
+              // DEF
+              positions.DEF?.forEach(p => allPositions.push({...p, role: 'DIF'}));
+              // MID
+              positions.MID?.forEach(p => allPositions.push({...p, role: 'MID'}));
+              // ATT
+              positions.ATT?.forEach(p => allPositions.push({...p, role: 'ATT'}));
+              
+              return allPositions.map((pos, idx) => (
+                <div
+                  key={`away-${idx}`}
+                  style={{
+                    position: 'absolute',
+                    left: `${50 + pos.x / 2}%`,  // Metà destra del campo
+                    top: `${100 - pos.y}%`,  // Inverti Y per ospiti
+                    transform: 'translate(-50%, -50%)',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    backgroundColor: theme.danger,
+                    boxShadow: `0 0 10px ${theme.danger}`,
+                    opacity: 1 - (warmupProgress / 150),
+                    transition: 'opacity 0.5s ease'
+                  }}
+                />
+              ));
+            })()}
+          </>
+        )}
   
         {/* Barra Momentum */}
         <div style={{
@@ -1698,11 +1927,63 @@ export default function AppDev() {
           width: '4px',
           boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
         }} />
-  
-        {/* Nomi Squadre */}
-        <div style={{ position: 'absolute', bottom: '10px', left: '10px', fontSize: '12px', fontWeight: 'bold', color: theme.cyan }}>{selectedMatch?.home}</div>
-        <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '12px', fontWeight: 'bold', color: theme.danger }}>{selectedMatch?.away}</div>
       </div>
+
+      {/* ✅ BARRA RISCALDAMENTO */}
+      {isWarmingUp && (
+        <div style={{ width: '80%', maxWidth: '700px', marginTop: '15px' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '8px'
+          }}>
+            <span style={{ color: theme.cyan, fontSize: '14px', fontWeight: 'bold' }}>
+              🏃 RISCALDAMENTO PRE-PARTITA
+            </span>
+            <span style={{ color: theme.text, fontSize: '14px' }}>
+              {warmupProgress}%
+            </span>
+          </div>
+          <div style={{
+            width: '100%',
+            height: '8px',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${warmupProgress}%`,
+              height: '100%',
+              backgroundColor: theme.cyan,
+              boxShadow: `0 0 10px ${theme.cyan}`,
+              transition: 'width 0.3s ease'
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* ✅ BOTTONE FORMAZIONI (visibile durante partita) */}
+      {simulationEnded === false && !isWarmingUp && formations && (
+        <button
+          onClick={() => setShowFormationsPopup(true)}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            background: 'rgba(0,0,0,0.7)',
+            border: `1px solid ${theme.cyan}`,
+            borderRadius: '8px',
+            padding: '8px 12px',
+            color: theme.cyan,
+            cursor: 'pointer',
+            fontSize: '12px',
+            zIndex: 50
+          }}
+        >
+          📋 Formazioni
+        </button>
+      )}
   
       {/* ✅ NUOVO: Feed Eventi con Allineamento Sinistra/Destra */}
       <div style={styles.eventFeed}>

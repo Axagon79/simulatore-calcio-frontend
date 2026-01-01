@@ -563,7 +563,7 @@ export default function AppDev() {
 // ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
 const loadFormations = async (home: string, away: string, league: string) => {
   try {
-    const response = await fetch('https://us-central1-pronosticiai.cloudfunctions.net/get_formations', {
+    const response = await fetch('https://us-central1-puppals-456c7.cloudfunctions.net/get_formations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ home, away, league })

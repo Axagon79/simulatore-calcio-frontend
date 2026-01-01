@@ -621,10 +621,8 @@ export default function AppDev() {
     const recuperoPT = Math.floor(Math.random() * 3) + 1; 
     const recuperoST = Math.floor(Math.random() * 5) + 2;
     
-    // ✅ NUOVO: Set per tracciare eventi già mostrati (usa l'ID unico del minuto + testo)
     const eventiMostrati = new Set<string>();
     
-    // ✅ RESET PUNTEGGIO ALL'INIZIO
     setLiveScore({home: 0, away: 0});
   
     const interval = setInterval(() => {
@@ -677,16 +675,13 @@ export default function AppDev() {
         }
       }
   
-      // ✅ LOGICA EVENTI - FIX DUPLICATI
+      // ✅ LOGICA EVENTI CON MOMENTUM FLUIDO
       if (finalData.cronaca) {
-        // Trova TUTTI gli eventi del minuto corrente
         const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === currentMinForEvents);
         
         eventiDelMinuto.forEach(event => {
-          // ✅ CREA UN ID UNICO per ogni evento (minuto + tipo + testo)
           const eventoId = `${event.minuto}-${event.tipo}-${event.testo}`;
           
-          // ✅ MOSTRA SOLO SE NON È STATO GIÀ MOSTRATO
           if (!eventiMostrati.has(eventoId)) {
             eventiMostrati.add(eventoId);
             setAnimEvents(prev => [event.testo, ...prev]);
@@ -698,9 +693,18 @@ export default function AppDev() {
                 away: event.squadra === 'ospite' ? prev.away + 1 : prev.away
               }));
               
-              setMomentum(event.squadra === 'casa' ? 90 : 10);
+              // ✅ MOMENTUM FLUIDO (non blocca agli estremi)
+              setMomentum(prev => 
+                event.squadra === 'casa' 
+                  ? Math.min(prev + 15, 80)
+                  : Math.max(prev - 15, 20)
+              );
             } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
-              setMomentum(prev => event.squadra === 'casa' ? Math.min(85, prev + 20) : Math.max(15, prev - 20));
+              setMomentum(prev => 
+                event.squadra === 'casa' 
+                  ? Math.min(prev + 12, 75) 
+                  : Math.max(prev - 12, 25)
+              );
             }
           
             // SCRITTE SUL CAMPO
@@ -731,6 +735,12 @@ export default function AppDev() {
           }
         });
       }
+      
+      // ✅ RITORNO GRADUALE AL CENTRO (momentum torna a 50 quando non ci sono eventi)
+      if (currentMinForEvents % 5 === 0) { // Ogni 5 minuti ricentra leggermente
+        setMomentum(prev => prev > 50 ? prev - 2 : prev < 50 ? prev + 2 : prev);
+      }
+      
     }, intervalMs);
   };
 

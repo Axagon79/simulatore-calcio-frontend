@@ -431,6 +431,12 @@ export default function AppDev() {
     executionTime: number;
   } | null>(null);
 
+  // ✅ NUOVO: Stato per gestire la fine partita
+  const [simulationEnded, setSimulationEnded] = useState(false);
+
+  // ✅ NUOVO: Punteggio live durante la simulazione
+  const [liveScore, setLiveScore] = useState<{home: number, away: number}>({home: 0, away: 0});
+
   // --- LOGICA DI CARICAMENTO NAZIONI DINAMICHE ---
   useEffect(() => {
   const fetchNations = async () => {
@@ -528,8 +534,9 @@ export default function AppDev() {
     setSimResult(null);
     setTimer(0);
     setAnimEvents([]);
-
-    // Context al bot (Il messaggio viene inviato ma la chat resta chiusa finché non la apri tu)
+    setSimulationEnded(false);
+    setLiveScore({home: 0, away: 0}); // ✅ RESET punteggio live
+  
     addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
   };
   const startSimulation = async () => {
@@ -612,7 +619,10 @@ export default function AppDev() {
     const regularStep = 90 / (totalDurationMs / intervalMs);
     
     const recuperoPT = Math.floor(Math.random() * 3) + 1; 
-    const recuperoST = Math.floor(Math.random() * 5) + 2; 
+    const recuperoST = Math.floor(Math.random() * 5) + 2;
+    
+    // ✅ RESET PUNTEGGIO ALL'INIZIO
+    setLiveScore({home: 0, away: 0});
   
     const interval = setInterval(() => {
       if (isPaused) return;
@@ -620,7 +630,6 @@ export default function AppDev() {
       let currentMinForEvents = Math.floor(t);
   
       if (!isInjuryTime) {
-        // --- TEMPO REGOLARE ---
         t += regularStep;
         currentMinForEvents = Math.floor(t);
         setTimer(Math.min(90, currentMinForEvents));
@@ -630,19 +639,17 @@ export default function AppDev() {
           injuryTimeCounter = 0;
         }
       } else {
-        // --- TEMPO DI RECUPERO ---
         injuryTimeCounter += (regularStep / 3); 
         const displayExtra = Math.floor(injuryTimeCounter);
         const baseMin = t < 60 ? 45 : 90;
         
-        setTimer(`${baseMin}+${displayExtra}`); 
+        setTimer(`${baseMin}+${displayExtra}`);
   
-        // ✅ FIX: Fine recupero 1° tempo
         if (baseMin === 45 && displayExtra >= recuperoPT) {
           isPaused = true;
           isInjuryTime = false;
-          injuryTimeCounter = 0;  // ✅ RESET CONTATORE
-          t = 46;  // ✅ Passa al secondo tempo
+          injuryTimeCounter = 0;
+          t = 46;
           
           const goalsHome = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'casa').length;
           const goalsAway = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'ospite').length;
@@ -654,32 +661,37 @@ export default function AppDev() {
           }, 3000);
         }
         
-        // ✅ FIX: Fine partita
         if (baseMin === 90 && displayExtra >= recuperoST) {
           clearInterval(interval);
           setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
+          
+          setSimResult(finalData);
+          setSimulationEnded(true);
+          
           setTimeout(() => {
             setPitchMsg(null);
-            setSimResult(finalData);
-            setViewState('result');
-          }, 4000);
+          }, 3000);
         }
       }
   
-      // --- LOGICA EVENTI ---
+      // --- LOGICA EVENTI E AGGIORNAMENTO PUNTEGGIO ---
       if (finalData.cronaca) {
         const event = finalData.cronaca.find(e => e.minuto === currentMinForEvents);
         if (event && !animEvents.includes(event.testo)) {
           setAnimEvents(prev => [event.testo, ...prev]);
       
-          // Momentum dinamico
+          // ✅ AGGIORNA PUNTEGGIO LIVE QUANDO C'È UN GOL
           if (event.tipo === 'gol') {
+            setLiveScore(prev => ({
+              home: event.squadra === 'casa' ? prev.home + 1 : prev.home,
+              away: event.squadra === 'ospite' ? prev.away + 1 : prev.away
+            }));
+            
             setMomentum(event.squadra === 'casa' ? 90 : 10);
           } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
             setMomentum(prev => event.squadra === 'casa' ? Math.min(85, prev + 20) : Math.max(15, prev - 20));
           }
       
-          // Scritte sul campo
           if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
             let msg = '';
             let col = '';
@@ -1404,11 +1416,141 @@ export default function AppDev() {
   const renderAnimation = () => (
     <div style={styles.animContainer}>
       
-      {/* ✅ NUOVO: PANNELLO METADATA IN ALTO A DESTRA */}
+      {/* ✅ NUOVO: HEADER LIVE SCORE (FISSO IN ALTO) */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(0, 0, 0, 0.95)',
+        backdropFilter: 'blur(20px)',
+        padding: '15px 40px',
+        borderRadius: '16px',
+        border: '2px solid rgba(0, 240, 255, 0.3)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+        zIndex: 90,
+        minWidth: isMobile ? '85%' : '500px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '20px'
+      }}>
+        {/* SQUADRA CASA */}
+        <div style={{
+          flex: 1,
+          textAlign: 'right',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '4px'
+        }}>
+          <div style={{
+            fontSize: isMobile ? '10px' : '11px',
+            color: theme.cyan,
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            opacity: 0.7
+          }}>
+            Casa
+          </div>
+          <div style={{
+            fontSize: isMobile ? '16px' : '20px',
+            fontWeight: '900',
+            color: 'white',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '150px'
+          }}>
+            {selectedMatch?.home}
+          </div>
+        </div>
+  
+        {/* PUNTEGGIO CENTRALE */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '8px 20px',
+          background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 240, 255, 0.3)',
+          boxShadow: '0 0 20px rgba(0, 240, 255, 0.2)'
+        }}>
+          <div style={{
+            fontSize: isMobile ? '28px' : '36px',
+            fontWeight: '900',
+            color: theme.cyan,
+            fontFamily: 'monospace',
+            textShadow: `0 0 10px ${theme.cyan}`,
+            minWidth: '30px',
+            textAlign: 'center'
+          }}>
+            {liveScore.home}
+          </div>
+          
+          <div style={{
+            fontSize: isMobile ? '20px' : '24px',
+            fontWeight: 'bold',
+            color: 'rgba(255, 255, 255, 0.3)'
+          }}>
+            -
+          </div>
+          
+          <div style={{
+            fontSize: isMobile ? '28px' : '36px',
+            fontWeight: '900',
+            color: theme.danger,
+            fontFamily: 'monospace',
+            textShadow: `0 0 10px ${theme.danger}`,
+            minWidth: '30px',
+            textAlign: 'center'
+          }}>
+            {liveScore.away}
+          </div>
+        </div>
+  
+        {/* SQUADRA OSPITE */}
+        <div style={{
+          flex: 1,
+          textAlign: 'left',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          gap: '4px'
+        }}>
+          <div style={{
+            fontSize: isMobile ? '10px' : '11px',
+            color: theme.danger,
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            opacity: 0.7
+          }}>
+            Ospite
+          </div>
+          <div style={{
+            fontSize: isMobile ? '16px' : '20px',
+            fontWeight: '900',
+            color: 'white',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '150px'
+          }}>
+            {selectedMatch?.away}
+          </div>
+        </div>
+      </div>
+      
+      {/* PANNELLO METADATA (spostalo leggermente più in basso per non sovrapporsi) */}
       {simulationMeta && (
         <div style={{
           position: 'absolute',
-          top: '20px',
+          top: '110px', // ✅ CAMBIATO: era '20px', ora più in basso
           right: '20px',
           background: 'rgba(0, 0, 0, 0.9)',
           backdropFilter: 'blur(10px)',
@@ -1544,8 +1686,95 @@ export default function AppDev() {
       <div style={{ marginTop: '20px', color: theme.cyan, letterSpacing: '2px', fontSize: '10px', animation: 'pulse 2s infinite' }}>
         SIMULAZIONE LIVE DAL CORE AI
       </div>
+      {/* ✅ NUOVO: BOTTONE "VAI AL RESOCONTO" (appare solo a fine partita) */}
+      {simulationEnded && (
+        <div style={{
+          marginTop: '30px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '15px',
+          animation: 'fadeIn 0.5s ease-in'
+        }}>
+          {/* Messaggio */}
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: theme.success,
+            textAlign: 'center',
+            textShadow: `0 0 10px ${theme.success}`,
+            animation: 'pulse 2s infinite'
+          }}>
+            ✅ Partita Terminata - Verifica gli Eventi
+          </div>
+
+          {/* Bottone Principale */}
+          <button
+            onClick={() => {
+              setViewState('result');
+              setSimulationEnded(false); // Reset per prossima simulazione
+            }}
+            style={{
+              padding: '15px 40px',
+              background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+              border: 'none',
+              borderRadius: '12px',
+              color: '#000',
+              fontSize: '16px',
+              fontWeight: '900',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              boxShadow: `0 0 30px rgba(0, 240, 255, 0.5)`,
+              transition: 'all 0.3s ease',
+              letterSpacing: '1px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
+            }}
+          >
+            📊 VAI AL RESOCONTO COMPLETO
+          </button>
+
+          {/* Bottone Secondario (Torna Indietro) */}
+          <button
+            onClick={() => {
+              setViewState('list');
+              setSimulationEnded(false);
+              setSimResult(null);
+            }}
+            style={{
+              padding: '10px 30px',
+              background: 'transparent',
+              border: `2px solid ${theme.textDim}`,
+              borderRadius: '8px',
+              color: theme.textDim,
+              fontSize: '12px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = theme.cyan;
+              e.currentTarget.style.color = theme.cyan;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = theme.textDim;
+              e.currentTarget.style.color = theme.textDim;
+            }}
+          >
+            ← Torna alla Lista Partite
+          </button>
+        </div>
+      )}
     </div>
   );
+   
   const renderPreMatch = () => {
 
     // --- 1. FUNZIONE COLORI LED ---
@@ -4037,11 +4266,24 @@ export default function AppDev() {
   return (
     <div style={styles.wrapper}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #333; borderRadius: 3px; }
-      `}</style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+      @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+      
+      /* ✅ NUOVO: Animazione FadeIn per il bottone */
+      @keyframes fadeIn { 
+        from { 
+          opacity: 0; 
+          transform: translateY(20px); 
+        } 
+        to { 
+          opacity: 1; 
+          transform: translateY(0); 
+        } 
+      }
+      
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-thumb { background: #333; borderRadius: 3px; }
+    `}</style>
 
       {/* TOP BAR UNIFICATA */}
       <div style={styles.topBar}>

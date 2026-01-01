@@ -571,13 +571,6 @@ export default function AppDev() {
   
       const enrichedData = {
         ...responseJson,
-        predicted_score: responseJson.predicted_score,
-        events: generateMockEvents(
-          responseJson.gh, 
-          responseJson.ga, 
-          selectedMatch.home, 
-          selectedMatch.away
-        ),
         report_scommesse: responseJson.report_scommesse || {
           Bookmaker: {},
           Analisi_Profonda: {
@@ -716,155 +709,6 @@ export default function AppDev() {
     }, intervalMs);
   };
 
-  const generateMockEvents = (gh: number, ga: number, home: string, away: string) => {
-    const events: any[] = [];
-    const h = home.toUpperCase();
-    const a = away.toUpperCase();
-  
-    const rand = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-  
-    // ✅ I TUOI POOL ORIGINALI
-    const poolAttacco = [
-      "tenta la magia in rovesciata, il pallone viene bloccato dal portiere.",
-      "scappa sulla fascia e mette un cross teso: la difesa libera in affanno.",
-      "grande azione personale, si incunea in area ma viene murato al momento del tiro.",
-      "cerca la palla filtrante per la punta, ma il passaggio è leggermente lungo.",
-      "prova la conclusione dalla distanza: palla che sibila sopra la traversa.",
-      "duello vinto sulla trequarti, palla a rimorchio ma nessuno arriva per il tap-in.",
-      "serie di batti e ribatti nell'area piccola, alla fine il portiere blocca a terra.",
-      "parte in contropiede fulmineo, ma l'ultimo tocco è impreciso.",
-      "palla filtrante geniale! L'attaccante controlla male e sfuma l'occasione.",
-      "colpo di testa imperioso su azione d'angolo: palla fuori di un soffio.",
-      "scambio stretto al limite dell'area, tiro a giro che non inquadra lo specchio.",
-      "insiste nella pressione offensiva, costringendo gli avversari al rinvio lungo.",
-      "si libera bene per il tiro, ma la conclusione è debole e centrale.",
-      "schema su punizione che libera l'ala, il cross è però troppo alto per tutti."
-    ];
-  
-    const poolDifesa = [
-      "grande intervento in scivolata! Il difensore legge benissimo la traiettoria.",
-      "muro difensivo invalicabile: respinta la conclusione a botta sicura.",
-      "chiusura provvidenziale in diagonale, l'attaccante era già pronto a calciare.",
-      "anticipo netto a centrocampo, la squadra può ripartire in transizione.",
-      "fa buona guardia sul cross da destra, svettando più in alto di tutti.",
-      "riesce a proteggere l'uscita del pallone sul fondo nonostante la pressione.",
-      "vince il duello fisico spalla a spalla e riconquista il possesso.",
-      "intervento pulito sul pallone, sventata una ripartenza pericolosissima.",
-      "chiusura millimetrica in area di rigore, brivido per i tifosi."
-    ];
-  
-    const poolPortiere = [
-      "grande intervento! Il portiere si allunga alla sua sinistra e mette in corner.",
-      "salva sulla linea! Riflesso felino su un colpo di testa ravvicinato.",
-      "attento in uscita bassa, anticipa la punta lanciata a rete con coraggio.",
-      "si oppone con i pugni a una botta violenta dal limite. Sicurezza tra i pali.",
-      "vola all'incrocio dei pali! Parata incredibile che salva il risultato.",
-      "blocca in due tempi un tiro velenoso che era rimbalzato davanti a lui.",
-      "esce con tempismo perfetto fuori dall'area per sventare il lancio lungo.",
-      "deviazione d'istinto su una deviazione improvvisa, corner per gli avversari."
-    ];
-  
-    const poolAtmosfera = [
-      "ritmi ora altissimi, le squadre si allungano e i ribaltamenti sono continui.",
-      "gara ora su ritmi bassissimi, si avverte la stanchezza in campo.",
-      "atmosfera elettrica sugli spalti, i tifosi spingono i propri beniamini.",
-      "fraseggio prolungato a centrocampo, le squadre cercano il varco giusto.",
-      "si intensifica il riscaldamento sulla panchina, pronti nuovi cambi tattici.",
-      "errore banale in fase di impostazione, brivido per l'allenatore in panchina.",
-      "il pressing alto inizia a dare i suoi frutti, avversari chiusi nella propria metà campo.",
-      "gioco momentaneamente fermo per un contrasto a centrocampo."
-    ];
-  
-    // ✅ 1. EVENTI SISTEMA (Milestone)
-    events.push({ minuto: 0, squadra: 'casa', tipo: 'info', testo: `🏁 [SISTEMA] FISCHIO D'INIZIO! Inizia ${h} vs ${a}!` });
-    
-    const recuperoPT = Math.floor(Math.random() * 4) + 1;
-    events.push({ minuto: 45, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Segnalati ${recuperoPT} minuti di recupero nel primo tempo.` });
-    events.push({ minuto: 45 + recuperoPT, squadra: 'casa', tipo: 'info', testo: `☕ [SISTEMA] FINE PRIMO TEMPO. Squadre negli spogliatoi.` });
-    
-    const recuperoST = Math.floor(Math.random() * 6) + 2;
-    events.push({ minuto: 90, squadra: 'casa', tipo: 'info', testo: `⏱️ [SISTEMA] Il quarto uomo indica ${recuperoST} minuti di recupero.` });
-  
-    // ✅ 2. GOL SINCRONIZZATI (gh per casa, ga per ospite)
-    const minutiUsati = new Set<number>();
-    
-    // GOL CASA
-    for (let i = 0; i < gh; i++) {
-      let min = Math.floor(Math.random() * 85) + 3;
-      while (minutiUsati.has(min)) min = Math.floor(Math.random() * 85) + 3;
-      minutiUsati.add(min);
-      
-      const isPenalty = Math.random() > 0.85;
-      
-      if (isPenalty) {
-        events.push({ minuto: min, squadra: 'casa', tipo: 'rigore_fischio', testo: `📢 [${h}] CALCIO DI RIGORE! Il direttore di gara indica il dischetto!` });
-        events.push({ minuto: min + 1, squadra: 'casa', tipo: 'gol', testo: `🎯 [${h}] GOAL SU RIGORE! Esecuzione perfetta dal dischetto!` });
-      } else {
-        const tipoGol = rand(["Conclusione potente!", "Di testa su cross!", "Azione corale!", "Tap-in vincente!"]);
-        events.push({ minuto: min, squadra: 'casa', tipo: 'gol', testo: `⚽ [${h}] GOOOL! ${tipoGol}` });
-      }
-    }
-  
-    // GOL OSPITE
-    for (let i = 0; i < ga; i++) {
-      let min = Math.floor(Math.random() * 85) + 3;
-      while (minutiUsati.has(min)) min = Math.floor(Math.random() * 85) + 3;
-      minutiUsati.add(min);
-      
-      const isPenalty = Math.random() > 0.85;
-      
-      if (isPenalty) {
-        events.push({ minuto: min, squadra: 'ospite', tipo: 'rigore_fischio', testo: `📢 [${a}] CALCIO DI RIGORE! Massima punizione per gli ospiti!` });
-        events.push({ minuto: min + 1, squadra: 'ospite', tipo: 'gol', testo: `🎯 [${a}] GOAL SU RIGORE! Freddissimo dagli undici metri!` });
-      } else {
-        const tipoGol = rand(["Zittisce lo stadio!", "Contropiede micidiale!", "Incredibile girata!", "Palla nel sette!"]);
-        events.push({ minuto: min, squadra: 'ospite', tipo: 'gol', testo: `⚽ [${a}] GOOOL! ${tipoGol}` });
-      }
-    }
-  
-    // ✅ 3. CARTELLINI (2-5 casuali)
-    const numGialli = Math.floor(Math.random() * 4) + 2;
-    for (let i = 0; i < numGialli; i++) {
-      let min = Math.floor(Math.random() * 85) + 5;
-      while (minutiUsati.has(min)) min++;
-      minutiUsati.add(min);
-      
-      const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-      const team = sq === 'casa' ? h : a;
-      events.push({ minuto: min, squadra: sq, tipo: 'cartellino', testo: `🟨 [${team}] Giallo per un fallo tattico a centrocampo.` });
-    }
-  
-    // ✅ 4. EVENTI DAI POOL (35-40 eventi distribuiti uniformemente)
-    const numEventiPerTempo = 18; // ~1 ogni 2.5 minuti
-    
-    for (let tempo = 1; tempo <= 2; tempo++) {
-      const minBase = tempo === 1 ? 1 : 46;
-      const minMax = tempo === 1 ? 45 : 90;
-      const intervallo = (minMax - minBase) / numEventiPerTempo;
-      
-      for (let i = 0; i < numEventiPerTempo; i++) {
-        const min = Math.floor(minBase + (i * intervallo) + Math.random() * (intervallo - 1));
-        
-        if (minutiUsati.has(min)) continue;
-        minutiUsati.add(min);
-        
-        const sq = Math.random() > 0.5 ? 'casa' : 'ospite';
-        const team = sq === 'casa' ? h : a;
-        
-        // Scelta pool con distribuzione equilibrata
-        const roll = Math.random();
-        let txt = "";
-        if (roll > 0.75) txt = rand(poolPortiere);
-        else if (roll > 0.50) txt = rand(poolAttacco);
-        else if (roll > 0.25) txt = rand(poolDifesa);
-        else txt = rand(poolAtmosfera);
-        
-        events.push({ minuto: min, squadra: sq, tipo: 'info', testo: `[${team}] ${txt}` });
-      }
-    }
-  
-    return events.sort((a, b) => a.minuto - b.minuto);
-  };
   // --- CHAT LOGIC ---
   const addBotMessage = (text: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text, timestamp: new Date() }]);
@@ -1665,7 +1509,7 @@ export default function AppDev() {
           </div>
         ) : (
           animEvents.map((e, i) => {
-            // Estrai la squadra dal testo
+            // ✅ FIX: Usa i nomi ESATTI come arrivano dal backend
             const homeUpper = selectedMatch?.home.toUpperCase() || '';
             const awayUpper = selectedMatch?.away.toUpperCase() || '';
             
@@ -1685,7 +1529,9 @@ export default function AppDev() {
                   textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
                   // ✅ COLORI CONDIZIONALI
                   color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
-                  fontWeight: isSistema ? 'bold' : 'normal'
+                  fontWeight: isSistema ? 'bold' : 'normal',
+                  paddingLeft: isCasa ? '10px' : '0',   // ✅ AGGIUNGI PADDING
+                  paddingRight: isOspite ? '10px' : '0'  // ✅ AGGIUNGI PADDING
                 }}
               >
                 {e}

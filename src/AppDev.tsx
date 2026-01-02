@@ -382,6 +382,7 @@ export default function AppDev() {
   const [isWarmingUp, setIsWarmingUp] = useState(false);
   const [warmupProgress, setWarmupProgress] = useState(0);
   const [showFormationsPopup, setShowFormationsPopup] = useState(false);
+  const [popupOpacity, setPopupOpacity] = useState(0);
   const [playerEvents, setPlayerEvents] = useState<{[playerName: string]: {goals: number; yellow: boolean; red: boolean}}>({});
 
   // Temporary usage to avoid warnings (will be used in popup later)
@@ -442,20 +443,13 @@ export default function AppDev() {
 
   const [selectedPeriod, setSelectedPeriod] = useState<'previous' | 'current' | 'next'>('current');
 
-  // ✅ NUOVO STATE PER METADATA REALE
-  const [simulationMeta, setSimulationMeta] = useState<{
-    algoName: string;
-    algoId: number;
-    cyclesRequested: number;
-    cyclesExecuted: number;
-    executionTime: number;
-  } | null>(null);
-
   // ✅ NUOVO: Stato per gestire la fine partita
   const [simulationEnded, setSimulationEnded] = useState(false);
 
   // ✅ NUOVO: Punteggio live durante la simulazione
   const [liveScore, setLiveScore] = useState<{home: number, away: number}>({home: 0, away: 0});
+
+  const [showMatchSummary, setShowMatchSummary] = useState(false);
 
   // --- LOGICA DI CARICAMENTO NAZIONI DINAMICHE ---
   useEffect(() => {
@@ -588,67 +582,72 @@ type FormationPositions = {
   ATT: {x: number; y: number}[];
 };
 
-// ✅ MAPPA POSIZIONI GIOCATORI PER MODULO (CAMPO ORIZZONTALE)
+// ✅ MAPPING MODULI (4 cifre → 3 cifre)
+const FORMATION_MAPPING: {[key: string]: string} = {
+  "3-4-2-1": "3-4-3",
+  "4-2-2-2": "4-4-2",
+  "4-2-3-1": "4-5-1",
+  "4-3-1-2": "4-3-3",
+};
+
+// ✅ FUNZIONE PER NORMALIZZARE IL MODULO (per visualizzazione)
+const normalizeModulo = (modulo: string): string => {
+  return FORMATION_MAPPING[modulo] || modulo;
+};
+
+// ✅ MAPPA POSIZIONI GIOCATORI - REALISTICHE
 const getFormationPositions = (modulo: string, isHome: boolean): FormationPositions => {
-  const FORMATION_MAPPING: {[key: string]: string} = {
-    "3-4-2-1": "3-4-3",
-    "4-2-2-2": "4-4-2",
-    "4-2-3-1": "4-5-1",
-    "4-3-1-2": "4-3-3",
-  };
-  
   const moduloNorm = FORMATION_MAPPING[modulo] || modulo;
   
-  // CAMPO ORIZZONTALE: x = posizione orizzontale (0=porta, 100=attacco), y = posizione verticale
-  // Squadra CASA: porta a sinistra (x basso), attacco verso destra (x alto)
+  // Posizioni REALISTICHE - attaccanti meno avanzati per non sovrapporsi
   const positions: {[key: string]: FormationPositions} = {
     "3-4-3": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 25}, {x: 20, y: 50}, {x: 20, y: 75}],
-      MID: [{x: 35, y: 15}, {x: 35, y: 38}, {x: 35, y: 62}, {x: 35, y: 85}],
-      ATT: [{x: 48, y: 25}, {x: 48, y: 50}, {x: 48, y: 75}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 18, y: 25}, {x: 15, y: 50}, {x: 18, y: 75}],
+      MID: [{x: 30, y: 12}, {x: 26, y: 38}, {x: 26, y: 62}, {x: 30, y: 88}],
+      ATT: [{x: 40, y: 22}, {x: 44, y: 50}, {x: 40, y: 78}]
     },
     "3-5-2": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 25}, {x: 20, y: 50}, {x: 20, y: 75}],
-      MID: [{x: 35, y: 10}, {x: 35, y: 30}, {x: 35, y: 50}, {x: 35, y: 70}, {x: 35, y: 90}],
-      ATT: [{x: 48, y: 35}, {x: 48, y: 65}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 18, y: 25}, {x: 15, y: 50}, {x: 18, y: 75}],
+      MID: [{x: 32, y: 8}, {x: 26, y: 30}, {x: 23, y: 50}, {x: 26, y: 70}, {x: 32, y: 92}],
+      ATT: [{x: 42, y: 35}, {x: 42, y: 65}]
     },
     "4-3-3": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 15}, {x: 20, y: 38}, {x: 20, y: 62}, {x: 20, y: 85}],
-      MID: [{x: 35, y: 25}, {x: 35, y: 50}, {x: 35, y: 75}],
-      ATT: [{x: 48, y: 25}, {x: 48, y: 50}, {x: 48, y: 75}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 22, y: 12}, {x: 16, y: 35}, {x: 16, y: 65}, {x: 22, y: 88}],
+      MID: [{x: 30, y: 28}, {x: 26, y: 50}, {x: 30, y: 72}],
+      ATT: [{x: 40, y: 18}, {x: 44, y: 50}, {x: 40, y: 82}]
     },
     "4-4-2": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 15}, {x: 20, y: 38}, {x: 20, y: 62}, {x: 20, y: 85}],
-      MID: [{x: 35, y: 15}, {x: 35, y: 38}, {x: 35, y: 62}, {x: 35, y: 85}],
-      ATT: [{x: 48, y: 35}, {x: 48, y: 65}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 22, y: 12}, {x: 16, y: 35}, {x: 16, y: 65}, {x: 22, y: 88}],
+      MID: [{x: 32, y: 12}, {x: 26, y: 38}, {x: 26, y: 62}, {x: 32, y: 88}],
+      ATT: [{x: 42, y: 35}, {x: 42, y: 65}]
     },
     "4-5-1": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 15}, {x: 20, y: 38}, {x: 20, y: 62}, {x: 20, y: 85}],
-      MID: [{x: 35, y: 10}, {x: 35, y: 30}, {x: 35, y: 50}, {x: 35, y: 70}, {x: 35, y: 90}],
-      ATT: [{x: 48, y: 50}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 22, y: 12}, {x: 16, y: 35}, {x: 16, y: 65}, {x: 22, y: 88}],
+      MID: [{x: 32, y: 8}, {x: 26, y: 30}, {x: 23, y: 50}, {x: 26, y: 70}, {x: 32, y: 92}],
+      ATT: [{x: 44, y: 50}]
     },
     "5-3-2": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 10}, {x: 20, y: 30}, {x: 20, y: 50}, {x: 20, y: 70}, {x: 20, y: 90}],
-      MID: [{x: 35, y: 25}, {x: 35, y: 50}, {x: 35, y: 75}],
-      ATT: [{x: 48, y: 35}, {x: 48, y: 65}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 24, y: 8}, {x: 18, y: 28}, {x: 15, y: 50}, {x: 18, y: 72}, {x: 24, y: 92}],
+      MID: [{x: 30, y: 28}, {x: 26, y: 50}, {x: 30, y: 72}],
+      ATT: [{x: 42, y: 35}, {x: 42, y: 65}]
     },
     "5-4-1": {
-      GK: [{x: 5, y: 50}],
-      DEF: [{x: 20, y: 10}, {x: 20, y: 30}, {x: 20, y: 50}, {x: 20, y: 70}, {x: 20, y: 90}],
-      MID: [{x: 35, y: 15}, {x: 35, y: 38}, {x: 35, y: 62}, {x: 35, y: 85}],
-      ATT: [{x: 48, y: 50}]
+      GK: [{x: 6, y: 50}],
+      DEF: [{x: 24, y: 8}, {x: 18, y: 28}, {x: 15, y: 50}, {x: 18, y: 72}, {x: 24, y: 92}],
+      MID: [{x: 32, y: 15}, {x: 28, y: 38}, {x: 28, y: 62}, {x: 32, y: 85}],
+      ATT: [{x: 44, y: 50}]
     }
   };
   
   const formation = positions[moduloNorm] || positions["4-3-3"];
   
-  // Per squadra OSPITE: specchia orizzontalmente (porta a destra)
+  // Per squadra OSPITE: specchia orizzontalmente
   if (!isHome) {
     return {
       GK: formation.GK.map(p => ({ x: 100 - p.x, y: p.y })),
@@ -661,6 +660,15 @@ const getFormationPositions = (modulo: string, isHome: boolean): FormationPositi
   return formation;
 };
 
+// ✅ COMPONENTE MAGLIETTA SVG
+const JerseySVG = ({ color, size = 20 }: { color: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
+    <path d="M6.5 2L2 6.5V10h3v10h14V10h3V6.5L17.5 2h-4L12 4l-1.5-2h-4zM8 4h2l2 2 2-2h2l3 3v2h-2v9H7v-9H5V7l3-3z"/>
+    <path d="M7 10h10v9H7z" fill={color}/>
+    <path d="M5 7l3-3h2l2 2 2-2h2l3 3v2h-2v-1H7v1H5V7z" fill={color} opacity="0.8"/>
+  </svg>
+);
+
 const startSimulation = async () => {
   if (!selectedMatch) return;
   
@@ -670,6 +678,10 @@ const startSimulation = async () => {
   setWarmupProgress(0);
   setFormations(null);
   setPlayerEvents({});
+  
+  // ✅ Prepara il popup (inizia trasparente)
+  setShowFormationsPopup(true);
+  setPopupOpacity(0);
   
   // Avvia barra di progresso animata
   const warmupInterval = setInterval(() => {
@@ -684,6 +696,8 @@ const startSimulation = async () => {
     loadFormations(selectedMatch.home, selectedMatch.away, league).then(success => {
       if (success) {
         console.log("✅ Formazioni caricate!");
+        // ✅ Inizia fade-in MOLTO LENTO del popup
+        setTimeout(() => setPopupOpacity(1), 8000);
       }
     });
     
@@ -711,23 +725,28 @@ const startSimulation = async () => {
       throw new Error(responseJson.error || 'Risposta del server incompleta');
     }
     
-    // ✅ FASE 3: Simulazione completata - ferma riscaldamento
+    // Ferma riscaldamento
     clearInterval(warmupInterval);
     setWarmupProgress(100);
     
-    // Breve pausa per mostrare 100%
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise(resolve => setTimeout(resolve, 800));
     setIsWarmingUp(false);
-
-    // ✅ SALVA I METADATA REALI
-    setSimulationMeta({
-      algoName: responseJson.algo_name,
-      algoId: responseJson.algo_id,
-      cyclesRequested: responseJson.cycles_requested,
-      cyclesExecuted: responseJson.cycles_executed,
-      executionTime: responseJson.execution_time
-    });
+      
+      // ✅ Popup già visibile, resta per 4 secondi poi fade-out
+      setTimeout(() => {
+        setPopupOpacity(0);
+        setTimeout(() => {
+          setShowFormationsPopup(false);
+          // Ora parti con l'animazione della partita
+          if (simMode === 'fast') {
+            setSimResult(enrichedData);
+            setViewState('result');
+            addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score}. Chiedimi pure spiegazioni.`);
+          } else {
+            runAnimation(enrichedData);
+          }
+        }, 1000);
+      },  50);
 
     const enrichedData = {
       ...responseJson,
@@ -741,15 +760,6 @@ const startSimulation = async () => {
       }
     };
 
-    if (simMode === 'fast') {
-      setTimeout(() => {
-        setSimResult(enrichedData);
-        setViewState('result');
-        addBotMessage(`Analisi completata! Risultato previsto: ${responseJson.predicted_score}. Chiedimi pure spiegazioni.`);
-      }, 1500);
-    } else {
-      runAnimation(enrichedData);
-    }
 
   } catch (e: any) {
     console.error("Errore Simulazione:", e);
@@ -823,6 +833,8 @@ const startSimulation = async () => {
           
           setSimResult(finalData);
           setSimulationEnded(true);
+
+          setShowMatchSummary(true); 
           
           setTimeout(() => {
             setPitchMsg(null);
@@ -903,7 +915,7 @@ const startSimulation = async () => {
               }
           
               setPitchMsg({ testo: msg, colore: col });
-              setTimeout(() => setPitchMsg(null), 3000);
+              setTimeout(() => setPitchMsg(null), 2000);
             }
           }
         });
@@ -1629,196 +1641,166 @@ const startSimulation = async () => {
   )
 
   // --- FUNZIONE MANCANTE: ANIMAZIONE GRAFICA ---
-  const renderAnimation = () => (
-    <div style={styles.animContainer}>
-      
-      {/* ✅ NUOVO: HEADER LIVE SCORE (FISSO IN ALTO) */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(0, 0, 0, 0.95)',
-        backdropFilter: 'blur(20px)',
-        padding: '15px 40px',
-        borderRadius: '16px',
-        border: '2px solid rgba(0, 240, 255, 0.3)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-        zIndex: 90,
-        minWidth: isMobile ? '85%' : '500px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '20px'
-      }}>
-        {/* SQUADRA CASA */}
+const renderAnimation = () => (
+  <div style={{
+    ...styles.animContainer,
+    alignItems: 'center',
+    padding: '20px'
+  }}>
+
+    {/* ✅ HEADER LIVE SCORE CON CRONOMETRO */}
+    <div style={{
+      marginBottom: '20px',
+      background: 'rgba(0, 0, 0, 0.95)',
+      backdropFilter: 'blur(20px)',
+      padding: '15px 30px',
+      borderRadius: '16px',
+      border: '2px solid rgba(0, 240, 255, 0.3)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+      zIndex: 90,
+      width: isMobile ? '90%' : '580px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }}>
+      {/* CRONOMETRO */}
+      <div style={{ width: '55px', textAlign: 'center' }}>
         <div style={{
-          flex: 1,
-          textAlign: 'right',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '4px'
+          fontSize: isMobile ? '20px' : '24px',
+          fontWeight: '900',
+          color: theme.purple,
+          fontFamily: 'monospace',
+          textShadow: `0 0 10px ${theme.purple}`
         }}>
-          <div style={{
-            fontSize: isMobile ? '10px' : '11px',
-            color: theme.cyan,
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            opacity: 0.7
-          }}>
-            Casa
-          </div>
-          <div style={{
-            fontSize: isMobile ? '16px' : '20px',
-            fontWeight: '900',
-            color: 'white',
-            textTransform: 'uppercase',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '150px'
-          }}>
-            {selectedMatch?.home}
-          </div>
-        </div>
-  
-        {/* PUNTEGGIO CENTRALE */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '8px 20px',
-          background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
-          borderRadius: '12px',
-          border: '1px solid rgba(0, 240, 255, 0.3)',
-          boxShadow: '0 0 20px rgba(0, 240, 255, 0.2)'
-        }}>
-          <div style={{
-            fontSize: isMobile ? '28px' : '36px',
-            fontWeight: '900',
-            color: theme.cyan,
-            fontFamily: 'monospace',
-            textShadow: `0 0 10px ${theme.cyan}`,
-            minWidth: '30px',
-            textAlign: 'center'
-          }}>
-            {liveScore.home}
-          </div>
-          
-          <div style={{
-            fontSize: isMobile ? '20px' : '24px',
-            fontWeight: 'bold',
-            color: 'rgba(255, 255, 255, 0.3)'
-          }}>
-            -
-          </div>
-          
-          <div style={{
-            fontSize: isMobile ? '28px' : '36px',
-            fontWeight: '900',
-            color: theme.danger,
-            fontFamily: 'monospace',
-            textShadow: `0 0 10px ${theme.danger}`,
-            minWidth: '30px',
-            textAlign: 'center'
-          }}>
-            {liveScore.away}
-          </div>
-        </div>
-  
-        {/* SQUADRA OSPITE */}
-        <div style={{
-          flex: 1,
-          textAlign: 'left',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: '4px'
-        }}>
-          <div style={{
-            fontSize: isMobile ? '10px' : '11px',
-            color: theme.danger,
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            opacity: 0.7
-          }}>
-            Ospite
-          </div>
-          <div style={{
-            fontSize: isMobile ? '16px' : '20px',
-            fontWeight: '900',
-            color: 'white',
-            textTransform: 'uppercase',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '150px'
-          }}>
-            {selectedMatch?.away}
-          </div>
+          {timer}'
         </div>
       </div>
-      
-      {/* PANNELLO METADATA (spostalo leggermente più in basso per non sovrapporsi) */}
-      {simulationMeta && (
+
+      {/* SQUADRA CASA */}
+      <div style={{ width: '120px', textAlign: 'right' }}>
         <div style={{
-          position: 'absolute',
-          top: '110px', // ✅ CAMBIATO: era '20px', ora più in basso
-          right: '20px',
-          background: 'rgba(0, 0, 0, 0.9)',
-          backdropFilter: 'blur(10px)',
-          padding: '15px 20px',
-          borderRadius: '12px',
-          border: '1px solid rgba(0, 240, 255, 0.3)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-          fontSize: '11px',
+          fontSize: '10px',
           color: theme.cyan,
-          textAlign: 'right',
-          minWidth: '200px',
-          zIndex: 100
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          opacity: 0.7,
+          marginBottom: '2px'
+        }}>Casa</div>
+        <div style={{
+          fontSize: isMobile ? '14px' : '16px',
+          fontWeight: '900',
+          color: 'white',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>{selectedMatch?.home}</div>
+      </div>
+
+      {/* PUNTEGGIO CENTRALE */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 16px',
+        background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
+        borderRadius: '10px',
+        border: '1px solid rgba(0, 240, 255, 0.3)'
+      }}>
+        <div style={{
+          fontSize: isMobile ? '24px' : '30px',
+          fontWeight: '900',
+          color: theme.cyan,
+          fontFamily: 'monospace',
+          textShadow: `0 0 10px ${theme.cyan}`,
+          width: '30px',
+          textAlign: 'center'
+        }}>{liveScore.home}</div>
+        <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
+        <div style={{
+          fontSize: isMobile ? '24px' : '30px',
+          fontWeight: '900',
+          color: theme.danger,
+          fontFamily: 'monospace',
+          textShadow: `0 0 10px ${theme.danger}`,
+          width: '30px',
+          textAlign: 'center'
+        }}>{liveScore.away}</div>
+      </div>
+
+      {/* SQUADRA OSPITE */}
+      <div style={{ width: '120px', textAlign: 'left' }}>
+        <div style={{
+          fontSize: '10px',
+          color: theme.danger,
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          opacity: 0.7,
+          marginBottom: '2px'
+        }}>Ospite</div>
+        <div style={{
+          fontSize: isMobile ? '14px' : '16px',
+          fontWeight: '900',
+          color: 'white',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>{selectedMatch?.away}</div>
+      </div>
+    </div>
+
+    {/* ✅ MODULI SQUADRE */}
+    {isWarmingUp && formations && (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        width: isMobile ? '90%' : '900px',
+        marginBottom: '10px'
+      }}>
+        <span style={{
+          color: theme.cyan,
+          fontSize: '16px',
+          fontWeight: 'bold',
+          textShadow: `0 0 8px ${theme.cyan}`,
+          marginLeft: '10px'
         }}>
-          <div style={{ marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid rgba(0, 240, 255, 0.2)' }}>
-            <div style={{ fontSize: '9px', color: '#666', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Motore AI
-            </div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.cyan }}>
-              {simulationMeta.algoName}
-            </div>
-            <div style={{ fontSize: '8px', color: '#888', marginTop: '2px' }}>
-              ID: {simulationMeta.algoId}
-            </div>
-          </div>
-          
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ fontSize: '9px', color: '#666', marginBottom: '4px' }}>
-              Cicli Eseguiti
-            </div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.success }}>
-              {simulationMeta.cyclesExecuted}
-            </div>
-            <div style={{ fontSize: '8px', color: '#888', marginTop: '2px' }}>
-              Richiesti: {simulationMeta.cyclesRequested}
-            </div>
-          </div>
-          
-          <div>
-            <div style={{ fontSize: '9px', color: '#666', marginBottom: '4px' }}>
-              Tempo Elaborazione
-            </div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.warning }}>
-              {simulationMeta.executionTime.toFixed(2)}s
-            </div>
-          </div>
-        </div>
-      )}
-  
-      <div style={styles.timerDisplay}>{timer}'</div>
-  
-      {/* Campo da Gioco Neon */}
-      <div style={styles.pitch}>
+          {normalizeModulo(formations.home_formation?.modulo || '4-3-3')}
+        </span>
+        <span style={{
+          color: theme.danger,
+          fontSize: '16px',
+          fontWeight: 'bold',
+          textShadow: `0 0 8px ${theme.danger}`,
+          marginRight: '320px'
+        }}>
+          {normalizeModulo(formations.away_formation?.modulo || '4-3-3')}
+        </span>
+      </div>
+    )}
+
+    {/* ✅ CONTENITORE CAMPO + CRONACA AFFIANCATI */}
+    <div style={{
+      display: 'flex',
+      gap: '30px',
+      width: '100%',
+      maxWidth: '1100px',
+      justifyContent: 'center',
+      alignItems: 'stretch'
+    }}>
+      
+      {/* CAMPO DA GIOCO */}
+      <div style={{
+        ...styles.pitch,
+        width: '70%',
+        minWidth: '350px',
+        maxWidth: '800px',
+        height: '380px',
+        marginTop: '25px',
+        flexShrink: 0
+      }}>
         {pitchMsg && (
           <div style={{
             position: 'absolute',
@@ -1841,64 +1823,57 @@ const startSimulation = async () => {
             </div>
           </div>
         )}
-        
+
         {/* Linea di metà campo */}
         <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
-        
-        {/* ✅ PALLINI GIOCATORI DURANTE RISCALDAMENTO */}
+
+        {/* Area grande SINISTRA (casa) */}
+        <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+
+        {/* Area piccola SINISTRA (casa) */}
+        <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+
+        {/* Area grande DESTRA (ospite) */}
+        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+
+        {/* Area piccola DESTRA (ospite) */}
+        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+
+        {/* ✅ MAGLIETTE GIOCATORI DURANTE RISCALDAMENTO */}
         {isWarmingUp && formations && (
           <>
-            {/* Squadra CASA (sinistra - cyan) */}
             {(() => {
               const pos = getFormationPositions(formations.home_formation?.modulo || '4-3-3', true);
               const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
               return allPos.map((p, idx) => (
-                <div
-                  key={`home-${idx}`}
-                  style={{
-                    position: 'absolute',
-                    left: `${p.x}%`,
-                    top: `${p.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.cyan,
-                    boxShadow: `0 0 8px ${theme.cyan}`,
-                    opacity: Math.max(0, 1 - (warmupProgress / 120)),
-                    transition: 'opacity 0.3s ease'
-                  }}
-                />
+                <div key={`home-${idx}`} style={{
+                  position: 'absolute',
+                  left: `${p.x}%`,
+                  top: `${p.y}%`,
+                  transform: 'translate(-50%, -50%)'
+                }}>
+                  <JerseySVG color={theme.cyan} size={28} />
+                </div>
               ));
             })()}
-            
-            {/* Squadra OSPITE (destra - rosso/magenta) */}
             {(() => {
               const pos = getFormationPositions(formations.away_formation?.modulo || '4-3-3', false);
               const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
               return allPos.map((p, idx) => (
-                <div
-                  key={`away-${idx}`}
-                  style={{
-                    position: 'absolute',
-                    left: `${p.x}%`,
-                    top: `${p.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.danger,
-                    boxShadow: `0 0 8px ${theme.danger}`,
-                    opacity: Math.max(0, 1 - (warmupProgress / 120)),
-                    transition: 'opacity 0.3s ease'
-                  }}
-                />
+                <div key={`away-${idx}`} style={{
+                  position: 'absolute',
+                  left: `${p.x}%`,
+                  top: `${p.y}%`,
+                  transform: 'translate(-50%, -50%)'
+                }}>
+                  <JerseySVG color={theme.danger} size={28} />
+                </div>
               ));
             })()}
           </>
         )}
-  
+
         {/* Barra Momentum */}
         <div style={{
           ...styles.momentumBar,
@@ -1908,193 +1883,222 @@ const startSimulation = async () => {
         }} />
       </div>
 
-      {/* ✅ BARRA RISCALDAMENTO */}
-      {isWarmingUp && (
-        <div style={{ width: '80%', maxWidth: '700px', marginTop: '15px' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '8px'
-          }}>
-            <span style={{ color: theme.cyan, fontSize: '14px', fontWeight: 'bold' }}>
-              🏃 RISCALDAMENTO PRE-PARTITA
-            </span>
-            <span style={{ color: theme.text, fontSize: '14px' }}>
-              {Math.round(warmupProgress)}%
-            </span>
-          </div>
-          <div style={{
-            width: '100%',
-            height: '8px',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            borderRadius: '4px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              width: `${warmupProgress}%`,
-              height: '100%',
-              backgroundColor: theme.cyan,
-              boxShadow: `0 0 10px ${theme.cyan}`,
-              transition: 'width 0.3s ease'
-            }} />
-          </div>
-        </div>
-      )}
-
-      {/* ✅ BOTTONE FORMAZIONI (visibile durante partita) */}
-      {simulationEnded === false && !isWarmingUp && formations && (
-        <button
-          onClick={() => setShowFormationsPopup(true)}
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            background: 'rgba(0,0,0,0.7)',
-            border: `1px solid ${theme.cyan}`,
-            borderRadius: '8px',
-            padding: '8px 12px',
-            color: theme.cyan,
-            cursor: 'pointer',
-            fontSize: '12px',
-            zIndex: 50
-          }}
-        >
-          📋 Formazioni
-        </button>
-      )}
-  
-      {/* ✅ NUOVO: Feed Eventi con Allineamento Sinistra/Destra */}
-      <div style={styles.eventFeed}>
+      {/* CRONACA EVENTI */}
+      <div style={{
+        ...styles.eventFeed,
+        width: '80%',
+        minWidth: '280px',
+        maxWidth: '550px',
+        marginRight: '30px',
+        height: '380px',
+        flexShrink: 0
+      }}>
         {animEvents.length === 0 ? (
-          <div style={{ color: '#666', textAlign: 'center', marginTop: '10px', fontSize: '12px' }}>
+          <div style={{ color: '#666', textAlign: 'center', fontSize: '12px' }}>
             Fischio d'inizio...
           </div>
         ) : (
           animEvents.map((e, i) => {
-            // ✅ FIX: Usa i nomi ESATTI come arrivano dal backend
             const homeUpper = selectedMatch?.home.toUpperCase() || '';
             const awayUpper = selectedMatch?.away.toUpperCase() || '';
-            
             const isCasa = e.includes(`[${homeUpper}]`);
             const isOspite = e.includes(`[${awayUpper}]`);
             const isSistema = e.includes('[SISTEMA]');
-            
+
             return (
-              <div 
-                key={i} 
-                style={{
-                  marginBottom: '5px',
-                  fontSize: '13px',
-                  borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  paddingBottom: '2px',
-                  // ✅ ALLINEAMENTO CONDIZIONALE
-                  textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
-                  // ✅ COLORI CONDIZIONALI
-                  color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
-                  fontWeight: isSistema ? 'bold' : 'normal',
-                  paddingLeft: isCasa ? '10px' : '0',   // ✅ AGGIUNGI PADDING
-                  paddingRight: isOspite ? '10px' : '0'  // ✅ AGGIUNGI PADDING
-                }}
-              >
+              <div key={i} style={{
+                marginBottom: '5px',
+                fontSize: '13px',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                paddingBottom: '2px',
+                textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
+                color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
+                fontWeight: isSistema ? 'bold' : 'normal',
+                paddingLeft: isCasa ? '10px' : '0',
+                paddingRight: isOspite ? '10px' : '0'
+              }}>
                 {e}
               </div>
             );
           })
         )}
       </div>
-  
-      <div style={{ marginTop: '20px', color: theme.cyan, letterSpacing: '2px', fontSize: '10px', animation: 'pulse 2s infinite' }}>
-        SIMULAZIONE LIVE DAL CORE AI
-      </div>
-      {/* ✅ NUOVO: BOTTONE "VAI AL RESOCONTO" (appare solo a fine partita) */}
-      {simulationEnded && (
-        <div style={{
-          marginTop: '30px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '15px',
-          animation: 'fadeIn 0.5s ease-in'
-        }}>
-          {/* Messaggio */}
-          <div style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: theme.success,
-            textAlign: 'center',
-            textShadow: `0 0 10px ${theme.success}`,
-            animation: 'pulse 2s infinite'
-          }}>
-            ✅ Partita Terminata - Verifica gli Eventi
-          </div>
-
-          {/* Bottone Principale */}
-          <button
-            onClick={() => {
-              setViewState('result');
-              setSimulationEnded(false); // Reset per prossima simulazione
-            }}
-            style={{
-              padding: '15px 40px',
-              background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-              border: 'none',
-              borderRadius: '12px',
-              color: '#000',
-              fontSize: '16px',
-              fontWeight: '900',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              boxShadow: `0 0 30px rgba(0, 240, 255, 0.5)`,
-              transition: 'all 0.3s ease',
-              letterSpacing: '1px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
-            }}
-          >
-            📊 VAI AL RESOCONTO COMPLETO
-          </button>
-
-          {/* Bottone Secondario (Torna Indietro) */}
-          <button
-            onClick={() => {
-              setViewState('list');
-              setSimulationEnded(false);
-              setSimResult(null);
-            }}
-            style={{
-              padding: '10px 30px',
-              background: 'transparent',
-              border: `2px solid ${theme.textDim}`,
-              borderRadius: '8px',
-              color: theme.textDim,
-              fontSize: '12px',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = theme.cyan;
-              e.currentTarget.style.color = theme.cyan;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = theme.textDim;
-              e.currentTarget.style.color = theme.textDim;
-            }}
-          >
-            ← Torna alla Lista Partite
-          </button>
-        </div>
-      )}
     </div>
-  );
+
+    {/* ✅ BARRA RISCALDAMENTO */}
+    {isWarmingUp && (
+      <div style={{ width: '100%', maxWidth: '900px', marginTop: '15px' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '8px'
+        }}>
+          <span style={{ color: theme.cyan, fontSize: '14px', fontWeight: 'bold' }}>
+            🏃 RISCALDAMENTO PRE-PARTITA
+          </span>
+          <span style={{ color: theme.text, fontSize: '14px' }}>
+            {Math.round(warmupProgress)}%
+          </span>
+        </div>
+        <div style={{
+          width: '100%',
+          height: '8px',
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          borderRadius: '4px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            width: `${warmupProgress}%`,
+            height: '100%',
+            backgroundColor: theme.cyan,
+            boxShadow: `0 0 10px ${theme.cyan}`,
+            transition: 'width 0.3s ease'
+          }} />
+        </div>
+      </div>
+    )}
+
+    {/* ✅ BOTTONE FORMAZIONI */}
+    {formations && (
+      <button
+        onClick={() => {
+          setShowFormationsPopup(true);
+          setPopupOpacity(1);
+        }}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '80px',
+          background: 'rgba(0,0,0,0.7)',
+          border: `1px solid ${theme.cyan}`,
+          borderRadius: '8px',
+          padding: '8px 12px',
+          color: theme.cyan,
+          cursor: 'pointer',
+          fontSize: '12px',
+          zIndex: 50
+        }}
+      >
+        📋 Formazioni
+      </button>
+    )}
+
+    {/* ✅ BOTTONE RIEPILOGO PARTITA */}
+    {simulationEnded && (
+      <button
+        onClick={() => setShowMatchSummary(true)}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '180px',
+          background: 'rgba(0,0,0,0.7)',
+          border: `1px solid ${theme.purple}`,
+          borderRadius: '8px',
+          padding: '8px 12px',
+          marginRight: '20px',
+          color: theme.purple,
+          cursor: 'pointer',
+          fontSize: '12px',
+          zIndex: 50
+        }}
+      >
+        📊 Riepilogo
+      </button>
+    )}
+
+    <div style={{ marginTop: '20px', color: theme.cyan, letterSpacing: '2px', fontSize: '10px', animation: 'pulse 2s infinite' }}>
+      SIMULAZIONE LIVE DAL CORE AI
+    </div>
+
+    {/* ✅ BOTTONI FINE PARTITA */}
+    {simulationEnded && (
+      <div style={{
+        marginTop: '20px',
+        marginBottom: '20px',
+
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '15px',
+        animation: 'fadeIn 0.5s ease-in'
+      }}>
+        <div style={{
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: theme.success,
+          textAlign: 'center',
+          textShadow: `0 0 10px ${theme.success}`,
+          animation: 'pulse 2s infinite'
+        }}>
+          ✅ Partita Terminata - Verifica gli Eventi
+        </div>
+
+        <button
+          onClick={() => {
+            setViewState('result');
+            setSimulationEnded(false);
+          }}
+          style={{
+            padding: '15px 40px',
+            background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+            border: 'none',
+            borderRadius: '12px',
+            marginRight: '20px',
+            color: '#000',
+            fontSize: '16px',
+            fontWeight: '900',
+            marginTop: '20px',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            boxShadow: `0 0 30px rgba(0, 240, 255, 0.5)`,
+            transition: 'all 0.3s ease',
+            letterSpacing: '1px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
+          }}
+        >
+          📊 VAI AL RESOCONTO COMPLETO
+        </button>
+
+        <button
+          onClick={() => {
+            setViewState('list');
+            setSimulationEnded(false);
+            setSimResult(null);
+          }}
+          style={{
+            padding: '10px 30px',
+            background: 'transparent',
+            border: `2px solid ${theme.textDim}`,
+            borderRadius: '8px',
+            color: theme.textDim,
+            fontSize: '12px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = theme.cyan;
+            e.currentTarget.style.color = theme.cyan;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = theme.textDim;
+            e.currentTarget.style.color = theme.textDim;
+          }}
+        >
+          ← Torna alla Lista Partite
+        </button>
+      </div>
+    )}
+  </div>
+);
    
   const renderPreMatch = () => {
 
@@ -5100,6 +5104,269 @@ const startSimulation = async () => {
           </div>
         </div>
       )}
+            {/* ✅ POPUP FORMAZIONI */}
+            {showFormationsPopup && formations && (
+              <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                opacity: popupOpacity,
+                transition: 'opacity 2s ease'
+              }}
+              onClick={() => {
+                setPopupOpacity(0);
+                setTimeout(() => setShowFormationsPopup(false), 50);
+              }}
+            >
+          <div 
+            style={{
+              background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '700px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              border: `1px solid ${theme.cyan}`,
+              boxShadow: `0 0 30px rgba(0,240,255,0.3)`
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              paddingBottom: '15px',
+              borderBottom: `1px solid rgba(255,255,255,0.1)`
+            }}>
+              <h2 style={{ color: theme.text, margin: 0, fontSize: '20px' }}>
+                📋 FORMAZIONI UFFICIALI
+              </h2>
+              <button
+                onClick={() => setShowFormationsPopup(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.text,
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Formazioni */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '20px'
+            }}>
+              {/* CASA */}
+              <div>
+                <div style={{
+                  color: theme.cyan,
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  marginBottom: '12px',
+                  textShadow: `0 0 8px ${theme.cyan}`
+                }}>
+                  🏠 {formations.home_team} ({normalizeModulo(formations.home_formation?.modulo || '4-3-3')})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {formations.home_formation?.titolari?.map((player, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 10px',
+                      backgroundColor: 'rgba(0,240,255,0.1)',
+                      borderRadius: '6px',
+                      borderLeft: `3px solid ${theme.cyan}`
+                    }}>
+                      <span style={{
+                        color: theme.cyan,
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        minWidth: '32px'
+                      }}>
+                        {player.role}
+                      </span>
+                      <span style={{ color: theme.text, fontSize: '13px' }}>
+                        {player.player}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* OSPITE */}
+              <div>
+                <div style={{
+                  color: theme.danger,
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  marginBottom: '12px',
+                  textShadow: `0 0 8px ${theme.danger}`
+                }}>
+                  ✈️ {formations.away_team} ({normalizeModulo(formations.away_formation?.modulo || '4-3-3')})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {formations.away_formation?.titolari?.map((player, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 10px',
+                      backgroundColor: 'rgba(255,107,107,0.1)',
+                      borderRadius: '6px',
+                      borderLeft: `3px solid ${theme.danger}`
+                    }}>
+                      <span style={{
+                        color: theme.danger,
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        minWidth: '32px'
+                      }}>
+                        {player.role}
+                      </span>
+                      <span style={{ color: theme.text, fontSize: '13px' }}>
+                        {player.player}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ POPUP RIEPILOGO PARTITA */}
+      {showMatchSummary && simResult && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowMatchSummary(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+              border: `2px solid ${theme.purple}`,
+              boxShadow: `0 0 40px rgba(188,19,254,0.4)`
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ color: theme.text, margin: 0, fontSize: '18px' }}>
+                📊 RIEPILOGO PARTITA
+              </h2>
+              <button
+                onClick={() => setShowMatchSummary(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.text,
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+              >✕</button>
+            </div>
+
+            {/* Risultato */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '20px',
+              padding: '15px',
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '10px'
+            }}>
+              <div style={{ fontSize: '14px', color: theme.textDim, marginBottom: '5px' }}>RISULTATO FINALE</div>
+              <div style={{ fontSize: '36px', fontWeight: '900' }}>
+                <span style={{ color: theme.cyan }}>{simResult.gh}</span>
+                <span style={{ color: theme.textDim }}> - </span>
+                <span style={{ color: theme.danger }}>{simResult.ga}</span>
+              </div>
+              <div style={{ fontSize: '14px', marginTop: '5px' }}>
+                <span style={{ color: theme.cyan }}>{selectedMatch?.home}</span>
+                <span style={{ color: theme.textDim }}> vs </span>
+                <span style={{ color: theme.danger }}>{selectedMatch?.away}</span>
+              </div>
+            </div>
+
+            {/* Marcatori */}
+            <div style={{ marginBottom: '15px' }}>
+              <div style={{ fontSize: '12px', color: theme.textDim, marginBottom: '8px' }}>⚽ MARCATORI</div>
+              <div style={{ fontSize: '13px', color: theme.text }}>
+                {simResult.cronaca?.filter((e: any) => e.tipo === 'gol').map((e: any, i: number) => (
+                  <div key={i} style={{ 
+                    marginBottom: '3px',
+                    color: e.squadra === 'casa' ? theme.cyan : theme.danger 
+                  }}>
+                    {e.testo.split(']')[1]?.trim() || e.testo}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Statistiche */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '8px',
+              fontSize: '12px'
+            }}>
+              {simResult.statistiche && Object.entries(simResult.statistiche).slice(0, 10).map(([key, val]: [string, any]) => (
+                <div key={key} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '6px 10px',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '6px'
+                }}>
+                  <span style={{ color: theme.textDim }}>{key}</span>
+                  <span style={{ color: theme.text }}>
+                    <span style={{ color: theme.cyan }}>{val[0]}</span>
+                    {' - '}
+                    <span style={{ color: theme.danger }}>{val[1]}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

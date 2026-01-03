@@ -3677,6 +3677,33 @@ const renderAnimation = () => (
           </div>
         </div>
 
+        <button 
+          onClick={() => window.location.href = '/mixer'}
+          style={{
+            background: 'rgba(168, 85, 247, 0.1)',
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            color: '#a855f7',
+            padding: '15px 22px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: '700',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = theme.cyan;
+            e.currentTarget.style.color = theme.cyan;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = theme.textDim;
+            e.currentTarget.style.color = theme.textDim;
+          }}
+        >
+          🎛️ Mixer Tuning
+        </button>
+
         <button
           onClick={() => setViewState('pre-match')}
           style={{

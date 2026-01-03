@@ -1,13 +1,18 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 
-// IMPORTA ANCHE LA VERSIONE DEV
-// import App from './App.tsx';
 import AppDev from './AppDev';
+import TuningMixer from './pages/TuningMixer';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppDev />   {/* usa la nuova dashboard */}
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AppDev />} />
+        <Route path="/mixer" element={<TuningMixer />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 );

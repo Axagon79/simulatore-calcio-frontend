@@ -10,8 +10,8 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AppDev />} />
         <Route path="/mixer" element={<TuningMixer />} />
+        <Route path="/*" element={<AppDev />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

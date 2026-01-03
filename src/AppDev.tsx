@@ -423,6 +423,9 @@ export default function AppDev() {
   const [configDebug, setConfigDebug] = useState(true);    // Debug Mode? (Checkbox)
 
 
+  
+
+
   // --- INCOLLA QUESTO BLOCCO INSIEME AGLI ALTRI useState ---
 
   // 1. Definiamo i preset di velocità (serve per il menu Master/MonteCarlo)
@@ -440,6 +443,12 @@ export default function AppDev() {
   const [selectedSpeed, setSelectedSpeed] = useState(4); // Default Standard
   const [customCycles, setCustomCycles] = useState(50);  // Valore manuale
   // ---------------------------------------------------------
+
+  // STATI PER POPUP "SIMULA DI NUOVO"
+  const [showResimulatePopup, setShowResimulatePopup] = useState(false);
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [tempAlgo, setTempAlgo] = useState(configAlgo);
+  const [tempCycles, setTempCycles] = useState(customCycles);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'previous' | 'current' | 'next'>('current');
 
@@ -783,8 +792,30 @@ const startSimulation = async () => {
     const intervalMs = 100;
     const regularStep = 90 / (totalDurationMs / intervalMs);
     
-    const recuperoPT = Math.floor(Math.random() * 3) + 1; 
-    const recuperoST = Math.floor(Math.random() * 5) + 2;
+    // RECUPERO REALISTICO CON DISTRIBUZIONE PONDERATA
+  // RECUPERO - Estrai dai dati del backend (dalla cronaca)
+const estraiRecupero = (cronaca: any[], tempo: 'pt' | 'st'): number => {
+  const minutoRiferimento = tempo === 'pt' ? 45 : 90;
+  const evento = cronaca.find(e => 
+    e.minuto === minutoRiferimento && 
+    e.tipo === 'info' && 
+    e.testo.includes('minuti di recupero')
+  );
+  
+  if (evento) {
+    // Estrai il numero dalla stringa "Segnalati X minuti di recupero"
+    const match = evento.testo.match(/(\d+)\s*minuti/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+  }
+  
+  // Fallback se non trovato
+  return tempo === 'pt' ? 2 : 4;
+};
+
+const recuperoPT = estraiRecupero(finalData.cronaca || [], 'pt');
+const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     
     const eventiMostrati = new Set<string>();
     
@@ -805,13 +836,25 @@ const startSimulation = async () => {
           injuryTimeCounter = 0;
         }
       } else {
-        injuryTimeCounter += (regularStep / 3); 
-        const displayExtra = Math.floor(injuryTimeCounter);
+        // RECUPERO - Timer completamente separato
         const baseMin = t < 60 ? 45 : 90;
         
-        setTimer(`${baseMin}+${displayExtra}`);
-  
-        if (baseMin === 45 && displayExtra >= recuperoPT) {
+        // Calcola quanto tempo dedicare ad ogni minuto di recupero (in ms)
+        // Vogliamo che ogni minuto di recupero duri circa 1.5 secondi reali
+        const recuperoStep = 1 / 15; // Ogni tick avanza di ~0.067 minuti di recupero
+        
+        injuryTimeCounter += recuperoStep;
+        const displayExtra = Math.floor(injuryTimeCounter);
+        
+        // Aggiorna display
+        if (displayExtra >= 1) {
+          setTimer(`${baseMin}+${displayExtra}`);
+        } else {
+          setTimer(`${baseMin}+1`);
+        }
+      
+        // FINE PRIMO TEMPO
+        if (baseMin === 45 && injuryTimeCounter >= recuperoPT) {
           isPaused = true;
           isInjuryTime = false;
           injuryTimeCounter = 0;
@@ -819,7 +862,7 @@ const startSimulation = async () => {
           
           const goalsHome = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'casa').length;
           const goalsAway = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'ospite').length;
-  
+      
           setPitchMsg({ testo: `INTERVALLO: ${goalsHome}-${goalsAway}`, colore: '#fff' });
           setTimeout(() => {
             setPitchMsg(null);
@@ -827,14 +870,14 @@ const startSimulation = async () => {
           }, 3000);
         }
         
-        if (baseMin === 90 && displayExtra >= recuperoST) {
+        // FINE SECONDO TEMPO  
+        if (baseMin === 90 && injuryTimeCounter >= recuperoST) {
           clearInterval(interval);
           setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
           
           setSimResult(finalData);
           setSimulationEnded(true);
-
-          setShowMatchSummary(true); 
+          setShowMatchSummary(true);
           
           setTimeout(() => {
             setPitchMsg(null);
@@ -978,6 +1021,49 @@ const startSimulation = async () => {
 
       addBotMessage(response);
     }, 800);
+  };
+
+
+  // --- FUNZIONI RESIMULATE ---
+  const handleResimulate = () => {
+    setShowResimulatePopup(true);
+  };
+
+  const handleKeepSettings = () => {
+    setShowResimulatePopup(false);
+    // Reset cronaca e stati animazione
+    setAnimEvents([]);
+    setTimer(0);
+    setMomentum(50);
+    setLiveScore({home: 0, away: 0});
+    setSimulationEnded(false);
+    setPitchMsg(null);
+    // Rilancia simulazione
+    startSimulation();
+  };
+
+  const handleModifySettings = () => {
+    setShowResimulatePopup(false);
+    setTempAlgo(configAlgo);
+    setTempCycles(customCycles);
+    setShowSettingsPopup(true);
+  };
+
+  const handleConfirmNewSettings = () => {
+    setConfigAlgo(tempAlgo);
+    setCustomCycles(tempCycles);
+    setShowSettingsPopup(false);
+    // Reset cronaca e stati animazione
+    setAnimEvents([]);
+    setTimer(0);
+    setMomentum(50);
+    setLiveScore({home: 0, away: 0});
+    setSimulationEnded(false);
+    setPitchMsg(null);
+    // Piccolo delay per assicurarsi che gli stati siano aggiornati
+    setTimeout(() => {
+      startSimulation();
+    }, 100);
   };
 
 
@@ -1648,6 +1734,32 @@ const renderAnimation = () => (
     padding: '20px'
   }}>
 
+    {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
+    <div style={{
+      position: 'absolute',
+      top: '15px',
+      left: '15px',
+      background: 'rgba(0, 0, 0, 0.6)',
+      backdropFilter: 'blur(10px)',
+      padding: '8px 14px',
+      borderRadius: '8px',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      fontSize: '11px',
+      color: '#888',
+      zIndex: 50,
+    }}>
+      <span style={{ color: '#00f0ff', fontWeight: '700' }}>
+        Algo {configAlgo}
+      </span>
+      <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+      <span style={{ color: '#bc13fe', fontWeight: '700' }}>
+        {customCycles} cicli
+      </span>
+    </div>
+
     {/* ✅ HEADER LIVE SCORE CON CRONOMETRO */}
     <div style={{
       marginBottom: '20px',
@@ -2094,6 +2206,25 @@ const renderAnimation = () => (
           }}
         >
           ← Torna alla Lista Partite
+        </button>
+        <button
+          onClick={handleResimulate}
+          style={{
+            padding: '15px 30px',
+            background: 'linear-gradient(135deg, #00f0ff, #bc13fe)',
+            border: 'none',
+            borderRadius: '12px',
+            color: '#000',
+            fontSize: '14px',
+            fontWeight: '800',
+            cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          🔄 SIMULA DI NUOVO
         </button>
       </div>
     )}
@@ -4637,6 +4768,320 @@ const renderAnimation = () => (
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-thumb { background: #333; borderRadius: 3px; }
     `}</style>
+
+
+    {/* === POPUP SIMULA DI NUOVO === */}
+    {showResimulatePopup && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        backdropFilter: 'blur(10px)',
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+          borderRadius: '20px',
+          padding: '40px',
+          maxWidth: '500px',
+          width: '90%',
+          border: '1px solid rgba(0, 240, 255, 0.3)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(0, 240, 255, 0.1)',
+        }}>
+          <h2 style={{
+            margin: '0 0 10px 0',
+            fontSize: '24px',
+            fontWeight: '800',
+            background: 'linear-gradient(90deg, #00f0ff, #bc13fe)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            textAlign: 'center',
+          }}>
+            🔄 Simula di Nuovo
+          </h2>
+          
+          <p style={{
+            color: '#888',
+            textAlign: 'center',
+            marginBottom: '30px',
+            fontSize: '14px',
+          }}>
+            {selectedMatch?.home} vs {selectedMatch?.away}
+          </p>
+
+          {/* RIEPILOGO SETTAGGI ATTUALI */}
+          <div style={{
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '30px',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}>
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Settaggi Attuali
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#00f0ff' }}>
+                  {configAlgo}
+                </div>
+                <div style={{ fontSize: '11px', color: '#888' }}>Algoritmo</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#bc13fe' }}>
+                  {customCycles}
+                </div>
+                <div style={{ fontSize: '11px', color: '#888' }}>Cicli</div>
+              </div>
+            </div>
+          </div>
+
+          {/* BOTTONI */}
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button
+              onClick={handleKeepSettings}
+              style={{
+                flex: 1,
+                padding: '16px 24px',
+                background: 'linear-gradient(135deg, #00f0ff, #0080ff)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#000',
+                fontSize: '14px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
+              }}
+            >
+              ✅ MANTIENI E SIMULA
+            </button>
+            
+            <button
+              onClick={handleModifySettings}
+              style={{
+                flex: 1,
+                padding: '16px 24px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '2px solid rgba(255,255,255,0.2)',
+                borderRadius: '12px',
+                color: '#fff',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+              }}
+            >
+              ⚙️ MODIFICA
+            </button>
+          </div>
+
+          {/* CHIUDI */}
+          <button
+            onClick={() => setShowResimulatePopup(false)}
+            style={{
+              width: '100%',
+              marginTop: '15px',
+              padding: '12px',
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              color: '#666',
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            ✕ Annulla
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* === POPUP MODIFICA SETTAGGI === */}
+    {showSettingsPopup && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        backdropFilter: 'blur(10px)',
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+          borderRadius: '20px',
+          padding: '40px',
+          maxWidth: '450px',
+          width: '90%',
+          border: '1px solid rgba(188, 19, 254, 0.3)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(188, 19, 254, 0.1)',
+        }}>
+          <h2 style={{
+            margin: '0 0 30px 0',
+            fontSize: '22px',
+            fontWeight: '800',
+            color: '#fff',
+            textAlign: 'center',
+          }}>
+            ⚙️ Modifica Settaggi
+          </h2>
+
+          {/* ALGORITMO */}
+          <div style={{ marginBottom: '25px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: '#888',
+              marginBottom: '10px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}>
+              Algoritmo
+            </label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[1, 2, 3, 4, 5].map(algo => (
+                <button
+                  key={algo}
+                  onClick={() => setTempAlgo(algo)}
+                  style={{
+                    flex: '1 1 auto',
+                    minWidth: '60px',
+                    padding: '12px 8px',
+                    background: tempAlgo === algo 
+                      ? 'linear-gradient(135deg, #bc13fe, #8b5cf6)' 
+                      : 'rgba(255,255,255,0.05)',
+                    border: tempAlgo === algo 
+                      ? 'none' 
+                      : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    color: tempAlgo === algo ? '#fff' : '#888',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {algo}
+                </button>
+              ))}
+            </div>
+            <div style={{ 
+              marginTop: '8px', 
+              fontSize: '11px', 
+              color: '#666',
+              textAlign: 'center',
+            }}>
+              {tempAlgo === 1 && 'Statistica Pura'}
+              {tempAlgo === 2 && 'Dinamico (Forma)'}
+              {tempAlgo === 3 && 'Tattico (Complesso)'}
+              {tempAlgo === 4 && 'Caos Estremo'}
+              {tempAlgo === 5 && 'Master (Ensemble)'}
+            </div>
+          </div>
+
+          {/* CICLI */}
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: '#888',
+              marginBottom: '10px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}>
+              Numero Cicli
+            </label>
+            <input
+              type="number"
+              value={tempCycles}
+              onChange={(e) => setTempCycles(Math.max(1, parseInt(e.target.value) || 1))}
+              style={{
+                width: '100%',
+                padding: '14px 18px',
+                background: 'rgba(0,0,0,0.4)',
+                border: '2px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px',
+                color: '#fff',
+                fontSize: '20px',
+                fontWeight: '700',
+                textAlign: 'center',
+                fontFamily: 'monospace',
+              }}
+            />
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: '8px', 
+              marginTop: '10px' 
+            }}>
+              {[20, 50, 100, 250, 500].map(c => (
+                <button
+                  key={c}
+                  onClick={() => setTempCycles(c)}
+                  style={{
+                    padding: '6px 12px',
+                    background: tempCycles === c 
+                      ? 'rgba(0, 240, 255, 0.2)' 
+                      : 'rgba(255,255,255,0.05)',
+                    border: tempCycles === c 
+                      ? '1px solid rgba(0, 240, 255, 0.5)' 
+                      : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px',
+                    color: tempCycles === c ? '#00f0ff' : '#666',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* BOTTONI */}
+          <button
+            onClick={handleConfirmNewSettings}
+            style={{
+              width: '100%',
+              padding: '16px 24px',
+              background: 'linear-gradient(135deg, #bc13fe, #8b5cf6)',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#fff',
+              fontSize: '15px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(188, 19, 254, 0.4)',
+              marginBottom: '12px',
+            }}
+          >
+            🚀 AVVIA SIMULAZIONE
+          </button>
+          
+          <button
+            onClick={() => setShowSettingsPopup(false)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              color: '#666',
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            ← Indietro
+          </button>
+        </div>
+      </div>
+    )}
 
       {/* TOP BAR UNIFICATA */}
       <div style={styles.topBar}>

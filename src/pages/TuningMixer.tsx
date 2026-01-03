@@ -343,22 +343,37 @@ const TuningMixer: React.FC = () => {
               <span>PESI MOTORE</span>
             </div>
             <div style={styles.colContent}>
-              {ordineMotore.map(key => (
+            {ordineMotore.map(key => {
+            // Range specifici per ogni peso
+            let minVal = 0;
+            const maxVal = 10;
+            
+            // Questi possono andare in negativo
+            if (key === 'PESO_RATING_ROSA' || 
+                key === 'PESO_FORMA_RECENTE' || 
+                key === 'PESO_BVS_QUOTE' || 
+                key === 'PESO_AFFIDABILITA' || 
+                key === 'PESO_VALORE_ROSA') {
+                minVal = -5;
+            }
+            
+            return (
                 <SliderRow
-                  key={key}
-                  paramKey={key}
-                  value={currentData[key]?.valore ?? DEFAULTS[key]}
-                  defaultValue={DEFAULTS[key]}
-                  isLocked={paramLocks[key] || false}
-                  isModified={modifiedParams.has(key)}
-                  source={currentData[key]?.source || 'default'}
-                  color={currentColor}
-                  onChange={handleParamChange}
-                  onToggleLock={toggleParamLock}
-                  min={-2}
-                  max={10}
+                key={key}
+                paramKey={key}
+                value={currentData[key]?.valore ?? DEFAULTS[key]}
+                defaultValue={DEFAULTS[key]}
+                isLocked={paramLocks[key] || false}
+                isModified={modifiedParams.has(key)}
+                source={currentData[key]?.source || 'default'}
+                color={currentColor}
+                onChange={handleParamChange}
+                onToggleLock={toggleParamLock}
+                min={minVal}
+                max={maxVal}
                 />
-              ))}
+            );
+            })}
             </div>
           </div>
 
@@ -369,22 +384,41 @@ const TuningMixer: React.FC = () => {
               <span>PARAMETRI GOL</span>
             </div>
             <div style={styles.colContent}>
-              {ordineGol.map(key => (
+            {ordineGol.map(key => {
+            let minVal = 0;
+            let maxVal = 20;
+            
+            if (key === 'DIVISORE_MEDIA_GOL') {
+                minVal = 0.1;  // Mai zero - causa crash
+                maxVal = 10;
+            } else if (key === 'IMPATTO_DIFESA_TATTICA') {
+                minVal = 0.1;  // Mai zero - causa crash
+                maxVal = 50;
+            } else if (key === 'POTENZA_FAVORITA_WINSHIFT') {
+                minVal = -1;   // Può andare negativo
+                maxVal = 1;
+            } else if (key === 'TETTO_MAX_GOL_ATTESI') {
+                minVal = 0.5;
+                maxVal = 10;
+            }
+            
+            return (
                 <SliderRow
-                  key={key}
-                  paramKey={key}
-                  value={currentData[key]?.valore ?? DEFAULTS[key]}
-                  defaultValue={DEFAULTS[key]}
-                  isLocked={paramLocks[key] || false}
-                  isModified={modifiedParams.has(key)}
-                  source={currentData[key]?.source || 'default'}
-                  color={currentColor}
-                  onChange={handleParamChange}
-                  onToggleLock={toggleParamLock}
-                  min={key.includes('WINSHIFT') ? 0 : 0.5}
-                  max={key.includes('DIFESA') ? 50 : 20}
+                key={key}
+                paramKey={key}
+                value={currentData[key]?.valore ?? DEFAULTS[key]}
+                defaultValue={DEFAULTS[key]}
+                isLocked={paramLocks[key] || false}
+                isModified={modifiedParams.has(key)}
+                source={currentData[key]?.source || 'default'}
+                color={currentColor}
+                onChange={handleParamChange}
+                onToggleLock={toggleParamLock}
+                min={minVal}
+                max={maxVal}
                 />
-              ))}
+            );
+            })}
             </div>
           </div>
 

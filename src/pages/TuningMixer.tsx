@@ -226,9 +226,41 @@ const TuningMixer: React.FC = () => {
   };
 
   const handleParamChange = (key: string, value: number) => {
+    // Definisci i limiti per ogni parametro
+    const limits: Record<string, { min: number; max: number }> = {
+      // Pesi che possono andare in negativo
+      PESO_RATING_ROSA: { min: -5, max: 10 },
+      PESO_FORMA_RECENTE: { min: -5, max: 10 },
+      PESO_BVS_QUOTE: { min: -5, max: 10 },
+      PESO_AFFIDABILITA: { min: -5, max: 10 },
+      PESO_VALORE_ROSA: { min: -5, max: 10 },
+      // Pesi solo positivi
+      PESO_MOTIVAZIONE: { min: 0, max: 10 },
+      PESO_FATTORE_CAMPO: { min: 0, max: 10 },
+      PESO_STORIA_H2H: { min: 0, max: 10 },
+      // Parametri gol
+      DIVISORE_MEDIA_GOL: { min: 0.1, max: 10 },
+      POTENZA_FAVORITA_WINSHIFT: { min: -1, max: 1 },
+      IMPATTO_DIFESA_TATTICA: { min: 0.1, max: 50 },
+      TETTO_MAX_GOL_ATTESI: { min: 0.5, max: 10 },
+      // Soglie
+      THR_1X2_RED: { min: 0, max: 100 },
+      THR_1X2_GREEN: { min: 0, max: 100 },
+      THR_UO_RED: { min: 0, max: 100 },
+      THR_UO_GREEN: { min: 0, max: 100 },
+      THR_GG_RED: { min: 0, max: 100 },
+      THR_GG_GREEN: { min: 0, max: 100 },
+    };
+  
+    // Applica i limiti
+    let clampedValue = value;
+    if (limits[key]) {
+      clampedValue = Math.max(limits[key].min, Math.min(limits[key].max, value));
+    }
+  
     setCurrentData(prev => ({
       ...prev,
-      [key]: { ...prev[key], valore: value }
+      [key]: { ...prev[key], valore: clampedValue }
     }));
     setModifiedParams(prev => new Set(prev).add(key));
   };

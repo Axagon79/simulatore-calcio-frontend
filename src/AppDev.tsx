@@ -2149,7 +2149,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           marginTop: '10px', 
           color: theme.cyan, 
           letterSpacing: '2px', 
-          marginTop: '10px',
           marginBottom: '10px',
           fontSize: '10px', 
           animation: 'pulse 2s infinite',

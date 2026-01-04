@@ -266,15 +266,30 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center', justifyContent: 'center', position: 'relative'
   },
   pitch: {
-    width: '80%', maxWidth: '700px', height: '300px',marginLeft: '100px',marginTop: '40px',
-    border: `2px solid ${theme.cyan}`, borderRadius: '10px',
-    position: 'relative', overflow: 'hidden', background: 'rgba(0, 240, 255, 0.05)',
-    boxShadow: `0 0 30px rgba(0,240,255,0.1)`
+    width: '80%', 
+    maxWidth: '700px', 
+    height: '300px',
+    marginLeft: '100px',
+    marginTop: '40px',
+    border: `1px solid rgba(255, 255, 255, 0.2)`,
+    borderRadius: '10px',
+    position: 'relative', 
+    overflow: 'hidden', 
+    background: 'linear-gradient(135deg, #0a4d2e 0%, #0d6b3f 50%, #0a4d2e 100%)',
+    boxShadow: `
+      0 0 20px rgba(255, 255, 255, 0.1),
+      inset 0 0 100px rgba(0, 0, 0, 0.3)
+    `
   },
   momentumBar: {
-    height: '100%', width: '10px', background: theme.purple,
-    position: 'absolute', top: 0, left: '50%',
-    transition: 'all 0.5s ease-out', boxShadow: `0 0 20px ${theme.purple}`
+    height: '100%',
+    width: '4px',
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    transition: 'left 0.5s ease-out',
+    zIndex: 10,
+    pointerEvents: 'none'
   },
   timerDisplay: {
     fontSize: '48px', fontWeight: '900', color: theme.text,
@@ -1789,8 +1804,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             background: 'rgba(0, 0, 0, 0.95)',
             marginTop: '-20px',
             backdropFilter: 'blur(20px)',
+            marginLeft: '300px',
             margin: '0 auto',
-            padding: '15px 30px',
+            padding: '15px 20px',
             borderRadius: '16px',
             border: '2px solid rgba(0, 240, 255, 0.3)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
@@ -1801,6 +1817,49 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             justifyContent: 'space-between'
           }}
         >
+          {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
+          <div style={{
+                width: isMobile ? '30px' : '130px',
+                flexShrink: 0, // Leggermente più largo per ospitare il testo in linea
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+              }}>
+                {/* Il Contenitore "Capsula" */}
+                <div style={{
+                  display: 'flex',
+                  height: '30px',
+                  alignItems: 'center',
+                  gap: '2px',
+                  background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
+                  padding: isMobile ? '4px 8px' : '5px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(0, 240, 255, 0.1)', // Bordino ciano sottile
+                }}>
+                  {/* DATA */}
+                  <span style={{
+                    fontSize: '13px',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 'bold'
+                  }}>
+                    {(selectedMatch as any).date_obj
+                      ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+                      : '00/00'}
+                  </span>
+
+                  {/* Separatore verticale sottile */}
+                  <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+
+                  {/* ORA */}
+                  <span style={{
+                    fontSize: '13px',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 'bold'
+                  }}>
+                    {(selectedMatch as any).match_time || '--:--'}
+                  </span>
+                </div>
+              </div>
           {/* CRONOMETRO */}
           <div style={{ width: '55px', textAlign: 'center' }}>
             <div style={{
@@ -1971,21 +2030,251 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               )}
   
               {/* Linea di metà campo */}
-              <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
+              <div style={{ 
+                position: 'absolute', 
+                left: '50%', 
+                height: '100%', 
+                borderLeft: '2px solid rgba(255,255,255,0.5)',
+                boxShadow: '0 0 10px rgba(255,255,255,0.3)'
+              }}></div>
+
+              <div style={{ 
+                position: 'absolute', 
+                top: '50%', 
+                left: '50%', 
+                transform: 'translate(-50%, -50%)', 
+                width: '80px', 
+                height: '80px', 
+                border: '2px solid rgba(255,255,255,0.5)', 
+                borderRadius: '50%',
+                boxShadow: '0 0 10px rgba(255,255,255,0.2)'
+              }}></div>
   
               {/* Area grande SINISTRA (casa) */}
-              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderRight: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
   
               {/* Area piccola SINISTRA (casa) */}
-              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderRight: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
   
               {/* Area grande DESTRA (ospite) */}
-              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderLeft: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
   
               {/* Area piccola DESTRA (ospite) */}
-              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
-  
+              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderLeft: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
+               
+              {/* Dischetto rigore CASA */}
+              <div style={{
+                position: 'absolute',
+                left: '11%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.7)',
+                boxShadow: '0 0 8px rgba(255,255,255,0.5)'
+              }}></div>
+
+              {/* Dischetto rigore OSPITE */}
+              <div style={{
+                position: 'absolute',
+                right: '11%',
+                top: '50%',
+                transform: 'translate(50%, -50%)',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.7)',
+                boxShadow: '0 0 8px rgba(255,255,255,0.5)'
+              }}></div>
+
+              {/* Punto centrale */}
+              <div style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.8)',
+                boxShadow: '0 0 8px rgba(255,255,255,0.6)',
+                zIndex: 5
+              }}></div>
+
+              {/* Mezzaluna area rigore CASA - semicerchio che sporge FUORI dall'area */}
+              <div style={{
+                position: 'absolute',
+                left: '85%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                border: '2px solid rgba(255,255,255,0.5)',
+                borderLeft: '50%',
+                clipPath: 'inset(0 50px 0 0)'
+              }}></div>
+
+              {/* Mezzaluna area rigore OSPITE - semicerchio che sporge FUORI dall'area */}
+              <div style={{
+                position: 'absolute',
+                left: '15%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                border: '2px solid rgba(255,255,255,0.5)',
+                borderLeft: '50%',
+                clipPath: 'inset(0 0 0 50px)'
+              }}></div>
+
+              {/* Archi d'angolo PIÙ PICCOLI MA PIÙ GROSSI - ALTO SX */}
+              <div style={{
+                position: 'absolute',
+                left: '-8px',
+                top: '-8px',
+                width: '16px',
+                height: '16px',
+                border: '3px solid rgba(255,255,255,0.7)',
+                borderRadius: '50%',
+                borderRight: 'none',
+                borderBottom: 'none'
+              }}></div>
+
+              {/* Archi d'angolo - BASSO SX */}
+              <div style={{
+                position: 'absolute',
+                left: '-8px',
+                bottom: '-8px',
+                width: '16px',
+                height: '16px',
+                border: '3px solid rgba(255,255,255,0.7)',
+                borderRadius: '50%',
+                borderRight: 'none',
+                borderTop: 'none'
+              }}></div>
+
+              {/* Archi d'angolo - ALTO DX */}
+              <div style={{
+                position: 'absolute',
+                right: '-8px',
+                top: '-8px',
+                width: '16px',
+                height: '16px',
+                border: '3px solid rgba(255,255,255,0.7)',
+                borderRadius: '50%',
+                borderLeft: 'none',
+                borderBottom: 'none'
+              }}></div>
+
+              {/* Archi d'angolo - BASSO DX */}
+              <div style={{
+                position: 'absolute',
+                right: '-8px',
+                bottom: '-8px',
+                width: '16px',
+                height: '16px',
+                border: '3px solid rgba(255,255,255,0.7)',
+                borderRadius: '50%',
+                borderLeft: 'none',
+                borderTop: 'none'
+              }}></div>
+
+              {/* Bandierine FUORI DAL CAMPO - ALTO SX */}
+              <div style={{
+                position: 'absolute',
+                left: '-3px',
+                top: '-3px',
+                width: '2px',
+                height: '20px',
+                background: 'rgba(255,255,255,0.8)',
+                transform: 'rotate(0deg)',
+                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  left: '2px',
+                  width: 0,
+                  height: 0,
+                  borderLeft: '10px solid rgba(255,60,60,0.9)',
+                  borderTop: '7px solid transparent',
+                  borderBottom: '7px solid transparent',
+                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
+                }}></div>
+              </div>
+
+              {/* Bandierine - BASSO SX */}
+              <div style={{
+                position: 'absolute',
+                left: '-3px',
+                bottom: '-3px',
+                width: '2px',
+                height: '20px',
+                background: 'rgba(255,255,255,0.8)',
+                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  left: '2px',
+                  width: 0,
+                  height: 0,
+                  borderLeft: '10px solid rgba(255,60,60,0.9)',
+                  borderTop: '7px solid transparent',
+                  borderBottom: '7px solid transparent',
+                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
+                }}></div>
+              </div>
+
+              {/* Bandierine - ALTO DX */}
+              <div style={{
+                position: 'absolute',
+                right: '-3px',
+                top: '-3px',
+                width: '2px',
+                height: '20px',
+                background: 'rgba(255,255,255,0.8)',
+                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '2px',
+                  width: 0,
+                  height: 0,
+                  borderRight: '10px solid rgba(255,60,60,0.9)',
+                  borderTop: '7px solid transparent',
+                  borderBottom: '7px solid transparent',
+                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
+                }}></div>
+              </div>
+
+              {/* Bandierine - BASSO DX */}
+              <div style={{
+                position: 'absolute',
+                right: '-3px',
+                bottom: '-3px',
+                width: '2px',
+                height: '20px',
+                background: 'rgba(255,255,255,0.8)',
+                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '2px',
+                  width: 0,
+                  height: 0,
+                  borderRight: '10px solid rgba(255,60,60,0.9)',
+                  borderTop: '7px solid transparent',
+                  borderBottom: '7px solid transparent',
+                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
+                }}></div>
+              </div>
+
               {/* ✅ MAGLIETTE GIOCATORI DURANTE RISCALDAMENTO */}
               {isWarmingUp && formations && (
                 <>
@@ -2020,13 +2309,45 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 </>
               )}
   
-              {/* Barra Momentum */}
+              {/* Barra Momentum con Scia */}
               <div style={{
-                ...styles.momentumBar,
-                left: `${momentum}%`,
-                width: '4px',
-                boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
-              }} />
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                pointerEvents: 'none',
+                overflow: 'hidden'
+              }}>
+                {/* SCIA SFUMATA */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: `${momentum}%`,
+                  width: '700px',
+                  height: '100%',
+                  background: momentum > 50 
+                    ? `linear-gradient(to left, ${theme.cyan}40, ${theme.cyan}20, transparent)`
+                    : `linear-gradient(to right, ${theme.danger}40, ${theme.danger}20, transparent)`,
+                  transform: momentum > 50 ? 'translateX(-700px)' : 'translateX(0)',
+                  transition: 'left 0.5s ease-out, background 0.3s ease',
+                  opacity: 0.6,
+                  filter: 'blur(3px)',
+                  zIndex: 1
+                }} />
+                
+                {/* BARRA PRINCIPALE */}
+                <div style={{
+                  ...styles.momentumBar,
+                  left: `${momentum}%`,
+                  background: momentum > 50 ? theme.cyan : theme.danger,
+                  boxShadow: `
+                    0 0 15px 3px ${momentum > 50 ? theme.cyan : theme.danger},
+                    0 0 30px 6px ${momentum > 50 ? theme.cyan : theme.danger}80
+                  `,
+                  filter: 'brightness(1.2)'
+                }} />
+              </div>
             </div>
           </div>
   
@@ -2075,6 +2396,25 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             </div>
           </div>
         </div>
+
+        <div style={{
+          position: 'absolute',    /* <--- FONDAMENTALE: Lo stacca dai bottoni */
+          marginTop: '-140px', 
+                     /* <--- MODIFICA QUI: Metti -50px per alzarlo, 0px per abbassarlo */
+          marginLeft: '-350px',               /* <--- Lo tiene ancorato a sinistra */
+          width: '100%',           /* <--- Lo centra perfettamente */
+          
+          /* IL TUO STILE (Mantenuto) */
+          textAlign: 'center',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: theme.success,
+          textShadow: `0 0 10px ${theme.success}`,
+          animation: 'pulse 2s infinite',
+          pointerEvents: 'none'    /* <--- Importante: Così se finisce sopra un bottone, puoi comunque cliccare il bottone */
+      }}>
+          ✅ Partita Terminata - Verifica gli Eventi
+      </div>
   
         {/* ✅ BARRA RISCALDAMENTO */}
         {isWarmingUp && (
@@ -2155,23 +2495,65 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         </div>
   
         <div style={{ 
-          marginTop: '10px', 
+          position: 'absolute',
+          marginTop: '-30px', 
           color: theme.cyan, 
-          letterSpacing: '2px', 
+          letterSpacing: '2px',
+          marginLeft: '950px', 
           marginBottom: '10px',
           fontSize: '10px', 
           animation: 'pulse 2s infinite',
-          textAlign: 'center'
+          textAlign: 'center',
+          pointerEvents: 'none'
         }}>
           SIMULAZIONE LIVE DAL CORE AI
         </div>
+
+        {/* QUOTE */}
+        <div style={{
+            position: 'absolute',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            height: '40px',
+            marginTop: '-120px',
+            marginLeft: '950px',
+            paddingTop: '12px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            {['1', 'X', '2'].map((label) => {
+              const val = (selectedMatch?.odds as any)[label];
+              return (
+                <div key={label} style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  paddingRight: '35px',
+                  paddingLeft: '25px',
+                  paddingBottom: '20px',
+                  paddingTop: '0px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', marginBottom: '2px' }}>
+                    {label}
+                  </span>
+                  <span style={{ fontSize: '16px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                    {val}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
   
         {/* ✅ BOTTONI FINE PARTITA */}
         {simulationEnded && (
           <div 
             className="sim-end-buttons"
             style={{
-              marginTop: '-30px',
+              marginTop: '-10px',
               marginBottom: '20px',
               display: 'flex',
               flexDirection: 'row',
@@ -2182,18 +2564,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               animation: 'fadeIn 0.5s ease-in'
             }}
           >
-            <div style={{
-              flexBasis: '100%',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: theme.success,
-              textAlign: 'center',
-              textShadow: `0 0 10px ${theme.success}`,
-              animation: 'pulse 2s infinite',
-              marginBottom: '5px'
-            }}>
-              ✅ Partita Terminata - Verifica gli Eventi
-            </div>
+            
   
             <button
               onClick={() => {
@@ -2207,6 +2578,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 borderRadius: '12px',
                 color: '#000',
                 fontSize: '16px',
+                marginLeft: '200px',
                 fontWeight: '900',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
@@ -2238,6 +2610,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 border: `2px solid ${theme.textDim}`,
                 borderRadius: '8px',
                 color: theme.textDim,
+                marginLeft: '-1200px',
                 fontSize: '12px',
                 fontWeight: 'bold',
                 textTransform: 'uppercase',
@@ -2267,6 +2640,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 borderRadius: '12px',
                 color: '#000',
                 fontSize: '14px',
+                marginLeft: '10px',
                 fontWeight: '800',
                 cursor: 'pointer',
                 boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',

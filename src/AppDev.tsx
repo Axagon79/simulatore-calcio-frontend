@@ -887,7 +887,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   
       // ✅ LOGICA EVENTI CON MOMENTUM FLUIDO
       if (finalData.cronaca) {
-        const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === currentMinForEvents);
+        // CALCOLA IL MINUTO CORRETTO ANCHE PER I RECUPERI
+        let minutoEvento = currentMinForEvents;
+        
+        if (isInjuryTime) {
+          const baseMin = t < 60 ? 45 : 90;
+          const extra = Math.floor(injuryTimeCounter);
+          minutoEvento = baseMin + extra;
+        }
+        
+        const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === minutoEvento);
         
         eventiDelMinuto.forEach(event => {
           const eventoId = `${event.minuto}-${event.tipo}-${event.testo}`;

@@ -4,7 +4,7 @@ import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
 import { checkAdmin, PERMISSIONS } from './permissions';
 import SimulationResultView from './components/SimulationResultView';
-
+import './styles/SimulationAnimation.css';
 import { ArrowLeft, /* altre icone */ } from 'lucide-react'; //
 
 // --- INTERFACCE & TIPI ---
@@ -266,7 +266,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center', justifyContent: 'center', position: 'relative'
   },
   pitch: {
-    width: '80%', maxWidth: '700px', height: '280px',
+    width: '80%', maxWidth: '700px', height: '300px',marginLeft: '100px',marginTop: '40px',
     border: `2px solid ${theme.cyan}`, borderRadius: '10px',
     position: 'relative', overflow: 'hidden', background: 'rgba(0, 240, 255, 0.05)',
     boxShadow: `0 0 30px rgba(0,240,255,0.1)`
@@ -281,7 +281,7 @@ const styles: Record<string, React.CSSProperties> = {
     textShadow: `0 0 20px ${theme.cyan}`, marginBottom: '20px'
   },
   eventFeed: {
-    marginTop: '20px', width: '80%', maxWidth: '600px', height: '150px',
+    marginTop: '20px', width: '500px', maxWidth: '600px', height: '300px',marginLeft: '-50px', 
     overflowY: 'auto', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '10px'
   },
 
@@ -1727,509 +1727,563 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   )
 
   // --- FUNZIONE MANCANTE: ANIMAZIONE GRAFICA ---
-const renderAnimation = () => (
-  <div style={{
-    ...styles.animContainer,
-    alignItems: 'center',
-    padding: '20px'
-  }}>
-
-    {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
+  const renderAnimation = () => (
     <div style={{
-      position: 'absolute',
-      top: '15px',
-      left: '15px',
-      background: 'rgba(0, 0, 0, 0.6)',
-      backdropFilter: 'blur(10px)',
-      padding: '8px 14px',
-      borderRadius: '8px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      flex: 1,
+      position: 'relative',
       display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      fontSize: '11px',
-      color: '#888',
-      zIndex: 50,
+      flexDirection: 'column',
+      overflowY: 'auto',
+      padding: '0'
     }}>
-      <span style={{ color: '#00f0ff', fontWeight: '700' }}>
-        Algo {configAlgo}
-      </span>
-      <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-      <span style={{ color: '#bc13fe', fontWeight: '700' }}>
-        {customCycles} cicli
-      </span>
-    </div>
-
-    {/* ✅ HEADER LIVE SCORE CON CRONOMETRO */}
-    <div style={{
-      marginBottom: '20px',
-      background: 'rgba(0, 0, 0, 0.95)',
-      backdropFilter: 'blur(20px)',
-      padding: '15px 30px',
-      borderRadius: '16px',
-      border: '2px solid rgba(0, 240, 255, 0.3)',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-      zIndex: 90,
-      width: isMobile ? '90%' : '580px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    }}>
-      {/* CRONOMETRO */}
-      <div style={{ width: '55px', textAlign: 'center' }}>
-        <div style={{
-          fontSize: isMobile ? '20px' : '24px',
-          fontWeight: '900',
-          color: theme.purple,
-          fontFamily: 'monospace',
-          textShadow: `0 0 10px ${theme.purple}`
-        }}>
-          {timer}'
-        </div>
-      </div>
-
-      {/* SQUADRA CASA */}
-      <div style={{ width: '120px', textAlign: 'right' }}>
-        <div style={{
-          fontSize: '10px',
-          color: theme.cyan,
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          opacity: 0.7,
-          marginBottom: '2px'
-        }}>Casa</div>
-        <div style={{
-          fontSize: isMobile ? '14px' : '16px',
-          fontWeight: '900',
-          color: 'white',
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>{selectedMatch?.home}</div>
-      </div>
-
-      {/* PUNTEGGIO CENTRALE */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 16px',
-        background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
-        borderRadius: '10px',
-        border: '1px solid rgba(0, 240, 255, 0.3)'
+        padding: '30px 30px 0px 30px',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        width: '100%'
       }}>
-        <div style={{
-          fontSize: isMobile ? '24px' : '30px',
-          fontWeight: '900',
-          color: theme.cyan,
-          fontFamily: 'monospace',
-          textShadow: `0 0 10px ${theme.cyan}`,
-          width: '30px',
-          textAlign: 'center'
-        }}>{liveScore.home}</div>
-        <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
-        <div style={{
-          fontSize: isMobile ? '24px' : '30px',
-          fontWeight: '900',
-          color: theme.danger,
-          fontFamily: 'monospace',
-          textShadow: `0 0 10px ${theme.danger}`,
-          width: '30px',
-          textAlign: 'center'
-        }}>{liveScore.away}</div>
-      </div>
-
-      {/* SQUADRA OSPITE */}
-      <div style={{ width: '120px', textAlign: 'left' }}>
-        <div style={{
-          fontSize: '10px',
-          color: theme.danger,
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          opacity: 0.7,
-          marginBottom: '2px'
-        }}>Ospite</div>
-        <div style={{
-          fontSize: isMobile ? '14px' : '16px',
-          fontWeight: '900',
-          color: 'white',
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>{selectedMatch?.away}</div>
-      </div>
-    </div>
-
-    {/* ✅ MODULI SQUADRE */}
-    {isWarmingUp && formations && (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        width: isMobile ? '90%' : '900px',
-        marginBottom: '10px'
-      }}>
-        <span style={{
-          color: theme.cyan,
-          fontSize: '16px',
-          fontWeight: 'bold',
-          textShadow: `0 0 8px ${theme.cyan}`,
-          marginLeft: '10px'
-        }}>
-          {normalizeModulo(formations.home_formation?.modulo || '4-3-3')}
-        </span>
-        <span style={{
-          color: theme.danger,
-          fontSize: '16px',
-          fontWeight: 'bold',
-          textShadow: `0 0 8px ${theme.danger}`,
-          marginRight: '320px'
-        }}>
-          {normalizeModulo(formations.away_formation?.modulo || '4-3-3')}
-        </span>
-      </div>
-    )}
-
-    {/* ✅ CONTENITORE CAMPO + CRONACA AFFIANCATI */}
-    <div style={{
-      display: 'flex',
-      gap: '30px',
-      width: '100%',
-      maxWidth: '1100px',
-      justifyContent: 'center',
-      alignItems: 'stretch'
-    }}>
-      
-      {/* CAMPO DA GIOCO */}
-      <div style={{
-        ...styles.pitch,
-        width: '70%',
-        minWidth: '350px',
-        maxWidth: '800px',
-        height: '380px',
-        marginTop: '25px',
-        flexShrink: 0
-      }}>
-        {pitchMsg && (
-          <div style={{
+  
+        {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
+        <div 
+          className="sim-badges-top"
+          style={{
             position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            zIndex: 100,
-            pointerEvents: 'none'
-          }}>
+            top: '10px',
+            left: '10px',
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(10px)',
+            padding: '8px 14px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '11px',
+            color: '#888',
+            zIndex: 50,
+          }}
+        >
+          <span style={{ color: '#00f0ff', fontWeight: '700' }}>
+            Algo {configAlgo}
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+          <span style={{ color: '#bc13fe', fontWeight: '700' }}>
+            {customCycles} cicli
+          </span>
+        </div>
+  
+        {/* ✅ HEADER LIVE SCORE CON CRONOMETRO */}
+        <div 
+          className="sim-header"
+          style={{
+            marginBottom: '25px',
+            background: 'rgba(0, 0, 0, 0.95)',
+            marginTop: '-20px',
+            backdropFilter: 'blur(20px)',
+            margin: '0 auto',
+            padding: '15px 30px',
+            borderRadius: '16px',
+            border: '2px solid rgba(0, 240, 255, 0.3)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+            zIndex: 90,
+            width: isMobile ? '90%' : '580px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          {/* CRONOMETRO */}
+          <div style={{ width: '55px', textAlign: 'center' }}>
             <div style={{
-              fontSize: '60px',
+              fontSize: isMobile ? '20px' : '24px',
               fontWeight: '900',
-              color: pitchMsg.colore,
-              textShadow: `0 0 20px ${pitchMsg.colore}`,
-              textTransform: 'uppercase',
-              transform: 'rotate(-5deg)',
-              animation: 'pulse 0.6s infinite alternate'
+              color: theme.purple,
+              fontFamily: 'monospace',
+              textShadow: `0 0 10px ${theme.purple}`
             }}>
-              {pitchMsg.testo}
+              {timer}'
             </div>
           </div>
-        )}
-
-        {/* Linea di metà campo */}
-        <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
-
-        {/* Area grande SINISTRA (casa) */}
-        <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
-
-        {/* Area piccola SINISTRA (casa) */}
-        <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
-
-        {/* Area grande DESTRA (ospite) */}
-        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
-
-        {/* Area piccola DESTRA (ospite) */}
-        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
-
-        {/* ✅ MAGLIETTE GIOCATORI DURANTE RISCALDAMENTO */}
-        {isWarmingUp && formations && (
-          <>
-            {(() => {
-              const pos = getFormationPositions(formations.home_formation?.modulo || '4-3-3', true);
-              const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
-              return allPos.map((p, idx) => (
-                <div key={`home-${idx}`} style={{
-                  position: 'absolute',
-                  left: `${p.x}%`,
-                  top: `${p.y}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}>
-                  <JerseySVG color={theme.cyan} size={28} />
-                </div>
-              ));
-            })()}
-            {(() => {
-              const pos = getFormationPositions(formations.away_formation?.modulo || '4-3-3', false);
-              const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
-              return allPos.map((p, idx) => (
-                <div key={`away-${idx}`} style={{
-                  position: 'absolute',
-                  left: `${p.x}%`,
-                  top: `${p.y}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}>
-                  <JerseySVG color={theme.danger} size={28} />
-                </div>
-              ));
-            })()}
-          </>
-        )}
-
-        {/* Barra Momentum */}
-        <div style={{
-          ...styles.momentumBar,
-          left: `${momentum}%`,
-          width: '4px',
-          boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
-        }} />
-      </div>
-
-      {/* CRONACA EVENTI */}
-      <div style={{
-        ...styles.eventFeed,
-        width: '80%',
-        minWidth: '280px',
-        maxWidth: '550px',
-        marginRight: '30px',
-        height: '380px',
-        flexShrink: 0
-      }}>
-        {animEvents.length === 0 ? (
-          <div style={{ color: '#666', textAlign: 'center', fontSize: '12px' }}>
-            Fischio d'inizio...
+  
+          {/* SQUADRA CASA */}
+          <div style={{ width: '120px', textAlign: 'right' }}>
+            <div style={{
+              fontSize: '10px',
+              color: theme.cyan,
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              opacity: 0.7,
+              marginBottom: '2px'
+            }}>Casa</div>
+            <div style={{
+              fontSize: isMobile ? '14px' : '16px',
+              fontWeight: '900',
+              color: 'white',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>{selectedMatch?.home}</div>
           </div>
-        ) : (
-          animEvents.map((e, i) => {
-            const homeUpper = selectedMatch?.home.toUpperCase() || '';
-            const awayUpper = selectedMatch?.away.toUpperCase() || '';
-            const isCasa = e.includes(`[${homeUpper}]`);
-            const isOspite = e.includes(`[${awayUpper}]`);
-            const isSistema = e.includes('[SISTEMA]');
-
-            return (
-              <div key={i} style={{
-                marginBottom: '5px',
-                fontSize: '13px',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                paddingBottom: '2px',
-                textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
-                color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
-                fontWeight: isSistema ? 'bold' : 'normal',
-                paddingLeft: isCasa ? '10px' : '0',
-                paddingRight: isOspite ? '10px' : '0'
-              }}>
-                {e}
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-
-    {/* ✅ BARRA RISCALDAMENTO */}
-    {isWarmingUp && (
-      <div style={{ width: '100%', maxWidth: '900px', marginTop: '15px' }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px'
-        }}>
-          <span style={{ color: theme.cyan, fontSize: '14px', fontWeight: 'bold' }}>
-            🏃 RISCALDAMENTO PRE-PARTITA
-          </span>
-          <span style={{ color: theme.text, fontSize: '14px' }}>
-            {Math.round(warmupProgress)}%
-          </span>
-        </div>
-        <div style={{
-          width: '100%',
-          height: '8px',
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}>
+  
+          {/* PUNTEGGIO CENTRALE */}
           <div style={{
-            width: `${warmupProgress}%`,
-            height: '100%',
-            backgroundColor: theme.cyan,
-            boxShadow: `0 0 10px ${theme.cyan}`,
-            transition: 'width 0.3s ease'
-          }} />
-        </div>
-      </div>
-    )}
-
-    {/* ✅ BOTTONE FORMAZIONI */}
-    {formations && (
-      <button
-        onClick={() => {
-          setShowFormationsPopup(true);
-          setPopupOpacity(1);
-        }}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '80px',
-          background: 'rgba(0,0,0,0.7)',
-          border: `1px solid ${theme.cyan}`,
-          borderRadius: '8px',
-          padding: '8px 12px',
-          color: theme.cyan,
-          cursor: 'pointer',
-          fontSize: '12px',
-          zIndex: 50
-        }}
-      >
-        📋 Formazioni
-      </button>
-    )}
-
-    {/* ✅ BOTTONE RIEPILOGO PARTITA */}
-    {simulationEnded && (
-      <button
-        onClick={() => setShowMatchSummary(true)}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '180px',
-          background: 'rgba(0,0,0,0.7)',
-          border: `1px solid ${theme.purple}`,
-          borderRadius: '8px',
-          padding: '8px 12px',
-          marginRight: '20px',
-          color: theme.purple,
-          cursor: 'pointer',
-          fontSize: '12px',
-          zIndex: 50
-        }}
-      >
-        📊 Riepilogo
-      </button>
-    )}
-
-    <div style={{ marginTop: '20px', color: theme.cyan, letterSpacing: '2px', fontSize: '10px', animation: 'pulse 2s infinite' }}>
-      SIMULAZIONE LIVE DAL CORE AI
-    </div>
-
-    {/* ✅ BOTTONI FINE PARTITA */}
-    {simulationEnded && (
-      <div style={{
-        marginTop: '20px',
-        marginBottom: '20px',
-
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '15px',
-        animation: 'fadeIn 0.5s ease-in'
-      }}>
-        <div style={{
-          fontSize: '16px',
-          fontWeight: 'bold',
-          color: theme.success,
-          textAlign: 'center',
-          textShadow: `0 0 10px ${theme.success}`,
-          animation: 'pulse 2s infinite'
-        }}>
-          ✅ Partita Terminata - Verifica gli Eventi
-        </div>
-
-        <button
-          onClick={() => {
-            setViewState('result');
-            setSimulationEnded(false);
-          }}
-          style={{
-            padding: '15px 40px',
-            background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-            border: 'none',
-            borderRadius: '12px',
-            marginRight: '20px',
-            color: '#000',
-            fontSize: '16px',
-            fontWeight: '900',
-            marginTop: '20px',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            boxShadow: `0 0 30px rgba(0, 240, 255, 0.5)`,
-            transition: 'all 0.3s ease',
-            letterSpacing: '1px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
-          }}
-        >
-          📊 VAI AL RESOCONTO COMPLETO
-        </button>
-
-        <button
-          onClick={() => {
-            setViewState('list');
-            setSimulationEnded(false);
-            setSimResult(null);
-          }}
-          style={{
-            padding: '10px 30px',
-            background: 'transparent',
-            border: `2px solid ${theme.textDim}`,
-            borderRadius: '8px',
-            color: theme.textDim,
-            fontSize: '12px',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = theme.cyan;
-            e.currentTarget.style.color = theme.cyan;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = theme.textDim;
-            e.currentTarget.style.color = theme.textDim;
-          }}
-        >
-          ← Torna alla Lista Partite
-        </button>
-        <button
-          onClick={handleResimulate}
-          style={{
-            padding: '15px 30px',
-            background: 'linear-gradient(135deg, #00f0ff, #bc13fe)',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#000',
-            fontSize: '14px',
-            fontWeight: '800',
-            cursor: 'pointer',
-            boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
+            padding: '6px 16px',
+            background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
+            borderRadius: '10px',
+            border: '1px solid rgba(0, 240, 255, 0.3)'
+          }}>
+            <div style={{
+              fontSize: isMobile ? '24px' : '30px',
+              fontWeight: '900',
+              color: theme.cyan,
+              fontFamily: 'monospace',
+              textShadow: `0 0 10px ${theme.cyan}`,
+              width: '30px',
+              textAlign: 'center'
+            }}>{liveScore.home}</div>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
+            <div style={{
+              fontSize: isMobile ? '24px' : '30px',
+              fontWeight: '900',
+              color: theme.danger,
+              fontFamily: 'monospace',
+              textShadow: `0 0 10px ${theme.danger}`,
+              width: '30px',
+              textAlign: 'center'
+            }}>{liveScore.away}</div>
+          </div>
+  
+          {/* SQUADRA OSPITE */}
+          <div style={{ width: '120px', textAlign: 'left' }}>
+            <div style={{
+              fontSize: '10px',
+              color: theme.danger,
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              opacity: 0.7,
+              marginBottom: '2px'
+            }}>Ospite</div>
+            <div style={{
+              fontSize: isMobile ? '14px' : '16px',
+              fontWeight: '900',
+              color: 'white',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>{selectedMatch?.away}</div>
+          </div>
+        </div>
+
+  
+        {/* ✅ CONTENITORE CAMPO + CRONACA AFFIANCATI */}
+        <div 
+          className="sim-main-layout"
+          style={{
+            display: 'flex',
+            gap: '25px',
+            width: '100%',
+            justifyContent: 'center',
+            alignItems: 'stretch'
           }}
         >
-          🔄 SIMULA DI NUOVO
-        </button>
+          
+          
+          {/* CAMPO DA GIOCO */}
+          <div 
+            className="sim-field-section"
+            style={{
+              flexShrink: 0
+            }}
+          >
+            <div 
+              className="sim-pitch"
+              style={{
+                ...styles.pitch,
+                marginTop: '25px'
+              }}
+            >
+            {/* ✅ MODULI SQUADRE */}
+            {isWarmingUp && formations && (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        width: isMobile ? '90%' : '900px',
+                        marginBottom: '10px'
+                      }}>
+                        <span style={{
+                          color: theme.cyan,
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          textShadow: `0 0 8px ${theme.cyan}`,
+                          marginLeft: '10px'
+                        }}>
+                          {normalizeModulo(formations.home_formation?.modulo || '4-3-3')}
+                        </span>
+                        <span style={{
+                          color: theme.danger,
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          textShadow: `0 0 8px ${theme.danger}`,
+                          marginRight: '250px'
+                        }}>
+                          {normalizeModulo(formations.away_formation?.modulo || '4-3-3')}
+                        </span>
+                      </div>
+                    )}
+
+              {pitchMsg && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  zIndex: 100,
+                  pointerEvents: 'none'
+                }}>
+                  <div style={{
+                    fontSize: '60px',
+                    fontWeight: '900',
+                    color: pitchMsg.colore,
+                    textShadow: `0 0 20px ${pitchMsg.colore}`,
+                    textTransform: 'uppercase',
+                    transform: 'rotate(-5deg)',
+                    animation: 'pulse 0.6s infinite alternate'
+                  }}>
+                    {pitchMsg.testo}
+                  </div>
+                </div>
+              )}
+  
+              {/* Linea di metà campo */}
+              <div style={{ position: 'absolute', left: '50%', height: '100%', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%' }}></div>
+  
+              {/* Area grande SINISTRA (casa) */}
+              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+  
+              {/* Area piccola SINISTRA (casa) */}
+              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderRight: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+  
+              {/* Area grande DESTRA (ospite) */}
+              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+  
+              {/* Area piccola DESTRA (ospite) */}
+              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}></div>
+  
+              {/* ✅ MAGLIETTE GIOCATORI DURANTE RISCALDAMENTO */}
+              {isWarmingUp && formations && (
+                <>
+                  {(() => {
+                    const pos = getFormationPositions(formations.home_formation?.modulo || '4-3-3', true);
+                    const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
+                    return allPos.map((p, idx) => (
+                      <div key={`home-${idx}`} style={{
+                        position: 'absolute',
+                        left: `${p.x}%`,
+                        top: `${p.y}%`,
+                        transform: 'translate(-50%, -50%)'
+                      }}>
+                        <JerseySVG color={theme.cyan} size={28} />
+                      </div>
+                    ));
+                  })()}
+                  {(() => {
+                    const pos = getFormationPositions(formations.away_formation?.modulo || '4-3-3', false);
+                    const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
+                    return allPos.map((p, idx) => (
+                      <div key={`away-${idx}`} style={{
+                        position: 'absolute',
+                        left: `${p.x}%`,
+                        top: `${p.y}%`,
+                        transform: 'translate(-50%, -50%)'
+                      }}>
+                        <JerseySVG color={theme.danger} size={28} />
+                      </div>
+                    ));
+                  })()}
+                </>
+              )}
+  
+              {/* Barra Momentum */}
+              <div style={{
+                ...styles.momentumBar,
+                left: `${momentum}%`,
+                width: '4px',
+                boxShadow: `0 0 30px 5px ${momentum > 50 ? theme.cyan : theme.danger}`
+              }} />
+            </div>
+          </div>
+  
+          {/* CRONACA EVENTI */}
+          <div 
+            className="sim-events-section"
+            style={{
+              flexShrink: 0
+            }}
+          >
+            <div 
+              className="sim-events-feed"
+              style={{
+                ...styles.eventFeed
+              }}
+            >
+              {animEvents.length === 0 ? (
+                <div style={{ color: '#666', textAlign: 'center', fontSize: '12px' }}>
+                  Fischio d'inizio...
+                </div>
+              ) : (
+                animEvents.map((e, i) => {
+                  const homeUpper = selectedMatch?.home.toUpperCase() || '';
+                  const awayUpper = selectedMatch?.away.toUpperCase() || '';
+                  const isCasa = e.includes(`[${homeUpper}]`);
+                  const isOspite = e.includes(`[${awayUpper}]`);
+                  const isSistema = e.includes('[SISTEMA]');
+  
+                  return (
+                    <div key={i} style={{
+                      marginBottom: '5px',
+                      fontSize: '13px',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)',
+                      paddingBottom: '2px',
+                      textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
+                      color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
+                      fontWeight: isSistema ? 'bold' : 'normal',
+                      paddingLeft: isCasa ? '10px' : '0',
+                      paddingRight: isOspite ? '10px' : '0'
+                    }}>
+                      {e}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+  
+        {/* ✅ BARRA RISCALDAMENTO */}
+        {isWarmingUp && (
+          <div style={{ width: '100%', maxWidth: '900px', marginTop: '15px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8px'
+            }}>
+              <span style={{ color: theme.cyan, fontSize: '14px', fontWeight: 'bold' }}>
+                🏃 RISCALDAMENTO PRE-PARTITA
+              </span>
+              <span style={{ color: theme.text, fontSize: '14px' }}>
+                {Math.round(warmupProgress)}%
+              </span>
+            </div>
+            <div style={{
+              width: '100%',
+              height: '8px',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${warmupProgress}%`,
+                height: '100%',
+                backgroundColor: theme.cyan,
+                boxShadow: `0 0 10px ${theme.cyan}`,
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+        )}
+  
+        {/* ✅ BOTTONI TOP RIGHT (FORMAZIONI + RIEPILOGO) */}
+        <div className="sim-top-right-buttons">
+          {/* BOTTONE FORMAZIONI */}
+          {formations && (
+            <button
+              onClick={() => {
+                setShowFormationsPopup(true);
+                setPopupOpacity(1);
+              }}
+              style={{
+                background: 'rgba(0,0,0,0.7)',
+                border: `1px solid ${theme.cyan}`,
+                borderRadius: '8px',
+                padding: '8px 12px',
+                color: theme.cyan,
+                cursor: 'pointer',
+                fontSize: '12px',
+                zIndex: 50
+              }}
+            >
+              📋 Formazioni
+            </button>
+          )}
+  
+          {/* BOTTONE RIEPILOGO PARTITA */}
+          {simulationEnded && (
+            <button
+              onClick={() => setShowMatchSummary(true)}
+              style={{
+                background: 'rgba(0,0,0,0.7)',
+                border: `1px solid ${theme.purple}`,
+                borderRadius: '8px',
+                padding: '8px 12px',
+                color: theme.purple,
+                cursor: 'pointer',
+                fontSize: '12px',
+                zIndex: 50
+              }}
+            >
+              📊 Riepilogo
+            </button>
+          )}
+        </div>
+  
+        <div style={{ 
+          marginTop: '10px', 
+          color: theme.cyan, 
+          letterSpacing: '2px', 
+          marginTop: '10px',
+          marginBottom: '10px',
+          fontSize: '10px', 
+          animation: 'pulse 2s infinite',
+          textAlign: 'center'
+        }}>
+          SIMULAZIONE LIVE DAL CORE AI
+        </div>
+  
+        {/* ✅ BOTTONI FINE PARTITA */}
+        {simulationEnded && (
+          <div 
+            className="sim-end-buttons"
+            style={{
+              marginTop: '-30px',
+              marginBottom: '20px',
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '15px',
+              animation: 'fadeIn 0.5s ease-in'
+            }}
+          >
+            <div style={{
+              flexBasis: '100%',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: theme.success,
+              textAlign: 'center',
+              textShadow: `0 0 10px ${theme.success}`,
+              animation: 'pulse 2s infinite',
+              marginBottom: '5px'
+            }}>
+              ✅ Partita Terminata - Verifica gli Eventi
+            </div>
+  
+            <button
+              onClick={() => {
+                setViewState('result');
+                setSimulationEnded(false);
+              }}
+              style={{
+                padding: '15px 40px',
+                background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+                border: 'none',
+                borderRadius: '12px',
+                color: '#000',
+                fontSize: '16px',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                boxShadow: `0 0 30px rgba(0, 240, 255, 0.5)`,
+                transition: 'all 0.3s ease',
+                letterSpacing: '1px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
+              }}
+            >
+              📊 VAI AL RESOCONTO COMPLETO
+            </button>
+  
+            <button
+              onClick={() => {
+                setViewState('list');
+                setSimulationEnded(false);
+                setSimResult(null);
+              }}
+              style={{
+                padding: '10px 30px',
+                background: 'transparent',
+                border: `2px solid ${theme.textDim}`,
+                borderRadius: '8px',
+                color: theme.textDim,
+                fontSize: '12px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = theme.cyan;
+                e.currentTarget.style.color = theme.cyan;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = theme.textDim;
+                e.currentTarget.style.color = theme.textDim;
+              }}
+            >
+              ← Torna alla Lista Partite
+            </button>
+  
+            <button
+              onClick={handleResimulate}
+              style={{
+                padding: '15px 30px',
+                background: 'linear-gradient(135deg, #00f0ff, #bc13fe)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#000',
+                fontSize: '14px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = `0 4px 20px rgba(0, 240, 255, 0.3)`;
+              }}
+            >
+              🔄 SIMULA DI NUOVO
+            </button>
+          </div>
+        )}
+  
       </div>
-    )}
-  </div>
-);
+    </div>
+  );
    
   const renderPreMatch = () => {
 

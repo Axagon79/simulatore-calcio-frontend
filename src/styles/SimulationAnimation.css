@@ -1,0 +1,417 @@
+/* ========================================
+   SIMULAZIONE LIVE - CSS RESPONSIVE
+   VERSIONE DESKTOP OTTIMIZZATA
+   ======================================== */
+
+/* ========================================
+   CONTAINER PRINCIPALE ANIMAZIONE
+   ======================================== */
+   .sim-animation-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    padding-top: 10px;
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  /* ========================================
+     BADGE ALGORITMO/CICLI (TOP LEFT)
+     ======================================== */
+  .sim-badges-top {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 10px;
+    z-index: 50;
+  }
+  
+  /* ========================================
+     HEADER: TIMER + SCORE + NOMI SQUADRE
+     ======================================== */
+  .sim-header {
+    width: 100%;
+    max-width: 1200px;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  
+  /* ========================================
+     LAYOUT PRINCIPALE: CAMPO + CRONACA
+     DESKTOP: TUTTO GRANDE E AFFIANCATO
+     ======================================== */
+  .sim-main-layout {
+    width: 100%;
+    max-width: 1500px;
+    display: flex;
+    gap: 25px;
+    align-items: flex-start;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+  
+  /* SEZIONE CAMPO - PIÙ GRANDE */
+  .sim-field-section {
+    flex: 1;
+    margin: auto;
+    margin-top: 20px;
+    max-width: 950px;
+    min-width: 600px;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* SEZIONE CRONACA - LARGA COME IL CAMPO */
+  .sim-events-section {
+    flex: 0 0 380px;
+    min-height: 500px;
+    margin-top: 15px;
+    width: 380px;
+    min-width: 550px;
+    max-width: 380px;
+  }
+  
+  /* ========================================
+     CAMPO DA CALCIO - PIÙ GRANDE
+     ======================================== */
+  .sim-pitch {
+    width: 100%;
+    max-width: 950px;
+    margin-right: 200px;
+    aspect-ratio: 1.54; /* 105m x 68m proporzioni reali */
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Desktop: altezza ottimizzata per sfruttare lo schermo */
+  .sim-pitch {
+    max-height: 550px;
+  }
+  
+  /* ========================================
+     CRONACA EVENTI - STESSA ALTEZZA DEL CAMPO
+     ======================================== */
+  .sim-events-feed {
+    width: 100%;
+    margin-top: 40;
+    margin-left: -35px;
+    height: 300px;
+    max-height: 550px;
+    overflow-y: auto;
+  }
+  
+  /* ========================================
+     BOTTONI FINE PARTITA - ORIZZONTALI
+     ======================================== */
+  .sim-end-buttons {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+  }
+  
+  /* Messaggio fine partita */
+  .sim-end-buttons > div:first-child {
+    margin-bottom: 5px;
+  }
+  
+  /* Container bottoni orizzontale */
+  .sim-end-buttons > button,
+  .sim-end-buttons-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* I 3 bottoni affiancati */
+  .sim-end-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+  }
+  
+  /* Il messaggio va sopra, i bottoni sotto */
+  .sim-end-buttons > div:first-child {
+    flex-basis: 100%;
+    text-align: center;
+  }
+  
+  /* ========================================
+     BOTTONI FORMAZIONI/RIEPILOGO (TOP RIGHT)
+     ======================================== */
+  .sim-top-right-buttons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 10px;
+    z-index: 50;
+  }
+  
+  /* ========================================
+     LABEL "SIMULAZIONE LIVE DAL CORE AI"
+     ======================================== */
+  .sim-live-label {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    text-align: center;
+  }
+  
+  /* ========================================
+     MODULI SQUADRE (WARMUP)
+     ======================================== */
+  .sim-formations-warmup {
+    width: 100%;
+    max-width: 1200px;
+    margin-bottom: 10px;
+  }
+  
+  /* ========================================
+     BARRA RISCALDAMENTO
+     ======================================== */
+  .sim-warmup-bar {
+    width: 100%;
+    max-width: 1000px;
+    margin-top: 10px;
+  }
+  
+  /* ========================================
+     FIX SCROLL EVENTI
+     ======================================== */
+  .sim-events-feed::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .sim-events-feed::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+  
+  .sim-events-feed::-webkit-scrollbar-thumb {
+    background: #00f0ff;
+    border-radius: 3px;
+  }
+  
+  /* ========================================
+     UTILITY: CENTRATURA ELEMENTI
+     ======================================== */
+  .sim-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .sim-text-center {
+    text-align: center;
+  }
+  
+  /* ========================================
+     RESPONSIVE: MOBILE/TABLET (PER DOPO)
+     Commentato per ora - si attiva dopo
+     ======================================== */
+  
+  /*
+  @media (max-width: 1024px) {
+    .sim-main-layout {
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+  
+    .sim-field-section,
+    .sim-events-section {
+      flex: 1;
+      width: 100%;
+      max-width: 700px;
+    }
+    
+    .sim-pitch {
+      max-width: 600px;
+      max-height: 390px;
+    }
+    
+    .sim-events-feed {
+      height: 350px;
+      max-height: 350px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .sim-badges-top {
+      position: relative;
+      top: auto;
+      left: auto;
+      margin-bottom: 10px;
+      justify-content: center;
+    }
+    
+    .sim-top-right-buttons {
+      position: relative;
+      top: auto;
+      right: auto;
+      margin-bottom: 10px;
+      justify-content: center;
+    }
+    
+    .sim-main-layout {
+      gap: 15px;
+    }
+  
+    .sim-field-section,
+    .sim-events-section {
+      max-width: 100%;
+    }
+    
+    .sim-pitch {
+      max-width: 95vw;
+      max-height: 350px;
+    }
+    
+    .sim-events-feed {
+      height: 280px;
+      max-height: 280px;
+    }
+    
+    .sim-end-buttons {
+      flex-direction: column;
+      gap: 12px;
+    }
+  
+    .sim-end-buttons button {
+      width: 100%;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .sim-pitch {
+      max-height: 280px;
+    }
+    
+    .sim-events-feed {
+      height: 220px;
+      max-height: 220px;
+    }
+  }
+  */
+  
+  /* ========================================
+     BOTTONI FORMAZIONI/RIEPILOGO (TOP RIGHT)
+     ======================================== */
+  .sim-top-right-buttons {
+    position: absolute;
+    top: 10px;
+    right: 80px;
+    display: flex;
+    gap: 10px;
+    z-index: 50;
+  }
+  
+  /* Mobile: spostiamo sotto l'header */
+  @media (max-width: 768px) {
+    .sim-top-right-buttons {
+      position: relative;
+      top: auto;
+      right: auto;
+      margin-bottom: 10px;
+      justify-content: center;
+    }
+  }
+  
+  /* ========================================
+     LABEL "SIMULAZIONE LIVE DAL CORE AI"
+     ======================================== */
+  .sim-live-label {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  /* Mobile: margine ridotto */
+  @media (max-width: 768px) {
+    .sim-live-label {
+      margin-top: 15px;
+      font-size: 9px;
+    }
+  }
+  
+  /* ========================================
+     MODULI SQUADRE (WARMUP)
+     ======================================== */
+  .sim-formations-warmup {
+    width: 100%;
+    max-width: 1000px;
+    margin-bottom: 20px;
+  }
+  
+  /* Mobile: formazioni più compatte */
+  @media (max-width: 768px) {
+    .sim-formations-warmup {
+      font-size: 12px;
+    }
+  }
+  
+  /* ========================================
+     BARRA RISCALDAMENTO
+     ======================================== */
+  .sim-warmup-bar {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 20px;
+  }
+  
+  /* Mobile: barra più sottile */
+  @media (max-width: 768px) {
+    .sim-warmup-bar {
+      max-width: 95vw;
+    }
+  }
+  
+  /* ========================================
+     FIX SCROLL EVENTI SU MOBILE
+     ======================================== */
+  .sim-events-feed::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .sim-events-feed::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+  
+  .sim-events-feed::-webkit-scrollbar-thumb {
+    background: #00f0ff;
+    border-radius: 3px;
+  }
+  
+  /* ========================================
+     UTILITY: CENTRATURA ELEMENTI
+     ======================================== */
+  .sim-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .sim-text-center {
+    text-align: center;
+  }
+  
+  /* ========================================
+     RESPONSIVE: NASCONDERE ELEMENTI
+     ======================================== */
+  /* Su mobile nascondiamo elementi non essenziali se serve */
+  @media (max-width: 480px) {
+    /* Esempio: nascondere badge algoritmo su schermi molto piccoli */
+    /* .sim-badges-top { display: none; } */
+    /* (commentato, valuta se serve) */
+  }

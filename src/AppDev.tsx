@@ -296,8 +296,21 @@ const styles: Record<string, React.CSSProperties> = {
     textShadow: `0 0 20px ${theme.cyan}`, marginBottom: '20px'
   },
   eventFeed: {
-    marginTop: '20px', width: '500px', maxWidth: '600px', height: '300px',marginLeft: '-50px', 
-    overflowY: 'auto', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '10px'
+    marginTop: '20px',
+    width: '500px',
+    maxWidth: '600px',
+    height: '300px',
+    marginLeft: '-50px',
+    overflowY: 'auto',
+    background: 'rgba(0, 0, 0, 0.7)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '12px',
+    padding: '15px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    scrollBehavior: 'smooth',
+    scrollbarWidth: 'thin',
+    scrollbarColor: `${theme.cyan}40 rgba(255,255,255,0.1)`
   },
 
   // CHAT BOT
@@ -409,6 +422,9 @@ export default function AppDev() {
   const [timer, setTimer] = useState<number | string>(0);
   const [animEvents, setAnimEvents] = useState<string[]>([]);
   const [momentum, setMomentum] = useState(50); // 0 = Away domina, 100 = Home domina
+
+  const [momentumDirection, setMomentumDirection] = useState<'casa' | 'ospite'>('casa');
+  const [lastSignificantMomentum, setLastSignificantMomentum] = useState(50);
 
   const [pitchMsg, setPitchMsg] = useState<{testo: string, colore: string} | null>(null);
 
@@ -998,19 +1014,31 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         let nuovoMomentum = prev + microMove;
         
         if (pressione < 0.08) {
-          // 8% probabilità: pressione CASA (sposta verso destra ma oscilla)
-          nuovoMomentum = prev + (Math.random() * 6) + 2; // +2 a +8
+          nuovoMomentum = prev + (Math.random() * 6) + 2;
         } else if (pressione < 0.16) {
-          // 8% probabilità: pressione OSPITE (sposta verso sinistra ma oscilla)
-          nuovoMomentum = prev - (Math.random() * 6) - 2; // -2 a -8
+          nuovoMomentum = prev - (Math.random() * 6) - 2;
         } else if (pressione < 0.25) {
-          // 9% probabilità: ritorno graduale verso centro
           if (prev > 55) nuovoMomentum = prev - (Math.random() * 3) - 1;
           else if (prev < 45) nuovoMomentum = prev + (Math.random() * 3) + 1;
         }
         
         // Limiti: non va mai sotto 15 o sopra 85
-        return Math.max(15, Math.min(85, nuovoMomentum));
+        nuovoMomentum = Math.max(15, Math.min(85, nuovoMomentum));
+        
+        // 🎯 CAMBIO POSSESSO SOLO SE MOVIMENTO SIGNIFICATIVO
+        const differenza = nuovoMomentum - lastSignificantMomentum;
+        
+        if (Math.abs(differenza) > 10) {
+          if (differenza > 10) {
+            setMomentumDirection('ospite');
+            setLastSignificantMomentum(nuovoMomentum);
+          } else if (differenza < -10) {
+            setMomentumDirection('casa');
+            setLastSignificantMomentum(nuovoMomentum);
+          }
+        }
+        
+        return nuovoMomentum;
       });
       
     }, intervalMs);
@@ -2319,22 +2347,27 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 pointerEvents: 'none',
                 overflow: 'hidden'
               }}>
-                {/* SCIA SFUMATA */}
+                {/* SCIA SFUMATA POTENTE */}
+                {!isWarmingUp && (
                 <div style={{
                   position: 'absolute',
                   top: 0,
                   left: `${momentum}%`,
-                  width: '700px',
+                  width: '800px',
                   height: '100%',
-                  background: momentum > 50 
-                    ? `linear-gradient(to left, ${theme.cyan}40, ${theme.cyan}20, transparent)`
-                    : `linear-gradient(to right, ${theme.danger}40, ${theme.danger}20, transparent)`,
-                  transform: momentum > 50 ? 'translateX(-700px)' : 'translateX(0)',
+                  background: momentumDirection === 'ospite'
+                    ? `linear-gradient(to left, ${theme.cyan}FF, ${theme.cyan}66, ${theme.cyan}44, transparent)`
+                    : `linear-gradient(to right, ${theme.danger}FF, ${theme.danger}66, ${theme.danger}44, transparent)`,
+                  transform: momentumDirection === 'ospite' ? 'translateX(-800px)' : 'translateX(0)',
                   transition: 'left 0.5s ease-out, background 0.3s ease',
-                  opacity: 0.6,
-                  filter: 'blur(3px)',
+                  opacity: 0.9,
+                  filter: 'blur(5px)',
+                  boxShadow: momentumDirection === 'ospite'
+                    ? `-50px 0 100px 50px ${theme.cyan}88`
+                    : `50px 0 100px 50px ${theme.danger}88`,
                   zIndex: 1
                 }} />
+                )}
                 
                 {/* BARRA PRINCIPALE */}
                 <div style={{
@@ -2365,8 +2398,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               }}
             >
               {animEvents.length === 0 ? (
-                <div style={{ color: '#666', textAlign: 'center', fontSize: '12px' }}>
-                  Fischio d'inizio...
+                <div style={{
+                  color: '#666',
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  padding: '20px',
+                  fontStyle: 'italic'
+                }}>
+                  ⚽ Fischio d'inizio...
                 </div>
               ) : (
                 animEvents.map((e, i) => {
@@ -2375,19 +2414,69 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   const isCasa = e.includes(`[${homeUpper}]`);
                   const isOspite = e.includes(`[${awayUpper}]`);
                   const isSistema = e.includes('[SISTEMA]');
-  
+                  const isGol = e.includes('⚽') || e.includes('GOOOL');
+                  const isRigore = e.includes('🎯') || e.includes('RIGORE');
+                  const isCartellino = e.includes('🟨') || e.includes('🟥');
+
                   return (
-                    <div key={i} style={{
-                      marginBottom: '5px',
-                      fontSize: '13px',
-                      borderBottom: '1px solid rgba(255,255,255,0.1)',
-                      paddingBottom: '2px',
-                      textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
-                      color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
-                      fontWeight: isSistema ? 'bold' : 'normal',
-                      paddingLeft: isCasa ? '10px' : '0',
-                      paddingRight: isOspite ? '10px' : '0'
-                    }}>
+                    <div
+                      key={i}
+                      style={{
+                        marginBottom: '8px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        lineHeight: '1.4',
+                        textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
+                        color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
+                        fontWeight: isSistema ? 'bold' : isGol ? '900' : 'normal',
+                        
+                        // SFONDO SPECIALE PER GOL
+                        background: isGol
+                          ? (isCasa
+                              ? `linear-gradient(90deg, ${theme.cyan}30, transparent)`
+                              : isOspite
+                              ? `linear-gradient(270deg, ${theme.danger}30, transparent)`
+                              : 'rgba(255, 255, 255, 0.05)')
+                          : isRigore
+                          ? 'rgba(255, 159, 67, 0.15)'
+                          : isCartellino
+                          ? 'rgba(255, 193, 7, 0.1)'
+                          : 'rgba(255, 255, 255, 0.02)',
+                        
+                        // BORDO COLORATO
+                        borderLeft: isCasa && isGol ? `4px solid ${theme.cyan}` : 'none',
+                        borderRight: isOspite && isGol ? `4px solid ${theme.danger}` : 'none',
+                        
+                        // GLOW PER GOL
+                        boxShadow: isGol
+                          ? (isCasa
+                              ? `0 0 20px ${theme.cyan}40, inset 0 0 20px ${theme.cyan}10`
+                              : `0 0 20px ${theme.danger}40, inset 0 0 20px ${theme.danger}10`)
+                          : 'none',
+                        
+                        // ANIMAZIONE FADE-IN
+                        animation: 'eventFadeIn 0.4s ease-out',
+                        
+                        // HOVER EFFECT
+                        transition: 'all 0.2s ease',
+                        cursor: 'default'
+                      }}
+                      onMouseEnter={(el) => {
+                        el.currentTarget.style.background = isGol
+                          ? (isCasa
+                              ? `linear-gradient(90deg, ${theme.cyan}40, transparent)`
+                              : `linear-gradient(270deg, ${theme.danger}40, transparent)`)
+                          : 'rgba(255, 255, 255, 0.08)';
+                      }}
+                      onMouseLeave={(el) => {
+                        el.currentTarget.style.background = isGol
+                          ? (isCasa
+                              ? `linear-gradient(90deg, ${theme.cyan}30, transparent)`
+                              : `linear-gradient(270deg, ${theme.danger}30, transparent)`)
+                          : 'rgba(255, 255, 255, 0.02)';
+                      }}
+                    >
                       {e}
                     </div>
                   );
@@ -2395,6 +2484,38 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               )}
             </div>
           </div>
+
+          {/* AGGIUNGI ANIMAZIONE CSS */}
+          <style>{`
+            @keyframes eventFadeIn {
+              from {
+                opacity: 0;
+                transform: translateY(-10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            
+            .sim-events-feed::-webkit-scrollbar {
+              width: 6px;
+            }
+            
+            .sim-events-feed::-webkit-scrollbar-track {
+              background: rgba(255, 255, 255, 0.05);
+              border-radius: 10px;
+            }
+            
+            .sim-events-feed::-webkit-scrollbar-thumb {
+              background: ${theme.cyan}60;
+              border-radius: 10px;
+            }
+            
+            .sim-events-feed::-webkit-scrollbar-thumb:hover {
+              background: ${theme.cyan}90;
+            }
+          `}</style>
         </div>
 
         <div style={{
@@ -5380,7 +5501,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               Algoritmo
             </label>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {[1, 2, 3, 4, 5].map(algo => (
+              {[1, 2, 3, 4, 5, 6].map(algo => (
                 <button
                   key={algo}
                   onClick={() => setTempAlgo(algo)}
@@ -5417,6 +5538,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               {tempAlgo === 3 && 'Tattico (Complesso)'}
               {tempAlgo === 4 && 'Caos Estremo'}
               {tempAlgo === 5 && 'Master (Ensemble)'}
+              {tempAlgo === 6 && 'MonteCarlo (Simulazioni)'}
             </div>
           </div>
 

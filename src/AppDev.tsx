@@ -712,51 +712,55 @@ const JerseySVG = ({ color, size = 20 }: { color: string; size?: number }) => (
   </svg>
 );
 
-const startSimulation = async () => {
+// ✅ VERSIONE AGGIORNATA E VELOCE
+const startSimulation = async (algoOverride: number | null = null, cyclesOverride: number | null = null) => {
   if (!selectedMatch) return;
-  // 1. GESTIONE FLASH MODE
-  // Se l'interruttore è attivo, forza la modalità 'fast' (niente animazione)
+
+  // 1. DETERMINAZIONE PARAMETRI (Priorità ai valori passati dal popup)
+  // Se ricevo algoOverride/cyclesOverride uso quelli, altrimenti quelli dello stato
+  const useAlgo = algoOverride !== null ? algoOverride : configAlgo;
+  const useCycles = cyclesOverride !== null ? cyclesOverride : customCycles;
+
+  // 2. GESTIONE FLASH MODE
   if (isFlashActive) {
       setSimMode('fast');
   }
-  // ✅ FASE 1: Carica subito le formazioni (veloce, ~1 secondo)
+
+  // ✅ FASE 1: Reset Stati e Avvio Grafica
   setViewState('simulating');
   setIsWarmingUp(true);
   setWarmupProgress(0);
   setFormations(null);
   setPlayerEvents({});
   
-  // 2. DECISIONE PARAMETRI
-  // Se Flash è ON -> Forza Algo 1 e Cicli 1
-  // Se Flash è OFF -> Usa i valori scelti dall'utente (configAlgo e customCycles)
-  const finalAlgo = isFlashActive ? 1 : configAlgo;
-  const finalCycles = isFlashActive ? 1 : getCycles(); // customCycles
+  // Parametri finali per la chiamata (considerando anche il Flash)
+  const finalAlgo = isFlashActive ? 1 : useAlgo;
+  const finalCycles = isFlashActive ? 1 : useCycles;
 
-  console.log(`🚀 AVVIO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
+  console.log(`🚀 AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
 
-  // ✅ Prepara il popup (inizia trasparente)
+  // Prepara il popup formazioni
   setShowFormationsPopup(true);
   setPopupOpacity(0);
   
   // Avvia barra di progresso animata
   const warmupInterval = setInterval(() => {
     setWarmupProgress(prev => {
-      if (prev >= 95) return prev; // Ferma al 95% finché non arriva la simulazione
+      if (prev >= 95) return prev; 
       return prev + Math.random() * 3 + 1;
     });
   }, 200);
   
   try {
-    // ✅ CARICA FORMAZIONI (parallelo alla simulazione)
+    // ✅ CARICA FORMAZIONI
     loadFormations(selectedMatch.home, selectedMatch.away, league).then(success => {
       if (success) {
         console.log("✅ Formazioni caricate!");
-        // ✅ Inizia fade-in MOLTO LENTO del popup
         setTimeout(() => setPopupOpacity(1), 8000);
       }
     });
     
-    // ✅ FASE 2: Lancia simulazione (lenta, ~9 secondi)
+    // ✅ FASE 2: Chiamata al Backend (USIAMO finalAlgo e finalCycles)
     const res = await fetch(AI_ENGINE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -767,8 +771,8 @@ const startSimulation = async () => {
         home: selectedMatch.home,
         away: selectedMatch.away,
         round: selectedRound?.name,
-        algo_id: finalAlgo,
-        cycles: finalCycles,
+        algo_id: finalAlgo,      // <--- VALORE CORRETTO
+        cycles: finalCycles,     // <--- VALORE CORRETTO
         save_db: configSaveDb
       })
     });
@@ -780,29 +784,12 @@ const startSimulation = async () => {
       throw new Error(responseJson.error || 'Risposta del server incompleta');
     }
     
-    // Ferma riscaldamento
     clearInterval(warmupInterval);
     setWarmupProgress(100);
     
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsWarmingUp(false);
       
-      // ✅ Popup già visibile, resta per 4 secondi poi fade-out
-      setTimeout(() => {
-        setPopupOpacity(0);
-        setTimeout(() => {
-          setShowFormationsPopup(false);
-          // Ora parti con l'animazione della partita
-          if (simMode === 'fast') {
-            setSimResult(enrichedData);
-            setViewState('result');
-            addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score}. Chiedimi pure spiegazioni.`);
-          } else {
-            runAnimation(enrichedData);
-          }
-        }, 1000);
-      },  50);
-
     const enrichedData = {
       ...responseJson,
       report_scommesse: responseJson.report_scommesse || {
@@ -815,6 +802,19 @@ const startSimulation = async () => {
       }
     };
 
+    setTimeout(() => {
+      setPopupOpacity(0);
+      setTimeout(() => {
+        setShowFormationsPopup(false);
+        if (isFlashActive || simMode === 'fast') {
+          setSimResult(enrichedData);
+          setViewState('result');
+          addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score}.`);
+        } else {
+          runAnimation(enrichedData);
+        }
+      }, 1000);
+    }, 50);
 
   } catch (e: any) {
     console.error("Errore Simulazione:", e);
@@ -1106,7 +1106,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     setSimulationEnded(false);
     setPitchMsg(null);
     // Rilancia simulazione
-    startSimulation();
+    startSimulation(configAlgo, customCycles);
   };
 
   const handleModifySettings = () => {
@@ -1117,6 +1117,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   };
 
   const handleConfirmNewSettings = () => {
+    // 1. Aggiorna lo stato per la grafica (lo vedrai aggiornato al prossimo render)
     setConfigAlgo(tempAlgo);
     setCustomCycles(tempCycles);
     setShowSettingsPopup(false);
@@ -1129,7 +1130,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     setPitchMsg(null);
     // Piccolo delay per assicurarsi che gli stati siano aggiornati
     setTimeout(() => {
-      startSimulation();
+      startSimulation(tempAlgo, tempCycles);
     }, 100);
   };
 
@@ -4130,7 +4131,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
                 {/* RIGA 5: TASTO AVVIO */}
                 <button 
-                  onClick={startSimulation}
+                  onClick={() => startSimulation()}
                   disabled={viewState === 'simulating'} // Si blocca solo se sta già lavorando
                   style={{
                     width: '100%',

@@ -449,9 +449,12 @@ export default function AppDev() {
 
   // --- STATI SETTINGS ENGINE ---
   const [configAlgo, setConfigAlgo] = useState(5);         // Default Monte Carlo
-
+ 
   const [configSaveDb, setConfigSaveDb] = useState(false); // Salva su DB? (Checkbox)
   const [configDebug, setConfigDebug] = useState(true);    // Debug Mode? (Checkbox)
+
+ // STATO PER L'INTERRUTTORE FLASH (Aggiungi questo)
+  const [isFlashActive, setIsFlashActive] = useState<boolean>(false);
 
 
   
@@ -535,10 +538,10 @@ export default function AppDev() {
 
     // --- 3. FUNZIONE RESET DEFAULT ---
     // Da collegare al tastino nel pannello di controllo
-    const handleSetDefault = () => {
+  /*  const handleSetDefault = () => {
       setConfigAlgo(5);      // Torna al Master AI
       setCustomCycles(50); // Torna a 50 cicli (ottimale per Algo 5)
-    };
+    }; */
 
 
   // --- FETCH DATI ---
@@ -711,7 +714,11 @@ const JerseySVG = ({ color, size = 20 }: { color: string; size?: number }) => (
 
 const startSimulation = async () => {
   if (!selectedMatch) return;
-  
+  // 1. GESTIONE FLASH MODE
+  // Se l'interruttore è attivo, forza la modalità 'fast' (niente animazione)
+  if (isFlashActive) {
+      setSimMode('fast');
+  }
   // ✅ FASE 1: Carica subito le formazioni (veloce, ~1 secondo)
   setViewState('simulating');
   setIsWarmingUp(true);
@@ -719,6 +726,14 @@ const startSimulation = async () => {
   setFormations(null);
   setPlayerEvents({});
   
+  // 2. DECISIONE PARAMETRI
+  // Se Flash è ON -> Forza Algo 1 e Cicli 1
+  // Se Flash è OFF -> Usa i valori scelti dall'utente (configAlgo e customCycles)
+  const finalAlgo = isFlashActive ? 1 : configAlgo;
+  const finalCycles = isFlashActive ? 1 : getCycles(); // customCycles
+
+  console.log(`🚀 AVVIO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
+
   // ✅ Prepara il popup (inizia trasparente)
   setShowFormationsPopup(true);
   setPopupOpacity(0);
@@ -752,8 +767,8 @@ const startSimulation = async () => {
         home: selectedMatch.home,
         away: selectedMatch.away,
         round: selectedRound?.name,
-        algo_id: configAlgo,
-        cycles: getCycles(),
+        algo_id: finalAlgo,
+        cycles: finalCycles,
         save_db: configSaveDb
       })
     });
@@ -2620,7 +2635,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           marginTop: '-30px', 
           color: theme.cyan, 
           letterSpacing: '2px',
-          marginLeft: '950px', 
+          marginLeft: '980px', 
           marginBottom: '10px',
           fontSize: '10px', 
           animation: 'pulse 2s infinite',
@@ -2630,11 +2645,29 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           SIMULAZIONE LIVE DAL CORE AI
         </div>
 
+        <div style={{ 
+          position: 'absolute',
+          background: 'rgba(255,255,255,0.1)',
+          marginTop: '-150px', 
+          color: theme.warning,
+          border: '2px solid rgba(255, 255, 255, 0.1)', 
+          borderRadius: '8px',
+          letterSpacing: '5px',
+          marginLeft: '1050px', 
+          marginBottom: '10px',
+          fontSize: '13px', 
+          animation: 'pulse 2s infinite',
+          textAlign: 'center',
+          pointerEvents: 'none'
+        }}>
+          QUOTE
+        </div>
+
         {/* QUOTE */}
         <div style={{
             position: 'absolute',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'stretch',
             gap: '5px',
             height: '40px',
             marginTop: '-120px',
@@ -2699,7 +2732,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 borderRadius: '12px',
                 color: '#000',
                 fontSize: '16px',
-                marginLeft: '200px',
+                marginLeft: '260px',
                 fontWeight: '900',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
@@ -3895,7 +3928,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     {(radarFocus === 'all' || radarFocus === 'away') && drawPentagramRadar(awayRadar, theme.danger,)}
 
                     {/* TOOLTIP DEL PUNTO (Appare quando passi sulle punte) */}
-                    {/* TOOLTIP DEL PUNTO (Appare quando passi sulle punte) */}
                     {pointTooltip && (
                       <g transform={`translate(${pointTooltip.x}, ${pointTooltip.y - 8})`} style={{ pointerEvents: 'none', transition: 'all 0.1s ease' }}>
                         {/* Rettangolo leggermente più largo per ospitare il % */}
@@ -3974,7 +4006,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   </div>
                 </div>
                   
-                {/* RIGA 2: INPUT CICLI E TASTO DEFAULT */}
+                {/* RIGA 2: INPUT CICLI E TASTO AVANZATE FLASH MODE */}
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center',
@@ -3990,9 +4022,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input 
                       type="number" 
-                      value={customCycles}
+                      value={isFlashActive ? 1 : customCycles} // Mostra 1 se Flash è attivo
                       onChange={(e) => setCustomCycles(Number(e.target.value))}
-                      style={{ 
+                      disabled={isFlashActive || viewState === 'simulating'} // <--- BLOCCO
+                      style={{
                         width: '60px', 
                         background: '#000', 
                         color: theme.cyan, 
@@ -4007,20 +4040,22 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       }}
                     />
                     <button 
-                      onClick={handleSetDefault}
+                      onClick={() => setIsFlashActive(!isFlashActive)} // <--- Accende/Spegne
+                      disabled={viewState === 'simulating'}
                       style={{ 
-                        background: '#1a1a1a', 
-                        border: '1px solid #333', 
-                        color: '#aaa', 
+                        background: isFlashActive ? '#ff9800' : '#1a1a1a', // Arancione se ON
+                        border: isFlashActive ? '1px solid #ff9800' : '1px solid #333', 
+                        color: isFlashActive ? '#fff' : '#aaa', 
                         fontSize: '11px',
                         fontWeight: 'bold',
                         padding: '5px 12px', 
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        transition: '0.2s'
+                        transition: '0.2s',
+                        boxShadow: isFlashActive ? '0 0 10px rgba(255, 152, 0, 0.4)' : 'none'
                       }}
                     >
-                      DEFAULT
+                      {isFlashActive ? '⚡ FLASH ON' : '⚡ FLASH OFF'}
                     </button>
                   </div>
                 </div>
@@ -4029,7 +4064,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 <select 
                   value={configAlgo} 
                   onChange={(e) => setConfigAlgo(Number(e.target.value))}
-                  style={{ 
+                  disabled={isFlashActive || viewState === 'simulating'} // <--- BLOCCO
+                  style={{
                     width: '100%',
                     height: '30px', // Più stretto
                     background: '#111', 
@@ -4043,7 +4079,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     cursor: 'pointer'
                   }}
                 >
-                  <option value={1}>ALGO 1: STATISTICO PURO</option>
+               {/*   <option value={1}>ALGO 1: STATISTICO PURO</option> */}
                   <option value={2}>ALGO 2: DINAMICO</option>
                   <option value={3}>ALGO 3: TATTICO</option>
                   <option value={4}>ALGO 4: CAOS</option>
@@ -4053,13 +4089,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
                 {/* RIGA 4: TASTI MODALITÀ */}
                 <div style={{ display: 'flex', gap: '5px', marginTop: '2px' }}>
-                  <button 
-                    onClick={() => setSimMode('fast')}
-                    style={{
+                <button 
+                  onClick={() => setSimMode('fast')}
+                  disabled={isFlashActive} // <--- BLOCCO
+                  style={{
                       flex: '1',
                       height: '36px',
                       fontSize: '10px',
-                      fontWeight: 'bold',
+                      fontWeight: 'bold', 
                       borderRadius: '6px',
                       cursor: 'pointer',
                       border: `1px solid ${simMode === 'fast' ? theme.cyan : '#333'}`,
@@ -4068,10 +4105,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       transition: '0.2s'
                     }}
                   >
-                    FLASH ⚡
+                    SOLO RISULTATO 🧮
                   </button>
+
                   <button 
                     onClick={() => setSimMode('animated')}
+                    disabled={isFlashActive} // <--- BLOCCO
                     style={{
                       flex: '1',
                       height: '36px',
@@ -4092,25 +4131,30 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 {/* RIGA 5: TASTO AVVIO */}
                 <button 
                   onClick={startSimulation}
+                  disabled={viewState === 'simulating'} // Si blocca solo se sta già lavorando
                   style={{
                     width: '100%',
-                    background: `linear-gradient(180deg, ${theme.cyan} 0%, #008b8b 100%)`,
+                    // Se Flash è ON diventa Arancione, altrimenti Ciano/Verde standard
+                    background: isFlashActive 
+                      ? `linear-gradient(180deg, #ff9800 0%, #ff5722 100%)` 
+                      : `linear-gradient(180deg, ${theme.cyan} 0%, #008b8b 100%)`,
                     color: '#000',
                     border: 'none',
                     borderRadius: '8px',
                     fontWeight: '900',
-                    fontSize: '16px',
+                    fontSize: '13px',
                     letterSpacing: '1px',
-                    cursor: 'pointer',
+                    cursor: viewState === 'simulating' ? 'not-allowed' : 'pointer',
                     textTransform: 'uppercase',
                     marginTop: '5px',
-                    boxShadow: `0 4px 15px ${theme.cyan}40`,
-                    transition: 'transform 0.1s',
+                    boxShadow: isFlashActive 
+                      ? `0 4px 15px rgba(255, 87, 34, 0.4)` 
+                      : `0 4px 15px ${theme.cyan}40`,
+                    transition: 'all 0.3s',
+                    opacity: viewState === 'simulating' ? 0.7 : 1
                   }}
-                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  AVVIA SIMULAZIONE
+                  {isFlashActive ? '⚡ ESEGUI FLASH STAT' : 'AVVIA SIMULAZIONE'}
                 </button>
               </div>
               </div>

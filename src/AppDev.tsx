@@ -3982,7 +3982,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               {/* PANNELLO DI CONFIGURAZIONE RAPIDA */}
               <div style={{
                 background: '#0a0a0a', 
-                padding: '15px', 
+                padding: '5px', 
                 borderRadius: '12px', 
                 border: '1px solid #222',
                 marginLeft: '-10px',
@@ -4003,10 +4003,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   gap: '40px',
                   paddingLeft: '-5px'
                 }}>
-                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '-15px', marginLeft: '-10px' }}>
+                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '5px', marginLeft: '5px' }}>
                     ENGINE: <span style={{ color: theme.cyan }}>CUSTOM</span>
                   </div>
-                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '-16px', marginLeft: '-30px' }}>
+                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '5px', marginLeft: '-30px' }}>
                     {/* Se è 0 (mentre cancelli), mostra 1 o un trattino per estetica, altrimenti il numero */}
                     C. ATTUALI: <span style={{ color: theme.cyan, fontSize: '12px'}}>{customCycles === 0 ? 1 : customCycles}</span>
                   </div>
@@ -4098,10 +4098,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         color: isFlashActive ? '#fff' : '#aaa', 
                         fontSize: '11px',
                         fontWeight: 'bold',
+                        marginTop: '15px',
                         padding: '5px 12px', 
                         borderRadius: '6px',
                         marginBottom: '15px',
-                        marginTop: '10px',
                         cursor: 'pointer',
                         transition: '0.2s',
                         boxShadow: isFlashActive ? '0 0 10px rgba(255, 152, 0, 0.4)' : 'none'
@@ -4150,7 +4150,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       height: '36px',
                       fontSize: '10px',
                       fontWeight: 'bold', 
-                      marginTop: '8px',
+                      marginTop: '5px',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       border: `1px solid ${simMode === 'fast' ? theme.cyan : '#333'}`,
@@ -4169,7 +4169,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       flex: '1',
                       height: '36px',
                       fontSize: '10px',
-                      marginTop: '8px',
+                      marginTop: '5px',
                       fontWeight: 'bold',
                       borderRadius: '6px',
                       cursor: 'pointer',
@@ -4201,7 +4201,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     letterSpacing: '1px',
                     cursor: viewState === 'simulating' ? 'not-allowed' : 'pointer',
                     textTransform: 'uppercase',
-                    marginTop: '20px',
+                    marginTop: '5px',
                     boxShadow: isFlashActive 
                       ? `0 4px 15px rgba(255, 87, 34, 0.4)` 
                       : `0 4px 15px ${theme.cyan}40`,

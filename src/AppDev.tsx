@@ -3982,9 +3982,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               {/* PANNELLO DI CONFIGURAZIONE RAPIDA */}
               <div style={{
                 background: '#0a0a0a', 
-                padding: '10px', 
-                borderRadius: '10px', 
+                padding: '15px', 
+                borderRadius: '12px', 
                 border: '1px solid #222',
+                marginLeft: '-10px',
+                marginRight: '-10px',
                 marginBottom: '10px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -3995,15 +3997,18 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 <div style={{ 
                   display: 'flex', 
                   flexDirection: 'row', 
-                  alignItems: 'center',
-                  gap: '15px',
-                  paddingLeft: '5px'
+                  alignItems: 'center', 
+                  marginLeft: '5px',
+                  marginTop: '5px',
+                  gap: '40px',
+                  paddingLeft: '-5px'
                 }}>
-                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '-15px', marginLeft: '-10px' }}>
                     ENGINE: <span style={{ color: theme.cyan }}>CUSTOM</span>
                   </div>
-                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px' }}>
-                    CICLI ATTUALI: <span style={{ color: theme.cyan, fontSize: '14px' }}>{customCycles}</span>
+                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '-16px', marginLeft: '-30px' }}>
+                    {/* Se è 0 (mentre cancelli), mostra 1 o un trattino per estetica, altrimenti il numero */}
+                    C. ATTUALI: <span style={{ color: theme.cyan, fontSize: '12px'}}>{customCycles === 0 ? 1 : customCycles}</span>
                   </div>
                 </div>
                   
@@ -4011,11 +4016,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 10px',
-                  background: '#111',
-                  borderRadius: '8px',
-                  border: '1px solid #1a1a1a'
+                  marginTop: '5px', 
+                  justifyContent: 'space-between', 
+                  padding: '3px 5px', 
+                  background: '#111', 
+                  borderRadius: '8px', 
+                  border: '1px solid #1a1a1a' 
                 }}>
                   <label style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>
                     Cicli:
@@ -4023,34 +4029,79 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input 
                       type="number" 
-                      value={isFlashActive ? 1 : customCycles} // Mostra 1 se Flash è attivo
-                      onChange={(e) => setCustomCycles(Number(e.target.value))}
-                      disabled={isFlashActive || viewState === 'simulating'} // <--- BLOCCO
+                      min="1"
+                      max="999999"
+                      
+                      // 1. VISUALIZZAZIONE: Se customCycles è 0 (vuoto), passiamo stringa vuota.
+                      // Se Flash è attivo, forziamo visivamente a 1.
+                      value={isFlashActive ? 1 : (customCycles === 0 ? '' : customCycles)}
+                      
+                      disabled={isFlashActive || viewState === 'simulating'}
+
+                      // 2. SELEZIONE AUTOMATICA (al click e al tab)
+                      onFocus={(e) => e.target.select()}
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+
+                      // 3. BLOCCO TASTI (Niente -, +, ., e)
+                      onKeyDown={(e) => {
+                        if (["-", "+", "e", "E", "."].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+
+                      // 4. QUANDO ESCI DAL CAMPO (BLUR)
+                      onBlur={() => {
+                        // Se l'utente ha lasciato il campo vuoto (0) o nullo, rimettiamo a 1
+                        if (!customCycles || customCycles === 0) {
+                          setCustomCycles(1);
+                        }
+                      }}
+
+                      // 5. MENTRE SCRIVI
+                      onChange={(e) => {
+                        const valStr = e.target.value;
+                        
+                        // Se cancello tutto, metto 0 (così diventa vuoto visivamente)
+                        if (valStr === '') {
+                          setCustomCycles(0);
+                          return;
+                        }
+                        
+                        const val = parseInt(valStr, 10);
+                        
+                        // Accetto il numero solo se è valido e positivo
+                        if (!isNaN(val) && val > 0) {
+                          setCustomCycles(val);
+                        }
+                      }}
+
                       style={{
                         width: '60px', 
                         background: '#000', 
                         color: theme.cyan, 
                         border: `1px solid ${theme.cyan}40`, 
                         padding: '5px', 
-                        borderRadius: '6px',
+                        borderRadius: '6px', 
                         fontSize: '12px', 
-                        fontWeight: 'bold',
+                        fontWeight: 'bold', 
                         textAlign: 'center',
                         outline: 'none',
                         MozAppearance: 'textfield' 
-                      }}
+                      }} 
                     />
                     <button 
-                      onClick={() => setIsFlashActive(!isFlashActive)} // <--- Accende/Spegne
+                      onClick={() => setIsFlashActive(!isFlashActive)} 
                       disabled={viewState === 'simulating'}
                       style={{ 
-                        background: isFlashActive ? '#ff9800' : '#1a1a1a', // Arancione se ON
+                        background: isFlashActive ? '#ff9800' : '#1a1a1a', 
                         border: isFlashActive ? '1px solid #ff9800' : '1px solid #333', 
                         color: isFlashActive ? '#fff' : '#aaa', 
                         fontSize: '11px',
                         fontWeight: 'bold',
                         padding: '5px 12px', 
                         borderRadius: '6px',
+                        marginBottom: '15px',
+                        marginTop: '10px',
                         cursor: 'pointer',
                         transition: '0.2s',
                         boxShadow: isFlashActive ? '0 0 10px rgba(255, 152, 0, 0.4)' : 'none'
@@ -4072,6 +4123,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     background: '#111', 
                     color: '#fff', 
                     border: '1px solid #333', 
+                    marginTop: '10px',
                     padding: '0 10px', 
                     borderRadius: '6px',
                     fontSize: '11px',
@@ -4098,6 +4150,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       height: '36px',
                       fontSize: '10px',
                       fontWeight: 'bold', 
+                      marginTop: '8px',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       border: `1px solid ${simMode === 'fast' ? theme.cyan : '#333'}`,
@@ -4116,6 +4169,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       flex: '1',
                       height: '36px',
                       fontSize: '10px',
+                      marginTop: '8px',
                       fontWeight: 'bold',
                       borderRadius: '6px',
                       cursor: 'pointer',
@@ -4143,11 +4197,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     border: 'none',
                     borderRadius: '8px',
                     fontWeight: '900',
-                    fontSize: '13px',
+                    fontSize: '14px',
                     letterSpacing: '1px',
                     cursor: viewState === 'simulating' ? 'not-allowed' : 'pointer',
                     textTransform: 'uppercase',
-                    marginTop: '5px',
+                    marginTop: '20px',
                     boxShadow: isFlashActive 
                       ? `0 4px 15px rgba(255, 87, 34, 0.4)` 
                       : `0 4px 15px ${theme.cyan}40`,
@@ -4155,7 +4209,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     opacity: viewState === 'simulating' ? 0.7 : 1
                   }}
                 >
-                  {isFlashActive ? '⚡ ESEGUI FLASH STAT' : 'AVVIA SIMULAZIONE'}
+                  {isFlashActive ? ' ESEGUI FLASH' : 'AVVIA SIMULAZIONE'}
                 </button>
               </div>
               </div>

@@ -237,7 +237,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto', padding: '0'
   },
   arenaContent: {
-    padding: '30px 30px 0px 30px',
+    padding: '3px 8px 0px',
+    overflowX: 'hidden',
     maxWidth: '1200px',
     margin: '0 auto',
     width: '100%'
@@ -1139,7 +1140,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   const renderMatchList = () => (
     <div style={{
       ...styles.arenaContent,
-      padding: isMobile ? '20px 10px 0 10px' : '30px 30px 0px 30px',
+      padding: isMobile ? '3px 8px 0px' : styles.arenaContent.padding,
       maxWidth: isMobile ? '100vw' : '1200px',
       boxSizing: 'border-box',
       overflowX: 'hidden'
@@ -1153,7 +1154,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           justifyContent: 'center', // Centra tutto il gruppo rispetto al VS
           alignItems: 'center',
           marginBottom: '20px',
-          marginTop: '-10px',
+          marginTop: '10px',
           gap: isMobile ? '8px' : '80px',// <--- REGOLA QUESTO: Aumenta o diminuisci per centrare i tasti sulle barre
           width: '100%',
         }}>
@@ -1804,7 +1805,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       padding: '0'
     }}>
       <div style={{
-        padding: '30px 30px 0px 30px',
+        padding: isMobile ? '3px 8px 0px' : styles.arenaContent.padding,
         maxWidth: '1400px',
         margin: '0 auto',
         width: '100%'
@@ -2887,17 +2888,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       return 'rgba(255, 0, 0, 1)';                       // Rosso Assoluto
     };
 
-    // --- 2. CALCOLO COLORI ---
-    // Usiamo la tua funzione per ottenere il colore esatto
-    // const homeColor = getTrendColor(homeFieldFactor);
-    // const awayColor = getTrendColor(awayFieldFactor);
-
-    // Trucco per l'ombra: rendiamo l'ombra leggermente trasparente (0.6) per un effetto neon più realistico
-    //const homeShadow = homeColor.replace(', 1)', ', 0.2)');
-    //const awayShadow = awayColor.replace(', 1)', ', 0.2)');
-
-     
-
     // --- 2. HELPER GRAFICI ---
 
     const drawPentagramRadar = (stats: number[], color: string) => {
@@ -2977,20 +2967,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       });
     };
 
-    // INCOLLA QUESTO PEZZO PRIMA DEL 'return ('
-    /*   const oddsBoxStyle = {
-        backgroundColor: 'rgba(255, 255, 255, 0.08)', 
-        borderRadius: '4px',                           
-        padding: '0px 6px',                           
-        minWidth: '0px',                              
-        marginTop: '0px',
-        fontSize: '13px',
-        fontWeight: 'bold',
-        color: 'white',
-        border: '1px solid rgba(255, 255, 255, 0.05)', 
-        display: 'inline-block'                        
-    };*/
-
     // --- 3. RENDER ---
     return (
       <div style={styles.arenaContent}>
@@ -3004,7 +2980,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           marginBottom: '30px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           paddingBottom: '8px',
-          paddingTop: isMobile ? '0' : '0px',
+          paddingTop: isMobile ? '0' : '25px',
           position: 'relative'
         }}>
 
@@ -3856,9 +3832,34 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <div className="riga-orizzontale-bottom">
 
               {/* DNA SYSTEM */}
-              <div className="card-dna" style={{ ...styles.card, padding: '10px', marginTop: '-20px', position: 'relative', overflow: 'hidden' }}>
-                <div className="header-section" style={{ marginBottom: '5px', position: 'relative' }}>
-                  <div className="header-title" style={{ fontSize: '10px', opacity: 0.8, marginTop: '10px' }}>🕸️ DNA SYSTEM</div>
+                <div className="card-dna" style={{ 
+                  ...styles.card, 
+                  padding: '10px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0, 240, 255, 0.1)', 
+                  marginTop: '-20px', 
+                  position: 'relative', 
+                  overflow: 'hidden' 
+                }}>
+                  <div className="header-section" style={{ 
+                    marginBottom: '5px', 
+                    position: 'relative',
+                    paddingTop: isMobile ? '30px' : '20px'
+                  }}>
+                    <div className="header-title" style={{
+                      fontSize: '10px',
+                      opacity: 0.8,
+                      position: isMobile ? 'absolute' : 'relative',
+                      top: isMobile ? '-20px' : '0',
+                      left: isMobile ? '-5px' : '0',
+                      right: isMobile ? '12px' : 'auto',
+                      marginTop: isMobile ? '0' : '-4px',
+                      zIndex: 10
+                    }}>
+                      🕸️ DNA SYSTEM
+                    </div>
+                  
+
 
                   {/* Container Legenda - Altezza fissa per non spingere il grafico */}
                   {/* Container Legenda INTERATTIVA */}
@@ -3911,7 +3912,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 </div>
 
                 {/* Contenitore Radar - Rimane bloccato dove l'avevi messo tu */}
-                <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', padding: '5px' }}>
+                <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '15px', padding: '5px' }}>
                   <svg width="250" height="250" viewBox="9 11 105 105">
                     {/* Griglie di sfondo */}
                     {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}

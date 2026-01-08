@@ -1,0 +1,172 @@
+/* ========================================
+   RESPONSIVE MOBILE - SOLO LAYOUT
+   Mantiene identici: colori, neon, gradienti
+======================================== */
+
+@media (max-width: 768px) {
+  
+    /* === GRIGLIA PRINCIPALE === */
+    .dashboard-main-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 20px !important;
+    }
+  
+    /* === COLONNE: Da 2 colonne a stack verticale === */
+    .colonna-sinistra-analisi,
+    .colonna-destra-analisi {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: auto !important;
+    }
+  
+    /* === CARD: Padding ridotto === */
+    .card-forma,
+    .card-trend,
+    .card-storia,
+    .card-campo,
+    .card-affidabilita,
+    .card-bias,
+    .card-dna,
+    .bvs-card {
+      padding: 15px !important;
+      margin-bottom: 15px !important;
+    }
+  
+    /* === TEAM ROW: Stack verticale su mobile === */
+    .team-row {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+  
+    .team-left-section,
+    .trend-right-section {
+      width: 100% !important;
+      justify-content: center !important;
+    }
+  
+    /* === TREND BOXES: Più piccoli === */
+    .trend-box {
+      width: 35px !important;
+      height: 35px !important;
+      font-size: 10px !important;
+    }
+  
+    .trend-boxes-container {
+      gap: 6px !important;
+    }
+  
+    /* === RADAR: Scala proporzionale === */
+    .radar-section svg,
+    .dna-radar-container svg {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+  
+    .radar-controls {
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      gap: 8px !important;
+    }
+  
+    /* === GRIGLIA STATS 3 COLONNE → 2 COLONNE === */
+    .stats-grid-3col {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  
+    /* === GRIGLIA STATS 2 COLONNE → 1 COLONNA === */
+    .stats-grid-2col {
+      grid-template-columns: 1fr !important;
+    }
+  
+    /* === HEADER TITOLI: Font ridotto === */
+    .header-title {
+      font-size: 12px !important;
+    }
+  
+    .team-name {
+      font-size: 13px !important;
+    }
+  
+    /* === PROGRESS BAR: Larghezza piena === */
+    .progress-bar-container,
+    .avg-progress-container {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+  
+    /* === POPUP: Centratura e larghezza === */
+    .formations-popup,
+    .settings-popup,
+    .resimulate-popup {
+      width: 95% !important;
+      max-width: 400px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
+  
+    /* === CAMPO DA GIOCO: Scala === */
+    .pitch {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+    }
+  
+    /* === CRONACA/EVENTI: Larghezza piena === */
+    .event-feed {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin-left: 0 !important;
+    }
+  
+    /* === CHAT WIDGET: Posizione === */
+    .chat-widget {
+      width: 100% !important;
+      bottom: 0 !important;
+      right: 0 !important;
+      border-radius: 16px 16px 0 0 !important;
+    }
+  
+    /* === PADDING ARENA === */
+    .arena-content {
+      padding: 20px 15px 0 15px !important;
+    }
+  
+    /* === BADGE/CLASSIFICHE: Font ridotto === */
+    .badge-classifica {
+      font-size: 11px !important;
+      padding: 4px 8px !important;
+    }
+  
+    /* === TIMER SIMULAZIONE === */
+    .timer-display {
+      font-size: 36px !important;
+    }
+  
+    /* === BOTTONI: Stack verticale === */
+    .btn-group {
+      flex-direction: column !important;
+      width: 100% !important;
+    }
+  
+    .btn-group button {
+      width: 100% !important;
+    }
+  
+    /* === GRIGLIA RISULTATI TOP 3 === */
+    .top-results-grid {
+      grid-template-columns: 1fr !important;
+    }
+  
+    /* === MODULO SCOMMESSE: Stack === */
+    .report-scommesse-grid {
+      grid-template-columns: 1fr !important;
+    }
+  
+    /* === SIDEBAR MOBILE: Già gestito da JS === */
+    .sidebar {
+      display: none !important;
+    }
+  
+  }
+  

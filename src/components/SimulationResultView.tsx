@@ -48,6 +48,21 @@ const modalStyles = `
     cursor: pointer;
     z-index: 10000;
   }
+
+  .confidence-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 14px;
+    background: #4ade80;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    z-index: 10000;
+    font-weight: bold;
+  }
 `;
 
 interface SimulationData {
@@ -91,6 +106,7 @@ interface SimulationData {
     motivazione: string;
   };
   report_html?: string;  // ✅ AGGIUNGI QUESTA RIGA
+  confidence_html?: string;  // ✅ AGGIUNGI QUESTA RIGA
 }
 
 interface Props {
@@ -109,6 +125,7 @@ const SimulationResultView: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<'match' | 'stats' | 'betting'>('betting');
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false); // ✅ SPOSTA QUI
+  const [showConfidenceModal, setShowConfidenceModal] = useState(false); // ✅ AGGIUNGI
   const pro = data?.report_scommesse_pro;
 
   const handleOpenReport = () => {
@@ -598,10 +615,37 @@ const SimulationResultView: React.FC<Props> = ({
           <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="close-btn" onClick={() => setShowReportModal(false)}>✕</button>
+
+              {/* ✅ AGGIUNGI QUESTO BOTTONE: */}
+                <button 
+                  className="confidence-btn" 
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setShowConfidenceModal(true);
+                  }}
+                >
+                  📊 CONFIDENCE DETTAGLIATO
+                </button>
+  
               <iframe 
                 srcDoc={data?.report_html} 
                 style={{width: '100%', height: '90vh', border: 'none'}}
                 title="Report Completo"
+              />
+            </div>
+          </div>
+        </>
+      )}
+      {showConfidenceModal && (
+        <>
+          <style>{modalStyles}</style>
+          <div className="modal-overlay" onClick={() => setShowConfidenceModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="close-btn" onClick={() => setShowConfidenceModal(false)}>✕</button>
+              <iframe 
+                srcDoc={data?.confidence_html} 
+                style={{width: '100%', height: '90vh', border: 'none'}}
+                title="Confidence Report"
               />
             </div>
           </div>

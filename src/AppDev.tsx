@@ -358,7 +358,6 @@ export default function AppDev() {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
 
-  const [showBettingModal, setShowBettingModal] = useState(false);
 
   const handleAskAI = (matchData: any) => {
     // Prepariamo un riassunto tecnico per l'IA
@@ -5363,7 +5362,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           data={simResult}
           homeName={selectedMatch?.home || 'Team Casa'} 
           awayName={selectedMatch?.away || 'Team Ospite'} 
-          onOpenBettingDetails={() => setShowBettingModal(true)}
           onOpenAIExplanation={() => handleAskAI(simResult)}
         />
       </div>
@@ -6189,50 +6187,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           </button>
         )}
       </div>
-      {/* Modale Scommesse Scientifica */}
-      {showBettingModal && simResult && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#0f172a', border: '1px solid #334155',
-            borderRadius: '24px', padding: '30px', maxWidth: '500px', width: '100%',
-            boxShadow: '0 0 50px rgba(0,0,0,0.5)'
-          }}>
-            <h3 style={{ color: '#fbbf24', fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
-              Analisi Profonda Scommesse
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div style={{ background: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
-                <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Confidence</div>
-                <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#10b981' }}>
-                  {simResult.report_scommesse.Analisi_Profonda.Confidence_Globale}
-                </div>
-              </div>
-              <div style={{ background: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
-                <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Std Dev</div>
-                <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#60a5fa' }}>
-                  {simResult.report_scommesse.Analisi_Profonda.Deviazione_Standard_Totale}
-                </div>
-              </div>
-            </div>
 
-            <button 
-              onClick={() => setShowBettingModal(false)}
-              style={{
-                marginTop: '25px', width: '100%', padding: '14px',
-                borderRadius: '14px', background: '#334155', color: 'white',
-                fontWeight: 'bold', border: 'none', cursor: 'pointer'
-              }}
-            >
-              Chiudi Analisi
-            </button>
-          </div>
-        </div>
-      )}
             {/* ✅ POPUP FORMAZIONI */}
             {showFormationsPopup && formations && (
               <div 

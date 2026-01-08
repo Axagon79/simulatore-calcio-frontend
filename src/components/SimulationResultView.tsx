@@ -12,6 +12,44 @@ interface MatchEvent {
   testo: string;
 }
 
+const modalStyles = `
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .modal-content {
+    background: white;
+    width: 95%;
+    height: 95%;
+    border-radius: 8px;
+    position: relative;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 24px;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    z-index: 10000;
+  }
+`;
+
 interface SimulationData {
   predicted_score: string;
   gh: number;
@@ -52,13 +90,13 @@ interface SimulationData {
     valore_mercato: string;
     motivazione: string;
   };
+  report_html?: string;  // ✅ AGGIUNGI QUESTA RIGA
 }
 
 interface Props {
   data: SimulationData;
   homeName: string;
   awayName: string;
-  onOpenBettingDetails: () => void;
   onOpenAIExplanation: () => void;
 }
 
@@ -66,12 +104,16 @@ const SimulationResultView: React.FC<Props> = ({
   data, 
   homeName = 'Team Casa', 
   awayName = 'Team Ospite', 
-  onOpenBettingDetails, 
   onOpenAIExplanation 
 }) => {
   const [activeTab, setActiveTab] = useState<'match' | 'stats' | 'betting'>('betting');
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false); // ✅ SPOSTA QUI
   const pro = data?.report_scommesse_pro;
+
+  const handleOpenReport = () => {
+    setShowReportModal(true);
+  };
 
   const calculateWidth = (home: any, away: any) => {
     const h = parseFloat(home?.toString().replace('%', '')) || 0;
@@ -346,7 +388,7 @@ const SimulationResultView: React.FC<Props> = ({
                 </div>
                 
                 <button
-                  onClick={onOpenBettingDetails}
+                  onClick={handleOpenReport}
                   className="w-full py-4 bg-linear-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 rounded-xl font-black text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:scale-105 hover:shadow-xl"
                 >
                   📊 Report Completo
@@ -550,6 +592,21 @@ const SimulationResultView: React.FC<Props> = ({
           </div>
         )}
       </div>
+      {showReportModal && (
+        <>
+          <style>{modalStyles}</style>  {/* ✅ AGGIUNGI QUESTA RIGA */}
+          <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="close-btn" onClick={() => setShowReportModal(false)}>✕</button>
+              <iframe 
+                srcDoc={data?.report_html} 
+                style={{width: '100%', height: '90vh', border: 'none'}}
+                title="Report Completo"
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

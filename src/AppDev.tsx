@@ -587,24 +587,47 @@ export default function AppDev() {
   }, []);
 
 
-  useEffect(() => {
-    const handleBack = () => {
-      if (selectedMatch) {
-        setSelectedMatch(null);
-      } else if (selectedRound) {
-        setSelectedRound(null);
-      } else {
-        // Previeni uscita dall'app al livello base
-        window.history.pushState(null, '', window.location.pathname);
-      }
-    };
-  
-    // Inizializza stack
-    window.history.pushState(null, '', window.location.pathname);
-    
-    window.addEventListener('popstate', handleBack);
-    return () => window.removeEventListener('popstate', handleBack);
-  }, [selectedMatch, selectedRound]);
+  // Gestione professionale del tasto Back su Android/Browser
+useEffect(() => {
+  const handleBackNavigation = (_event: PopStateEvent) => {
+    // Se c'è un match selezionato o siamo in una vista specifica, annulliamo l'uscita
+    if (viewState === 'result' || viewState === 'simulating') {
+      setViewState('pre-match');
+      // Impediamo l'uscita riaggiungendo uno stato "fittizio"
+      window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
+    } 
+    else if (viewState === 'pre-match' || viewState === 'settings') {
+      setViewState('list');
+      setSelectedMatch(null);
+      window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
+    }
+    else if (selectedMatch) {
+      setSelectedMatch(null);
+      setViewState('list');
+      window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
+    } 
+    else if (activeLeague) {
+      // Se siamo nella lista partite, torniamo alla Dashboard principale
+      setActiveLeague(null);
+    }
+    // Se siamo già nella Dashboard, il tasto back chiuderà l'app normalmente (comportamento corretto)
+  };
+
+  // Registriamo il listener per il tasto back
+  window.addEventListener('popstate', handleBackNavigation);
+
+  return () => {
+    window.removeEventListener('popstate', handleBackNavigation);
+  };
+}, [viewState, selectedMatch, activeLeague]);
+
+// Ogni volta che cambiamo "schermata", dobbiamo dire al browser che siamo "andati avanti"
+useEffect(() => {
+  if (selectedMatch || activeLeague || viewState !== 'list') {
+    // Inseriamo uno stato nella cronologia così il tasto "Back" avrà qualcosa da "tornare indietro"
+    window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
+  }
+}, [selectedMatch, activeLeague, viewState]);
 
 
   
@@ -971,24 +994,24 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         
         const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === minutoEvento);
         
-        eventiDelMinuto.forEach(event => {
-          const eventoId = `${event.minuto}-${event.tipo}-${event.testo}`;
+        eventiDelMinuto.forEach(matchEvent => {
+          const eventoId = `${matchEvent.minuto}-${matchEvent.tipo}-${matchEvent.testo}`;
           
           if (!eventiMostrati.has(eventoId)) {
             eventiMostrati.add(eventoId);
-            setAnimEvents(prev => [event.testo, ...prev]);
+            setAnimEvents(prev => [matchEvent.testo, ...prev]);
           
             // AGGIORNA PUNTEGGIO LIVE
-            if (event.tipo === 'gol') {
+            if (matchEvent.tipo === 'gol') {
               setLiveScore(prev => ({
-                home: event.squadra === 'casa' ? prev.home + 1 : prev.home,
-                away: event.squadra === 'ospite' ? prev.away + 1 : prev.away
+                home: matchEvent.squadra === 'casa' ? prev.home + 1 : prev.home,
+                away: matchEvent.squadra === 'ospite' ? prev.away + 1 : prev.away
               }));
               
               // ✅ MOMENTUM FLUIDO CON OSCILLAZIONE NATURALE
-            if (event.tipo === 'gol') {
+            if (matchEvent.tipo === 'gol') {
               setMomentum(prev => 
-                  event.squadra === 'casa' 
+                  matchEvent.squadra === 'casa' 
                       ? Math.min(prev + 20, 85)  // Sposta ma non blocca
                       : Math.max(prev - 20, 15)
               );
@@ -1002,39 +1025,39 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   return prev;
               });
             }
-          } else if (event.tipo === 'rigore_fischio' || event.tipo === 'rosso') {
+          } else if (matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rosso') {
             setMomentum(prev => 
-              event.squadra === 'casa' 
+              matchEvent.squadra === 'casa' 
                 ? Math.min(prev + 12, 75) 
                 : Math.max(prev - 12, 25)
             );
-          } else if (event.tipo === 'cartellino') {
+          } else if (matchEvent.tipo === 'cartellino') {
             // Giallo: piccolo vantaggio all'avversario
             setMomentum(prev => 
-              event.squadra === 'casa' 
+              matchEvent.squadra === 'casa' 
                 ? Math.max(prev - 5, 20)  // Casa prende giallo: ospite avvantaggiato
                 : Math.min(prev + 5, 80)  // Ospite prende giallo: casa avvantaggiata
             );
           }
           
             // SCRITTE SUL CAMPO
-            if (event.tipo === 'gol' || event.tipo === 'rigore_fischio' || event.tipo === 'rigore_sbagliato' || event.tipo === 'rosso') {
+            if (matchEvent.tipo === 'gol' || matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rigore_sbagliato' || matchEvent.tipo === 'rosso') {
               let msg = '';
               let col = '';
               
-              if (event.tipo === 'gol') { 
+              if (matchEvent.tipo === 'gol') { 
                 msg = 'GOOOL!'; 
-                col = event.squadra === 'casa' ? theme.cyan : theme.danger; 
+                col = matchEvent.squadra === 'casa' ? theme.cyan : theme.danger; 
               }
-              else if (event.tipo === 'rigore_fischio') { 
+              else if (matchEvent.tipo === 'rigore_fischio') { 
                 msg = 'RIGORE!'; 
                 col = '#ff9f43'; 
               }
-              else if (event.tipo === 'rigore_sbagliato') { 
+              else if (matchEvent.tipo === 'rigore_sbagliato') { 
                 msg = 'RIGORE PARATO!'; 
                 col = '#ffffff'; 
               }
-              else if (event.tipo === 'rosso') { 
+              else if (matchEvent.tipo === 'rosso') { 
                 msg = 'ROSSO!'; 
                 col = theme.danger; 
               }

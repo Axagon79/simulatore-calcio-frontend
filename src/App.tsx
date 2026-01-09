@@ -59,6 +59,27 @@ function App() {
 const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
 console.log("🚀 API connessa a:", API_BASE);
 
+// 📍 POSIZIONAMENTO: Dopo l'ultimo useState (showMatchSummary) e prima di "useEffect(() => { const fetchNations..."
+
+// ✅ GESTIONE GLOBALE TASTO INDIETRO SMARTPHONE
+useEffect(() => {
+  window.history.pushState({ noBackExitsApp: true }, '');
+
+  const handleBackButton = (event: PopStateEvent) => {
+    if (event.state?.noBackExitsApp) {
+      window.history.pushState({ noBackExitsApp: true }, '');
+      // L'app NON si chiude, puoi personalizzare qui
+    }
+  };
+
+  window.addEventListener('popstate', handleBackButton);
+
+  return () => {
+    window.removeEventListener('popstate', handleBackButton);
+  };
+}, []); // 👈 Array vuoto = si attiva UNA VOLTA all'avvio dell'app
+
+
   useEffect(() => {
     fetchLeagues()
     setLeague('')

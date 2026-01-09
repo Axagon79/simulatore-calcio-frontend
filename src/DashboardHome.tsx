@@ -113,27 +113,33 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                      }
                  }}
                  onMouseEnter={(e) => {
-                     e.currentTarget.style.borderColor = league.color;
-                     e.currentTarget.style.background = 'rgba(30, 35, 50, 0.8)';
-                     e.currentTarget.style.transform = 'translateY(-3px)';
-                 }}
-                 onMouseLeave={(e) => {
-                     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-                     e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
-                     e.currentTarget.style.transform = 'translateY(0)';
-                 }}
-                 onTouchStart={(e) => {
-                     e.currentTarget.style.borderColor = league.color;
-                     e.currentTarget.style.background = 'rgba(30, 35, 50, 0.9)';
-                     e.currentTarget.style.transform = 'scale(0.98)';
-                 }}
-                 onTouchEnd={(e) => {
-                     setTimeout(() => {
-                         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-                         e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
-                         e.currentTarget.style.transform = 'scale(1)';
-                     }, 200);
-                 }}
+                  if (!e.currentTarget) return;
+                  e.currentTarget.style.borderColor = league.color;
+                  e.currentTarget.style.background = 'rgba(30, 35, 50, 0.8)';
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+              }}
+              onMouseLeave={(e) => {
+                  if (!e.currentTarget) return;
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              onTouchStart={(e) => {
+                  if (!e.currentTarget) return;
+                  e.currentTarget.style.borderColor = league.color;
+                  e.currentTarget.style.background = 'rgba(30, 35, 50, 0.9)';
+                  e.currentTarget.style.transform = 'scale(0.98)';
+              }}
+              onTouchEnd={(e) => {
+                  const target = e.currentTarget; // ✅ Salva riferimento
+                  if (!target) return;
+                  setTimeout(() => {
+                      if (!target) return; // ✅ Ricontrolla nel setTimeout
+                      target.style.borderColor = 'rgba(255,255,255,0.05)';
+                      target.style.background = 'rgba(20, 22, 35, 0.6)';
+                      target.style.transform = 'scale(1)';
+                  }, 200);
+              }}
                >
                    <div>
                       <div style={{

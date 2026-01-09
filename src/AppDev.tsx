@@ -1300,10 +1300,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                if (e.currentTarget) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                if (e.currentTarget) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
               }}
             >
               {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
@@ -2767,12 +2767,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 letterSpacing: '1px'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
+                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
+                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
+                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
+                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
               }}
             >
               📊 VAI AL RESOCONTO COMPLETO
@@ -2798,14 +2798,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.borderColor = theme.cyan;
-                e.currentTarget.style.color = theme.cyan;
+                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
+                if (e.currentTarget) e.currentTarget.style.borderColor = theme.cyan;
+                if (e.currentTarget) e.currentTarget.style.color = theme.cyan;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.borderColor = theme.textDim;
-                e.currentTarget.style.color = theme.textDim;
+                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
+                if (e.currentTarget) e.currentTarget.style.borderColor = theme.textDim;
+                if (e.currentTarget) e.currentTarget.style.color = theme.textDim;
               }}
             >
               ← Torna alla Lista Partite
@@ -2830,12 +2830,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
+                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
+                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = `0 4px 20px rgba(0, 240, 255, 0.3)`;
+                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
+                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 4px 20px rgba(0, 240, 255, 0.3)`;
               }}
             >
               🔄 SIMULA DI NUOVO
@@ -4380,8 +4380,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               fontWeight: 'bold',
               transition: 'all 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#666'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#444'}
+            onMouseEnter={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor = '#666' }}
+            onMouseLeave={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor = '#444' }}
           >
             Annulla
           </button>
@@ -4404,8 +4404,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               boxShadow: `0 0 20px rgba(0, 240, 255, 0.3)`,
               transition: 'all 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = `0 0 20px rgba(0, 240, 255, 0.3)`}
+            onMouseEnter={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor  = `0 0 30px rgba(0, 240, 255, 0.5)`}}
+            onMouseLeave={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor  = `0 0 20px rgba(0, 240, 255, 0.3)`}}
           >
             ✅ Salva Modifiche
           </button>
@@ -4505,12 +4505,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             gap: '8px'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = theme.cyan;
-            e.currentTarget.style.color = theme.cyan;
+            if (e.currentTarget) e.currentTarget.style.borderColor = theme.cyan;
+            if (e.currentTarget) e.currentTarget.style.color = theme.cyan;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = theme.textDim;
-            e.currentTarget.style.color = theme.textDim;
+            if (e.currentTarget) e.currentTarget.style.borderColor = theme.textDim;
+            if (e.currentTarget) e.currentTarget.style.color = theme.textDim;
           }}
         >
           🎛️ Mixer Tuning
@@ -4530,12 +4530,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = theme.cyan;
-            e.currentTarget.style.color = theme.cyan;
+            if (e.currentTarget) e.currentTarget.style.borderColor = theme.cyan;
+            if (e.currentTarget) e.currentTarget.style.color = theme.cyan;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = theme.textDim;
-            e.currentTarget.style.color = theme.textDim;
+            if (e.currentTarget) e.currentTarget.style.borderColor = theme.textDim;
+            if (e.currentTarget) e.currentTarget.style.color = theme.textDim;
           }}
         >
           [ ESC ] Back to Dashboard
@@ -4596,12 +4596,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     }}
                     onMouseEnter={(e) => {
                         if (configMode !== opt.id) {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                            if (e.currentTarget) e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
                         }
                     }}
                     onMouseLeave={(e) => {
                         if (configMode !== opt.id) {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                            if (e.currentTarget) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
                         }
                     }}
                 >
@@ -4976,19 +4976,19 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                                         onMouseEnter={(e) => {
                                             if (Array.isArray(selectedMatchForConfig)) {
                                                 if (!selectedMatchForConfig.find(m => m.id === match.id)) {
-                                                    e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
+                                                    if (e.currentTarget) e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
                                                 }
                                             } else if (selectedMatchForConfig?.id !== match.id) {
-                                                e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
+                                                if (e.currentTarget) e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
                                             }
                                         }}
                                         onMouseLeave={(e) => {
                                             if (Array.isArray(selectedMatchForConfig)) {
                                                 if (!selectedMatchForConfig.find(m => m.id === match.id)) {
-                                                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                                    if (e.currentTarget) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
                                                 }
                                             } else if (selectedMatchForConfig?.id !== match.id) {
-                                                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                                if (e.currentTarget) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
                                             }
                                         }}
                                     >
@@ -5109,12 +5109,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   }}
                   onMouseEnter={(e) => {
                     if (configAlgo !== opt.id) {
-                      e.currentTarget.style.borderColor = '#555';
+                      if (e.currentTarget) e.currentTarget.style.borderColor = '#555';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (configAlgo !== opt.id) {
-                      e.currentTarget.style.borderColor = '#333';
+                      if (e.currentTarget) e.currentTarget.style.borderColor = '#333';
                     }
                   }}
                 >
@@ -5151,12 +5151,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                               }}
                               onMouseEnter={(e) => {
                                   if (selectedSpeed !== spd.id) {
-                                      e.currentTarget.style.background = '#333';
+                                      if (e.currentTarget) e.currentTarget.style.background = '#333';
                                   }
                               }}
                               onMouseLeave={(e) => {
                                   if (selectedSpeed !== spd.id) {
-                                      e.currentTarget.style.background = '#222';
+                                      if (e.currentTarget) e.currentTarget.style.background = '#222';
                                   }
                               }}
                           >
@@ -5313,12 +5313,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 35px rgba(0,240,255,0.5)';
-              e.currentTarget.style.transform = 'scale(1.02)';
+              if (e.currentTarget) e.currentTarget.style.boxShadow = '0 0 35px rgba(0,240,255,0.5)';
+              if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.02)';
           }}
           onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 25px rgba(0,240,255,0.3)';
-              e.currentTarget.style.transform = 'scale(1)';
+              if (e.currentTarget) e.currentTarget.style.boxShadow = '0 0 25px rgba(0,240,255,0.3)';
+              if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
           }}
       >
           [ EXECUTE SEQUENCE ]
@@ -5807,8 +5807,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 gap: '6px',
                 transition: 'all 0.2s'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'}
+              onMouseEnter={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.2)'}}
+              onMouseLeave={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.1)'}}
             >
               ⟵ DASHBOARD
             </button>

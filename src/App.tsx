@@ -181,9 +181,18 @@ useEffect(() => {
   }
 
   const groupMatchesByDate = () => {
+    // ✅ Controllo sicurezza: se matches è vuoto, svuota groupedMatches
+    if (!matches || matches.length === 0) {
+      setGroupedMatches([]);
+      return;
+    }
+  
     const groups: { [key: string]: Match[] } = {}
     
     matches.forEach(match => {
+      // ✅ Controllo sicurezza: salta match null o senza date_obj
+      if (!match || !match.date_obj) return;
+      
       const date = new Date(match.date_obj)
       const dateKey = date.toISOString().split('T')[0]
       
@@ -192,7 +201,7 @@ useEffect(() => {
       }
       groups[dateKey].push(match)
     })
-
+  
     const grouped: MatchGroup[] = Object.keys(groups)
       .sort()
       .map(dateKey => {
@@ -200,10 +209,12 @@ useEffect(() => {
         const dayName = DAY_NAMES[date.getDay()]
         const dateFormatted = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`
         
-        const sortedMatches = groups[dateKey].sort((a, b) => {
-          return a.match_time.localeCompare(b.match_time)
-        })
-
+        const sortedMatches = groups[dateKey]
+          .filter(m => m && m.match_time) // ✅ Filtra match invalidi
+          .sort((a, b) => {
+            return a.match_time.localeCompare(b.match_time)
+          })
+  
         return {
           date: dateKey,
           dateFormatted,
@@ -211,7 +222,7 @@ useEffect(() => {
           matches: sortedMatches
         }
       })
-
+  
     setGroupedMatches(grouped)
   }
 

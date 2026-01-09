@@ -58,7 +58,6 @@ function App() {
 
   // 🔥 GESTIONE COMPLETA DEL TASTO INDIETRO
   useEffect(() => {
-    let navigationStack: string[] = []
 
     const handleBackButton = (e: PopStateEvent) => {
       e.preventDefault()
@@ -236,14 +235,13 @@ function App() {
     setGroupedMatches(grouped)
   }
 
-  const [simulationResults, setSimulationResults] = useState<any>(null)
   const [isSimulating, setIsSimulating] = useState(false)
 
   const handleSimulate = async () => {
     if (!selectedMatch) return
     
     setIsSimulating(true)
-    setSimulationResults(null)
+    
     
     try {
       const response = await fetch(`${API_BASE}/simulation/simulate-match`, {
@@ -260,8 +258,8 @@ function App() {
       
       if (!response.ok) throw new Error('Errore simulazione')
       
-      const results = await response.json()
-      setSimulationResults(results)
+      await response.json()
+      
       
     } catch (error) {
       console.error('Errore:', error)

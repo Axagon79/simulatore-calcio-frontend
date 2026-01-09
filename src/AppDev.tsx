@@ -588,73 +588,66 @@ export default function AppDev() {
   }, []);
 
 
-// ✅ GESTIONE INTELLIGENTE TASTO INDIETRO (UNDO + EXIT)
+// ✅ GESTIONE NAVIGAZIONE PERFETTA (FIX CONFLITTO)
 useEffect(() => {
-  // Parentesi vuote () per evitare errore TypeScript su 'e'
   const handleBack = () => {
-    
-    // 1. CONTROLLIAMO SE C'È QUALCOSA DA CHIUDERE (Priorità Alta)
-    const isOverlayOpen = showMatchSummary || showFormationsPopup || showResimulatePopup || 
-                          showSettingsPopup || chatOpen || mobileMenuOpen || expandedMatch;
+    // 1. GESTIONE POPUP (Priorità Massima)
+    // Se c'è un popup aperto, chiudiamo SOLO quello e rimaniamo nella pagina (PushState)
+    const isPopupOpen = showMatchSummary || showFormationsPopup || showResimulatePopup || 
+                        showSettingsPopup || chatOpen || mobileMenuOpen;
 
-    if (isOverlayOpen) {
-      // Se c'è un popup, rimaniamo nell'app (riattiviamo la trappola)
-      window.history.pushState({ internal: true }, '', window.location.pathname);
-      
-      if (showMatchSummary) { setShowMatchSummary(false); return; }
-      if (showFormationsPopup) { setShowFormationsPopup(false); setPopupOpacity(0); return; }
-      if (showResimulatePopup) { setShowResimulatePopup(false); return; }
-      if (showSettingsPopup) { setShowSettingsPopup(false); return; }
-      if (chatOpen) { setChatOpen(false); return; }
-      if (mobileMenuOpen) { setMobileMenuOpen(false); return; }
-      if (expandedMatch) { setExpandedMatch(null); return; }
+    if (isPopupOpen) {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+      if (showMatchSummary) setShowMatchSummary(false);
+      if (showFormationsPopup) { setShowFormationsPopup(false); setPopupOpacity(0); }
+      if (showResimulatePopup) setShowResimulatePopup(false);
+      if (showSettingsPopup) setShowSettingsPopup(false);
+      if (chatOpen) setChatOpen(false);
+      if (mobileMenuOpen) setMobileMenuOpen(false);
       return;
     }
 
-    // 2. NAVIGAZIONE TRA LE SCHERMATE (Indietro nella gerarchia)
-    if (viewState !== 'list') {
-      window.history.pushState({ internal: true }, '', window.location.pathname); // Trappola
+    // 2. GESTIONE ESPANSIONE PARTITA (Mobile)
+    if (expandedMatch) {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+      setExpandedMatch(null); 
+      return; 
+    }
+
+    // 3. NAVIGAZIONE INTERNA (Analisi -> Lista)
+    // Questo è il punto che non ti funzionava prima!
+    if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result' || viewState === 'settings') {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
       
-      if (viewState === 'result' || viewState === 'simulating' || viewState === 'settings') {
-         setViewState('pre-match');
-         setSimulationEnded(false);
-         return;
-      }
-      if (viewState === 'pre-match') {
-         setViewState('list');
-         setSelectedMatch(null);
-         return;
-      }
+      // Reset totale per tornare alla lista pulita
+      setViewState('list');
+      setSelectedMatch(null); 
+      setSimulationEnded(false);
       return;
     }
 
-    // 3. TORNA ALLA DASHBOARD (Deseleziona Campionato)
-    if (selectedMatch || activeLeague) {
-      window.history.pushState({ internal: true }, '', window.location.pathname); // Trappola
-      
-      if (selectedMatch) { setSelectedMatch(null); return; }
-      if (activeLeague) { setActiveLeague(null); return; }
+    // 4. NAVIGAZIONE LEGA (Lista Partite -> Dashboard)
+    if (activeLeague) {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+      setActiveLeague(null);
       return;
     }
 
-    // 4. GESTIONE USCITA APP (Dashboard -> Exit)
+    // 5. USCITA DALL'APP (Solo se siamo nella Dashboard Home)
     const now = Date.now();
     if (now - lastBackPress.current < 2000) {
-      // DOPPIO CLICK: USCITA REALE
-      // Qui NON facciamo pushState. Lasciamo che il browser faccia il suo corso (uscita).
-      // Se necessario su alcuni Android: window.history.back();
+      // Qui lasciamo uscire (nessun pushState)
+      // Se necessario forza: window.history.back();
     } else {
-      // PRIMO CLICK: AVVISO
       lastBackPress.current = now;
       setShowExitToast(true);
       setTimeout(() => setShowExitToast(false), 2000);
-      
-      // Riattiviamo la trappola per catturare il prossimo click (se avviene dopo 2 sec)
+      // Blocchiamo l'uscita al primo tocco
       window.history.pushState({ internal: true }, '', window.location.pathname);
     }
   };
 
-  // Inizializza la gestione della cronologia
+  // Inizializza la "trappola" appena il componente monta o cambia stato rilevante
   window.history.pushState({ internal: true }, '', window.location.pathname);
   window.addEventListener('popstate', handleBack);
   
@@ -668,20 +661,20 @@ useEffect(() => {
 
   
 
-  // --- LOGICA SIMULAZIONE ---
-
-  const prepareSimulation = (match: Match) => {
-    setSelectedMatch(match);
-    // window.history.pushState({page: 'match'}, '', window.location.pathname);  <-- QUESTA RIGA VA CANCELLATA!
-    setViewState('pre-match');
-    setSimResult(null);
-    setTimer(0);
-    setAnimEvents([]);
-    setSimulationEnded(false);
-    setLiveScore({home: 0, away: 0});
+const prepareSimulation = (match: Match) => {
+  setSelectedMatch(match);
+  // ❌ RIGA CANCELLATA: window.history.pushState({page: 'match'}, '', window.location.pathname);
+  // Lasciamo che sia l'useEffect globale a gestire la cronologia, altrimenti ne crea due!
   
-    addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
-  };
+  setViewState('pre-match');
+  setSimResult(null);
+  setTimer(0);
+  setAnimEvents([]);
+  setSimulationEnded(false);
+  setLiveScore({home: 0, away: 0});
+
+  addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
+};
 
 // ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
 const loadFormations = async (home: string, away: string, league: string) => {

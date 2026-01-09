@@ -6,7 +6,7 @@ import { checkAdmin, PERMISSIONS } from './permissions';
 import SimulationResultView from './components/SimulationResultView';
 import './styles/SimulationAnimation.css';
 import { ArrowLeft, /* altre icone */ } from 'lucide-react'; //
-import { useNavigate } from 'react-router-dom'
+
 
 // --- INTERFACCE & TIPI ---
 
@@ -357,7 +357,6 @@ export default function AppDev() {
   const [activeLeague, setActiveLeague] = useState<string | null>(null);
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const navigate = useNavigate();
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
 

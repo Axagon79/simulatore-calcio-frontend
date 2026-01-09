@@ -59,25 +59,40 @@ function App() {
 const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
 console.log("🚀 API connessa a:", API_BASE);
 
-// 📍 POSIZIONAMENTO: Dopo l'ultimo useState (showMatchSummary) e prima di "useEffect(() => { const fetchNations..."
+// 📍 TROVA E SOSTITUISCI il blocco useEffect esistente (righe 62-75)
 
-// ✅ GESTIONE GLOBALE TASTO INDIETRO SMARTPHONE
 useEffect(() => {
-  window.history.pushState({ noBackExitsApp: true }, '');
+  // Previeni chiusura app con back button
+  const preventExit = () => {
+    window.history.pushState(null, '', window.location.href);
+  };
 
-  const handleBackButton = (event: PopStateEvent) => {
-    if (event.state?.noBackExitsApp) {
-      window.history.pushState({ noBackExitsApp: true }, '');
-      // L'app NON si chiude, puoi personalizzare qui
+  const handleBackButton = (e: PopStateEvent) => {
+    e.preventDefault();
+    window.history.pushState(null, '', window.location.href);
+    
+    // OPZIONALE: aggiungi qui la logica di navigazione interna
+    // Ad esempio, se vuoi tornare alla lista partite:
+    if (selectedMatch) {
+      setSelectedMatch(null);
     }
   };
 
+  // Aggiungi stato alla cronologia all'avvio
+  window.history.pushState(null, '', window.location.href);
+  
+  // Listener per il back button
   window.addEventListener('popstate', handleBackButton);
+  
+  // Aggiungi anche questo per sicurezza
+  window.addEventListener('beforeunload', preventExit);
 
   return () => {
     window.removeEventListener('popstate', handleBackButton);
+    window.removeEventListener('beforeunload', preventExit);
   };
-}, []); // 👈 Array vuoto = si attiva UNA VOLTA all'avvio dell'app
+}, [selectedMatch]); // 👈 Aggiungi selectedMatch per gestire la navigazione interna
+
 
 
   useEffect(() => {

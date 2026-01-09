@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="description" content="Simulatore di partite di calcio con intelligenza artificiale" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AI SIMULATOR" />
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/icon-192x192.png" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <title>AI SIMULATOR - Simulatore Calcio</title>
+  </head>
+  <body>
+    <noscript>Devi abilitare JavaScript per utilizzare questa app.</noscript>
+    <div id="root"></div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Registra il service worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/service-worker.js')
+            .then((registration) => {
+              console.log('✅ Service Worker registrato:', registration);
+              
+              // Controlla aggiornamenti ogni 60 secondi
+              setInterval(() => {
+                registration.update();
+              }, 60000);
+            })
+            .catch((error) => {
+              console.log('❌ Registrazione Service Worker fallita:', error);
+            });
+        });
+      }
+
+      // Mostra prompt di installazione PWA
+      let deferredPrompt;
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Mostra un banner personalizzato (opzionale)
+        console.log('💡 PWA può essere installata!');
+        
+        // Puoi mostrare un pulsante "Installa App" qui
+        // Per ora logghiamo solo
+      });
+
+      window.addEventListener('appinstalled', () => {
+        console.log('🎉 PWA installata con successo!');
+        deferredPrompt = null;
+      });
+
+      // Gestione navigazione back button per PWA standalone
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('📱 App in modalità standalone');
+        
+        // Previeni comportamento back button di default
+        window.addEventListener('popstate', (e) => {
+          // La logica è già gestita in App.tsx
+          console.log('🔙 Back button premuto in modalità PWA');
+        });
+      }
+    </script>
+  </body>
+</html>

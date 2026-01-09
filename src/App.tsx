@@ -53,47 +53,71 @@ function App() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Sostituisci la vecchia riga 54 (const API_BASE = ...) con questa:
-//const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
+  console.log("🚀 API connessa a:", API_BASE);
 
-const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
-console.log("🚀 API connessa a:", API_BASE);
+  // 🔥 GESTIONE COMPLETA DEL TASTO INDIETRO
+  useEffect(() => {
+    let navigationStack: string[] = []
 
-// 📍 TROVA E SOSTITUISCI il blocco useEffect esistente (righe 62-75)
-
-useEffect(() => {
-  // Previeni chiusura app con back button
-  const preventExit = () => {
-    window.history.pushState(null, '', window.location.href);
-  };
-
-  const handleBackButton = (e: PopStateEvent) => {
-    e.preventDefault();
-    window.history.pushState(null, '', window.location.href);
-    
-    // OPZIONALE: aggiungi qui la logica di navigazione interna
-    // Ad esempio, se vuoi tornare alla lista partite:
-    if (selectedMatch) {
-      setSelectedMatch(null);
+    const handleBackButton = (e: PopStateEvent) => {
+      e.preventDefault()
+      
+      // Logica di navigazione gerarchica
+      if (selectedMatch) {
+        // Se c'è una partita selezionata, torna alla lista partite
+        setSelectedMatch(null)
+        window.history.pushState({ level: 'matches' }, '', window.location.href)
+      } else if (selectedRound) {
+        // Se c'è una giornata selezionata, torna alle giornate
+        setSelectedRound(null)
+        setMatches([])
+        setGroupedMatches([])
+        window.history.pushState({ level: 'rounds' }, '', window.location.href)
+      } else if (league) {
+        // Se c'è un campionato selezionato, torna ai campionati
+        setLeague('')
+        setRounds([])
+        window.history.pushState({ level: 'leagues' }, '', window.location.href)
+      } else if (country !== 'Italy') {
+        // Se non sei sulla nazione di default, torna a Italia
+        setCountry('Italy')
+        window.history.pushState({ level: 'countries' }, '', window.location.href)
+      } else {
+        // Se sei già al livello base, non fare nulla (evita uscita dall'app)
+        window.history.pushState({ level: 'root' }, '', window.location.href)
+      }
     }
-  };
 
-  // Aggiungi stato alla cronologia all'avvio
-  window.history.pushState(null, '', window.location.href);
-  
-  // Listener per il back button
-  window.addEventListener('popstate', handleBackButton);
-  
-  // Aggiungi anche questo per sicurezza
-  window.addEventListener('beforeunload', preventExit);
+    // Inizializza lo stack di navigazione
+    window.history.pushState({ level: 'root' }, '', window.location.href)
+    
+    // Listener per il back button
+    window.addEventListener('popstate', handleBackButton)
 
-  return () => {
-    window.removeEventListener('popstate', handleBackButton);
-    window.removeEventListener('beforeunload', preventExit);
-  };
-}, [selectedMatch]); // 👈 Aggiungi selectedMatch per gestire la navigazione interna
+    return () => {
+      window.removeEventListener('popstate', handleBackButton)
+    }
+  }, [selectedMatch, selectedRound, league, country])
 
+  // 🔄 AGGIORNA LO STACK QUANDO CAMBI LIVELLO
+  useEffect(() => {
+    if (selectedMatch) {
+      window.history.pushState({ level: 'match' }, '', window.location.href)
+    }
+  }, [selectedMatch])
 
+  useEffect(() => {
+    if (selectedRound) {
+      window.history.pushState({ level: 'rounds' }, '', window.location.href)
+    }
+  }, [selectedRound])
+
+  useEffect(() => {
+    if (league) {
+      window.history.pushState({ level: 'leagues' }, '', window.location.href)
+    }
+  }, [league])
 
   useEffect(() => {
     fetchLeagues()
@@ -313,8 +337,8 @@ useEffect(() => {
                     onClick={() => setSelectedRound(round)}
                   >
                     <div style={styles.roundIcon}>{ROUND_ICONS[round.type]}</div>
-                    <div style={styles.roundLabel}>{round.label}</div>
-                    <div style={styles.roundName}>{round.name}</div>
+                    <div style={styles.roundLabel}>{round.type}</div>
+                    <div style={styles.roundName}>{round.label}</div>
                   </button>
                 )
               })}
@@ -322,24 +346,19 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Lista Partite Raggruppate */}
+        {/* Lista Partite */}
         {groupedMatches.length > 0 && (
           <div style={styles.card}>
-            <label style={styles.sectionLabel}>
-              ⚽ Partite - {selectedRound?.name} ({matches.length})
-            </label>
-            
+            <label style={styles.sectionLabel}>⚽ Seleziona Partita</label>
             <div style={styles.matchesContainer}>
               {groupedMatches.map((group) => (
                 <div key={group.date} style={styles.dateGroup}>
                   <div style={styles.dateHeader}>
-                    📅 {group.dayName} {group.dateFormatted}
+                    {group.dayName} {group.dateFormatted}
                   </div>
-                  
                   {group.matches.map((match) => {
                     const isSelected = selectedMatch?.id === match.id
                     const isFinished = match.status === 'Finished'
-                    
                     return (
                       <div
                         key={match.id}
@@ -355,21 +374,19 @@ useEffect(() => {
                             ...styles.matchStatus,
                             ...(isFinished ? styles.matchStatusFinished : styles.matchStatusScheduled)
                           }}>
-                            {match.status === 'Finished' ? '✓ Finita' : '📍 Programmata'}
+                            {isFinished ? '✅ Finita' : '📅 Prevista'}
                           </span>
                         </div>
-                        
                         <div style={styles.matchTeams}>
                           <div style={styles.teamName}>{match.home}</div>
-                          <div style={styles.matchScore}>
-                            {match.real_score || 'vs'}
-                          </div>
+                          {match.real_score && (
+                            <div style={styles.matchScore}>{match.real_score}</div>
+                          )}
                           <div style={styles.teamName}>{match.away}</div>
                         </div>
-
-                        {match.h2h_data?.history_summary && (
+                        {match.h2h_data && (
                           <div style={styles.h2hInfo}>
-                            📊 {match.h2h_data.history_summary}
+                            📊 H2H disponibili: {JSON.stringify(match.h2h_data).substring(0, 50)}...
                           </div>
                         )}
                       </div>
@@ -381,13 +398,16 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Riepilogo e Bottone Simula */}
+        {/* Riepilogo e Simulazione */}
         {selectedMatch && (
           <div style={styles.summaryCard}>
+            <label style={styles.sectionLabel}>📋 Riepilogo Simulazione</label>
             <div style={styles.summaryGrid}>
               <div style={styles.summaryItem}>
                 <span style={styles.summaryLabel}>🌍 Nazione</span>
-                <span style={styles.summaryValue}>{selectedCountry?.flag} {selectedCountry?.name}</span>
+                <span style={styles.summaryValue}>
+                  {selectedCountry?.flag} {selectedCountry?.name}
+                </span>
               </div>
               <div style={styles.summaryItem}>
                 <span style={styles.summaryLabel}>🏆 Campionato</span>
@@ -395,84 +415,60 @@ useEffect(() => {
               </div>
               <div style={styles.summaryItem}>
                 <span style={styles.summaryLabel}>📅 Giornata</span>
-                <span style={styles.summaryValue}>{selectedRound?.name}</span>
+                <span style={styles.summaryValue}>{selectedRound?.label}</span>
               </div>
               <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>⚽ Partita</span>
-                <span style={styles.summaryValue}>
-                  {selectedMatch.home} vs {selectedMatch.away}
-                </span>
+                <span style={styles.summaryLabel}>🏠 Casa</span>
+                <span style={styles.summaryValue}>{selectedMatch.home}</span>
+              </div>
+              <div style={styles.summaryItem}>
+                <span style={styles.summaryLabel}>✈️ Trasferta</span>
+                <span style={styles.summaryValue}>{selectedMatch.away}</span>
+              </div>
+              <div style={styles.summaryItem}>
+                <span style={styles.summaryLabel}>🕐 Orario</span>
+                <span style={styles.summaryValue}>{selectedMatch.match_time}</span>
               </div>
             </div>
-            
-            {/* Bottone Simula con stato */}
-            <button 
-              onClick={handleSimulate}
+            <button
               style={styles.simulateBtn}
+              onClick={handleSimulate}
               disabled={isSimulating}
             >
-              {isSimulating ? '⏳ SIMULAZIONE IN CORSO...' : '🚀 SIMULA QUESTA PARTITA'}
+              {isSimulating ? '⏳ Simulazione in corso...' : '🎮 Avvia Simulazione'}
             </button>
+          </div>
+        )}
 
-            {/* Risultati Simulazione */}
-            {simulationResults && (
-              <div style={{
-                marginTop: '24px',
-                padding: '20px',
-                backgroundColor: '#f0f4ff',
-                borderRadius: '14px',
-                border: '2px solid #667eea'
-              }}>
-                <h3 style={{ marginBottom: '16px', color: '#667eea' }}>
-                  📊 Risultati Simulazione
-                </h3>
-                <pre style={{ 
-                  backgroundColor: 'white', 
-                  padding: '16px', 
-                  borderRadius: '8px',
-                  overflow: 'auto',
-                  fontSize: '14px'
-                }}>
-                  {JSON.stringify(simulationResults, null, 2)}
-                </pre>
-              </div>
-            )}
-
+        {/* Loading Overlay */}
+        {(loading || isSimulating) && (
+          <div style={styles.loadingOverlay}>
+            <div style={styles.spinner}></div>
+            <p style={styles.loadingText}>
+              {isSimulating ? 'Simulazione in corso...' : 'Caricamento...'}
+            </p>
           </div>
         )}
       </div>
-
-      {/* Loading Overlay */}
-      {loading && (
-        <div style={styles.loadingOverlay}>
-          <div style={styles.spinner} />
-          <p style={styles.loadingText}>Caricamento...</p>
-        </div>
-      )}
     </div>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles = {
   wrapper: {
-    width: '100vw',
     minHeight: '100vh',
     backgroundColor: '#f5f7fa',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    margin: 0,
-    padding: 0
+    width: '100%',
+    overflowX: 'hidden' as const
   },
   container: {
-    width: '100%',
-    maxWidth: '1400px',
-    padding: '20px',
+    maxWidth: '1200px',
     margin: '0 auto',
-    boxSizing: 'border-box'
+    padding: 'clamp(16px, 3vw, 32px)',
+    width: '100%'
   },
   header: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
     marginBottom: '30px',
     padding: '50px 30px',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -507,7 +503,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   selectorGroup: {
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column' as const
   },
   label: {
     display: 'block',
@@ -547,9 +543,9 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'white',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    textAlign: 'center',
+    textAlign: 'center' as const,
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
     alignItems: 'center',
     gap: '8px'
   },
@@ -566,7 +562,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     fontWeight: '800',
     color: '#667eea',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     letterSpacing: '0.8px'
   },
   roundName: {
@@ -576,15 +572,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   matchesContainer: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
     gap: '24px',
     maxHeight: '700px',
-    overflowY: 'auto',
+    overflowY: 'auto' as const,
     padding: '6px'
   },
   dateGroup: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
     gap: '12px'
   },
   dateHeader: {
@@ -615,7 +611,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '12px',
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
     gap: '10px'
   },
   matchTime: {
@@ -628,7 +624,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
     fontSize: '11px',
     fontWeight: '800',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     letterSpacing: '0.4px'
   },
   matchStatusFinished: {
@@ -654,7 +650,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: '0',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap' as const
   },
   matchScore: {
     padding: '8px 16px',
@@ -664,19 +660,19 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '16px',
     color: '#667eea',
     minWidth: '60px',
-    textAlign: 'center',
+    textAlign: 'center' as const,
     flexShrink: 0
   },
   h2hInfo: {
     fontSize: '13px',
     color: '#666',
-    fontStyle: 'italic',
+    fontStyle: 'italic' as const,
     marginTop: '8px',
     paddingTop: '10px',
     borderTop: '1px solid #f0f0f0',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap' as const
   },
   summaryCard: {
     backgroundColor: 'white',
@@ -694,7 +690,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   summaryItem: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
     gap: '6px'
   },
   summaryLabel: {
@@ -708,7 +704,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: '800',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap' as const
   },
   simulateBtn: {
     width: '100%',
@@ -722,18 +718,18 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     letterSpacing: '1.5px'
   },
   loadingOverlay: {
-    position: 'fixed',
+    position: 'fixed' as const,
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.6)',
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000

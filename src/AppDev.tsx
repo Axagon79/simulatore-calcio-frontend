@@ -584,19 +584,22 @@ export default function AppDev() {
 
 
   useEffect(() => {
-    const handleHashChange = () => {
-      if (!window.location.hash) {
-        // Tasto indietro premuto
-        if (selectedMatch) {
-          setSelectedMatch(null);
-        } else if (selectedRound) {
-          setSelectedRound(null);
-        }
+    const handleBack = () => {
+      if (selectedMatch) {
+        setSelectedMatch(null);
+      } else if (selectedRound) {
+        setSelectedRound(null);
+      } else {
+        // Previeni uscita dall'app al livello base
+        window.history.pushState(null, '', window.location.pathname);
       }
     };
   
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    // Inizializza stack
+    window.history.pushState(null, '', window.location.pathname);
+    
+    window.addEventListener('popstate', handleBack);
+    return () => window.removeEventListener('popstate', handleBack);
   }, [selectedMatch, selectedRound]);
 
 
@@ -606,7 +609,7 @@ export default function AppDev() {
 
   const prepareSimulation = (match: Match) => {
     setSelectedMatch(match);
-    navigate('#match');
+    window.history.pushState({page: 'match'}, '', window.location.pathname);
     setViewState('pre-match');
     setSimResult(null);
     setTimer(0);
@@ -1190,7 +1193,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           return (
             <button
               key={r.name}
-              onClick={() => { setSelectedRound(r); navigate('#round'); }}
+              onClick={() => { 
+                setSelectedRound(r); 
+                window.history.pushState({page: 'round'}, '', window.location.pathname);
+              }}
               onMouseEnter={() => setHoveredRound(r.name)}
               onMouseLeave={() => setHoveredRound(null)}
               style={{

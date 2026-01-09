@@ -458,7 +458,8 @@ export default function AppDev() {
   const [isFlashActive, setIsFlashActive] = useState<boolean>(false);
 
 
-  
+  const [showExitToast, setShowExitToast] = useState(false);
+  const lastBackPress = useRef(0);
 
 
   // --- INCOLLA QUESTO BLOCCO INSIEME AGLI ALTRI useState ---
@@ -587,47 +588,74 @@ export default function AppDev() {
   }, []);
 
 
-  // Gestione professionale del tasto Back su Android/Browser
+// ✅ GESTIONE INTELLIGENTE TASTO INDIETRO (UNDO OPERATION)
 useEffect(() => {
-  const handleBackNavigation = (_event: PopStateEvent) => {
-    // Se c'è un match selezionato o siamo in una vista specifica, annulliamo l'uscita
-    if (viewState === 'result' || viewState === 'simulating') {
-      setViewState('pre-match');
-      // Impediamo l'uscita riaggiungendo uno stato "fittizio"
-      window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
-    } 
-    else if (viewState === 'pre-match' || viewState === 'settings') {
-      setViewState('list');
-      setSelectedMatch(null);
-      window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
+  const handleBack = ()  => {
+    // Blocchiamo sempre l'uscita immediata per gestire noi la logica
+    window.history.pushState({ internal: true }, '', window.location.pathname);
+
+    // 1. CHIUSURA POPUP E MENU (Livello più alto)
+    if (showMatchSummary) { setShowMatchSummary(false); return; }
+    if (showFormationsPopup) { setShowFormationsPopup(false); setPopupOpacity(0); return; }
+    if (showResimulatePopup) { setShowResimulatePopup(false); return; }
+    if (showSettingsPopup) { setShowSettingsPopup(false); return; }
+    if (chatOpen) { setChatOpen(false); return; }
+    if (mobileMenuOpen) { setMobileMenuOpen(false); return; }
+
+    // 2. CHIUSURA ESPANSIONI (Mobile accordion)
+    if (expandedMatch) { setExpandedMatch(null); return; }
+
+    // 3. NAVIGAZIONE VISTE INTERNE
+    if (viewState === 'result') {
+      // Se siamo nei risultati, torniamo alla simulazione o pre-match
+      setViewState('pre-match'); 
+      setSimulationEnded(false);
+      return; 
     }
-    else if (selectedMatch) {
+    if (viewState === 'settings') { setViewState('pre-match'); return; }
+    if (viewState === 'simulating') { 
+      // Se stiamo simulando, interrompiamo? Meglio tornare al pre-match
+      setViewState('pre-match'); 
+      return; 
+    }
+
+    // 4. DESELEZIONE PARTITA (Annulla ultima operazione di selezione)
+    if (selectedMatch) {
       setSelectedMatch(null);
-      setViewState('list');
-      window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
-    } 
-    else if (activeLeague) {
-      // Se siamo nella lista partite, torniamo alla Dashboard principale
+      setViewState('list'); // Assicura di tornare alla lista
+      return;
+    }
+
+    // 5. TORNA ALLA DASHBOARD (Esci dal campionato)
+    if (activeLeague) {
       setActiveLeague(null);
+      return;
     }
-    // Se siamo già nella Dashboard, il tasto back chiuderà l'app normalmente (comportamento corretto)
+
+    // 6. GESTIONE USCITA APP (Doppio tocco)
+    const now = Date.now();
+    if (now - lastBackPress.current < 2000) {
+      // Qui lasciamo che l'utente esca veramente (o usiamo history.back() se necessario)
+      // Per PWA/Android spesso basta non fare pushState di nuovo, ma per sicurezza:
+      window.history.back(); 
+    } else {
+      lastBackPress.current = now;
+      setShowExitToast(true);
+      setTimeout(() => setShowExitToast(false), 2000);
+    }
   };
 
-  // Registriamo il listener per il tasto back
-  window.addEventListener('popstate', handleBackNavigation);
-
-  return () => {
-    window.removeEventListener('popstate', handleBackNavigation);
-  };
-}, [viewState, selectedMatch, activeLeague]);
-
-// Ogni volta che cambiamo "schermata", dobbiamo dire al browser che siamo "andati avanti"
-useEffect(() => {
-  if (selectedMatch || activeLeague || viewState !== 'list') {
-    // Inseriamo uno stato nella cronologia così il tasto "Back" avrà qualcosa da "tornare indietro"
-    window.history.pushState({ navigation: 'internal' }, '', window.location.pathname);
-  }
-}, [selectedMatch, activeLeague, viewState]);
+  // Inizializza lo stato per intercettare il back
+  window.history.pushState({ internal: true }, '', window.location.pathname);
+  window.addEventListener('popstate', handleBack);
+  
+  return () => window.removeEventListener('popstate', handleBack);
+}, [
+  // Importante: tutte le dipendenze per sapere cosa è "aperto"
+  viewState, activeLeague, selectedMatch, expandedMatch,
+  showMatchSummary, showFormationsPopup, showResimulatePopup, 
+  showSettingsPopup, chatOpen, mobileMenuOpen
+]);
 
 
   
@@ -6504,7 +6532,26 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           </div>
         </div>
       )}
-
+      {/* AVVISO DI USCITA (TOAST ANDROID STYLE) */}
+      {showExitToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '50px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(50, 50, 50, 0.9)',
+          color: 'white',
+          padding: '10px 20px',
+          borderRadius: '20px',
+          fontSize: '14px',
+          zIndex: 9999,
+          boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap'
+        }}>
+          Premi ancora per uscire
+        </div>
+      )}
     </div>
   );
 }

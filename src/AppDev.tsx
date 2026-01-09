@@ -672,13 +672,13 @@ useEffect(() => {
 
   const prepareSimulation = (match: Match) => {
     setSelectedMatch(match);
-    window.history.pushState({page: 'match'}, '', window.location.pathname);
+    // window.history.pushState({page: 'match'}, '', window.location.pathname);  <-- QUESTA RIGA VA CANCELLATA!
     setViewState('pre-match');
     setSimResult(null);
     setTimer(0);
     setAnimEvents([]);
     setSimulationEnded(false);
-    setLiveScore({home: 0, away: 0}); // ✅ RESET punteggio live
+    setLiveScore({home: 0, away: 0});
   
     addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
   };

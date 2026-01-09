@@ -561,7 +561,12 @@ export default function AppDev() {
 
   useEffect(() => {
     if (!league || !selectedRound) return;
-    fetch(`${API_BASE}/matches?league=${league}&round=${selectedRound.name}`).then(r => r.json()).then(setMatches);
+    fetch(`${API_BASE}/matches?league=${league}&round=${selectedRound.name}`)
+  .then(r => r.json())
+  .then(data => {
+    const validMatches = Array.isArray(data) ? data.filter(m => m && m.date_obj) : [];
+    setMatches(validMatches);
+  });
   }, [league, selectedRound]);
 
   // Scroll Chat

@@ -57,66 +57,46 @@ function App() {
   console.log("🚀 API connessa a:", API_BASE);
 
   // 🔥 GESTIONE COMPLETA DEL TASTO INDIETRO
-  useEffect(() => {
+useEffect(() => {
+  // Previeni comportamento di default in PWA
+  const preventBackExit = (e: Event) => {
+    e.preventDefault();
+    return false;
+  };
 
-    const handleBackButton = (e: PopStateEvent) => {
-      e.preventDefault()
-      
-      // Logica di navigazione gerarchica
-      if (selectedMatch) {
-        // Se c'è una partita selezionata, torna alla lista partite
-        setSelectedMatch(null)
-        window.history.pushState({ level: 'matches' }, '', window.location.href)
-      } else if (selectedRound) {
-        // Se c'è una giornata selezionata, torna alle giornate
-        setSelectedRound(null)
-        setMatches([])
-        setGroupedMatches([])
-        window.history.pushState({ level: 'rounds' }, '', window.location.href)
-      } else if (league) {
-        // Se c'è un campionato selezionato, torna ai campionati
-        setLeague('')
-        setRounds([])
-        window.history.pushState({ level: 'leagues' }, '', window.location.href)
-      } else if (country !== 'Italy') {
-        // Se non sei sulla nazione di default, torna a Italia
-        setCountry('Italy')
-        window.history.pushState({ level: 'countries' }, '', window.location.href)
-      } else {
-        // Se sei già al livello base, non fare nulla (evita uscita dall'app)
-        window.history.pushState({ level: 'root' }, '', window.location.href)
-      }
-    }
-
-    // Inizializza lo stack di navigazione
-    window.history.pushState({ level: 'root' }, '', window.location.href)
-    
-    // Listener per il back button
-    window.addEventListener('popstate', handleBackButton)
-
-    return () => {
-      window.removeEventListener('popstate', handleBackButton)
-    }
-  }, [selectedMatch, selectedRound, league, country])
-
-  // 🔄 AGGIORNA LO STACK QUANDO CAMBI LIVELLO
-  useEffect(() => {
+  const handleBackButton = () => {
+    // Logica di navigazione gerarchica
     if (selectedMatch) {
-      window.history.pushState({ level: 'match' }, '', window.location.href)
+      setSelectedMatch(null)
+    } else if (selectedRound) {
+      setSelectedRound(null)
+      setMatches([])
+      setGroupedMatches([])
+    } else if (league) {
+      setLeague('')
+      setRounds([])
+    } else if (country !== 'Italy') {
+      setCountry('Italy')
+    } else {
+      // Livello base: aggiungi stato per bloccare uscita
+      window.history.pushState(null, '', window.location.href)
     }
-  }, [selectedMatch])
+  }
 
-  useEffect(() => {
-    if (selectedRound) {
-      window.history.pushState({ level: 'rounds' }, '', window.location.href)
-    }
-  }, [selectedRound])
+  // Inizializza stack
+  window.history.pushState(null, '', window.location.href)
+  
+  // Listener principale
+  window.addEventListener('popstate', handleBackButton)
+  
+  // Per Android: blocca anche beforeunload
+  window.addEventListener('beforeunload', preventBackExit)
 
-  useEffect(() => {
-    if (league) {
-      window.history.pushState({ level: 'leagues' }, '', window.location.href)
-    }
-  }, [league])
+  return () => {
+    window.removeEventListener('popstate', handleBackButton)
+    window.removeEventListener('beforeunload', preventBackExit)
+  }
+}, [selectedMatch, selectedRound, league, country])
 
   useEffect(() => {
     fetchLeagues()

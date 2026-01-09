@@ -123,8 +123,10 @@ useEffect(() => {
   }, [selectedRound])
 
   useEffect(() => {
-    if (matches.length > 0) {
+    if (matches && matches.length > 0 && matches.every(m => m && m.date_obj)) {
       groupMatchesByDate()
+    } else {
+      setGroupedMatches([])
     }
   }, [matches])
 

@@ -136,33 +136,19 @@ const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
 ];
 */
 
-// 2. AGGIORNIAMO LA LISTA CAMPIONATI PER USARE GLI STESSI CODICI
-
 const LEAGUES_MAP: League[] = [
   // ITALIA
   { id: 'SERIE_A', name: 'Serie A', country: 'Italy' },
   { id: 'SERIE_B', name: 'Serie B', country: 'Italy' },
-  { id: 'SERIE_C_A', name: 'Serie C - Gir A', country: 'Italy' },
-  { id: 'SERIE_C_B', name: 'Serie C - Gir B', country: 'Italy' },
-  { id: 'SERIE_C_C', name: 'Serie C - Gir C', country: 'Italy' },
-
-  // INGHILTERRA
+  { id: 'SERIE_C_GIRONE_A', name: 'Serie C - Gir A', country: 'Italy' },  // ✅ CAMBIA
+  { id: 'SERIE_C_GIRONE_B', name: 'Serie C - Gir B', country: 'Italy' },  // ✅ CAMBIA
+  { id: 'SERIE_C_GIRONE_C', name: 'Serie C - Gir C', country: 'Italy' },  // ✅ CAMBIA
   { id: 'PREMIER_LEAGUE', name: 'Premier League', country: 'England' },
-
-  // SPAGNA
   { id: 'LA_LIGA', name: 'La Liga', country: 'Spain' },
-
-  // GERMANIA
   { id: 'BUNDESLIGA', name: 'Bundesliga', country: 'Germany' },
-
-  // FRANCIA (Recuperata!)
   { id: 'LIGUE_1', name: 'Ligue 1', country: 'France' },
-
-  // OLANDA (Recuperata!)
   { id: 'EREDIVISIE', name: 'Eredivisie', country: 'Netherlands' },
-
-  // PORTOGALLO
-  { id: 'LIGA_PORTUGAL', name: 'Primeira Liga', country: 'Portugal' },
+  { id: 'LIGA_PORTUGAL', name: 'Liga Portugal', country: 'Portugal' },
 ];
 
 // --- TEMA NEON / SCI-FI ---

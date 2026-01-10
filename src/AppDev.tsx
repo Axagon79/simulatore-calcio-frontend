@@ -1071,8 +1071,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // Deve accadere indipendentemente dal fatto che ci sia un evento o meno
         if (currentMinForEvents % 3 === 0) {
           setMomentum(prev => {
-              if (prev > 55) return prev - 1.5;
-              if (prev < 45) return prev + 1.5;
+              if (prev > 55) return prev - 0.5;
+              if (prev < 45) return prev + 0.5;
               return prev;
           });
         }
@@ -1081,16 +1081,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       // ✅ OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
       setMomentum(prev => {
         // Micro-oscillazione casuale sempre attiva (-2 a +2)
-        const microMove = (Math.random() - 0.5) * 4;
+        const microMove = (Math.random() - 0.5) * 8;
         
         // Ogni tanto (20% probabilità) crea un "momento di pressione"
         const pressione = Math.random();
         let nuovoMomentum = prev + microMove;
         
-        if (pressione < 0.08) {
-          nuovoMomentum = prev + (Math.random() * 6) + 2;
-        } else if (pressione < 0.16) {
-          nuovoMomentum = prev - (Math.random() * 6) - 2;
+        if (pressione < 0.20) {
+          nuovoMomentum = prev + (Math.random() * 15) + 5;
+        } else if (pressione < 0.40) {
+          nuovoMomentum = prev - (Math.random() * 15) - 5;
         } else if (pressione < 0.25) {
           if (prev > 55) nuovoMomentum = prev - (Math.random() * 3) - 1;
           else if (prev < 45) nuovoMomentum = prev + (Math.random() * 3) + 1;

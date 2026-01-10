@@ -136,33 +136,19 @@ const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
 ];
 */
 
-// 2. AGGIORNIAMO LA LISTA CAMPIONATI PER USARE GLI STESSI CODICI
-
 const LEAGUES_MAP: League[] = [
   // ITALIA
   { id: 'SERIE_A', name: 'Serie A', country: 'Italy' },
   { id: 'SERIE_B', name: 'Serie B', country: 'Italy' },
-  { id: 'SERIE_C_A', name: 'Serie C - Gir A', country: 'Italy' },
-  { id: 'SERIE_C_B', name: 'Serie C - Gir B', country: 'Italy' },
-  { id: 'SERIE_C_C', name: 'Serie C - Gir C', country: 'Italy' },
-
-  // INGHILTERRA
+  { id: 'SERIE_C_GIRONE_A', name: 'Serie C - Gir A', country: 'Italy' },  // ✅ CAMBIA
+  { id: 'SERIE_C_GIRONE_B', name: 'Serie C - Gir B', country: 'Italy' },  // ✅ CAMBIA
+  { id: 'SERIE_C_GIRONE_C', name: 'Serie C - Gir C', country: 'Italy' },  // ✅ CAMBIA
   { id: 'PREMIER_LEAGUE', name: 'Premier League', country: 'England' },
-
-  // SPAGNA
   { id: 'LA_LIGA', name: 'La Liga', country: 'Spain' },
-
-  // GERMANIA
   { id: 'BUNDESLIGA', name: 'Bundesliga', country: 'Germany' },
-
-  // FRANCIA (Recuperata!)
   { id: 'LIGUE_1', name: 'Ligue 1', country: 'France' },
-
-  // OLANDA (Recuperata!)
   { id: 'EREDIVISIE', name: 'Eredivisie', country: 'Netherlands' },
-
-  // PORTOGALLO
-  { id: 'LIGA_PORTUGAL', name: 'Primeira Liga', country: 'Portugal' },
+  { id: 'LIGA_PORTUGAL', name: 'Liga Portugal', country: 'Portugal' },
 ];
 
 // --- TEMA NEON / SCI-FI ---
@@ -588,100 +574,93 @@ export default function AppDev() {
   }, []);
 
 
-// ✅ GESTIONE INTELLIGENTE TASTO INDIETRO (UNDO + EXIT)
-  useEffect(() => {
-    // Parentesi vuote () per evitare errore TypeScript su 'e'
-    const handleBack = () => {
+// ✅ GESTIONE NAVIGAZIONE PERFETTA (FIX CONFLITTO)
+useEffect(() => {
+  const handleBack = () => {
+    // 1. GESTIONE POPUP (Priorità Massima)
+    // Se c'è un popup aperto, chiudiamo SOLO quello e rimaniamo nella pagina (PushState)
+    const isPopupOpen = showMatchSummary || showFormationsPopup || showResimulatePopup || 
+                        showSettingsPopup || chatOpen || mobileMenuOpen;
+
+    if (isPopupOpen) {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+      if (showMatchSummary) setShowMatchSummary(false);
+      if (showFormationsPopup) { setShowFormationsPopup(false); setPopupOpacity(0); }
+      if (showResimulatePopup) setShowResimulatePopup(false);
+      if (showSettingsPopup) setShowSettingsPopup(false);
+      if (chatOpen) setChatOpen(false);
+      if (mobileMenuOpen) setMobileMenuOpen(false);
+      return;
+    }
+
+    // 2. GESTIONE ESPANSIONE PARTITA (Mobile)
+    if (expandedMatch) {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+      setExpandedMatch(null); 
+      return; 
+    }
+
+    // 3. NAVIGAZIONE INTERNA (Analisi -> Lista)
+    // Questo è il punto che non ti funzionava prima!
+    if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result' || viewState === 'settings') {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
       
-      // 1. CONTROLLIAMO SE C'È QUALCOSA DA CHIUDERE (Priorità Alta)
-      const isOverlayOpen = showMatchSummary || showFormationsPopup || showResimulatePopup || 
-                            showSettingsPopup || chatOpen || mobileMenuOpen || expandedMatch;
+      // Reset totale per tornare alla lista pulita
+      setViewState('list');
+      setSelectedMatch(null); 
+      setSimulationEnded(false);
+      return;
+    }
 
-      if (isOverlayOpen) {
-        // Se c'è un popup, rimaniamo nell'app (riattiviamo la trappola)
-        window.history.pushState({ internal: true }, '', window.location.pathname);
-        
-        if (showMatchSummary) { setShowMatchSummary(false); return; }
-        if (showFormationsPopup) { setShowFormationsPopup(false); setPopupOpacity(0); return; }
-        if (showResimulatePopup) { setShowResimulatePopup(false); return; }
-        if (showSettingsPopup) { setShowSettingsPopup(false); return; }
-        if (chatOpen) { setChatOpen(false); return; }
-        if (mobileMenuOpen) { setMobileMenuOpen(false); return; }
-        if (expandedMatch) { setExpandedMatch(null); return; }
-        return;
-      }
+    // 4. NAVIGAZIONE LEGA (Lista Partite -> Dashboard)
+    if (activeLeague) {
+      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+      setActiveLeague(null);
+      return;
+    }
 
-      // 2. NAVIGAZIONE TRA LE SCHERMATE (Indietro nella gerarchia)
-      if (viewState !== 'list') {
-        window.history.pushState({ internal: true }, '', window.location.pathname); // Trappola
-        
-        if (viewState === 'result' || viewState === 'simulating' || viewState === 'settings') {
-           setViewState('pre-match');
-           setSimulationEnded(false);
-           return;
-        }
-        if (viewState === 'pre-match') {
-           setViewState('list');
-           setSelectedMatch(null);
-           return;
-        }
-        return;
-      }
-
-      // 3. TORNA ALLA DASHBOARD (Deseleziona Campionato)
-      if (selectedMatch || activeLeague) {
-        window.history.pushState({ internal: true }, '', window.location.pathname); // Trappola
-        
-        if (selectedMatch) { setSelectedMatch(null); return; }
-        if (activeLeague) { setActiveLeague(null); return; }
-        return;
-      }
-
-      // 4. GESTIONE USCITA APP (Dashboard -> Exit)
-      const now = Date.now();
-      if (now - lastBackPress.current < 2000) {
-        // DOPPIO CLICK: USCITA REALE
-        // Qui NON facciamo pushState. Lasciamo che il browser faccia il suo corso (uscita).
-        // Se necessario su alcuni Android: window.history.back();
-      } else {
-        // PRIMO CLICK: AVVISO
-        lastBackPress.current = now;
-        setShowExitToast(true);
-        setTimeout(() => setShowExitToast(false), 2000);
-        
-        // Riattiviamo la trappola per catturare il prossimo click (se avviene dopo 2 sec)
-        window.history.pushState({ internal: true }, '', window.location.pathname);
-      }
-    };
-
-    // Inizializza la gestione della cronologia
-    window.history.pushState({ internal: true }, '', window.location.pathname);
-    window.addEventListener('popstate', handleBack);
-    
-    return () => window.removeEventListener('popstate', handleBack);
-  }, [
-    viewState, activeLeague, selectedMatch, expandedMatch,
-    showMatchSummary, showFormationsPopup, showResimulatePopup, 
-    showSettingsPopup, chatOpen, mobileMenuOpen
-  ]);
-
-
-  
-
-  // --- LOGICA SIMULAZIONE ---
-
-  const prepareSimulation = (match: Match) => {
-    setSelectedMatch(match);
-    window.history.pushState({page: 'match'}, '', window.location.pathname);
-    setViewState('pre-match');
-    setSimResult(null);
-    setTimer(0);
-    setAnimEvents([]);
-    setSimulationEnded(false);
-    setLiveScore({home: 0, away: 0}); // ✅ RESET punteggio live
-  
-    addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
+    // 5. USCITA DALL'APP (Solo se siamo nella Dashboard Home)
+    const now = Date.now();
+    if (now - lastBackPress.current < 2000) {
+      // Qui lasciamo uscire (nessun pushState)
+      // Se necessario forza: window.history.back();
+    } else {
+      lastBackPress.current = now;
+      setShowExitToast(true);
+      setTimeout(() => setShowExitToast(false), 2000);
+      // Blocchiamo l'uscita al primo tocco
+      window.history.pushState({ internal: true }, '', window.location.pathname);
+    }
   };
+
+  // Inizializza la "trappola" appena il componente monta o cambia stato rilevante
+  window.history.pushState({ internal: true }, '', window.location.pathname);
+  window.addEventListener('popstate', handleBack);
+  
+  return () => window.removeEventListener('popstate', handleBack);
+}, [
+  viewState, activeLeague, selectedMatch, expandedMatch,
+  showMatchSummary, showFormationsPopup, showResimulatePopup, 
+  showSettingsPopup, chatOpen, mobileMenuOpen
+]);
+
+
+  
+
+const prepareSimulation = (match: Match) => {
+  setSelectedMatch(match);
+  // ❌ RIGA CANCELLATA: window.history.pushState({page: 'match'}, '', window.location.pathname);
+  // Lasciamo che sia l'useEffect globale a gestire la cronologia, altrimenti ne crea due!
+  
+  setViewState('pre-match');
+  setSimResult(null);
+  setTimer(0);
+  setAnimEvents([]);
+  setSimulationEnded(false);
+  setLiveScore({home: 0, away: 0});
+
+  addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
+};
 
 // ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
 const loadFormations = async (home: string, away: string, league: string) => {
@@ -1017,7 +996,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }
       }
   
-      // ✅ LOGICA EVENTI CON MOMENTUM FLUIDO
+      // ✅ LOGICA EVENTI CON MOMENTUM FLUIDO (CORRETTA)
       if (finalData.cronaca) {
         // CALCOLA IL MINUTO CORRETTO ANCHE PER I RECUPERI
         let minutoEvento = currentMinForEvents;
@@ -1030,6 +1009,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         
         const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === minutoEvento);
         
+        // 1. GESTIONE DEGLI EVENTI SPECIFICI (GOL, CARTELLINI, ETC.)
         eventiDelMinuto.forEach(matchEvent => {
           const eventoId = `${matchEvent.minuto}-${matchEvent.tipo}-${matchEvent.testo}`;
           
@@ -1044,40 +1024,32 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 away: matchEvent.squadra === 'ospite' ? prev.away + 1 : prev.away
               }));
               
-              // ✅ MOMENTUM FLUIDO CON OSCILLAZIONE NATURALE
-            if (matchEvent.tipo === 'gol') {
+              // MOMENTUM GOL (Spinta forte immediata)
               setMomentum(prev => 
                   matchEvent.squadra === 'casa' 
-                      ? Math.min(prev + 20, 85)  // Sposta ma non blocca
+                      ? Math.min(prev + 20, 85) 
                       : Math.max(prev - 20, 15)
               );
+            } 
+            // MOMENTUM RIGORI E ROSSI
+            else if (matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rosso') {
+              setMomentum(prev => 
+                matchEvent.squadra === 'casa' 
+                  ? Math.min(prev + 12, 75) 
+                  : Math.max(prev - 12, 25)
+              );
+            } 
+            // MOMENTUM CARTELLINI
+            else if (matchEvent.tipo === 'cartellino') {
+              setMomentum(prev => 
+                matchEvent.squadra === 'casa' 
+                  ? Math.max(prev - 5, 20) 
+                  : Math.min(prev + 5, 80)
+              );
             }
-
-            // ✅ RITORNO GRADUALE AL CENTRO
-            if (currentMinForEvents % 3 === 0) {
-              setMomentum(prev => {
-                  if (prev > 55) return prev - 1.5;
-                  if (prev < 45) return prev + 1.5;
-                  return prev;
-              });
-            }
-          } else if (matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rosso') {
-            setMomentum(prev => 
-              matchEvent.squadra === 'casa' 
-                ? Math.min(prev + 12, 75) 
-                : Math.max(prev - 12, 25)
-            );
-          } else if (matchEvent.tipo === 'cartellino') {
-            // Giallo: piccolo vantaggio all'avversario
-            setMomentum(prev => 
-              matchEvent.squadra === 'casa' 
-                ? Math.max(prev - 5, 20)  // Casa prende giallo: ospite avvantaggiato
-                : Math.min(prev + 5, 80)  // Ospite prende giallo: casa avvantaggiata
-            );
-          }
           
             // SCRITTE SUL CAMPO
-            if (matchEvent.tipo === 'gol' || matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rigore_sbagliato' || matchEvent.tipo === 'rosso') {
+            if (['gol', 'rigore_fischio', 'rigore_sbagliato', 'rosso'].includes(matchEvent.tipo)) {
               let msg = '';
               let col = '';
               
@@ -1085,24 +1057,25 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 msg = 'GOOOL!'; 
                 col = matchEvent.squadra === 'casa' ? theme.cyan : theme.danger; 
               }
-              else if (matchEvent.tipo === 'rigore_fischio') { 
-                msg = 'RIGORE!'; 
-                col = '#ff9f43'; 
-              }
-              else if (matchEvent.tipo === 'rigore_sbagliato') { 
-                msg = 'RIGORE PARATO!'; 
-                col = '#ffffff'; 
-              }
-              else if (matchEvent.tipo === 'rosso') { 
-                msg = 'ROSSO!'; 
-                col = theme.danger; 
-              }
+              else if (matchEvent.tipo === 'rigore_fischio') { msg = 'RIGORE!'; col = '#ff9f43'; }
+              else if (matchEvent.tipo === 'rigore_sbagliato') { msg = 'RIGORE PARATO!'; col = '#ffffff'; }
+              else if (matchEvent.tipo === 'rosso') { msg = 'ROSSO!'; col = theme.danger; }
           
               setPitchMsg({ testo: msg, colore: col });
               setTimeout(() => setPitchMsg(null), 2000);
             }
           }
-        });
+        }); // <--- FINE DEL FOREACH DEGLI EVENTI
+
+        // 2. RITORNO GRADUALE AL CENTRO (FUORI DAL FOREACH!)
+        // Deve accadere indipendentemente dal fatto che ci sia un evento o meno
+        if (currentMinForEvents % 3 === 0) {
+          setMomentum(prev => {
+              if (prev > 55) return prev - 1.5;
+              if (prev < 45) return prev + 1.5;
+              return prev;
+          });
+        }
       }
       
       // ✅ OSCILLAZIONE COSTANTE (la barra non sta mai ferma)

@@ -2732,7 +2732,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           pointerEvents: 'none',
           backdropFilter: 'blur(10px)'
         }}>
-          ⚡ QUOTE LIVE
+          ⚡ QUOTE
         </div>
 
         <div style={{

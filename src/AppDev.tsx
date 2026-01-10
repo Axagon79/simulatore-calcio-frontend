@@ -2597,23 +2597,29 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         </div>
 
         <div style={{
-          position: 'absolute',    /* <--- FONDAMENTALE: Lo stacca dai bottoni */
-          marginTop: '-140px', 
-                     /* <--- MODIFICA QUI: Metti -50px per alzarlo, 0px per abbassarlo */
-          marginLeft: '-350px',               /* <--- Lo tiene ancorato a sinistra */
-          width: '100%',           /* <--- Lo centra perfettamente */
-          
-          /* IL TUO STILE (Mantenuto) */
-          textAlign: 'center',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          color: theme.success,
-          textShadow: `0 0 10px ${theme.success}`,
-          animation: 'pulse 2s infinite',
-          pointerEvents: 'none'    /* <--- Importante: Così se finisce sopra un bottone, puoi comunque cliccare il bottone */
+        position: 'absolute',
+        marginTop: '-140px', 
+        marginLeft: '-350px',
+        width: '100%',
+        textAlign: 'center',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: simulationEnded ? theme.cyan : theme.success,  // 👈 Cambia colore
+        textShadow: simulationEnded 
+          ? `0 0 10px ${theme.cyan}` 
+          : `0 0 10px ${theme.success}`,
+        animation: simulationEnded ? 'none' : 'pulse 2s infinite',  // 👈 Ferma animazione
+        pointerEvents: 'none'
       }}>
-          ✅ Partita Terminata - Verifica gli Eventi
+        {simulationEnded 
+          ? <>
+          ⚙️ ELABORAZIONE AI CONCLUSA<br/>
+          {'\u00A0'.repeat(12)}✅ VERIFICA I DATI DEL RESOCONTO 📊
+        </>
+
+          : '✅ ELABORAZIONE DATI IN TEMPO REALE...'}
       </div>
+
   
         {/* ✅ BARRA RISCALDAMENTO */}
         {isWarmingUp && (
@@ -2707,56 +2713,87 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }}>
           SIMULAZIONE LIVE DAL CORE AI
         </div>
-        {/* QUOTE - Mostra sempre, con '-' se mancano */}
+        {/* QUOTE - Stile migliorato */}
         <div style={{ 
           position: 'absolute',
-          background: 'rgba(255,255,255,0.1)',
-          marginTop: '-150px', 
-          color: theme.warning,
-          border: '2px solid rgba(255, 255, 255, 0.1)', 
-          borderRadius: '8px',
+          background: 'linear-gradient(135deg, rgba(0,240,255,0.15), rgba(138,43,226,0.15))',
+          marginTop: '-89px', 
+          color: theme.cyan,
+          border: '2px solid rgba(0,240,255,0.3)', 
+          borderRadius: '12px',
           letterSpacing: '5px',
-          marginLeft: '1025px', 
-          marginBottom: '10px',
-          fontSize: '13px', 
+          marginLeft: '820px', 
+          padding: '11px 15px',
+          fontSize: '11px', 
+          fontWeight: 'bold',
+          boxShadow: '0 0 20px rgba(0,240,255,0.2)',
           animation: 'pulse 2s infinite',
           textAlign: 'center',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          backdropFilter: 'blur(10px)'
         }}>
-          QUOTE
+          ⚡ QUOTE LIVE
         </div>
 
         <div style={{
             position: 'absolute',
             display: 'flex',
             alignItems: 'stretch',
-            gap: '5px',
-            height: '40px',
-            marginTop: '-120px',
-            marginLeft: '950px',
-            paddingTop: '12px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+            gap: '10px',
+            height: '30px',
+            marginTop: '-100px',
+            marginLeft: '960px',
+            paddingTop: '12px'
           }}>
-            {['1', 'X', '2'].map((label) => {
-              const val = selectedMatch?.odds?.[label] ?? '-';  // ← Se non c'è, metti '-'
+            {['1', 'X', '2'].map((label, idx) => {
+              const val = selectedMatch?.odds?.[label] ?? '-';
+              const colors = [
+                'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,200,255,0.1))',
+                'linear-gradient(135deg, rgba(138,43,226,0.2), rgba(138,43,226,0.1))',
+                'linear-gradient(135deg, rgba(255,20,147,0.2), rgba(255,20,147,0.1))'
+              ];
+              const borderColors = [
+                'rgba(0,240,255,0.4)',
+                'rgba(138,43,226,0.4)',
+                'rgba(255,20,147,0.4)'
+              ];
+              
               return (
                 <div key={label} style={{
                   flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  justifyContent: 'center',
+                  background: colors[idx],
                   paddingRight: '35px',
                   paddingLeft: '25px',
-                  paddingBottom: '20px',
-                  paddingTop: '0px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                  paddingBottom: '30px',
+                  paddingTop: '5px',
+                  borderRadius: '12px',
+                  border: `2px solid ${borderColors[idx]}`,
+                  boxShadow: `0 0 15px ${borderColors[idx]}`,
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease'
                 }}>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', marginBottom: '2px' }}>
+                  <span style={{ 
+                    fontSize: '9px', 
+                    color: 'rgba(255,255,255,0.6)', 
+                    fontWeight: 'bold', 
+                    marginBottom: '10px',
+                    marginLeft: '10px',
+                    letterSpacing: '2px'
+                  }}>
                     {label}
                   </span>
-                  <span style={{ fontSize: '16px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                  <span style={{ 
+                    fontSize: '18px', 
+                    color: '#fff', 
+                    fontWeight: 'black', 
+                    fontFamily: 'monospace',
+                    marginLeft: '8px',
+                    textShadow: '0 0 10px rgba(255,255,255,0.3)'
+                  }}>
                     {val}
                   </span>
                 </div>

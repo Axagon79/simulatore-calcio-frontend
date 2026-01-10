@@ -1027,16 +1027,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               // MOMENTUM GOL (Spinta forte immediata)
               setMomentum(prev => 
                   matchEvent.squadra === 'casa' 
-                      ? Math.min(prev + 20, 85) 
-                      : Math.max(prev - 20, 15)
+                      ? Math.min(prev + 20, 100) 
+                      : Math.max(prev - 20, 0)
               );
             } 
             // MOMENTUM RIGORI E ROSSI
             else if (matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rosso') {
               setMomentum(prev => 
                 matchEvent.squadra === 'casa' 
-                  ? Math.min(prev + 12, 75) 
-                  : Math.max(prev - 12, 25)
+                  ? Math.min(prev + 12, 85) 
+                  : Math.max(prev - 12, 15)
               );
             } 
             // MOMENTUM CARTELLINI
@@ -1097,7 +1097,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }
         
         // Limiti: non va mai sotto 15 o sopra 85
-        nuovoMomentum = Math.max(15, Math.min(85, nuovoMomentum));
+        nuovoMomentum = Math.max(0, Math.min(100, nuovoMomentum));
         
         // 🎯 CAMBIO POSSESSO SOLO SE MOVIMENTO SIGNIFICATIVO
         const differenza = nuovoMomentum - lastSignificantMomentum;

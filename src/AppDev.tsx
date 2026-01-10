@@ -3941,7 +3941,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 }}>
                   <div className="header-section" style={{ 
                     marginBottom: isMobile ? '20px' : '-15px',
-                    marginTop: isMobile ? '-5px' : '-5px', 
+                    marginTop: isMobile ? '-5px' : '15px', 
                     position: 'relative',
                     height: isMobile ? '70px' : '90px',
                     paddingTop: isMobile ? '30px' : '30px'

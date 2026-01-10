@@ -1027,16 +1027,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               // MOMENTUM GOL (Spinta forte immediata)
               setMomentum(prev => 
                   matchEvent.squadra === 'casa' 
-                      ? Math.min(prev + 20, 100) 
-                      : Math.max(prev - 20, 0)
+                      ? Math.min(prev + 15, 100) 
+                      : Math.max(prev - 15, 0)
               );
             } 
             // MOMENTUM RIGORI E ROSSI
             else if (matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rosso') {
               setMomentum(prev => 
                 matchEvent.squadra === 'casa' 
-                  ? Math.min(prev + 12, 85) 
-                  : Math.max(prev - 12, 15)
+                  ? Math.min(prev + 8, 85) 
+                  : Math.max(prev - 8, 15)
               );
             } 
             // MOMENTUM CARTELLINI
@@ -1081,16 +1081,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       // ✅ OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
       setMomentum(prev => {
         // Micro-oscillazione casuale sempre attiva (-2 a +2)
-        const microMove = (Math.random() - 0.5) * 8;
+        const microMove = (Math.random() - 0.5) * 4;
         
         // Ogni tanto (20% probabilità) crea un "momento di pressione"
         const pressione = Math.random();
         let nuovoMomentum = prev + microMove;
         
         if (pressione < 0.20) {
-          nuovoMomentum = prev + (Math.random() * 15) + 5;
+          nuovoMomentum = prev + (Math.random() * 8) + 3;
         } else if (pressione < 0.40) {
-          nuovoMomentum = prev - (Math.random() * 15) - 5;
+          nuovoMomentum = prev - (Math.random() * 8) - 3;
         } else if (pressione < 0.25) {
           if (prev > 55) nuovoMomentum = prev - (Math.random() * 3) - 1;
           else if (prev < 45) nuovoMomentum = prev + (Math.random() * 3) + 1;

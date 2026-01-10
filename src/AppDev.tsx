@@ -2707,7 +2707,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }}>
           SIMULAZIONE LIVE DAL CORE AI
         </div>
-
+        {/* QUOTE - Mostra solo se esistono */}
+        {selectedMatch?.odds && (
+          <>
         <div style={{ 
           position: 'absolute',
           background: 'rgba(255,255,255,0.1)',
@@ -2739,7 +2741,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             borderTop: '1px solid rgba(255, 255, 255, 0.05)'
           }}>
             {['1', 'X', '2'].map((label) => {
-              const val = (selectedMatch?.odds as any)[label];
+              const val = selectedMatch?.odds?.[label];  // ← Ora sicuro che esiste
               return (
                 <div key={label} style={{
                   flex: 1,
@@ -2758,13 +2760,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     {label}
                   </span>
                   <span style={{ fontSize: '16px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>
-                    {val}
+                    {val ?? '-'}
                   </span>
                 </div>
               );
             })}
-          </div>
-  
+            </div>
+            </>
+        )}
+
         {/* ✅ BOTTONI FINE PARTITA */}
         {simulationEnded && (
           <div 

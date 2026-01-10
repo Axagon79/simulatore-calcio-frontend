@@ -1071,8 +1071,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // Deve accadere indipendentemente dal fatto che ci sia un evento o meno
         if (currentMinForEvents % 3 === 0) {
           setMomentum(prev => {
-              if (prev > 55) return prev - 0.5;
-              if (prev < 45) return prev + 0.5;
+              if (prev > 55) return prev - 0.1;
+              if (prev < 45) return prev + 0.1;
               return prev;
           });
         }

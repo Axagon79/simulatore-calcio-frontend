@@ -3940,18 +3940,20 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   overflow: 'hidden' 
                 }}>
                   <div className="header-section" style={{ 
-                    marginBottom: '5px', 
+                    marginBottom: isMobile ? '20px' : '-15px',
+                    marginTop: isMobile ? '-5px' : '-5px', 
                     position: 'relative',
-                    paddingTop: isMobile ? '30px' : '20px'
+                    height: isMobile ? '70px' : '90px',
+                    paddingTop: isMobile ? '30px' : '30px'
                   }}>
                     <div className="header-title" style={{
                       fontSize: '10px',
                       opacity: 0.8,
                       position: isMobile ? 'absolute' : 'relative',
-                      top: isMobile ? '-20px' : '0',
+                      top: isMobile ? '-20px' : '20',
                       left: isMobile ? '-5px' : '0',
                       right: isMobile ? '12px' : 'auto',
-                      marginTop: isMobile ? '0' : '-4px',
+                      marginTop: isMobile ? '0' : '5px',
                       zIndex: 10
                     }}>
                       🕸️ DNA SYSTEM
@@ -4010,7 +4012,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 </div>
 
                 {/* Contenitore Radar - Rimane bloccato dove l'avevi messo tu */}
-                <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '15px', padding: '5px' }}>
+                <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '15px', padding: '0px' }}>
                   <svg width="250" height="250" viewBox="9 11 105 105">
                     {/* Griglie di sfondo */}
                     {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}

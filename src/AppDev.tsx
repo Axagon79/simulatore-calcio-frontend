@@ -5,6 +5,7 @@ import './styles/AppDev-grid.css';
 import { checkAdmin, PERMISSIONS } from './permissions';
 import SimulationResultView from './components/SimulationResultView';
 import './styles/SimulationAnimation.css';
+import './styles/SimulationAnimation-responsive.css'; // NUOVO
 import { ArrowLeft, /* altre icone */ } from 'lucide-react'; //
 
 
@@ -1969,7 +1970,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           {/* CRONOMETRO */}
           <div style={{ width: '55px', textAlign: 'center' }}>
             <div style={{
-              fontSize: isMobile ? '20px' : '24px',
+              fontSize: isMobile ? '24px' : '24px',
               fontWeight: '900',
               color: theme.purple,
               fontFamily: 'monospace',
@@ -2006,7 +2007,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '6px 16px',
+            padding: '0px 5px',
             background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
             borderRadius: '10px',
             border: '1px solid rgba(0, 240, 255, 0.3)'
@@ -2093,7 +2094,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       }}>
                         <span style={{
                           color: theme.cyan,
-                          fontSize: '16px',
+                          fontSize: isMobile ? '10px' : '16px',
                           fontWeight: 'bold',
                           textShadow: `0 0 8px ${theme.cyan}`,
                           marginLeft: '10px'
@@ -2102,10 +2103,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         </span>
                         <span style={{
                           color: theme.danger,
-                          fontSize: '16px',
+                          fontSize: isMobile ? '10px' : '16px',
                           fontWeight: 'bold',
                           textShadow: `0 0 8px ${theme.danger}`,
-                          marginRight: '250px'
+                          marginRight: isMobile ? '-25px' :  '250px'
                         }}>
                           {normalizeModulo(formations.away_formation?.modulo || '4-3-3')}
                         </span>
@@ -2122,7 +2123,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   pointerEvents: 'none'
                 }}>
                   <div style={{
-                    fontSize: '60px',
+                    fontSize: isMobile ? '35px' : '60px',
                     fontWeight: '900',
                     color: pitchMsg.colore,
                     textShadow: `0 0 20px ${pitchMsg.colore}`,
@@ -2211,7 +2212,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               {/* Mezzaluna area rigore CASA - semicerchio che sporge FUORI dall'area */}
               <div style={{
                 position: 'absolute',
-                left: '85%',
+                left: !isMobile ? '85%' : '87%',
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
                 width: '80px',
@@ -2225,7 +2226,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               {/* Mezzaluna area rigore OSPITE - semicerchio che sporge FUORI dall'area */}
               <div style={{
                 position: 'absolute',
-                left: '15%',
+                left: !isMobile ? '15%' : '13%',
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
                 width: '80px',
@@ -2391,7 +2392,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       <div key={`home-${idx}`} style={{
                         position: 'absolute',
                         left: `${p.x}%`,
-                        top: `${p.y}%`,
+                        top: `${(p.y + (isMobile ? 2 : 0))}%`,
                         transform: 'translate(-50%, -50%)'
                       }}>
                         <JerseySVG color={theme.cyan} size={28} />
@@ -2405,7 +2406,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       <div key={`away-${idx}`} style={{
                         position: 'absolute',
                         left: `${p.x}%`,
-                        top: `${p.y}%`,
+                        top: `${(p.y + (isMobile ? 2 : 0))}%`,
                         transform: 'translate(-50%, -50%)'
                       }}>
                         <JerseySVG color={theme.danger} size={28} />
@@ -2660,6 +2661,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           {/* BOTTONE FORMAZIONI */}
           {formations && (
             <button
+              className="btn-formazioni"  // 👈 AGGIUNGI QUESTA CLASSE
               onClick={() => {
                 setShowFormationsPopup(true);
                 setPopupOpacity(1);
@@ -2670,18 +2672,21 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 borderRadius: '8px',
                 padding: '8px 12px',
                 color: theme.cyan,
+                position: 'relative',
                 cursor: 'pointer',
                 fontSize: '12px',
                 zIndex: 50
+                // Togli position/marginTop qui, li gestiamo in CSS
               }}
             >
               📋 Formazioni
             </button>
           )}
-  
+
           {/* BOTTONE RIEPILOGO PARTITA */}
           {simulationEnded && (
             <button
+              className="btn-riepilogo"  // 👈 AGGIUNGI QUESTA CLASSE
               onClick={() => setShowMatchSummary(true)}
               style={{
                 background: 'rgba(0,0,0,0.7)',
@@ -2698,6 +2703,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             </button>
           )}
         </div>
+
   
         <div style={{ 
           position: 'absolute',

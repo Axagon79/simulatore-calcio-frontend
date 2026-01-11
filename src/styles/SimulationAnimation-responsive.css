@@ -1,0 +1,259 @@
+/* ============================================
+   SIMULAZIONE ANIMATA - RESPONSIVE
+   Desktop-first: stili mobile solo sotto breakpoint
+   ============================================ */
+
+/* === TABLET (sotto 1024px) === */
+@media screen and (max-width: 1024px) {
+  
+    /* Layout principale */
+    .sim-main-layout {
+      gap: 15px !important;
+    }
+    
+    .sim-pitch {
+      max-width: 550px !important;
+      height: 250px !important;
+      margin-left: 50px !important;
+    }
+    
+    .sim-events-feed {
+      width: 400px !important;
+      height: 250px !important;
+      margin-left: -30px !important;
+    }
+    
+    /* Header: riduci marginLeft */
+    .sim-header {
+      margin-left: 100px !important;
+      width: 520px !important;
+    }
+  }
+  
+  /* === MOBILE (sotto 768px) === */
+  @media screen and (max-width: 768px) {
+    
+    /* Badge algo/cicli: rimane visibile ma compatto */
+    .sim-badges-top {
+      top: 3px !important;
+      left: 20px !important;
+      padding: 6px 10px !important;
+      font-size: 10px !important;
+      gap: 8px !important;
+    }
+
+    
+    .sim-header > div:nth-child(2) {  /* 👈 Seleziona il cronometro (2° figlio) */
+        order: 0 !important;  /* Cambia ordine nel flex */
+        margin-left: 80px !important;
+        
+    }
+      
+     /* Punteggio centrale - stile compatto */
+    .sim-score-box {
+        padding: 4px 8px !important;
+        gap: 5px !important;
+        z-index: 100 !important;
+    }
+  
+    /* Numeri del punteggio più piccoli */
+    .sim-score-box > div {
+        font-size: 22px !important;
+        width: 2px !important;
+    }
+
+    .sim-score-box {
+        position: absolute !important;
+        top: 10px !important;  /* 👈 Regola altezza */
+        left: 50px !important;
+        transform: translateX(-50%) !important;  /* 👈 Centra */
+        z-index: 100 !important;
+    }
+
+    /* Header: centrato e full-width */
+    .sim-header {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      margin-top: 40px !important;
+      width: 100% !important;
+      padding: 10px 15px !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+    }
+    
+    .sim-header > div {
+      flex-shrink: 1 !important;
+      text-align: center !important;
+    }
+    
+    /* Layout principale: verticale */
+    .sim-main-layout {
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 20px !important;
+      padding: 0 10px !important;
+    }
+    
+    /* Sezione campo */
+    .sim-field-section {
+      width: 100% !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    /* Campo: full width */
+    .sim-pitch {
+      width: 62% !important;
+      max-width: 63% !important;
+      height: 200px !important;
+      margin-left: 47px !important;
+      margin-right: 300px !important;
+      margin-top: -5px !important;
+      margin-bottom: -20px !important;
+    }
+    
+    /* Sezione cronaca */
+    .sim-events-section {
+      width: 100% !important;
+    }
+    
+    /* Feed eventi: full width */
+    .sim-events-feed {
+      width: 80% !important;
+      max-width: 68% !important;
+      height: 300px !important;
+      max-height: 400px !important;
+      margin-left: 0 !important;
+      margin: 0 auto !important;
+      border: 2px solid rgb(24 20 214) !important; 
+    }
+    
+    .btn-formazioni,
+    .btn-riepilogo {
+        position: relative !important;
+        margin: 0 !important;
+        padding: 8px 12px !important;
+        font-size: 11px !important;
+    }
+
+    /* Bottoni top-right: già con classe, solo centro */
+    .sim-top-right-buttons {
+        position: absolute !important;
+        top: 5px !important;  /* 👈 Regola solo questa */
+        left: 70% !important;
+        transform: translateX(-50%) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        z-index: 1000 !important;
+        margin: 0 !important;
+      }
+    
+    .sim-top-right-buttons button {
+    font-size: 11px !important;
+    margin: 0 !important;
+    margin-left: 5px !important;
+    right: 500 px !important;
+    padding: 5px 8px !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    margin-bottom: -65px !important;
+    
+    height: 30px !important;
+    }
+    
+    /* Barra riscaldamento: centered */
+    .sim-header + div + div {
+      width: 95% !important;
+      max-width: 95% !important;
+      margin-left: -15px !important;
+      margin-right: auto !important;
+      margin-top: -205px !important;
+    }
+    
+    /* Bottoni fine partita */
+    .sim-end-buttons {
+      flex-direction: column !important;
+      gap: 10px !important;
+      padding: 0 15px !important;
+    }
+    
+    .sim-end-buttons button {
+      margin-left: 0 !important;
+      width: 100% !important;
+      max-width: 300px !important;
+      margin-top: -120px !important;
+      max-height: 40px !important;
+      padding: 20px !important;
+      margin-bottom: 15px !important;
+    ;
+    }
+    
+    /* Testi nel campo (INTERVALLO, FINALE) */
+    .sim-pitch > div[style*="fontSize: '60px'"] {
+        font-size: 40px !important;  /* 👈 Da 60px a 40px */
+    }
+    
+    /* TextShadow proporzionale */
+    .sim-pitch > div[style*="textShadow: `0 0 20px"] {
+        text-shadow: 0 0 15px currentColor !important;  /* 👈 Ridotto */
+    }
+    
+    /* Rotazione meno aggressiva */
+    .sim-pitch > div[style*="transform: 'rotate(-5deg)"] {
+        transform: rotate(-3deg) !important;
+    }
+
+    /* NASCONDI elementi decorativi con position absolute */
+    /* Testo "ELABORAZIONE AI CONCLUSA" con marginLeft negativo */
+    div[style*="marginLeft: '-350px'"] {
+      display: none !important;
+    }
+    
+    /* Testo "SIMULAZIONE LIVE DAL CORE AI" */
+    div[style*="marginLeft: '980px'"] {
+      display: none !important;
+    }
+    
+    /* Badge "QUOTE" */
+    div[style*="marginLeft: '820px'"] {
+      display: none !important;
+    }
+    
+    /* Container quote 1-X-2 */
+    div[style*="marginLeft: '960px'"] {
+      display: none !important;
+    }
+  }
+  
+  /* === SMALL MOBILE (sotto 480px) === 
+  @media screen and (max-width: 480px) {
+    
+    .sim-badges-top {
+      font-size: 9px !important;
+      padding: 5px 8px !important;
+    }
+    
+    .sim-header {
+      width: 98% !important;
+      padding: 8px 10px !important;
+    }
+    
+    .sim-pitch {
+      height: 180px !important;
+      width: 98% !important;
+    }
+    
+    .sim-events-feed {
+      height: 200px !important;
+      font-size: 12px !important;
+      width: 98% !important;
+    }
+    
+    .sim-end-buttons button {
+      padding: 12px 20px !important;
+      font-size: 13px !important;
+    }
+  }*/
+  

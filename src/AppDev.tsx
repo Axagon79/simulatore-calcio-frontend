@@ -1865,13 +1865,18 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       display: 'flex',
       flexDirection: 'column',
       overflowY: 'auto',
-      padding: '0'
+      overflowX: 'hidden',  // 👈 AGGIUNGI questa riga
+      padding: '0',
+      maxWidth: '100vw',    // 👈 AGGIUNGI questa riga
+      width: '100%'          // 👈 AGGIUNGI questa riga
     }}>
+  
       <div style={{
         padding: isMobile ? '3px 8px 0px' : styles.arenaContent.padding,
         maxWidth: '1400px',
         margin: '0 auto',
-        width: '100%'
+        width: '100%',
+        overflowX: 'hidden'  // 👈 AGGIUNGI SOLO QUESTA RIGA
       }}>
   
         {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
@@ -6519,41 +6524,138 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <div style={{ marginBottom: '15px' }}>
               <div style={{ fontSize: '12px', color: theme.textDim, marginBottom: '8px' }}>⚽ MARCATORI</div>
               <div style={{ fontSize: '13px', color: theme.text }}>
-                {simResult.cronaca?.filter((e: any) => e.tipo === 'gol').map((e: any, i: number) => (
-                  <div key={i} style={{ 
-                    marginBottom: '3px',
-                    color: e.squadra === 'casa' ? theme.cyan : theme.danger 
-                  }}>
-                    {e.testo.split(']')[1]?.trim() || e.testo}
-                  </div>
-                ))}
+                {simResult.cronaca?.filter((e: any) => e.tipo === 'gol').map((e: any, i: number) => {
+                  const testoPulito = e.testo
+                    .replace(/^\d+'/, '')           // Rimuove "22' "
+                    .replace('⚽ ', '')             // Rimuove "⚽ "
+                    .replace(/\[.*?\]\s*/, '')      // Rimuove "[CELTA VIGO] "
+                    .replace('GOOOL! ', '')         // Rimuove "GOOOL! "
+                    .replace(/ - .*$/, '')          // Rimuove " - Zittisce lo stadio!"
+                    .trim();
+                  
+                  const squadraNome = e.squadra === 'casa' ? selectedMatch?.home : selectedMatch?.away;
+                  
+                  return (
+                    <div key={i} style={{ 
+                      marginBottom: '3px',
+                      color: e.squadra === 'casa' ? theme.cyan : theme.danger 
+                    }}>
+                      <strong>{e.minuto}'</strong> {testoPulito} ({squadraNome})
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Statistiche */}
+            {/* TUA versione + proporzioni corrette dal centro */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              display: 'flex',
+              flexDirection: 'column',
               gap: '8px',
-              fontSize: '12px'
+              fontSize: '11px',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              padding: '8px'
             }}>
-              {simResult.statistiche && Object.entries(simResult.statistiche).slice(0, 10).map(([key, val]: [string, any]) => (
-                <div key={key} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '6px 10px',
-                  background: 'rgba(255,255,255,0.05)',
-                  borderRadius: '6px'
-                }}>
-                  <span style={{ color: theme.textDim }}>{key}</span>
-                  <span style={{ color: theme.text }}>
-                    <span style={{ color: theme.cyan }}>{val[0]}</span>
-                    {' - '}
-                    <span style={{ color: theme.danger }}>{val[1]}</span>
-                  </span>
-                </div>
-              ))}
+              {simResult.statistiche && Object.entries(simResult.statistiche)
+                .filter(([key]: [string, any]) => 
+                  !key.includes('PT') &&                  
+                  ['Possesso', 'Tiri Totali', 'Tiri in Porta', 'Tiri Fuori', 'Calci d\'Angolo', 'Attacchi', 'Attacchi Pericolosi'].some(stat => key.includes(stat))
+                )
+                .map(([key, val]: [string, any]) => {
+                  const homeVal = parseInt(val[0]);
+                  const awayVal = parseInt(val[1]);
+                  const total = homeVal + awayVal;
+                  
+                  return (
+                    <div key={key} style={{
+                      padding: '6px 12px',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(0,240,255,0.1)'
+                    }}>
+                      <div style={{ fontSize: '9px', color: theme.textDim, textAlign: 'center', marginBottom: '6px' }}>
+                        {key.replace('PT', '')}
+                      </div>
+                      
+                      <div style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        width: '100%'
+                      }}>
+                        <span style={{ 
+                          fontSize: '12px', 
+                          fontWeight: 'bold', 
+                          color: theme.cyan,
+                          minWidth: '20px',
+                          textAlign: 'right'
+                        }}>
+                          {val[0]}
+                        </span>
+                        
+                        <div style={{
+                          flex: 1,
+                          height: '8px',
+                          position: 'relative',
+                          display: 'flex'
+                        }}>
+                          {/* CASA - Centro → Sinistra (9/25=36%) */}
+                          <div style={{
+                            position: 'absolute',
+                            right: 'calc(50% + 4px)',  // ← Dal centro sinistra
+                            width: `${(homeVal / total) * 48}%`,  // Max 48%
+                            height: '100%',
+                            background: theme.cyan,
+                            boxShadow: '0 0 8px rgba(0,240,255,0.5)',
+                            borderRadius: '4px 0 0 4px'
+                          }} />
+                          
+                          {/* "-" CENTRALE */}
+                          <div style={{
+                            position: 'absolute',
+                            left: '50%',
+                            width: '8px',
+                            height: '100%',
+                            background: 'rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '8px',
+                            color: theme.textDim,
+                            transform: 'translateX(-50%)'
+                          }}>
+                            -
+                          </div>
+                          
+                          {/* TRASFERTA - Centro → Destra (16/25=64%) */}
+                          <div style={{
+                            position: 'absolute',
+                            left: 'calc(50% + 4px)',  // ← Dal centro destra
+                            width: `${(awayVal / total) * 48}%`,  // Max 48%
+                            height: '100%',
+                            background: theme.danger,
+                            boxShadow: '0 0 8px rgba(255,42,109,0.5)',
+                            borderRadius: '0 4px 4px 0'
+                          }} />
+                        </div>
+                        
+                        <span style={{ 
+                          fontSize: '12px', 
+                          fontWeight: 'bold', 
+                          color: theme.danger,
+                          minWidth: '20px',
+                          textAlign: 'left'
+                        }}>
+                          {val[1]}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
+
           </div>
         </div>
       )}

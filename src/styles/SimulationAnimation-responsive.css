@@ -21,17 +21,50 @@
       width: 400px !important;
       height: 250px !important;
       margin-left: -30px !important;
+      margin-bottom: -150px !important;
     }
     
     /* Header: riduci marginLeft */
     .sim-header {
       margin-left: 100px !important;
       width: 520px !important;
+      margin-left: 2px !important;
     }
   }
   
-  /* === MOBILE (sotto 768px) === */
-  @media screen and (max-width: 768px) {
+/* === MOBILE (sotto 768px) === */
+@media screen and (max-width: 768px) {
+  
+    /* Blocco scroll orizzontale su TUTTI gli elementi */
+    * {
+      max-width: 100vw !important;
+      box-sizing: border-box !important;
+    }
+    
+    /* Body e HTML: scroll verticale fluido, orizzontale bloccato */
+    body,
+    html {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      max-width: 100vw !important;
+      width: 100% !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Container principali: blocca overflow orizzontale */
+    body > div,
+    .wrapper,
+    .mainContent,
+    .arena,
+    .arenaContent {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      max-width: 100vw !important;
+      width: 100% !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+  
+  
     
     /* Badge algo/cicli: rimane visibile ma compatto */
     .sim-badges-top {
@@ -41,35 +74,30 @@
       font-size: 10px !important;
       gap: 8px !important;
     }
-
     
-    .sim-header > div:nth-child(2) {  /* 👈 Seleziona il cronometro (2° figlio) */
-        order: 0 !important;  /* Cambia ordine nel flex */
-        margin-left: 80px !important;
-        
+    /* Cronometro */
+    .sim-header > div:nth-child(2) {
+      order: 0 !important;
+      margin-left: 80px !important;
     }
-      
-     /* Punteggio centrale - stile compatto */
+    
+    /* Punteggio centrale - stile compatto */
     .sim-score-box {
-        padding: 4px 8px !important;
-        gap: 5px !important;
-        z-index: 100 !important;
+      position: absolute !important;
+      top: 10px !important;
+      left: 50px !important;
+      transform: translateX(-50%) !important;
+      padding: 4px 8px !important;
+      gap: 5px !important;
+      z-index: 100 !important;
     }
-  
+    
     /* Numeri del punteggio più piccoli */
     .sim-score-box > div {
-        font-size: 22px !important;
-        width: 2px !important;
+      font-size: 22px !important;
+      width: 2px !important;
     }
-
-    .sim-score-box {
-        position: absolute !important;
-        top: 10px !important;  /* 👈 Regola altezza */
-        left: 50px !important;
-        transform: translateX(-50%) !important;  /* 👈 Centra */
-        z-index: 100 !important;
-    }
-
+    
     /* Header: centrato e full-width */
     .sim-header {
       margin-left: 0 !important;
@@ -105,9 +133,9 @@
     /* Campo: full width */
     .sim-pitch {
       width: 62% !important;
-      max-width: 63% !important;
+      max-width: 65% !important;
       height: 200px !important;
-      margin-left: 47px !important;
+      margin-left: 75px !important;
       margin-right: 300px !important;
       margin-top: -5px !important;
       margin-bottom: -20px !important;
@@ -126,41 +154,44 @@
       max-height: 400px !important;
       margin-left: 0 !important;
       margin: 0 auto !important;
-      border: 2px solid rgb(24 20 214) !important; 
+      border: 2px solid rgb(24, 20, 214) !important;
+      margin-bottom: -150px !important;
     }
     
+    /* Bottoni individuali */
     .btn-formazioni,
     .btn-riepilogo {
-        position: relative !important;
-        margin: 0 !important;
-        padding: 8px 12px !important;
-        font-size: 11px !important;
+      position: relative !important;
+      margin: 0 !important;
+      padding: 8px 12px !important;
+      font-size: 11px !important;
+      pointer-events: auto !important;
     }
-
-    /* Bottoni top-right: già con classe, solo centro */
+    
+    /* Bottoni top-right: container */
     .sim-top-right-buttons {
-        position: absolute !important;
-        top: 5px !important;  /* 👈 Regola solo questa */
-        left: 70% !important;
-        transform: translateX(-50%) !important;
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 10px !important;
-        z-index: 1000 !important;
-        margin: 0 !important;
-      }
+      position: absolute !important;
+      top: 5px !important;
+      left: 70% !important;
+      transform: translateX(-50%) !important;
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 10px !important;
+      z-index: 100 !important;
+      pointer-events: none !important;
+      margin: 0 !important;
+    }
     
     .sim-top-right-buttons button {
-    font-size: 11px !important;
-    margin: 0 !important;
-    margin-left: 5px !important;
-    right: 500 px !important;
-    padding: 5px 8px !important;
-    flex-shrink: 0 !important;
-    display: inline-block !important;
-    margin-bottom: -65px !important;
-    
-    height: 30px !important;
+      font-size: 11px !important;
+      margin: 0 !important;
+      margin-left: 5px !important;
+      padding: 5px 8px !important;
+      flex-shrink: 0 !important;
+      display: inline-block !important;
+      margin-bottom: -65px !important;
+      pointer-events: auto !important;
+      height: 30px !important;
     }
     
     /* Barra riscaldamento: centered */
@@ -169,65 +200,133 @@
       max-width: 95% !important;
       margin-left: -15px !important;
       margin-right: auto !important;
-      margin-top: -205px !important;
+      margin-top: 10px !important;
     }
     
-    /* Bottoni fine partita */
+    /* Bottoni fine partita: più spazio sopra */
     .sim-end-buttons {
-      flex-direction: column !important;
-      gap: 10px !important;
-      padding: 0 15px !important;
+      margin-top: 10px !important;
+      position: relative !important;
+      z-index: 1 !important;
     }
     
     .sim-end-buttons button {
+      margin-top: 0 !important;  /* 👈 RIMUOVI -120px */
       margin-left: 0 !important;
+      margin-bottom: 10px !important;  /* 👈 Da 15px a 10px */
       width: 100% !important;
       max-width: 300px !important;
-      margin-top: -120px !important;
-      max-height: 40px !important;
-      padding: 20px !important;
-      margin-bottom: 15px !important;
-    ;
+      max-height: 45px !important;  /* 👈 Da 40px a 45px */
+      padding: 12px 20px !important;  /* 👈 Da 20px a 12px */
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
     
     /* Testi nel campo (INTERVALLO, FINALE) */
     .sim-pitch > div[style*="fontSize: '60px'"] {
-        font-size: 40px !important;  /* 👈 Da 60px a 40px */
+      font-size: 40px !important;
     }
     
     /* TextShadow proporzionale */
     .sim-pitch > div[style*="textShadow: `0 0 20px"] {
-        text-shadow: 0 0 15px currentColor !important;  /* 👈 Ridotto */
+      text-shadow: 0 0 15px currentColor !important;
     }
     
     /* Rotazione meno aggressiva */
     .sim-pitch > div[style*="transform: 'rotate(-5deg)"] {
-        transform: rotate(-3deg) !important;
+      transform: rotate(-3deg) !important;
+    }
+    
+    /* TESTO "SIMULAZIONE LIVE DAL CORE AI" */
+    body div[style*="margin-left: 980px"] {
+        position: static !important;
+        display: block !important;
+        margin: 5px auto 5px auto !important;
+        text-align: center !important;
+        font-size: 10px !important;
+        width: 90% !important;
+        order: 1 !important;
+    }
+    
+    /* BADGE "QUOTE" */
+    body div[style*="margin-left: 820px"] {
+        position: static !important;
+        display: block !important;
+        margin: 5px auto 5px auto !important;
+        text-align: center !important;
+        font-size: 11px !important;
+        width: fit-content !important;
+        padding: 8px 12px !important;
+        order: 2 !important;
+    }
+    
+    /* CONTAINER QUOTE 1-X-2 - ordinato e centrato */
+    body div[style*="margin-left: 960px"] {
+        position: static !important;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: stretch !important;  /* 👈 Allinea altezza */
+        gap: 8px !important;  /* 👈 Spazio tra quote */
+        margin: 6px auto 30px auto !important;
+        width: 90% !important;  /* 👈 Da 95% a 90% */
+        max-width: 280px !important;  /* 👈 Larghezza massima */
+        padding: 0 10px !important;
+        overflow: visible !important;
     }
 
-    /* NASCONDI elementi decorativi con position absolute */
-    /* Testo "ELABORAZIONE AI CONCLUSA" con marginLeft negativo */
-    div[style*="marginLeft: '-350px'"] {
-      display: none !important;
+    
+     /* Quote singole 1-X-2: dimensioni fisse e ordinate */
+    body div[style*="margin-left: 960px"] > div {
+        flex: 1 1 0 !important;  /* 👈 Tutte stessa larghezza */
+        max-width: none !important;
+        min-width: 0 !important;
+        padding: 8px 6px !important;  /* 👈 Padding verticale aumentato */
+        font-size: 10px !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+        height: auto !important;
+        min-height: 50px !important;  /* 👈 Da 50px a 42px (più basso) */
+        max-height: 50px !important;  /* 👈 Limita altezza massima */
+    }
+
+    /* Valori numerici quote (2.5, 3.3, 2.7) */
+    body div[style*="margin-left: 960px"] > div > div:last-child {
+        font-size: 14px !important;  /* 👈 Più grande */
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        margin-top: 0px !important;
+        padding-bottom: 1px !important;  /* 👈 AGGIUNTO: centra meglio */
     }
     
-    /* Testo "SIMULAZIONE LIVE DAL CORE AI" */
-    div[style*="marginLeft: '980px'"] {
-      display: none !important;
+    /* TESTO "ELABORAZIONE AI CONCLUSA" */
+    body div[style*="margin-left: -350px"] {
+        position: static !important;
+        display: block !important;
+        margin: -300px auto 10px auto !important;
+        text-align: center !important;
+        font-size: 13px !important;
+        width: 90% !important;
+        padding: 10px !important;
+        order: 10 !important;
     }
-    
-    /* Badge "QUOTE" */
-    div[style*="marginLeft: '820px'"] {
-      display: none !important;
-    }
-    
-    /* Container quote 1-X-2 */
-    div[style*="marginLeft: '960px'"] {
-      display: none !important;
+    /* Etichette quote (1, X, 2) */
+    body div[style*="margin-left: 960px"] > div > div:first-child {
+        font-size: 11px !important;
+        font-weight: bold !important;
+        margin-bottom: 3px !important;
+        line-height: 1 !important;
+        padding-top: 1px !important;  /* 👈 AGGIUNTO: spinge verso il basso */
     }
   }
   
-  /* === SMALL MOBILE (sotto 480px) === 
+  /* === SMALL MOBILE (sotto 480px) === */
   @media screen and (max-width: 480px) {
     
     .sim-badges-top {
@@ -236,7 +335,7 @@
     }
     
     .sim-header {
-      width: 98% !important;
+      width: 100% !important;
       padding: 8px 10px !important;
     }
     
@@ -249,11 +348,16 @@
       height: 200px !important;
       font-size: 12px !important;
       width: 98% !important;
+      margin-bottom: -150px !important;
     }
     
-    .sim-end-buttons button {
-      padding: 12px 20px !important;
-      font-size: 13px !important;
+    /* Bottoni fine partita: RIMUOVI margini negativi */
+    .sim-end-buttons {
+      margin-top: 10px !important;  /* 👈 Da -120px a 10px normale */
+      margin-bottom: 20px !important;
+      flex-direction: column !important;
+      gap: 10px !important;
+      padding: 0 15px !important;
     }
-  }*/
+  }
   

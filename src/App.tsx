@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface League { id: string; name: string }
 interface RoundInfo {
@@ -43,6 +43,7 @@ const ROUND_ICONS = {
 const DAY_NAMES = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
 
 function App() {
+  // --- STATI DATI ---
   const [country, setCountry] = useState('Italy')
   const [leagues, setLeagues] = useState<League[]>([])
   const [league, setLeague] = useState('')
@@ -51,52 +52,112 @@ function App() {
   const [matches, setMatches] = useState<Match[]>([])
   const [groupedMatches, setGroupedMatches] = useState<MatchGroup[]>([])
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
+  
+  // --- STATI UI ---
   const [loading, setLoading] = useState(false)
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [exitPrompt, setExitPrompt] = useState(false)
+
+  // --- REFS PER STATO SINCRONO (Fondamentali per evitare bug) ---
+  const stateRef = useRef({
+    hasMatch: false,
+    hasRound: false,
+    hasLeague: false,
+    isHome: true
+  });
+  const lastBackPressTime = useRef<number>(0);
+
+  // Tiene aggiornati i ref istantaneamente
+  useEffect(() => {
+    stateRef.current = {
+      hasMatch: !!selectedMatch,
+      hasRound: !!selectedRound,
+      hasLeague: !!league,
+      isHome: !league && !selectedMatch && !selectedRound
+    };
+  }, [selectedMatch, selectedRound, league]);
 
   const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
-  console.log("🚀 API connessa a:", API_BASE);
 
-  // 🔥 GESTIONE COMPLETA DEL TASTO INDIETRO
-useEffect(() => {
-  // Previeni comportamento di default in PWA
-  const preventBackExit = (e: Event) => {
-    e.preventDefault();
-    return false;
-  };
-
-  const handleBackButton = () => {
-    // Logica di navigazione gerarchica
-    if (selectedMatch) {
-      setSelectedMatch(null)
-    } else if (selectedRound) {
-      setSelectedRound(null)
-      setMatches([])
-      setGroupedMatches([])
-    } else if (league) {
-      setLeague('')
-      setRounds([])
-    } else if (country !== 'Italy') {
-      setCountry('Italy')
-    } else {
-      // Livello base: aggiungi stato per bloccare uscita
-      window.history.pushState(null, '', window.location.href)
+  // 🔥 GESTIONE TASTO INDIETRO (NUCLEAR PROOF)
+  useEffect(() => {
+    // 1. Disabilita il ripristino automatico dello scroll (risolve il salto in alto)
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
     }
-  }
 
-  // Inizializza stack
-  window.history.pushState(null, '', window.location.href)
-  
-  // Listener principale
-  window.addEventListener('popstate', handleBackButton)
-  
-  // Per Android: blocca anche beforeunload
-  window.addEventListener('beforeunload', preventBackExit)
+    // 2. Funzione che reinserisce il blocco nella cronologia
+    const pushTrap = () => {
+      window.history.pushState({ trap: true }, '', window.location.href);
+    };
 
-  return () => {
-    window.removeEventListener('popstate', handleBackButton)
-    window.removeEventListener('beforeunload', preventBackExit)
-  }
-}, [selectedMatch, selectedRound, league, country])
+    // 3. "Armiamo" la trappola sia al caricamento che al primo click
+    // (Molti browser bloccano pushState se non c'è interazione utente)
+    pushTrap();
+    
+    const primeTrapOnInteraction = () => {
+      pushTrap();
+      document.removeEventListener('click', primeTrapOnInteraction);
+    };
+    document.addEventListener('click', primeTrapOnInteraction);
+
+    // 4. Gestore dell'evento Indietro
+    const handleBackButton = () => {
+      // Nota: Quando siamo qui, il browser è GIÀ tornato indietro di 1 step.
+      const current = stateRef.current;
+      const now = Date.now();
+
+      // --- CASO A: MENU APERTI (Chiudiamo e restiamo nell'app) ---
+      if (current.hasMatch) {
+        setSelectedMatch(null);
+        pushTrap(); // Ripristiniamo lo step perso
+        return;
+      }
+
+      if (current.hasRound) {
+        setSelectedRound(null);
+        setMatches([]);
+        setGroupedMatches([]);
+        pushTrap();
+        return;
+      }
+
+      if (current.hasLeague) {
+        setLeague('');
+        setRounds([]);
+        pushTrap();
+        return;
+      }
+
+      // --- CASO B: DASHBOARD HOME (Gestione Uscita) ---
+      const timeDiff = now - lastBackPressTime.current;
+
+      if (timeDiff < 2000) {
+        // DOPPIO CLICK: Vogliamo uscire.
+        // Poiché siamo nel gestore popstate, siamo già tornati indietro di 1.
+        // Facciamo un altro passo indietro manuale per uscire del tutto.
+        console.log("Uscita forzata...");
+        window.history.back(); 
+      } else {
+        // PRIMO CLICK: Mostra avviso e resta.
+        lastBackPressTime.current = now;
+        setExitPrompt(true);
+        setTimeout(() => setExitPrompt(false), 2000);
+        
+        // FONDAMENTALE: Reinseriamo lo stato per annullare il 'back' appena avvenuto
+        pushTrap();
+      }
+    };
+
+    window.addEventListener('popstate', handleBackButton);
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+      document.removeEventListener('click', primeTrapOnInteraction);
+    };
+  }, []); // Eseguito una volta sola all'avvio
+
+  // --- ALTRI USE EFFECT (Logica dati) ---
 
   useEffect(() => {
     fetchLeagues()
@@ -183,7 +244,6 @@ useEffect(() => {
   }
 
   const groupMatchesByDate = () => {
-    // ✅ Controllo sicurezza: se matches è vuoto, svuota groupedMatches
     if (!matches || matches.length === 0) {
       setGroupedMatches([]);
       return;
@@ -192,7 +252,6 @@ useEffect(() => {
     const groups: { [key: string]: Match[] } = {}
     
     matches.forEach(match => {
-      // ✅ Controllo sicurezza: salta match null o senza date_obj
       if (!match || !match.date_obj) return;
       
       const date = new Date(match.date_obj)
@@ -212,7 +271,7 @@ useEffect(() => {
         const dateFormatted = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`
         
         const sortedMatches = groups[dateKey]
-          .filter(m => m && m.match_time) // ✅ Filtra match invalidi
+          .filter(m => m && m.match_time)
           .sort((a, b) => {
             return a.match_time.localeCompare(b.match_time)
           })
@@ -228,13 +287,10 @@ useEffect(() => {
     setGroupedMatches(grouped)
   }
 
-  const [isSimulating, setIsSimulating] = useState(false)
-
   const handleSimulate = async () => {
     if (!selectedMatch) return
     
     setIsSimulating(true)
-    
     
     try {
       const response = await fetch(`${API_BASE}/simulation/simulate-match`, {
@@ -253,7 +309,6 @@ useEffect(() => {
       
       await response.json()
       
-      
     } catch (error) {
       console.error('Errore:', error)
       alert('❌ Errore durante la simulazione')
@@ -261,7 +316,6 @@ useEffect(() => {
       setIsSimulating(false)
     }
   }
-
 
   const selectedCountry = COUNTRIES.find(c => c.code === country)
   const selectedLeague = leagues.find(l => l.id === league)
@@ -428,6 +482,16 @@ useEffect(() => {
             >
               {isSimulating ? '⏳ Simulazione in corso...' : '🎮 Avvia Simulazione'}
             </button>
+          </div>
+        )}
+
+        {/* 3. TOAST GLOBALE PER USCITA */}
+        {exitPrompt && (
+          <div 
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg animate-bounce"
+            style={{ zIndex: 10000 }} 
+          >
+            🔙 Premi ancora per uscire
           </div>
         )}
 
@@ -712,6 +776,21 @@ const styles = {
     textTransform: 'uppercase' as const,
     letterSpacing: '1.5px'
   },
+  exitToast: {
+    position: 'fixed' as const,
+    bottom: '40px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: '#333',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '50px',
+    fontSize: '14px',
+    fontWeight: '600',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    zIndex: 2000,
+    animation: 'fadeIn 0.3s ease'
+  },
   loadingOverlay: {
     position: 'fixed' as const,
     top: 0,
@@ -759,6 +838,11 @@ styleSheet.textContent = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
   }
   
   @media (max-width: 768px) {

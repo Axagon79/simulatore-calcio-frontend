@@ -445,8 +445,21 @@ export default function AppDev() {
   const [isFlashActive, setIsFlashActive] = useState<boolean>(false);
 
 
-  const [showExitToast, setShowExitToast] = useState(false);
-  const lastBackPress = useRef(0);
+
+
+
+  
+  // Questo ref conterrà SEMPRE lo stato aggiornato dell'app
+  const stateRef = useRef({
+    isPopupOpen: false,
+    mobileMenu: false,
+    expandedMatch: null as string | null,
+    viewState: 'list',
+    activeLeague: null as string | null,
+    rounds: [] as any
+  });
+  
+  
 
 
   // --- INCOLLA QUESTO BLOCCO INSIEME AGLI ALTRI useState ---
@@ -533,10 +546,15 @@ export default function AppDev() {
     }; */
 
 
-  // --- FETCH DATI ---
-  useEffect(() => {
-    fetch(`${API_BASE}/leagues?country=${country}`).then(r => r.json()).then(d => { setLeagues(d); if (d.length) setLeague(d[0].id); });
-  }, [country]);
+// --- FETCH DATI ---
+useEffect(() => {
+  fetch(`${API_BASE}/leagues?country=${country}`)
+    .then(r => r.json())
+    .then(d => { 
+        setLeagues(d); 
+        setLeague(""); // <--- 🔥 ECCO LA MODIFICA: Forza il reset su "vuoto" (Seleziona)
+    });
+}, [country]);
 
   useEffect(() => {
     if (!league) return;
@@ -575,83 +593,133 @@ export default function AppDev() {
   }, []);
 
 
-// ✅ GESTIONE NAVIGAZIONE PERFETTA (FIX CONFLITTO)
-useEffect(() => {
-  const handleBack = () => {
-    // 1. GESTIONE POPUP (Priorità Massima)
-    // Se c'è un popup aperto, chiudiamo SOLO quello e rimaniamo nella pagina (PushState)
-    const isPopupOpen = showMatchSummary || showFormationsPopup || showResimulatePopup || 
-                        showSettingsPopup || chatOpen || mobileMenuOpen;
 
-    if (isPopupOpen) {
-      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
-      if (showMatchSummary) setShowMatchSummary(false);
-      if (showFormationsPopup) { setShowFormationsPopup(false); setPopupOpacity(0); }
-      if (showResimulatePopup) setShowResimulatePopup(false);
-      if (showSettingsPopup) setShowSettingsPopup(false);
-      if (chatOpen) setChatOpen(false);
-      if (mobileMenuOpen) setMobileMenuOpen(false);
-      return;
+// =========================================================================
+  //       NAVIGAZIONE CON HASH ESPLICITO (#HOME)
+  // =========================================================================
+
+  // 1. SINCRONIZZAZIONE STATO
+  useEffect(() => {
+    stateRef.current = {
+      isPopupOpen: showMatchSummary || showFormationsPopup || showResimulatePopup || 
+                   showSettingsPopup || chatOpen,
+      mobileMenu: mobileMenuOpen,
+      expandedMatch: expandedMatch,
+      viewState: viewState, 
+      activeLeague: activeLeague,
+      rounds: rounds
+    };
+  }, [showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, 
+      chatOpen, mobileMenuOpen, expandedMatch, viewState, activeLeague, rounds]);
+
+
+  // 2. MOTORE: SCRIVE L'URL (Ora gestisce anche #home)
+  useEffect(() => {
+    // Menu e Popup (Priorità Massima)
+    if (mobileMenuOpen) {
+        if (window.location.hash !== '#menu') window.history.pushState(null, '', '#menu');
+        return;
+    }
+    if (showMatchSummary || showFormationsPopup || showResimulatePopup || showSettingsPopup || chatOpen) {
+        if (window.location.hash !== '#dialog') window.history.pushState(null, '', '#dialog');
+        return;
     }
 
-    // 2. GESTIONE ESPANSIONE PARTITA (Mobile)
-    if (expandedMatch) {
-      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
-      setExpandedMatch(null); 
-      return; 
+    // Livello 3: Analisi (#match)
+    if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result') {
+        if (window.location.hash !== '#match') window.history.pushState(null, '', '#match');
     }
+    // Livello 2: Dettaglio Card (#detail)
+    else if (expandedMatch) {
+        if (window.location.hash !== '#detail') window.history.pushState(null, '', '#detail');
+    }
+    // Livello 1: Lista Partite (#list)
+    else if (activeLeague) {
+        // Se siamo sulla lista ma l'URL è #home o vuoto -> Spingi #list
+        if (window.location.hash === '' || window.location.hash === '#home') {
+             window.history.pushState(null, '', '#list');
+        }
+        // Se c'era un hash "superiore" (#match, #detail) -> Pulisci con replace
+        else if (['#match', '#detail', '#menu', '#dialog'].includes(window.location.hash)) {
+             window.history.replaceState(null, '', '#list');
+        }
+        // Nota: Se c'è #round-xx lo lasciamo stare
+    }
+    // Livello 0: Dashboard (#home)
+    else {
+        // Se non c'è nessuna lega attiva, FORZIAMO #home
+        if (window.location.hash !== '#home') {
+            window.history.replaceState(null, '', '#home');
+        }
+    }
+  }, [viewState, expandedMatch, activeLeague, mobileMenuOpen, showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, chatOpen]);
 
-    // 3. NAVIGAZIONE INTERNA (Analisi -> Lista)
-    // Questo è il punto che non ti funzionava prima!
-    if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result' || viewState === 'settings') {
-      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
+
+  // 3. GESTIONE TASTO INDIETRO
+  useEffect(() => {
+    const handleHashChange = () => {
+      const currentHash = window.location.hash;
+      const current = stateRef.current;
+
+      // 1. Popup/Menu
+      if (current.mobileMenu && currentHash !== '#menu') { setMobileMenuOpen(false); return; }
+      if (current.isPopupOpen && currentHash !== '#dialog') {
+          setShowMatchSummary(false); setShowFormationsPopup(false); setPopupOpacity(0);
+          setShowResimulatePopup(false); setShowSettingsPopup(false); setChatOpen(false);
+          return;
+      }
+
+      // 2. Dettaglio (#detail)
+      if (currentHash === '#detail') {
+          if (current.viewState !== 'list') {
+             setViewState('list');
+             setSimResult(null);
+             setSimulationEnded(false);
+          }
+      }
+
+      // 3. Lista (#list o #round)
+      else if (currentHash === '#list' || currentHash.startsWith('#round')) {
+          setViewState('list');
+          setSimResult(null);
+          setSimulationEnded(false);
+          setExpandedMatch(null);
+
+          // Ripristina giornata corrente se torno a #list pulito
+          if (currentHash === '#list') {
+             const currentRound = current.rounds.find((r: any) => r.type === 'current');
+             if (currentRound) setSelectedRound(currentRound);
+          }
+      }
       
-      // Reset totale per tornare alla lista pulita
-      setViewState('list');
-      setSelectedMatch(null); 
-      setSimulationEnded(false);
-      return;
+      // 4. Dashboard (#home)
+      else if (currentHash === '#home') {
+          setViewState('list');
+          setExpandedMatch(null);
+          setActiveLeague(null); // <--- CHIUDE LA LEGA E MOSTRA LA DASHBOARD
+          setMobileMenuOpen(false);
+      }
+    };
+
+    // Al primo avvio, se l'URL è vuoto, mettiamo subito #home
+    if (window.location.hash === '') {
+        window.history.replaceState(null, '', '#home');
     }
 
-    // 4. NAVIGAZIONE LEGA (Lista Partite -> Dashboard)
-    if (activeLeague) {
-      window.history.pushState({ internal: true }, '', window.location.pathname); // Blocca uscita
-      setActiveLeague(null);
-      return;
-    }
+    window.addEventListener('popstate', handleHashChange);
+    return () => window.removeEventListener('popstate', handleHashChange);
+  }, []);
 
-    // 5. USCITA DALL'APP (Solo se siamo nella Dashboard Home)
-    const now = Date.now();
-    if (now - lastBackPress.current < 2000) {
-      // Qui lasciamo uscire (nessun pushState)
-      // Se necessario forza: window.history.back();
-    } else {
-      lastBackPress.current = now;
-      setShowExitToast(true);
-      setTimeout(() => setShowExitToast(false), 2000);
-      // Blocchiamo l'uscita al primo tocco
-      window.history.pushState({ internal: true }, '', window.location.pathname);
-    }
-  };
 
-  // Inizializza la "trappola" appena il componente monta o cambia stato rilevante
-  window.history.pushState({ internal: true }, '', window.location.pathname);
-  window.addEventListener('popstate', handleBack);
-  
-  return () => window.removeEventListener('popstate', handleBack);
-}, [
-  viewState, activeLeague, selectedMatch, expandedMatch,
-  showMatchSummary, showFormationsPopup, showResimulatePopup, 
-  showSettingsPopup, chatOpen, mobileMenuOpen
-]);
 
 
   
 
 const prepareSimulation = (match: Match) => {
   setSelectedMatch(match);
-  // ❌ RIGA CANCELLATA: window.history.pushState({page: 'match'}, '', window.location.pathname);
-  // Lasciamo che sia l'useEffect globale a gestire la cronologia, altrimenti ne crea due!
+  // 👇 AGGIUNGI QUESTA RIGA 👇
+  setExpandedMatch(null); 
+  // 👆 RISOLVE IL BUG DEL TASTO INDIETRO
   
   setViewState('pre-match');
   setSimResult(null);
@@ -1231,8 +1299,19 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <button
               key={r.name}
               onClick={() => { 
-                setSelectedRound(r); 
-                window.history.pushState({page: 'round'}, '', window.location.pathname);
+                setSelectedRound(r); // Imposta la giornata
+                
+                // 🔥 LOGICA HASH GIORNATE
+                if (r.type === 'current') {
+                    // Se clicco sulla giornata "Attuale", torno alla base (#list)
+                    // Uso replaceState così non creo cronologia inutile se sono già lì
+                    window.history.replaceState(null, '', '#list');
+                } else {
+                    // Se vado su "Precedente" o "Successiva", creo uno scalino (#round-N)
+                    // Usiamo r.name per rendere l'hash unico (es: #round-34)
+                    // Così puoi fare Avanti -> Avanti -> Indietro -> Indietro
+                    window.history.pushState(null, '', `#round-${r.name.replace(/\s/g, '')}`);
+                }
               }}
               onMouseEnter={() => setHoveredRound(r.name)}
               onMouseLeave={() => setHoveredRound(null)}
@@ -2437,12 +2516,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   position: 'absolute',
                   top: 0,
                   left: `${momentum}%`,
-                  width: '800px',
+                  width: isMobile ? '400px' : '800px',  // ← CONTROLLA QUESTO
                   height: '100%',
                   background: momentumDirection === 'ospite'
                     ? `linear-gradient(to left, ${theme.cyan}FF, ${theme.cyan}66, ${theme.cyan}44, transparent)`
                     : `linear-gradient(to right, ${theme.danger}FF, ${theme.danger}66, ${theme.danger}44, transparent)`,
-                  transform: momentumDirection === 'ospite' ? 'translateX(-800px)' : 'translateX(0)',
+                  transform: momentumDirection === 'ospite' ? `translateX(${isMobile ? '-400px' : '-800px'})` : 'translateX(0)',
                   transition: 'left 0.5s ease-out, background 0.3s ease',
                   opacity: 0.9,
                   filter: 'blur(5px)',
@@ -6018,9 +6097,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               ✕
             </button>
           )}
+
+          {/* --- INIZIO BLOCCO SELEZIONE NAZIONE/CAMPIONATO --- */}
+                    
           <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold' }}>NAZIONE</div>
 
-          {/* 1. Inseriamo il controllo isLoadingNations per risolvere l'errore 6133 */}
+          {/* 1. Controllo Caricamento Nazioni */}
           {isLoadingNations ? (
             <div style={{ 
               padding: '10px', 
@@ -6033,12 +6115,23 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               ⏳ Caricamento nazioni...
             </div>
           ) : (
-            /* 2. Mostriamo la select solo quando i dati sono pronti */
+            /* 2. Select Nazione con FORZATURA RESET */
             <select
               value={country} 
-              onChange={e => setCountry(e.target.value)}
-              style={{ padding: '10px', background: '#000', color: 'white', border: '1px solid #333', borderRadius: '6px', width: '100%' }}
+              onChange={(e) => {
+                setCountry(e.target.value);
+                setLeague(""); // <--- 🔥 FORZA IL SISTEMA A PUNTARE SU "SELEZIONA" (value="")
+              }}
+              style={{ 
+                padding: '10px', 
+                background: '#000', 
+                color: 'white', 
+                border: '1px solid #333', 
+                borderRadius: '6px', 
+                width: '100%' 
+              }}
             >
+              <option value="">-- Seleziona Nazione --</option>
               {availableCountries.map(c => (
                 <option key={c.code} value={c.code}>
                   {c.flag} {c.name}
@@ -6047,13 +6140,40 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             </select>
           )}
 
-          <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>CAMPIONATO</div>
+          <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>
+            CAMPIONATO
+          </div>
+
+          {/* 3. Select Campionato con LOGICA "TAP & CLOSE" */}
           <select
-            value={league} onChange={e => setLeague(e.target.value)}
-            style={{ padding: '10px', background: '#000', color: 'white', border: '1px solid #333', borderRadius: '6px', width: '100%' }}
+            value={league} 
+            onChange={(e) => {
+              const selectedLeague = e.target.value;
+              setLeague(selectedLeague);
+              
+              // Se l'utente seleziona un campionato reale (non vuoto), chiudi il menu
+              if (selectedLeague && selectedLeague !== "") {
+                  setMobileMenuOpen(false);
+              }
+            }}
+            style={{ 
+              padding: '10px', 
+              background: '#000', 
+              color: 'white', 
+              border: '1px solid #333', 
+              borderRadius: '6px', 
+              width: '100%' 
+            }}
           >
-            {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {/* 🔥 QUESTA È L'OPZIONE CHE VIENE ATTIVATA DAL RESET SOPRA */}
+            <option value="">-- Seleziona --</option>
+            
+            {leagues.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
           </select>
+
+          {/* --- FINE BLOCCO SELEZIONE --- */}
 
 
           {/* 🔥 BOX RIEPILOGO - APPARE SIA PER MASSIVO CHE SINGOLO */}
@@ -6657,26 +6777,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             </div>
 
           </div>
-        </div>
-      )}
-      {/* AVVISO DI USCITA (TOAST ANDROID STYLE) */}
-      {showExitToast && (
-        <div style={{
-          position: 'fixed',
-          bottom: '50px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: 'rgba(50, 50, 50, 0.9)',
-          color: 'white',
-          padding: '10px 20px',
-          borderRadius: '20px',
-          fontSize: '14px',
-          zIndex: 9999,
-          boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-          pointerEvents: 'none',
-          whiteSpace: 'nowrap'
-        }}>
-          Premi ancora per uscire
         </div>
       )}
     </div>

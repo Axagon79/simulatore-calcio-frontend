@@ -547,14 +547,31 @@ export default function AppDev() {
 
 
 // --- FETCH DATI ---
-useEffect(() => {
-  fetch(`${API_BASE}/leagues?country=${country}`)
-    .then(r => r.json())
-    .then(d => { 
-        setLeagues(d); 
-        setLeague(""); // <--- 🔥 ECCO LA MODIFICA: Forza il reset su "vuoto" (Seleziona)
-    });
-}, [country]);
+  useEffect(() => {
+    // Se non c'è nazione, non fare nulla
+    if (!country) return;
+
+    fetch(`${API_BASE}/leagues?country=${country}`)
+      .then(r => r.json())
+      .then(d => { 
+          setLeagues(d); 
+          
+          // 🔥 LOGICA INTELLIGENTE (Salva-Dashboard)
+          // Cerchiamo se la lega attuale (league) esiste nella lista appena scaricata (d)
+          const isCurrentLeagueValid = d.find((l: any) => l.id === league);
+
+          if (isCurrentLeagueValid) {
+              // CASO 1: Vengo dalla Dashboard (es. Serie A è valida per l'Italia)
+              // NON faccio nulla, mantengo la selezione!
+          } else {
+              // CASO 2: Ho cambiato nazione a mano (es. Serie A non esiste in Inghilterra)
+              // Resetto su "Seleziona"
+              setLeague(""); 
+          }
+      });
+      
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
 
   useEffect(() => {
     if (!league) return;
@@ -595,10 +612,13 @@ useEffect(() => {
 
 
 // =========================================================================
-  //       NAVIGAZIONE CON HASH ESPLICITO (#HOME)
+  //       NAVIGAZIONE DEFINITIVA (FIX: isBackNav + TORNA A CASA)
   // =========================================================================
 
-  // 1. SINCRONIZZAZIONE STATO
+  // 1. SEMAFORO DI SICUREZZA (La riga che mancava!)
+  const isBackNav = useRef(false);
+
+  // 2. SINCRONIZZAZIONE STATO
   useEffect(() => {
     stateRef.current = {
       isPopupOpen: showMatchSummary || showFormationsPopup || showResimulatePopup || 
@@ -613,9 +633,15 @@ useEffect(() => {
       chatOpen, mobileMenuOpen, expandedMatch, viewState, activeLeague, rounds]);
 
 
-  // 2. MOTORE: SCRIVE L'URL (Ora gestisce anche #home)
+  // 3. MOTORE: SCRIVE L'URL (Rispetta il semaforo isBackNav)
   useEffect(() => {
-    // Menu e Popup (Priorità Massima)
+    // Se stiamo tornando indietro (Semaforo ROSSO), non spingere nulla nella history
+    if (isBackNav.current) {
+        isBackNav.current = false; // Reset semaforo
+        return; 
+    }
+
+    // --- Priorità Assolute (Menu e Popup) ---
     if (mobileMenuOpen) {
         if (window.location.hash !== '#menu') window.history.pushState(null, '', '#menu');
         return;
@@ -625,29 +651,27 @@ useEffect(() => {
         return;
     }
 
-    // Livello 3: Analisi (#match)
+    // --- Livello 3: Analisi Partita ---
     if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result') {
         if (window.location.hash !== '#match') window.history.pushState(null, '', '#match');
     }
-    // Livello 2: Dettaglio Card (#detail)
+    // --- Livello 2: Card Espansa ---
     else if (expandedMatch) {
         if (window.location.hash !== '#detail') window.history.pushState(null, '', '#detail');
     }
-    // Livello 1: Lista Partite (#list)
+    // --- Livello 1: Lista Partite ---
     else if (activeLeague) {
-        // Se siamo sulla lista ma l'URL è #home o vuoto -> Spingi #list
+        // Se siamo su #home o vuoto, andiamo a #list
         if (window.location.hash === '' || window.location.hash === '#home') {
              window.history.pushState(null, '', '#list');
         }
-        // Se c'era un hash "superiore" (#match, #detail) -> Pulisci con replace
+        // Se veniamo da stati profondi (#match, #detail), puliamo l'URL
         else if (['#match', '#detail', '#menu', '#dialog'].includes(window.location.hash)) {
              window.history.replaceState(null, '', '#list');
         }
-        // Nota: Se c'è #round-xx lo lasciamo stare
     }
-    // Livello 0: Dashboard (#home)
+    // --- Livello 0: Dashboard (#home) ---
     else {
-        // Se non c'è nessuna lega attiva, FORZIAMO #home
         if (window.location.hash !== '#home') {
             window.history.replaceState(null, '', '#home');
         }
@@ -655,13 +679,16 @@ useEffect(() => {
   }, [viewState, expandedMatch, activeLeague, mobileMenuOpen, showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, chatOpen]);
 
 
-  // 3. GESTIONE TASTO INDIETRO
+  // 4. GESTIONE TASTO INDIETRO (Logica Aggressiva)
   useEffect(() => {
     const handleHashChange = () => {
+      // 🛑 ATTIVIAMO IL SEMAFORO
+      isBackNav.current = true;
+
       const currentHash = window.location.hash;
       const current = stateRef.current;
 
-      // 1. Popup/Menu
+      // 1. Chiusura Menu/Popup
       if (current.mobileMenu && currentHash !== '#menu') { setMobileMenuOpen(false); return; }
       if (current.isPopupOpen && currentHash !== '#dialog') {
           setShowMatchSummary(false); setShowFormationsPopup(false); setPopupOpacity(0);
@@ -669,7 +696,7 @@ useEffect(() => {
           return;
       }
 
-      // 2. Dettaglio (#detail)
+      // 2. Tornati alla CARD ESPANSA (#detail)
       if (currentHash === '#detail') {
           if (current.viewState !== 'list') {
              setViewState('list');
@@ -678,30 +705,40 @@ useEffect(() => {
           }
       }
 
-      // 3. Lista (#list o #round)
+      // 3. Tornati alla LISTA (#list)
       else if (currentHash === '#list' || currentHash.startsWith('#round')) {
+          
+          // 🔥 UX FIX: Se sono già sulla lista e premo indietro -> Vado alla Home (chiudo tutto)
+          // Questo risolve il problema di dover premere indietro 10 volte se hai cambiato 10 nazioni
+          if (current.viewState === 'list' && !current.expandedMatch) {
+              setActiveLeague(null); // Chiude la lega
+              setMobileMenuOpen(false);
+              return;
+          }
+
+          // Altrimenti torno alla lista normale
           setViewState('list');
           setSimResult(null);
           setSimulationEnded(false);
           setExpandedMatch(null);
 
-          // Ripristina giornata corrente se torno a #list pulito
+          // Ripristina giornata corrente
           if (currentHash === '#list') {
              const currentRound = current.rounds.find((r: any) => r.type === 'current');
              if (currentRound) setSelectedRound(currentRound);
           }
       }
       
-      // 4. Dashboard (#home)
-      else if (currentHash === '#home') {
+      // 4. Tornati alla HOME (#home o vuoto)
+      else if (currentHash === '#home' || currentHash === '' || currentHash === '#') {
           setViewState('list');
           setExpandedMatch(null);
-          setActiveLeague(null); // <--- CHIUDE LA LEGA E MOSTRA LA DASHBOARD
+          setActiveLeague(null);
           setMobileMenuOpen(false);
       }
     };
 
-    // Al primo avvio, se l'URL è vuoto, mettiamo subito #home
+    // Fix iniziale: Appena apro l'app, metto #home
     if (window.location.hash === '') {
         window.history.replaceState(null, '', '#home');
     }

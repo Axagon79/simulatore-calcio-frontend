@@ -1,3 +1,5 @@
+
+import { useState } from 'react'
 // --- CONFIGURAZIONE ---
 const IS_ADMIN = true; 
 
@@ -18,6 +20,10 @@ interface DashboardProps {
 
 export default function DashboardHome({ onSelectLeague }: DashboardProps) {
 
+  // ✅ AGGIUNGI QUI
+  const [showOtherLeagues, setShowOtherLeagues] = useState(false);
+
+
   // --- LISTA CAMPIONATI AGGIORNATA (TUTTI E 7) ---
   const leagues = [
     { id: 'SERIE_A', name: 'Serie A', country: '🇮🇹 Italia', matches: 10, color: theme.cyan },
@@ -28,6 +34,41 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
     { id: 'EREDIVISIE', name: 'Eredivisie', country: '🇳🇱 Olanda', matches: 4, color: '#FFA500' },
     { id: 'LIGUE_1', name: 'Ligue 1', country: '🇫🇷 Francia', matches: 7, color: '#0055ff' }, 
   ];
+
+  // ✅ CARD SPECIALE PER ALTRI CAMPIONATI
+const otherLeaguesCard = {
+  id: 'OTHER_LEAGUES',
+  name: 'Altri Campionati',
+  country: '🌍 Mondo',
+  matches: 15,
+  color: theme.purple
+};
+
+// ✅ AGGIUNGI QUI - LISTA COMPLETA ALTRI CAMPIONATI
+const otherLeagues = [
+  // EUROPA SERIE B
+  { id: 'CHAMPIONSHIP', name: 'Championship', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra B', color: '#cc0055' },
+  { id: 'LA_LIGA_2', name: 'LaLiga 2', country: '🇪🇸 Spagna B', color: '#dd8833' },
+  { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: '🇩🇪 Germania B', color: '#dddddd' },
+  { id: 'LIGUE_2', name: 'Ligue 2', country: '🇫🇷 Francia B', color: '#0044cc' },
+  
+  // EUROPA NORDICI + EXTRA
+  { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Prem.', country: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scozia', color: '#0055aa' },
+  { id: 'ALLSVENSKAN', name: 'Allsvenskan', country: '🇸🇪 Svezia', color: '#ffcc00' },
+  { id: 'ELITESERIEN', name: 'Eliteserien', country: '🇳🇴 Norvegia', color: '#cc0000' },
+  { id: 'SUPERLIGAEN', name: 'Superligaen', country: '🇩🇰 Danimarca', color: '#dd0000' },
+  { id: 'JUPILER_PRO_LEAGUE', name: 'Jupiler Pro', country: '🇧🇪 Belgio', color: '#ffdd00' },
+  { id: 'SUPER_LIG', name: 'Süper Lig', country: '🇹🇷 Turchia', color: '#ee0000' },
+  { id: 'LEAGUE_OF_IRELAND', name: 'League of Ireland', country: '🇮🇪 Irlanda', color: '#009900' },
+  
+  // AMERICHE
+  { id: 'BRASILEIRAO', name: 'Brasileirão', country: '🇧🇷 Brasile', color: '#00ff00' },
+  { id: 'PRIMERA_DIVISION_ARG', name: 'Primera División', country: '🇦🇷 Argentina', color: '#66ccff' },
+  { id: 'MLS', name: 'MLS', country: '🇺🇸 USA', color: '#0066cc' },
+  
+  // ASIA
+  { id: 'J1_LEAGUE', name: 'J1 League', country: '🇯🇵 Giappone', color: '#cc0000' },
+];
 
   return (
     <div style={{ 
@@ -191,10 +232,175 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                    </div>
                </div>
             ))}
-        </div>
-        
-        <div style={{height: '50px'}}></div>
+            {/* ✅ INCOLLA QUI - CARD ALTRI CAMPIONATI */}
+            <div 
+              key={otherLeaguesCard.id}
+              onClick={() => setShowOtherLeagues(true)}
+              style={{
+                background: 'linear-gradient(135deg, rgba(188,19,254,0.2), rgba(0,240,255,0.1))',
+                backdropFilter: 'blur(10px)',
+                border: `2px solid ${theme.purple}`,
+                borderRadius: '20px',
+                padding: '25px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                height: '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                ...window.innerWidth < 768 && {
+                  height: '120px',
+                  padding: '18px',
+                  borderRadius: '16px'
+                }
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.purple}40`;
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{fontSize: '48px', marginBottom: '10px'}}>🌍</div>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '18px' : '22px',
+                fontWeight: '800',
+                color: 'white',
+                marginBottom: '8px'
+              }}>
+                Altri Campionati
+              </div>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                color: theme.purple,
+                fontWeight: 'bold'
+              }}>
+                +15 Disponibili
+              </div>
+            </div>
+            <div style={{height: '50px'}}></div>
+        </div> 
       </div>
+      {/* ✅ MODALE ALTRI CAMPIONATI */}
+      {showOtherLeagues && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setShowOtherLeagues(false)}
+        >
+          <div 
+            style={{
+              background: theme.bg,
+              border: `2px solid ${theme.purple}`,
+              borderRadius: '20px',
+              padding: window.innerWidth < 768 ? '20px' : '30px',  // ✅ Meno padding su mobile
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* HEADER */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '30px'
+            }}>
+              <h2 style={{
+                fontSize: '28px',
+                fontWeight: '800',
+                color: 'white',
+                margin: 0
+              }}>
+                🌍 Altri Campionati
+              </h2>
+              <button
+                onClick={() => setShowOtherLeagues(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.textDim,
+                  fontSize: '32px',
+                  cursor: 'pointer',
+                  padding: '0',
+                  lineHeight: '1'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* GRIGLIA CAMPIONATI */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: window.innerWidth < 768 
+                ? '1fr'  // ✅ Mobile: 1 colonna
+                : 'repeat(auto-fill, minmax(250px, 1fr))',  // Desktop: griglia
+              gap: '15px'
+            }}>
+              {otherLeagues.map(league => (
+                <div
+                  key={league.id}
+                  onClick={() => {
+                    setShowOtherLeagues(false);
+                    onSelectLeague(league.id);
+                  }}
+                  style={{
+                    background: 'rgba(20, 22, 35, 0.6)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = league.color;
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <div style={{
+                    fontSize: '11px',
+                    color: theme.textDim,
+                    marginBottom: '8px'
+                  }}>
+                    {league.country}
+                  </div>
+                  <div style={{
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: 'white'
+                  }}>
+                    {league.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -141,15 +141,40 @@ const LEAGUES_MAP: League[] = [
   // ITALIA
   { id: 'SERIE_A', name: 'Serie A', country: 'Italy' },
   { id: 'SERIE_B', name: 'Serie B', country: 'Italy' },
-  { id: 'SERIE_C_GIRONE_A', name: 'Serie C - Gir A', country: 'Italy' },  // ✅ CAMBIA
-  { id: 'SERIE_C_GIRONE_B', name: 'Serie C - Gir B', country: 'Italy' },  // ✅ CAMBIA
-  { id: 'SERIE_C_GIRONE_C', name: 'Serie C - Gir C', country: 'Italy' },  // ✅ CAMBIA
+  { id: 'SERIE_C_GIRONE_A', name: 'Serie C - Gir A', country: 'Italy' },
+  { id: 'SERIE_C_GIRONE_B', name: 'Serie C - Gir B', country: 'Italy' },
+  { id: 'SERIE_C_GIRONE_C', name: 'Serie C - Gir C', country: 'Italy' },
+  
+  // EUROPA TOP
   { id: 'PREMIER_LEAGUE', name: 'Premier League', country: 'England' },
   { id: 'LA_LIGA', name: 'La Liga', country: 'Spain' },
   { id: 'BUNDESLIGA', name: 'Bundesliga', country: 'Germany' },
   { id: 'LIGUE_1', name: 'Ligue 1', country: 'France' },
   { id: 'EREDIVISIE', name: 'Eredivisie', country: 'Netherlands' },
   { id: 'LIGA_PORTUGAL', name: 'Liga Portugal', country: 'Portugal' },
+  
+  // 🆕 EUROPA SERIE B
+  { id: 'CHAMPIONSHIP', name: 'Championship', country: 'England' },
+  { id: 'LA_LIGA_2', name: 'LaLiga 2', country: 'Spain' },
+  { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: 'Germany' },
+  { id: 'LIGUE_2', name: 'Ligue 2', country: 'France' },
+  
+  // 🆕 EUROPA NORDICI + EXTRA
+  { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Prem.', country: 'Scotland' },
+  { id: 'ALLSVENSKAN', name: 'Allsvenskan', country: 'Sweden' },
+  { id: 'ELITESERIEN', name: 'Eliteserien', country: 'Norway' },
+  { id: 'SUPERLIGAEN', name: 'Superligaen', country: 'Denmark' },
+  { id: 'JUPILER_PRO_LEAGUE', name: 'Jupiler Pro', country: 'Belgium' },
+  { id: 'SUPER_LIG', name: 'Süper Lig', country: 'Turkey' },
+  { id: 'LEAGUE_OF_IRELAND', name: 'League of Ireland', country: 'Ireland' },
+  
+  // 🆕 AMERICHE
+  { id: 'BRASILEIRAO', name: 'Brasileirão', country: 'Brazil' },
+  { id: 'PRIMERA_DIVISION_ARG', name: 'Primera División', country: 'Argentina' },
+  { id: 'MLS', name: 'MLS', country: 'USA' },
+  
+  // 🆕 ASIA
+  { id: 'J1_LEAGUE', name: 'J1 League', country: 'Japan' },
 ];
 
 // --- TEMA NEON / SCI-FI ---

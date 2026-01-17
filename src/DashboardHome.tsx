@@ -47,13 +47,13 @@ const otherLeaguesCard = {
 // ✅ AGGIUNGI QUI - LISTA COMPLETA ALTRI CAMPIONATI
 const otherLeagues = [
   // EUROPA SERIE B
-  { id: 'CHAMPIONSHIP', name: 'Championship', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra B', color: '#cc0055' },
+  { id: 'CHAMPIONSHIP', name: 'Championship', country: '🇬🇧 Inghilterra B', color: '#cc0055' },
   { id: 'LA_LIGA_2', name: 'LaLiga 2', country: '🇪🇸 Spagna B', color: '#dd8833' },
   { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: '🇩🇪 Germania B', color: '#dddddd' },
   { id: 'LIGUE_2', name: 'Ligue 2', country: '🇫🇷 Francia B', color: '#0044cc' },
   
   // EUROPA NORDICI + EXTRA
-  { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Prem.', country: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scozia', color: '#0055aa' },
+  { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Prem.', country: '🇬🇧 Scozia', color: '#0055aa' },
   { id: 'ALLSVENSKAN', name: 'Allsvenskan', country: '🇸🇪 Svezia', color: '#ffcc00' },
   { id: 'ELITESERIEN', name: 'Eliteserien', country: '🇳🇴 Norvegia', color: '#cc0000' },
   { id: 'SUPERLIGAEN', name: 'Superligaen', country: '🇩🇰 Danimarca', color: '#dd0000' },

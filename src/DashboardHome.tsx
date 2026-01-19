@@ -267,7 +267,7 @@ const otherLeagues = [
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <div style={{fontSize: '48px', marginBottom: '10px'}}>🌍</div>
+              <div style={{fontSize: '48px', marginBottom: '-10px'}}>🌍</div>
               <div style={{
                 fontSize: window.innerWidth < 768 ? '18px' : '22px',
                 fontWeight: '800',

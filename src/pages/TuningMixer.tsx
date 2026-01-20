@@ -102,6 +102,11 @@ const TuningMixer: React.FC = () => {
   const [masterLocked, setMasterLocked] = useState(false);
   const [paramLocks, setParamLocks] = useState<Record<string, boolean>>({});
 
+  const [presetsList, setPresetsList] = useState<string[]>([]);
+  const [presetName, setPresetName] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('');
+
+
   // --- CARICA DATI DA MONGODB ---
   const loadTuning = useCallback(async () => {
     setLoading(true);
@@ -213,7 +218,107 @@ const TuningMixer: React.FC = () => {
       setSaving(false);
     }
   };
-
+  const handleSavePreset = async () => {
+    if (!presetName.trim()) {
+      alert('Inserisci un nome per il preset!');
+      return;
+    }
+    
+    // Controlla se esiste già
+    if (presetsList.includes(presetName)) {
+      if (!window.confirm(`Il preset "${presetName}" esiste già. Vuoi sovrascriverlo?`)) {
+        return;
+      }
+    }
+    
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/save_preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: presetName,
+          config: currentData
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess(`Preset "${presetName}" salvato!`);
+        setTimeout(() => setSuccess(null), 3000);
+        loadPresetsList();
+        setPresetName('');
+      } else {
+        setError(data.error || 'Errore salvataggio preset');
+      }
+    } catch (err) {
+      setError('Errore connessione');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handleLoadPreset = async () => {
+    if (!selectedPreset) {
+      alert('Seleziona un preset da caricare!');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/load_preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selectedPreset }),
+      });
+      const data = await response.json();
+      if (data.success && data.preset && data.preset.config) {
+        setCurrentData(data.preset.config);
+        setSuccess(`Preset "${selectedPreset}" caricato!`);
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(data.error || 'Errore caricamento preset');
+      }
+    } catch (err) {
+      setError('Errore connessione');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleDeletePreset = async () => {
+    if (!selectedPreset) {
+      alert('Seleziona un preset da eliminare!');
+      return;
+    }
+    
+    if (!window.confirm(`Sei sicuro di voler eliminare il preset "${selectedPreset}"?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/delete_preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selectedPreset }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess(`Preset "${selectedPreset}" eliminato!`);
+        setTimeout(() => setSuccess(null), 3000);
+        setSelectedPreset('');
+        loadPresetsList();
+      } else {
+        setError(data.error || 'Errore eliminazione preset');
+      }
+    } catch (err) {
+      setError('Errore connessione');
+      console.error(err);
+    }
+  };
+    
   const resetToDefault = () => {
     if (!window.confirm(`Reset ${ALGO_FULL_NAMES[activeAlgo]} ai valori di default?`)) return;
     
@@ -278,7 +383,32 @@ const TuningMixer: React.FC = () => {
     processAlgoData(fullConfig, algoId);
   };
 
-  useEffect(() => { loadTuning(); }, []);
+  const loadPresetsList = useCallback(async () => {
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/list_presets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (data.success && data.presets) {
+        // Filtra i preset per l'algoritmo corrente
+        const targetKey = ALGO_MAP[activeAlgo];
+        const filtered = data.presets
+          .filter((p: any) => p.name && p.name.includes(targetKey))
+          .map((p: any) => p.name);
+        setPresetsList(filtered);
+      }
+    } catch (err) {
+      console.error('Errore caricamento preset:', err);
+    }
+  }, [activeAlgo]);
+  
+
+  useEffect(() => { 
+    loadTuning(); 
+    loadPresetsList();
+  }, []);
+  
 
   useEffect(() => {
     if (Object.keys(fullConfig).length > 0) {
@@ -338,6 +468,92 @@ const TuningMixer: React.FC = () => {
         </div>
         
         <div style={styles.headerRight}>
+
+          {/* PRESET CONTROLS */}
+          <input
+            type="text"
+            placeholder="Nome preset..."
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '6px 12px',
+              borderRadius: 6,
+              fontSize: 12,
+              width: 150,
+            }}
+          />
+          <button
+            onClick={handleSavePreset}
+            disabled={saving}
+            style={{
+              background: 'rgba(34,197,94,0.2)',
+              border: '1px solid #22c55e',
+              color: '#22c55e',
+              padding: '6px 12px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: 11,
+              fontWeight: 700,
+            }}
+          >
+            💾 Salva
+          </button>
+          <select
+            value={selectedPreset}
+            onChange={(e) => setSelectedPreset(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '6px 12px',
+              borderRadius: 6,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">-- Carica Preset --</option>
+            {presetsList.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleLoadPreset}
+            disabled={!selectedPreset}
+            style={{
+              background: 'rgba(59,130,246,0.2)',
+              border: '1px solid #3b82f6',
+              color: '#3b82f6',
+              padding: '6px 12px',
+              borderRadius: 6,
+              cursor: selectedPreset ? 'pointer' : 'not-allowed',
+              fontSize: 11,
+              fontWeight: 700,
+              opacity: selectedPreset ? 1 : 0.5,
+            }}
+          >
+            📥 Carica
+          </button>
+          <button
+            onClick={handleDeletePreset}
+            disabled={!selectedPreset}
+            style={{
+              background: 'rgba(239,68,68,0.2)',
+              border: '1px solid #ef4444',
+              color: '#ef4444',
+              padding: '6px 12px',
+              borderRadius: 6,
+              cursor: selectedPreset ? 'pointer' : 'not-allowed',
+              fontSize: 11,
+              fontWeight: 700,
+              opacity: selectedPreset ? 1 : 0.5,
+            }}
+          >
+            🗑️ Elimina
+          </button>
+ 
           {modifiedParams.size > 0 && (
             <span style={styles.unsavedBadge}>⚠️ {modifiedParams.size} modifiche</span>
           )}

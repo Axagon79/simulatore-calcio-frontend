@@ -1035,6 +1035,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
     let injuryTimeCounter = 0; 
     let isInjuryTime = false;  
     let isPaused = false;
+    let isVarChecking = false;  // ← AGGIUNGI QUESTO FLAG
     
     const totalDurationMs = 30000; 
     const intervalMs = 100;
@@ -1181,6 +1182,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA GOL ---
               if (matchEvent.tipo === "gol") {
+                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
                 setLiveScore(prev => ({
                   home: matchEvent.squadra === "casa" ? prev.home + 1 : prev.home,
                   away: matchEvent.squadra === "ospite" ? prev.away + 1 : prev.away
@@ -1199,6 +1201,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA RIGORE FISCHIATO ---
               else if (matchEvent.tipo === "rigore_fischio") {
+                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
                 setMomentum(prev => 
                   matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
                 );
@@ -1209,6 +1212,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA ROSSO ---
               else if (matchEvent.tipo === "rosso") {
+                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
                 setMomentum(prev => 
                   matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
                 );
@@ -1222,6 +1226,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             else if (matchEvent.tipo === "VAR_PROCESS") {
               isPaused = true;  // 🛑 Blocca il tempo
               setIsVarActive(true);  // 🔴 Cronometro rosso pulsante
+              isVarChecking = true;  // ← AGGIUNGI QUESTO
               
               // Aggiungi VAR alla cronaca
               setAnimEvents(prev => [matchEvent.testo, ...prev]);
@@ -1290,6 +1295,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     setPitchMsg(null);
                     setIsVarActive(false);  // ⚪ Cronometro torna normale
                     isPaused = false;  // ▶️ Riprende il tempo
+                    isVarChecking = false;  // ← AGGIUNGI QUESTO
                   }, 3000);
                   
                 } else {
@@ -1299,6 +1305,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     setPitchMsg(null);
                     setIsVarActive(false);
                     isPaused = false;
+                    isVarChecking = false;  // ← AGGIUNGI QUESTO
                   }, 3000);
                 }
                 

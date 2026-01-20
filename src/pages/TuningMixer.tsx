@@ -107,6 +107,12 @@ const TuningMixer: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState('');
 
 
+  const [globalPresetsList, setGlobalPresetsList] = useState<string[]>([]);
+  const [globalPresetName, setGlobalPresetName] = useState('');
+  const [selectedGlobalPreset, setSelectedGlobalPreset] = useState('');
+
+
+
   // --- CARICA DATI DA MONGODB ---
   const loadTuning = useCallback(async () => {
     setLoading(true);
@@ -225,7 +231,8 @@ const TuningMixer: React.FC = () => {
     }
     
     // Controlla se esiste già
-    if (presetsList.includes(presetName)) {
+    if (presetsList.includes(`${ALGO_MAP[activeAlgo]}_${presetName}`)) {
+
       if (!window.confirm(`Il preset "${presetName}" esiste già. Vuoi sovrascriverlo?`)) {
         return;
       }
@@ -238,9 +245,10 @@ const TuningMixer: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: presetName,
+          name: `${ALGO_MAP[activeAlgo]}_${presetName}`,
           config: currentData
         }),
+        
       });
       const data = await response.json();
       if (data.success) {
@@ -318,6 +326,82 @@ const TuningMixer: React.FC = () => {
       console.error(err);
     }
   };
+
+
+  const handleSaveGlobalPreset = async () => {
+    if (!globalPresetName.trim()) {
+      alert('Inserisci un nome per il preset globale!');
+      return;
+    }
+    
+    const fullName = `FULL_${globalPresetName}`;
+    
+    // Controlla se esiste già
+    if (globalPresetsList.includes(fullName)) {
+      if (!window.confirm(`Il preset globale "${globalPresetName}" esiste già. Vuoi sovrascriverlo?`)) {
+        return;
+      }
+    }
+    
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/save_preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fullName,
+          config: fullConfig  // Salva TUTTA la config
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess(`Preset globale "${globalPresetName}" salvato!`);
+        setTimeout(() => setSuccess(null), 3000);
+        loadGlobalPresetsList();
+        setGlobalPresetName('');
+      } else {
+        setError(data.error || 'Errore salvataggio preset globale');
+      }
+    } catch (err) {
+      setError('Errore connessione');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleLoadGlobalPreset = async () => {
+    if (!selectedGlobalPreset) {
+      alert('Seleziona un preset globale da caricare!');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/load_preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selectedGlobalPreset }),
+      });
+      const data = await response.json();
+      if (data.success && data.preset && data.preset.config) {
+        setFullConfig(data.preset.config);
+        processAlgoData(data.preset.config, activeAlgo);
+        setSuccess(`Preset globale caricato!`);
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(data.error || 'Errore caricamento preset globale');
+      }
+    } catch (err) {
+      setError('Errore connessione');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
     
   const resetToDefault = () => {
     if (!window.confirm(`Reset ${ALGO_FULL_NAMES[activeAlgo]} ai valori di default?`)) return;
@@ -402,12 +486,35 @@ const TuningMixer: React.FC = () => {
       console.error('Errore caricamento preset:', err);
     }
   }, [activeAlgo]);
+
+
+  const loadGlobalPresetsList = useCallback(async () => {
+    try {
+      const response = await fetch(`${AI_ENGINE_BASE}/list_presets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (data.success && data.presets) {
+        // Filtra solo i preset che iniziano con "FULL_"
+        const filtered = data.presets
+          .filter((p: any) => p.name && p.name.startsWith('FULL_'))
+          .map((p: any) => p.name);
+        setGlobalPresetsList(filtered);
+      }
+    } catch (err) {
+      console.error('Errore caricamento preset globali:', err);
+    }
+  }, []);
+  
   
 
   useEffect(() => { 
     loadTuning(); 
     loadPresetsList();
+    loadGlobalPresetsList();
   }, []);
+  
   
 
   useEffect(() => {
@@ -469,12 +576,13 @@ const TuningMixer: React.FC = () => {
         
         <div style={styles.headerRight}>
 
-          {/* PRESET CONTROLS */}
+
+          {/* PRESET GLOBALE */}
           <input
             type="text"
-            placeholder="Nome preset..."
-            value={presetName}
-            onChange={(e) => setPresetName(e.target.value)}
+            placeholder="Nome preset globale..."
+            value={globalPresetName}
+            onChange={(e) => setGlobalPresetName(e.target.value)}
             style={{
               background: 'rgba(255,255,255,0.1)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -482,16 +590,16 @@ const TuningMixer: React.FC = () => {
               padding: '6px 12px',
               borderRadius: 6,
               fontSize: 12,
-              width: 150,
+              width: 160,
             }}
           />
           <button
-            onClick={handleSavePreset}
+            onClick={handleSaveGlobalPreset}
             disabled={saving}
             style={{
-              background: 'rgba(34,197,94,0.2)',
-              border: '1px solid #22c55e',
-              color: '#22c55e',
+              background: 'rgba(168,85,247,0.2)',
+              border: '1px solid #a855f7',
+              color: '#a855f7',
               padding: '6px 12px',
               borderRadius: 6,
               cursor: 'pointer',
@@ -499,11 +607,11 @@ const TuningMixer: React.FC = () => {
               fontWeight: 700,
             }}
           >
-            💾 Salva
+            💾💾 Salva TUTTO
           </button>
           <select
-            value={selectedPreset}
-            onChange={(e) => setSelectedPreset(e.target.value)}
+            value={selectedGlobalPreset}
+            onChange={(e) => setSelectedGlobalPreset(e.target.value)}
             style={{
               background: 'rgba(255,255,255,0.1)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -514,45 +622,32 @@ const TuningMixer: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            <option value="">-- Carica Preset --</option>
-            {presetsList.map(name => (
-              <option key={name} value={name}>{name}</option>
+            <option value="">-- Preset Globale --</option>
+            {globalPresetsList.map(name => (
+              <option key={name} value={name}>{name.replace('FULL_', '')}</option>
             ))}
           </select>
           <button
-            onClick={handleLoadPreset}
-            disabled={!selectedPreset}
+            onClick={handleLoadGlobalPreset}
+            disabled={!selectedGlobalPreset}
             style={{
               background: 'rgba(59,130,246,0.2)',
               border: '1px solid #3b82f6',
               color: '#3b82f6',
               padding: '6px 12px',
               borderRadius: 6,
-              cursor: selectedPreset ? 'pointer' : 'not-allowed',
+              cursor: selectedGlobalPreset ? 'pointer' : 'not-allowed',
               fontSize: 11,
               fontWeight: 700,
-              opacity: selectedPreset ? 1 : 0.5,
+              opacity: selectedGlobalPreset ? 1 : 0.5,
             }}
           >
-            📥 Carica
+            📥 Carica TUTTO
           </button>
-          <button
-            onClick={handleDeletePreset}
-            disabled={!selectedPreset}
-            style={{
-              background: 'rgba(239,68,68,0.2)',
-              border: '1px solid #ef4444',
-              color: '#ef4444',
-              padding: '6px 12px',
-              borderRadius: 6,
-              cursor: selectedPreset ? 'pointer' : 'not-allowed',
-              fontSize: 11,
-              fontWeight: 700,
-              opacity: selectedPreset ? 1 : 0.5,
-            }}
-          >
-            🗑️ Elimina
-          </button>
+
+
+
+          
  
           {modifiedParams.size > 0 && (
             <span style={styles.unsavedBadge}>⚠️ {modifiedParams.size} modifiche</span>
@@ -575,10 +670,101 @@ const TuningMixer: React.FC = () => {
       </header>
 
       {/* === ALGO INFO BAR === */}
-      <div style={{ ...styles.infoBar, borderLeftColor: currentColor }}>
-        <span style={{ ...styles.infoBadge, background: currentColor }}>{ALGO_LABELS[activeAlgo]}</span>
-        <span style={styles.infoName}>{ALGO_FULL_NAMES[activeAlgo]}</span>
+      <div style={{ ...styles.infoBar, borderLeftColor: currentColor, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ ...styles.infoBadge, background: currentColor }}>{ALGO_LABELS[activeAlgo]}</span>
+          <span style={styles.infoName}>{ALGO_FULL_NAMES[activeAlgo]}</span>
+        </div>
+
+        {/* PRESET SINGOLO ALGORITMO */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="Nome preset..."
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '6px 12px',
+              borderRadius: 6,
+              fontSize: 11,
+              width: 130,
+            }}
+          />
+          <button
+            onClick={handleSavePreset}
+            disabled={saving}
+            style={{
+              background: 'rgba(34,197,94,0.2)',
+              border: '1px solid #22c55e',
+              color: '#22c55e',
+              padding: '5px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: 10,
+              fontWeight: 700,
+            }}
+          >
+            💾 Salva
+          </button>
+          <select
+            value={selectedPreset}
+            onChange={(e) => setSelectedPreset(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '5px 10px',
+              borderRadius: 6,
+              fontSize: 10,
+              cursor: 'pointer',
+              width: 150,
+            }}
+          >
+            <option value="">-- Carica Preset --</option>
+            {presetsList.map(name => (
+              <option key={name} value={name}>{name.replace(`${ALGO_MAP[activeAlgo]}_`, '')}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleLoadPreset}
+            disabled={!selectedPreset}
+            style={{
+              background: 'rgba(59,130,246,0.2)',
+              border: '1px solid #3b82f6',
+              color: '#3b82f6',
+              padding: '5px 10px',
+              borderRadius: 6,
+              cursor: selectedPreset ? 'pointer' : 'not-allowed',
+              fontSize: 10,
+              fontWeight: 700,
+              opacity: selectedPreset ? 1 : 0.5,
+            }}
+          >
+            📥 Carica
+          </button>
+          <button
+            onClick={handleDeletePreset}
+            disabled={!selectedPreset}
+            style={{
+              background: 'rgba(239,68,68,0.2)',
+              border: '1px solid #ef4444',
+              color: '#ef4444',
+              padding: '5px 10px',
+              borderRadius: 6,
+              cursor: selectedPreset ? 'pointer' : 'not-allowed',
+              fontSize: 10,
+              fontWeight: 700,
+              opacity: selectedPreset ? 1 : 0.5,
+            }}
+          >
+            🗑️ Elimina
+          </button>
+        </div>
       </div>
+
 
       {/* === MAIN CONTENT === */}
       <main style={{ ...styles.main, opacity: masterLocked ? 0.4 : 1, pointerEvents: masterLocked ? 'none' : 'auto' }}>

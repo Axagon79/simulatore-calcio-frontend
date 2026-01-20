@@ -1253,6 +1253,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     }
                     
                     setPitchMsg({ testo: annullaMsg, colore: "#ff2a6d" });
+                    // Rimuovi scritta dopo 2 secondi
+                    setTimeout(() => setPitchMsg(null), 4000);
                     
                   } else {
                     // ✅ CONFERMATO
@@ -1264,18 +1266,19 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     else confermaMsg = "✅ DECISIONE CONFERMATA";
                     
                     setPitchMsg({ testo: confermaMsg, colore: "#05f9b6" });
+                    // Rimuovi scritta dopo 2 secondi
+                    setTimeout(() => setPitchMsg(null), 4000);
                   }
                 } else {
                   // Fallback se non trova sentenza
                   setPitchMsg({ testo: "✅ CONTROLLO COMPLETATO", colore: "#05f9b6" });
+                  // Rimuovi scritta dopo 2 secondi
+                  setTimeout(() => setPitchMsg(null), 4000);
                 }
                 
                 setIsVarActive(false);  // ⚪ Cronometro torna normale
                 isPaused = false;  // ▶️ Riprende il tempo
-                
-                // Rimuovi scritta dopo 2 secondi
-                setTimeout(() => setPitchMsg(null), 4000);
-                
+              
               }, 8000);
             }
             

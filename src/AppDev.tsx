@@ -1109,8 +1109,27 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           injuryTimeCounter = 0;
           t = 46;
           
-          const goalsHome = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'casa').length;
-          const goalsAway = finalData.cronaca.filter(e => e.minuto <= 45 && e.tipo === 'gol' && e.squadra === 'ospite').length;
+          // Conta solo i gol VALIDI (non annullati dal VAR)
+          const goalsHome = finalData.cronaca.filter((e: any) => {
+            if (e.minuto > 45 || e.tipo !== 'gol' || e.squadra !== 'casa') return false;
+            
+            const varAnnullato = finalData.cronaca.find((v: any) => 
+              v.minuto === e.minuto && v.tipo === 'VAR_VERDICT' && v.decision === 'annullato' && v.var_type === 'gol'
+            );
+            
+            return !varAnnullato;
+          }).length;
+
+          const goalsAway = finalData.cronaca.filter((e: any) => {
+            if (e.minuto > 45 || e.tipo !== 'gol' || e.squadra !== 'ospite') return false;
+            
+            const varAnnullato = finalData.cronaca.find((v: any) => 
+              v.minuto === e.minuto && v.tipo === 'VAR_VERDICT' && v.decision === 'annullato' && v.var_type === 'gol'
+            );
+            
+            return !varAnnullato;
+          }).length;
+
       
           setPitchMsg({ testo: `INTERVALLO: ${goalsHome}-${goalsAway}`, colore: '#fff' });
           setTimeout(() => {
@@ -1221,13 +1240,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
               
               // ⏱️ Cerca la sentenza VAR nei prossimi eventi dello stesso minuto
+              // ⏱️ Mostra la scritta VAR CHECK per 6 secondi
               setTimeout(() => {
+                // Dopo 6 secondi, cerca la sentenza
                 const sentenzaVAR = finalData.cronaca.find((e: any) => 
-                  e.minuto >= matchEvent.minuto &&  // ← Cerca anche minuti successivi
+                  e.minuto >= matchEvent.minuto &&
                   e.tipo === "VAR_VERDICT" &&
                   (e as any).var_type === varType
                 );
-            
                 
                 if (sentenzaVAR) {
                   const decision = (sentenzaVAR as any).decision;
@@ -1241,7 +1261,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     
                     if (varType === "gol" || varType === "gol_fantasma") {
                       annullaMsg = "❌ GOL ANNULLATO";
-                      // Rimuovi il gol dal punteggio (solo se era stato aggiunto)
                       setLiveScore(prev => ({
                         home: matchEvent.squadra === "casa" ? Math.max(0, prev.home - 1) : prev.home,
                         away: matchEvent.squadra === "ospite" ? Math.max(0, prev.away - 1) : prev.away
@@ -1253,8 +1272,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     }
                     
                     setPitchMsg({ testo: annullaMsg, colore: "#ff2a6d" });
-                    // Rimuovi scritta dopo 2 secondi
-                    setTimeout(() => setPitchMsg(null), 4000);
                     
                   } else {
                     // ✅ CONFERMATO
@@ -1266,20 +1283,27 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     else confermaMsg = "✅ DECISIONE CONFERMATA";
                     
                     setPitchMsg({ testo: confermaMsg, colore: "#05f9b6" });
-                    // Rimuovi scritta dopo 2 secondi
-                    setTimeout(() => setPitchMsg(null), 4000);
                   }
+                  
+                  // Rimuovi la sentenza dopo altri 3 secondi
+                  setTimeout(() => {
+                    setPitchMsg(null);
+                    setIsVarActive(false);  // ⚪ Cronometro torna normale
+                    isPaused = false;  // ▶️ Riprende il tempo
+                  }, 3000);
+                  
                 } else {
-                  // Fallback se non trova sentenza
+                  // Fallback
                   setPitchMsg({ testo: "✅ CONTROLLO COMPLETATO", colore: "#05f9b6" });
-                  // Rimuovi scritta dopo 2 secondi
-                  setTimeout(() => setPitchMsg(null), 4000);
+                  setTimeout(() => {
+                    setPitchMsg(null);
+                    setIsVarActive(false);
+                    isPaused = false;
+                  }, 3000);
                 }
                 
-                setIsVarActive(false);  // ⚪ Cronometro torna normale
-                isPaused = false;  // ▶️ Riprende il tempo
-              
-              }, 8000);
+              }, 6000);  // ← 6 secondi per la scritta CHECK
+
             }
             
             // ===== VAR_VERDICT - Già gestito nel setTimeout di VAR_PROCESS =====
@@ -6806,7 +6830,22 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <div style={{ marginBottom: '15px' }}>
               <div style={{ fontSize: '12px', color: theme.textDim, marginBottom: '8px' }}>⚽ MARCATORI</div>
               <div style={{ fontSize: '13px', color: theme.text }}>
-                {simResult.cronaca?.filter((e: any) => e.tipo === 'gol').map((e: any, i: number) => {
+              {simResult.cronaca?.filter((e: any) => {
+                    // Mostra solo i gol che NON hanno un VAR_VERDICT annullato
+                    if (e.tipo !== 'gol') return false;
+                    
+                    // Cerca se c'è un VAR che annulla questo gol
+                    const varAnnullato = simResult.cronaca?.find((v: any) => 
+                      v.minuto === e.minuto && 
+                      v.tipo === 'VAR_VERDICT' && 
+                      v.decision === 'annullato' &&
+                      v.var_type === 'gol'
+                    );
+                    
+                    // Mostra il gol SOLO se NON è stato annullato
+                    return !varAnnullato;
+                  }).map((e: any, i: number) => {
+
                   const testoPulito = e.testo
                     .replace(/^\d+'/, '')           // Rimuove "22' "
                     .replace('⚽ ', '')             // Rimuove "⚽ "

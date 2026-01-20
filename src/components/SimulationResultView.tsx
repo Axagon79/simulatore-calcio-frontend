@@ -7,10 +7,13 @@ import {
 
 interface MatchEvent {
   minuto: number;
-  squadra?: 'casa' | 'ospite';
-  tipo: "gol" | "cartellino" | "cambio" | "info" | "rigore_fischio" | "rigore_sbagliato" | "rosso";
+  squadra?: 'casa' | 'ospite' | 'info';
+  tipo: "gol" | "cartellino" | "cambio" | "info" | "rigore_fischio" | "rigore_sbagliato" | "rosso" | "VAR_PROCESS" | "VAR_VERDICT" | "formazione";
   testo: string;
+  var_type?: "gol" | "rigore" | "rigore_on_field_review" | "rosso" | "gol_fantasma";
+  decision?: "confermato" | "annullato";
 }
+
 
 const modalStyles = `
   .modal-overlay {

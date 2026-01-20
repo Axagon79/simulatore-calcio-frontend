@@ -57,7 +57,10 @@ interface SimulationResult {
   cronaca: { 
     minuto: number; 
     squadra?: 'casa' | 'ospite'; 
-    tipo: 'gol' | 'cartellino' | 'cambio' | 'info' | 'rigore_fischio' | 'rigore_sbagliato' | 'rosso';
+    tipo: "gol" | "cartellino" | "cambio" | "info" | "rigore_fischio" | "rigore_sbagliato" | "rosso" | "VAR_PROCESS" | "VAR_VERDICT" | "formazione";
+    var_type?: "gol" | "rigore" | "rigore_on_field_review" | "rosso" | "gol_fantasma";
+    decision?: "confermato" | "annullato";
+
     testo: string 
   }[];
 
@@ -371,6 +374,8 @@ export default function AppDev() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
+
+  const [isVarActive, setIsVarActive] = useState(false);
 
 
   const handleAskAI = (matchData: any) => {
@@ -925,6 +930,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   // ✅ FASE 1: Reset Stati e Avvio Grafica
   setViewState('simulating');
   setIsWarmingUp(true);
+  setIsVarActive(false); // 👈 Aggiungi questo reset iniziale
   setWarmupProgress(0);
   setFormations(null);
   setPlayerEvents({});
@@ -1098,6 +1104,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // FINE PRIMO TEMPO
         if (baseMin === 45 && injuryTimeCounter >= recuperoPT) {
           isPaused = true;
+          setIsVarActive(false); // 👈 Spegni il VAR all'intervallo
           isInjuryTime = false;
           injuryTimeCounter = 0;
           t = 46;
@@ -1115,6 +1122,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // FINE SECONDO TEMPO  
         if (baseMin === 90 && injuryTimeCounter >= recuperoST) {
           clearInterval(interval);
+          setIsVarActive(false); // 👈 Spegni il VAR a fine partita
           setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
           
           setSimResult(finalData);
@@ -1141,62 +1149,144 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         const eventiDelMinuto = finalData.cronaca.filter(e => e.minuto === minutoEvento);
         
         // 1. GESTIONE DEGLI EVENTI SPECIFICI (GOL, CARTELLINI, ETC.)
-        eventiDelMinuto.forEach(matchEvent => {
+        eventiDelMinuto.forEach((matchEvent) => {
           const eventoId = `${matchEvent.minuto}-${matchEvent.tipo}-${matchEvent.testo}`;
           
           if (!eventiMostrati.has(eventoId)) {
             eventiMostrati.add(eventoId);
-            setAnimEvents(prev => [matchEvent.testo, ...prev]);
-          
-            // AGGIORNA PUNTEGGIO LIVE
-            if (matchEvent.tipo === 'gol') {
-              setLiveScore(prev => ({
-                home: matchEvent.squadra === 'casa' ? prev.home + 1 : prev.home,
-                away: matchEvent.squadra === 'ospite' ? prev.away + 1 : prev.away
-              }));
+            
+            // ===== GESTIONE EVENTI NORMALI (GOL, RIGORI, ROSSI, ECC.) =====
+            if (!['VAR_PROCESS', 'VAR_VERDICT'].includes(matchEvent.tipo as string)) {
+              // Aggiungi alla cronaca IMMEDIATAMENTE
+              setAnimEvents(prev => [matchEvent.testo, ...prev]);
               
-              // MOMENTUM GOL (Spinta forte immediata)
-              setMomentum(prev => 
-                  matchEvent.squadra === 'casa' 
-                      ? Math.min(prev + 15, 100) 
-                      : Math.max(prev - 15, 0)
-              );
-            } 
-            // MOMENTUM RIGORI E ROSSI
-            else if (matchEvent.tipo === 'rigore_fischio' || matchEvent.tipo === 'rosso') {
-              setMomentum(prev => 
-                matchEvent.squadra === 'casa' 
-                  ? Math.min(prev + 8, 85) 
-                  : Math.max(prev - 8, 15)
-              );
-            } 
-            // MOMENTUM CARTELLINI
-            else if (matchEvent.tipo === 'cartellino') {
-              setMomentum(prev => 
-                matchEvent.squadra === 'casa' 
-                  ? Math.max(prev - 5, 20) 
-                  : Math.min(prev + 5, 80)
-              );
-            }
-          
-            // SCRITTE SUL CAMPO
-            if (['gol', 'rigore_fischio', 'rigore_sbagliato', 'rosso'].includes(matchEvent.tipo)) {
-              let msg = '';
-              let col = '';
-              
-              if (matchEvent.tipo === 'gol') { 
-                msg = 'GOOOL!'; 
-                col = matchEvent.squadra === 'casa' ? theme.cyan : theme.danger; 
+              // --- LOGICA GOL ---
+              if (matchEvent.tipo === "gol") {
+                setLiveScore(prev => ({
+                  home: matchEvent.squadra === "casa" ? prev.home + 1 : prev.home,
+                  away: matchEvent.squadra === "ospite" ? prev.away + 1 : prev.away
+                }));
+                setMomentum(prev => 
+                  matchEvent.squadra === "casa" ? Math.min(prev + 15, 100) : Math.max(prev - 15, 0)
+                );
+                
+                // Scritta sul campo
+                setPitchMsg({ 
+                  testo: "⚽ GOOOL!", 
+                  colore: matchEvent.squadra === "casa" ? theme.cyan : theme.danger 
+                });
+                setTimeout(() => setPitchMsg(null), 2000);
               }
-              else if (matchEvent.tipo === 'rigore_fischio') { msg = 'RIGORE!'; col = '#ff9f43'; }
-              else if (matchEvent.tipo === 'rigore_sbagliato') { msg = 'RIGORE PARATO!'; col = '#ffffff'; }
-              else if (matchEvent.tipo === 'rosso') { msg = 'ROSSO!'; col = theme.danger; }
-          
-              setPitchMsg({ testo: msg, colore: col });
-              setTimeout(() => setPitchMsg(null), 2000);
+              
+              // --- LOGICA RIGORE FISCHIATO ---
+              else if (matchEvent.tipo === "rigore_fischio") {
+                setMomentum(prev => 
+                  matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
+                );
+                
+                setPitchMsg({ testo: "🚨 RIGORE!", colore: "#ff9f43" });
+                setTimeout(() => setPitchMsg(null), 2000);
+              }
+              
+              // --- LOGICA ROSSO ---
+              else if (matchEvent.tipo === "rosso") {
+                setMomentum(prev => 
+                  matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
+                );
+                
+                setPitchMsg({ testo: "🟥 ROSSO!", colore: theme.danger });
+                setTimeout(() => setPitchMsg(null), 2000);
+              }
             }
-          }
-        }); // <--- FINE DEL FOREACH DEGLI EVENTI
+            
+            // ===== VAR CHECK - BLOCCA TUTTO =====
+            else if (matchEvent.tipo === "VAR_PROCESS") {
+              isPaused = true;  // 🛑 Blocca il tempo
+              setIsVarActive(true);  // 🔴 Cronometro rosso pulsante
+              
+              // Aggiungi VAR alla cronaca
+              setAnimEvents(prev => [matchEvent.testo, ...prev]);
+              
+              // 🟡 SCRITTA SUL CAMPO - Specifica COSA viene controllato
+              const varType = (matchEvent as any).var_type || "gol";
+              let checkMsg = "";
+              
+              if (varType === "gol") checkMsg = "⚠️ VAR: CHECK GOL...";
+              else if (varType === "rigore") checkMsg = "⚠️ VAR: VERIFICA RIGORE...";
+              else if (varType === "rigore_on_field_review") checkMsg = "⚠️ VAR: ON-FIELD REVIEW...";
+              else if (varType === "rosso") checkMsg = "⚠️ VAR: CHECK ROSSO...";
+              else if (varType === "gol_fantasma") checkMsg = "⚠️ VAR: CONTROLLO...";
+              else checkMsg = "⚠️ VAR CHECK...";
+              
+              setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
+              
+              // ⏱️ Cerca la sentenza VAR nei prossimi eventi dello stesso minuto
+              setTimeout(() => {
+                const sentenzaVAR = finalData.cronaca.find((e: any) => 
+                  e.minuto === matchEvent.minuto && 
+                  e.tipo === "VAR_VERDICT" &&
+                  (e as any).var_type === varType
+                );
+                
+                if (sentenzaVAR) {
+                  const decision = (sentenzaVAR as any).decision;
+                  
+                  // Aggiungi sentenza alla cronaca
+                  setAnimEvents(prev => [sentenzaVAR.testo, ...prev]);
+                  
+                  if (decision === "annullato") {
+                    // ❌ ANNULLATO
+                    let annullaMsg = "";
+                    
+                    if (varType === "gol" || varType === "gol_fantasma") {
+                      annullaMsg = "❌ GOL ANNULLATO";
+                      // Rimuovi il gol dal punteggio (solo se era stato aggiunto)
+                      setLiveScore(prev => ({
+                        home: matchEvent.squadra === "casa" ? Math.max(0, prev.home - 1) : prev.home,
+                        away: matchEvent.squadra === "ospite" ? Math.max(0, prev.away - 1) : prev.away
+                      }));
+                    } else if (varType === "rigore" || varType === "rigore_on_field_review") {
+                      annullaMsg = "❌ RIGORE ANNULLATO";
+                    } else if (varType === "rosso") {
+                      annullaMsg = "⚠️ ROSSO REVOCATO";
+                    }
+                    
+                    setPitchMsg({ testo: annullaMsg, colore: "#ff2a6d" });
+                    
+                  } else {
+                    // ✅ CONFERMATO
+                    let confermaMsg = "";
+                    
+                    if (varType === "gol") confermaMsg = "✅ GOL VALIDO";
+                    else if (varType === "rigore" || varType === "rigore_on_field_review") confermaMsg = "✅ RIGORE CONFERMATO";
+                    else if (varType === "rosso") confermaMsg = "✅ ROSSO CONFERMATO";
+                    else confermaMsg = "✅ DECISIONE CONFERMATA";
+                    
+                    setPitchMsg({ testo: confermaMsg, colore: "#05f9b6" });
+                  }
+                } else {
+                  // Fallback se non trova sentenza
+                  setPitchMsg({ testo: "✅ CONTROLLO COMPLETATO", colore: "#05f9b6" });
+                }
+                
+                setIsVarActive(false);  // ⚪ Cronometro torna normale
+                isPaused = false;  // ▶️ Riprende il tempo
+                
+                // Rimuovi scritta dopo 2 secondi
+                setTimeout(() => setPitchMsg(null), 2000);
+                
+              }, 4000);
+            }
+            
+            // ===== VAR_VERDICT - Già gestito nel setTimeout di VAR_PROCESS =====
+            else if (matchEvent.tipo === "VAR_VERDICT") {
+              // Non fare nulla, già mostrato
+              return;
+            }
+            
+          } // fine !eventiMostrati.has
+        }); // fine forEach
+        
 
         // 2. RITORNO GRADUALE AL CENTRO (FUORI DAL FOREACH!)
         // Deve accadere indipendentemente dal fatto che ci sia un evento o meno
@@ -2115,13 +2205,19 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               </div>
           {/* CRONOMETRO */}
           <div style={{ width: '55px', textAlign: 'center' }}>
-            <div style={{
-              fontSize: isMobile ? '24px' : '24px',
-              fontWeight: '900',
-              color: theme.purple,
-              fontFamily: 'monospace',
-              textShadow: `0 0 10px ${theme.purple}`
-            }}>
+            <div 
+              className={isVarActive ? 'sim-timer-pulsing' : ''} // <--- AGGIUNTO QUI
+              style={{
+                fontSize: isMobile ? '24px' : '24px',
+                fontWeight: '900',
+                color: isVarActive ? '#ff2e2e' : theme.purple, // Diventa rosso se VAR è attivo
+                fontFamily: 'monospace',
+                textShadow: isVarActive 
+                  ? `0 0 15px #ff2e2e` 
+                  : `0 0 10px ${theme.purple}`,
+                transition: 'all 0.3s ease'
+              }}
+            >
               {timer}'
             </div>
           </div>

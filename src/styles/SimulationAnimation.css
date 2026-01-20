@@ -76,6 +76,19 @@
     min-width: 550px;
     max-width: 380px;
   }
+
+  /* --- ANIMAZIONE VAR --- */
+  .sim-timer-pulsing {
+    animation: var-glow 0.8s infinite alternate;
+    color: #ff2e2e !important; /* Rosso acceso per il VAR */
+    text-shadow: 0 0 15px rgba(255, 46, 46, 0.7);
+    font-weight: 800;
+  }
+
+  @keyframes var-glow {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0.4; transform: scale(1.05); }
+  }
   
   /* ========================================
      CAMPO DA CALCIO - PIÙ GRANDE

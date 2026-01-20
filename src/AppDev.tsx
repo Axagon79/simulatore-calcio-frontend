@@ -1216,7 +1216,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               else if (varType === "rigore_on_field_review") checkMsg = "⚠️ VAR: ON-FIELD REVIEW...";
               else if (varType === "rosso") checkMsg = "⚠️ VAR: CHECK ROSSO...";
               else if (varType === "gol_fantasma") checkMsg = "⚠️ VAR: CONTROLLO...";
-              else checkMsg = "⚠️ VAR CHECK...";
+              else checkMsg = "  ⚠️ VAR CHECK...";
               
               setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
               
@@ -1273,9 +1273,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 isPaused = false;  // ▶️ Riprende il tempo
                 
                 // Rimuovi scritta dopo 2 secondi
-                setTimeout(() => setPitchMsg(null), 2000);
+                setTimeout(() => setPitchMsg(null), 4000);
                 
-              }, 4000);
+              }, 8000);
             }
             
             // ===== VAR_VERDICT - Già gestito nel setTimeout di VAR_PROCESS =====

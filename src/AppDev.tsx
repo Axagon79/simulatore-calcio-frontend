@@ -1224,14 +1224,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             
             // ===== VAR CHECK - BLOCCA TUTTO =====
             else if (matchEvent.tipo === "VAR_PROCESS") {
-              isPaused = true;  // 🛑 Blocca il tempo
-              setIsVarActive(true);  // 🔴 Cronometro rosso pulsante
-              isVarChecking = true;  // ← AGGIUNGI QUESTO
+              isPaused = true;
+              setIsVarActive(true);
               
-              // Aggiungi VAR alla cronaca
               setAnimEvents(prev => [matchEvent.testo, ...prev]);
               
-              // 🟡 SCRITTA SUL CAMPO - Specifica COSA viene controllato
               const varType = (matchEvent as any).var_type || "gol";
               let checkMsg = "";
               
@@ -1240,14 +1237,23 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               else if (varType === "rigore_on_field_review") checkMsg = "⚠️ VAR: ON-FIELD REVIEW...";
               else if (varType === "rosso") checkMsg = "⚠️ VAR: CHECK ROSSO...";
               else if (varType === "gol_fantasma") checkMsg = "⚠️ VAR: CONTROLLO...";
-              else checkMsg = "  ⚠️ VAR CHECK...";
+              else checkMsg = "⚠️ VAR CHECK...";
               
-              setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
+              // 💀 MODO CATTIVO: Ridisegna la scritta ogni 100ms per 6 secondi
+              let varTicks = 0;
+              const varInterval = setInterval(() => {
+                setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
+                varTicks++;
+                
+                if (varTicks >= 60) {  // 60 tick x 100ms = 6 secondi
+                  clearInterval(varInterval);
+                }
+              }, 100);
               
-              // ⏱️ Cerca la sentenza VAR nei prossimi eventi dello stesso minuto
-              // ⏱️ Mostra la scritta VAR CHECK per 6 secondi
+              // Dopo 6 secondi, mostra la sentenza
               setTimeout(() => {
-                // Dopo 6 secondi, cerca la sentenza
+                clearInterval(varInterval);  // Ferma il ridisegno
+                
                 const sentenzaVAR = finalData.cronaca.find((e: any) => 
                   e.minuto >= matchEvent.minuto &&
                   e.tipo === "VAR_VERDICT" &&
@@ -1256,12 +1262,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 
                 if (sentenzaVAR) {
                   const decision = (sentenzaVAR as any).decision;
-                  
-                  // Aggiungi sentenza alla cronaca
                   setAnimEvents(prev => [sentenzaVAR.testo, ...prev]);
                   
                   if (decision === "annullato") {
-                    // ❌ ANNULLATO
                     let annullaMsg = "";
                     
                     if (varType === "gol" || varType === "gol_fantasma") {
@@ -1279,7 +1282,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     setPitchMsg({ testo: annullaMsg, colore: "#ff2a6d" });
                     
                   } else {
-                    // ✅ CONFERMATO
                     let confermaMsg = "";
                     
                     if (varType === "gol") confermaMsg = "✅ GOL VALIDO";
@@ -1290,28 +1292,24 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     setPitchMsg({ testo: confermaMsg, colore: "#05f9b6" });
                   }
                   
-                  // Rimuovi la sentenza dopo altri 3 secondi
+                  // Rimuovi sentenza dopo 3 secondi
                   setTimeout(() => {
                     setPitchMsg(null);
-                    setIsVarActive(false);  // ⚪ Cronometro torna normale
-                    isPaused = false;  // ▶️ Riprende il tempo
-                    isVarChecking = false;  // ← AGGIUNGI QUESTO
+                    setIsVarActive(false);
+                    isPaused = false;
                   }, 3000);
                   
                 } else {
-                  // Fallback
                   setPitchMsg({ testo: "✅ CONTROLLO COMPLETATO", colore: "#05f9b6" });
                   setTimeout(() => {
                     setPitchMsg(null);
                     setIsVarActive(false);
                     isPaused = false;
-                    isVarChecking = false;  // ← AGGIUNGI QUESTO
                   }, 3000);
                 }
-                
-              }, 6000);  // ← 6 secondi per la scritta CHECK
-
+              }, 6000);
             }
+            
             
             // ===== VAR_VERDICT - Già gestito nel setTimeout di VAR_PROCESS =====
             else if (matchEvent.tipo === "VAR_VERDICT") {

@@ -613,16 +613,16 @@ const TuningMixer: React.FC = () => {
             value={selectedGlobalPreset}
             onChange={(e) => setSelectedGlobalPreset(e.target.value)}
             style={{
-              background: 'rgba(255,255,255,0.1)',
+              background: 'rgb(196 103 6)',
               border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff',
+              color: '#000',
               padding: '6px 12px',
               borderRadius: 6,
               fontSize: 12,
               cursor: 'pointer',
             }}
           >
-            <option value="">-- Preset Globale --</option>
+            <option value="" style={{ color: '#000' }} >-- Preset Globale --</option>
             {globalPresetsList.map(name => (
               <option key={name} value={name}>{name.replace('FULL_', '')}</option>
             ))}
@@ -713,21 +713,23 @@ const TuningMixer: React.FC = () => {
             value={selectedPreset}
             onChange={(e) => setSelectedPreset(e.target.value)}
             style={{
-              background: 'rgba(255,255,255,0.1)',
+              background: '#fde000',  // ⬅️ BIANCO invece di trasparente
               border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff',
-              padding: '5px 10px',
+              color: '#000',  // ⬅️ NERO invece di bianco
+              padding: '6px 12px',
               borderRadius: 6,
-              fontSize: 10,
+              fontSize: 12,
               cursor: 'pointer',
-              width: 150,
             }}
           >
             <option value="">-- Carica Preset --</option>
             {presetsList.map(name => (
-              <option key={name} value={name}>{name.replace(`${ALGO_MAP[activeAlgo]}_`, '')}</option>
+              <option key={name} value={name}>
+                {name.replace(`${ALGO_MAP[activeAlgo]}_`, '')}
+              </option>
             ))}
           </select>
+
           <button
             onClick={handleLoadPreset}
             disabled={!selectedPreset}

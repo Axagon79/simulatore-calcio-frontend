@@ -1223,10 +1223,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               // ⏱️ Cerca la sentenza VAR nei prossimi eventi dello stesso minuto
               setTimeout(() => {
                 const sentenzaVAR = finalData.cronaca.find((e: any) => 
-                  e.minuto === matchEvent.minuto && 
+                  e.minuto >= matchEvent.minuto &&  // ← Cerca anche minuti successivi
                   e.tipo === "VAR_VERDICT" &&
                   (e as any).var_type === varType
                 );
+            
                 
                 if (sentenzaVAR) {
                   const decision = (sentenzaVAR as any).decision;

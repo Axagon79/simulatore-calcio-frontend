@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardHome from './DashboardHome';
+import CupMatches from './CupMatches';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
 import { checkAdmin, PERMISSIONS } from './permissions';
@@ -1027,8 +1028,6 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   }
 };
 
-
-  // Trova la funzione runAnimation dentro AppDev.tsx e sostituiscila con questa:
 
   const runAnimation = (finalData: SimulationResult) => {
     let t = 0;
@@ -5755,6 +5754,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     return (
       <DashboardHome
         onSelectLeague={(id) => {
+          // ✅ GESTIONE COPPE EUROPEE
+          if (id === 'UCL' || id === 'UEL') {
+            setActiveLeague(id);
+            return;
+          }
 
           // 1. Cerchiamo il campionato nella mappa costante
           const campionatoTrovato = LEAGUES_MAP.find(L => L.id === id);
@@ -5778,6 +5782,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           setSelectedMatch(null);
           setActiveLeague(id);
         }}
+      />
+    );
+  }
+
+  // ✅ GESTIONE COPPE EUROPEE
+  if (activeLeague === 'UCL' || activeLeague === 'UEL') {
+    return (
+      <CupMatches
+        cupId={activeLeague}
+        onBack={() => setActiveLeague(null)}
       />
     );
   }

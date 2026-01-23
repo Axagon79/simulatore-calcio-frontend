@@ -59,7 +59,9 @@ export default function CupMatches({ cupId, onBack }: CupMatchesProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const theme = cupTheme[cupId];
-  const API_BASE = 'http://localhost:5001/puppals-456c7/us-central1/api';
+  const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5001/puppals-456c7/us-central1/api'
+  : 'https://api-6b34yfzjia-uc.a.run.app';
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

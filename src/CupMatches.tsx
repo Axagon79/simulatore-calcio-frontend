@@ -375,21 +375,59 @@ if (viewState === 'analysis' && selectedMatch) {
                   </div>
 
                   {/* MOBILE COMPACT */}
-                  {isMobile && !isExpanded ? (
-                    <>
-                      <div style={{
-                        flex: 1,
-                        textAlign: 'center',
+                {isMobile && !isExpanded ? (
+                <>
+                    <div style={{
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 30px 1fr 20px',
+                    gap: '5px',
+                    alignItems: 'center',
+                    padding: '0 10px'
+                    }}>
+                    {/* CASA */}
+                    <div style={{
                         fontSize: '13px',
                         fontWeight: 'bold',
                         color: 'white',
-                        padding: '0 10px'
-                      }}>
-                        {match.home_team.substring(0, 15)} {match.result?.home_score !== undefined ? `${match.result.home_score}-${match.result.away_score}` : 'vs'} {match.away_team.substring(0, 15)}
-                      </div>
-                      <div style={{ fontSize: '18px', color: theme.secondary }}>▼</div>
-                    </>
-                  ) : !isMobile ? (
+                        textAlign: 'center',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                    }}>
+                        {match.home_team}
+                    </div>
+                    
+                    {/* RISULTATO/VS */}
+                    <div style={{
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        color: theme.secondary,
+                        textAlign: 'center'
+                    }}>
+                        {match.status === 'finished' && match.result?.home_score !== undefined && match.result?.away_score !== undefined
+                        ? `${match.result.home_score}-${match.result.away_score}`
+                        : 'vs'}
+                    </div>
+                    
+                    {/* OSPITE */}
+                    <div style={{
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        color: 'white',
+                        textAlign: 'center',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                    }}>
+                        {match.away_team}
+                    </div>
+                    
+                    {/* FRECCIA */}
+                    <div style={{ fontSize: '18px', color: theme.secondary, textAlign: 'right' }}>▼</div>
+                    </div>
+                </>
+                ) : !isMobile ? (
                     // DESKTOP
                     <>
                       <div style={{
@@ -686,19 +724,57 @@ if (viewState === 'analysis' && selectedMatch) {
 
                     {/* MOBILE COMPACT */}
                     {isMobile && !isExpanded ? (
-                        <>
+                    <>
                         <div style={{
-                            flex: 1,
-                            textAlign: 'center',
+                        flex: 1,
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 30px 1fr 20px',
+                        gap: '5px',
+                        alignItems: 'center',
+                        padding: '0 10px'
+                        }}>
+                        {/* CASA */}
+                        <div style={{
                             fontSize: '13px',
                             fontWeight: 'bold',
                             color: 'white',
-                            padding: '0 10px'
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
                         }}>
-                            {match.home_team.substring(0, 15)} vs {match.away_team.substring(0, 15)}
+                            {match.home_team}
                         </div>
-                        <div style={{ fontSize: '18px', color: theme.secondary }}>▼</div>
-                        </>
+                        
+                        {/* RISULTATO/VS */}
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            color: theme.secondary,
+                            textAlign: 'center'
+                        }}>
+                            {match.status === 'finished' && match.result?.home_score !== undefined && match.result?.away_score !== undefined
+                            ? `${match.result.home_score}-${match.result.away_score}`
+                            : 'vs'}
+                        </div>
+                        
+                        {/* OSPITE */}
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {match.away_team}
+                        </div>
+                        
+                        {/* FRECCIA */}
+                        <div style={{ fontSize: '18px', color: theme.secondary, textAlign: 'right' }}>▼</div>
+                        </div>
+                    </>
                     ) : !isMobile ? (
                         // DESKTOP
                         <>

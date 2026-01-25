@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import CupMatchAnalysis from './CupMatchAnalysis';
+import CupMatchResult from './CupMatchResult';
 
 // --- TEMA COPPE EUROPEE ---
 const cupTheme = {
@@ -51,12 +52,14 @@ export default function CupMatches({ cupId, onBack }: CupMatchesProps) {
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [viewState, setViewState] = useState<'list' | 'analysis' | 'simulating' | 'result'>('list');
+  const [simulationResult, setSimulationResult] = useState<any>(null);
   const [showPlayedMatches, setShowPlayedMatches] = useState(true);
   const [showUpcomingMatches, setShowUpcomingMatches] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
 
   const theme = cupTheme[cupId];
   const API_BASE = window.location.hostname === 'localhost' 
@@ -190,11 +193,113 @@ if (viewState === 'analysis' && selectedMatch) {
           setViewState('list');
           setSelectedMatch(null);
         }}
-        onSimulate={(config) => {
-          // TODO: Avvia simulazione
-          console.log('Simulazione richiesta:', config);
+        onSimulate={async (config: any) => {
+            // ← FIX: Se abbiamo già il result dall'animazione, usalo!
+            if (config.result) {
+                console.log('✅ Usando result da animazione:', config.result);
+                setSimulationResult(config.result);
+                setViewState('result');
+                return;
+            }
+            setViewState('simulating');
+            
+            try {
+                
+              const API_BASE = window.location.hostname === 'localhost' 
+                ? 'http://localhost:5001/puppals-456c7/us-central1/api'
+                : 'https://api-6b34yfzjia-uc.a.run.app';
+              
+              const response = await fetch(`${API_BASE}/simulation/simulate-cup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  competition: cupId,
+                  home: selectedMatch.home_team,
+                  away: selectedMatch.away_team,
+                  algo_id: config.algoId,
+                  cycles: config.cycles
+                })
+              });
+              
+              const result = await response.json();
+
+                console.log('✅ RISULTATO SIMULAZIONE:', result);
+                setSimulationResult(result);
+                setViewState('result');
+                // Qui NON deve esserci setViewState('list')
+              
+            } catch (error) {
+              console.error('Errore simulazione:', error);
+              alert('Errore durante la simulazione');
+              setViewState('analysis');
+            }
+            
+          }}
+      />
+    );
+  }
+
+  // ✅ MOSTRA RISULTATO PARTITA
+  if (viewState === 'result' && simulationResult && selectedMatch) {
+    return (
+      <CupMatchResult
+        cupId={cupId}
+        result={simulationResult}
+        onBack={() => {
+          setViewState('list');
+          setSimulationResult(null);
+          setSelectedMatch(null);
         }}
       />
+    );
+  }
+
+  // ✅ MOSTRA LOADING SIMULAZIONE
+  if (viewState === 'simulating') {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: baseBg,
+        backgroundImage: `radial-gradient(circle at 50% 0%, ${theme.primary}20, ${baseBg} 70%)`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '30px' }}>{theme.icon}</div>
+        <div style={{ 
+          fontSize: '24px', 
+          fontWeight: 'bold',
+          marginBottom: '20px'
+        }}>
+          ANALISI IN CORSO
+        </div>
+        <div style={{ 
+          fontSize: '16px',
+          color: textDim,
+          display: 'flex',
+          gap: '5px'
+        }}>
+          <span className="dot-1">.</span>
+          <span className="dot-2">.</span>
+          <span className="dot-3">.</span>
+        </div>
+        <style>{`
+          @keyframes blink {
+            0%, 20% { opacity: 0; }
+            40% { opacity: 1; }
+            100% { opacity: 0; }
+          }
+          .dot-1 { animation: blink 1.4s infinite; }
+          .dot-2 { animation: blink 1.4s infinite 0.2s; }
+          .dot-3 { animation: blink 1.4s infinite 0.4s; }
+        `}</style>
+      </div>
     );
   }
   

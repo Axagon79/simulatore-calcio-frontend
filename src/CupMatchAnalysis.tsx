@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CupAnimatedField from './CupAnimatedField';
 
 // Tema coppe
 const cupTheme = {
@@ -27,7 +28,7 @@ interface CupMatchAnalysisProps {
   cupId: 'UCL' | 'UEL';
   match: any;
   onBack: () => void;
-  onSimulate: (algo: number, cycles: number, animated: boolean) => void;
+  onSimulate: (config: { algoId: number; cycles: number; animated: boolean; result?: any }) => void;
 }
 
 export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: CupMatchAnalysisProps) {
@@ -39,6 +40,8 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
   const [cycles, setCycles] = useState(100);
   const [isAnimated, setIsAnimated] = useState(true);
 
+  const [showAnimation, setShowAnimation] = useState(false);
+
   const formatOdds = (val: any): string => {
     if (val === undefined || val === null) return '-';
     const num = Number(val);
@@ -46,8 +49,42 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
   };
 
   const handleSimulate = () => {
-    onSimulate(selectedAlgo, cycles, isAnimated);
+    if (isAnimated) {
+      setShowAnimation(true);
+    } else {
+      onSimulate({
+        algoId: selectedAlgo,
+        cycles,
+        animated: false
+      });
+    }
   };
+
+  // Se showAnimation è true, mostra l'animazione
+  if (showAnimation) {
+    return (
+      <CupAnimatedField
+        cupId={cupId}
+        homeTeam={match.home_team}
+        awayTeam={match.away_team}
+        selectedMatch={match}
+        onComplete={(result) => {
+          console.log('Simulazione completata:', result); // ← ORA viene usato
+          setShowAnimation(false);
+          onSimulate({
+            algoId: selectedAlgo,
+            cycles,
+            animated: true,
+            result  // ← Passa il result a onSimulate
+          });
+        }}
+        config={{
+          algoId: selectedAlgo,
+          cycles
+        }}
+      />
+    );
+  }
 
   return (
     <div style={{

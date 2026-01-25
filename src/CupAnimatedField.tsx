@@ -64,8 +64,8 @@ export default function CupAnimatedField({
   const isMobile = window.innerWidth < 768;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  const [simulationData, setSimulationData] = useState<any>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [, setSimulationData] = useState<any>(null);
+  const [, setIsSimulating] = useState(false);
   const [simResult, setSimResult] = useState<any>(null);
   
   const configAlgo = config.algoId;
@@ -86,7 +86,7 @@ export default function CupAnimatedField({
   const [simulationEnded, setSimulationEnded] = useState(false);
   const [liveScore, setLiveScore] = useState<{home: number, away: number}>({home: 0, away: 0});
   const [showMatchSummary, setShowMatchSummary] = useState(false);
-  const [viewState, setViewState] = useState<'simulation' | 'result' | 'list'>('simulation');
+  const [, setViewState] = useState<'simulation' | 'result' | 'list'>('simulation');
 // Flag per evitare doppia animazione
   const [animationStarted, setAnimationStarted] = useState(false);
   const baseBg = '#05070a';
@@ -1720,12 +1720,8 @@ export default function CupAnimatedField({
             </button>
   
             <button
-              onClick={() => {
-                setViewState('list');
-                setSimulationEnded(false);
-                setSimResult(null);
-              }}
-              style={{
+            onClick={() => onComplete(simResult)}
+            style={{
                 padding: '10px 30px',
                 background: 'transparent',
                 border: `2px solid ${theme.textDim}`,
@@ -1737,19 +1733,19 @@ export default function CupAnimatedField({
                 textTransform: 'uppercase',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
+            }}
+            onMouseEnter={(e) => {
                 if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
                 if (e.currentTarget) e.currentTarget.style.borderColor = theme.cyan;
                 if (e.currentTarget) e.currentTarget.style.color = theme.cyan;
-              }}
-              onMouseLeave={(e) => {
+            }}
+            onMouseLeave={(e) => {
                 if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
                 if (e.currentTarget) e.currentTarget.style.borderColor = theme.textDim;
                 if (e.currentTarget) e.currentTarget.style.color = theme.textDim;
-              }}
+            }}
             >
-              ← Torna alla Lista Partite
+            ← Torna alla Lista Partite
             </button>
   
             <button

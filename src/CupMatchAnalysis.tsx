@@ -88,15 +88,16 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
 
   return (
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
+      position: 'fixed' as const,
+      top: '60px',
+      left: isMobile ? 0 : '322px',
       right: 0,
       bottom: 0,
       backgroundColor: baseBg,
       backgroundImage: `radial-gradient(circle at 50% 0%, ${theme.primary}20, ${baseBg} 70%)`,
       overflowY: 'auto',
-      padding: '20px'
+      padding: '20px',
+      boxSizing: 'border-box' as const
     }}>
       <div style={{
         maxWidth: '1200px',

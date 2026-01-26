@@ -367,6 +367,7 @@ export default function AppDev() {
   const [country, setCountry] = useState('');
   const [leagues, setLeagues] = useState<League[]>([]);
   const [league, setLeague] = useState('');
+  const [selectedCup, setSelectedCup] = useState('');
   const [rounds, setRounds] = useState<RoundInfo[]>([]);
   const [selectedRound, setSelectedRound] = useState<RoundInfo | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -1459,6 +1460,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     }}>
 
       {/* 1. NAVIGAZIONE A CAPSULE INDIPENDENTI - ALLINEAMENTO PROPORZIONALE */}
+      {!selectedCup && (
       <div
         key={rounds[0]?.name}
         style={{
@@ -1541,12 +1543,22 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           );
         })}
       </div>
-
+      )}
 
       
 
       {/* 2. LISTA PARTITE (Stile Card "Pixel Perfect") */}
-      {matches.length === 0 ? (
+      
+      {/* Se è selezionata una coppa, mostra CupMatches */}
+      {selectedCup ? (
+      <CupMatches 
+        cupId={selectedCup as 'UCL' | 'UEL'} 
+        onBack={() => {
+          setSelectedCup('');
+          setActiveLeague(null);  // Torna alla dashboard
+        }}
+      />
+      ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Nessuna partita trovata</div>
       ) : (
 
@@ -5757,6 +5769,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           // ✅ GESTIONE COPPE EUROPEE
           if (id === 'UCL' || id === 'UEL') {
             setActiveLeague(id);
+            setSelectedCup(id);  // <-- AGGIUNGI QUESTA RIGA!
             return;
           }
 
@@ -5787,14 +5800,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   }
 
   // ✅ GESTIONE COPPE EUROPEE
-  if (activeLeague === 'UCL' || activeLeague === 'UEL') {
+ /* if (activeLeague === 'UCL' || activeLeague === 'UEL') {
     return (
       <CupMatches
         cupId={activeLeague}
         onBack={() => setActiveLeague(null)}
       />
     );
-  }
+  }*/
 
   // --- BLOCCO 2: SITO PRINCIPALE ---
   return (
@@ -6134,7 +6147,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       </div>
     )}
 
-      {/* TOP BAR UNIFICATA */}
+      {/* TOP BAR UNIFICATA - Nascosta quando sei nelle Coppe */}
+      
       <div style={styles.topBar}>
 
         {/* HAMBURGER MENU (Solo Mobile) */}
@@ -6162,7 +6176,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         {!isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px' }}>
             <button
-              onClick={() => setActiveLeague(null)}
+              onClick={() => {
+                if (selectedCup) {
+                  setSelectedCup('');
+                  setActiveLeague(null);
+                } else {
+                  setActiveLeague(null);
+                }
+              }}
               style={{
                 background: 'rgba(0, 240, 255, 0.1)',
                 border: '1px solid rgba(0, 240, 255, 0.3)',
@@ -6184,17 +6205,28 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             </button>
 
             <div style={{ ...styles.logo, display: 'flex', alignItems: 'center' }}>
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
-                alt="Logo"
-                style={{
-                  height: '28px',
-                  width: 'auto',
-                  marginRight: '15px',
-                  filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)'
-                }}
-              />
-              AI SIMULATOR PRO
+              {selectedCup ? (
+                <>
+                  <span style={{ marginRight: '10px', fontSize: '24px' }}>
+                    {selectedCup === 'UCL' ? '⭐' : '🌟'}
+                  </span>
+                  {selectedCup === 'UCL' ? 'UEFA Champions League' : 'UEFA Europa League'}
+                </>
+              ) : (
+                <>
+                  <img
+                    src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
+                    alt="Logo"
+                    style={{
+                      height: '28px',
+                      width: 'auto',
+                      marginRight: '15px',
+                      filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)'
+                    }}
+                  />
+                  AI SIMULATOR PRO
+                </>
+              )}
             </div>
           </div>
         )}
@@ -6231,6 +6263,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             padding: '4px 12px',
             borderRadius: '4px',
             fontSize: '10px',
+            marginLeft: 'auto',
             fontWeight: 'bold',
             letterSpacing: '1px',
             boxShadow: '0 0 15px rgba(255, 0, 128, 0.5)',
@@ -6264,7 +6297,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           }}>U</div>
         </div>
       </div>
-
+    
       <div style={styles.mainContent}>
 
         {/* OVERLAY MOBILE (quando menu aperto) */}
@@ -6351,7 +6384,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
           {/* 3. Select Campionato con LOGICA "TAP & CLOSE" */}
           <select
-            value={league} 
+            value={selectedCup ? '' : league}  // <-- Se sei nelle coppe, mostra "Seleziona"
             onChange={(e) => {
               const selectedLeague = e.target.value;
               setLeague(selectedLeague);
@@ -6359,6 +6392,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               // Se l'utente seleziona un campionato reale (non vuoto), chiudi il menu
               if (selectedLeague && selectedLeague !== "") {
                   setMobileMenuOpen(false);
+                  setSelectedCup('');  // Resetta le coppe per mostrare il campionato
               }
             }}
             style={{ 
@@ -6376,6 +6410,36 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             {leagues.map(l => (
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
+          </select>
+
+          {/* --- SELEZIONE COPPE EUROPEE --- */}
+          <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>
+            COPPE
+          </div>
+
+          <select
+            value={selectedCup}
+            onChange={(e) => {
+              const cup = e.target.value;
+              setSelectedCup(cup);
+              
+              if (cup && cup !== "") {
+                setMobileMenuOpen(false);
+                // Qui poi collegheremo la navigazione a CupMatches
+              }
+            }}
+            style={{ 
+              padding: '10px', 
+              background: '#000', 
+              color: 'white', 
+              border: '1px solid #333', 
+              borderRadius: '6px', 
+              width: '100%' 
+            }}
+          >
+            <option value="">-- Seleziona --</option>
+            <option value="UCL">🏆 Champions League</option>
+            <option value="UEL">🏆 Europa League</option>
           </select>
 
           {/* --- FINE BLOCCO SELEZIONE --- */}

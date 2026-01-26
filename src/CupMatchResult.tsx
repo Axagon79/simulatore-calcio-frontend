@@ -130,8 +130,8 @@ const eventi = (result.cronaca || []).filter((e: any) =>
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
+      top: '60px',  // <-- Lascia spazio per la top bar
+      left: isMobile ? 0 : '322px',  // Mobile: tutto schermo, Desktop: dopo sidebar
       right: 0,
       bottom: 0,
       background: '#05070a',

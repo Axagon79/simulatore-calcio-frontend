@@ -62,7 +62,6 @@ export default function CupAnimatedField({
   
   const theme = cupTheme[cupId];
   const isMobile = window.innerWidth < 768;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const [, setSimulationData] = useState<any>(null);
   const [, setIsSimulating] = useState(false);
@@ -93,78 +92,20 @@ export default function CupAnimatedField({
 
   const styles: Record<string, React.CSSProperties> = {
     wrapper: {
-      width: '100vw',
-      minHeight: '100vh',
-      backgroundColor: baseBg,
-      color: theme.text,
-      fontFamily: theme.font,
-      backgroundImage: `radial-gradient(circle at 50% 10%, ${theme.primary}30, ${baseBg} 60%)`,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    },
-    
-    topBar: {
-      height: '60px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 25px',
-      borderBottom: `1px solid ${theme.primary}20`,
-      backdropFilter: 'blur(10px)',
-      zIndex: 20
-    },
-    
-    logo: {
-      fontSize: '22px',
-      fontWeight: '900',
-      background: `linear-gradient(to right, ${theme.primary}, ${theme.secondary})`,
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      letterSpacing: '2px'
-    },
-    
-    mainContent: {
-      display: 'flex',
-      flex: 1,
-      height: 'calc(100vh - 60px)',
-      overflow: 'hidden'
-    },
-    
-    sidebar: {
-      width: '280px',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '15px',
-      borderRight: `1px solid ${theme.primary}20`,
-      background: 'rgba(0,0,0,0.3)',
-      overflowY: 'auto' as const,
-      transition: 'transform 0.3s ease'
-    },
-    
-    sidebarMobile: {
-      position: 'fixed' as const,
-      top: 0,
-      left: 0,
-      bottom: 0,
-      width: '280px',
-      background: 'rgba(5, 7, 10, 0.98)',
-      backdropFilter: 'blur(20px)',
-      zIndex: 1000,
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '15px',
-      overflowY: 'auto' as const,
-      transform: 'translateX(-100%)',
-      transition: 'transform 0.3s ease',
-      boxShadow: '4px 0 20px rgba(0,0,0,0.5)'
-    },
-    
-    sidebarMobileOpen: {
-      transform: 'translateX(0)'
-    },
+        position: 'fixed' as const,
+        top: '60px',
+        left: isMobile ? 0 : '322px',
+        right: 0,
+        bottom: 0,
+        backgroundColor: baseBg,
+        color: theme.text,
+        fontFamily: theme.font,
+        backgroundImage: `radial-gradient(circle at 50% 10%, ${theme.primary}30, ${baseBg} 60%)`,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxSizing: 'border-box' as const
+      },
     
     mobileOverlay: {
       position: 'fixed' as const,
@@ -185,13 +126,17 @@ export default function CupAnimatedField({
     },
     
     arena: {
-      flex: 1,
-      position: 'relative' as const,
-      display: 'flex',
-      flexDirection: 'column',
-      overflowY: 'auto' as const,
-      padding: '0'
-    },
+        flex: 1,
+        position: 'relative' as const,
+        display: 'flex',
+        flexDirection: 'column',
+        overflowY: 'auto' as const,
+        overflowX: 'hidden',
+        padding: '0',
+        width: '100%',
+        maxWidth: isMobile ? '100vw' : 'calc(100vw - 300px)',
+        boxSizing: 'border-box' as const
+      },
     
     arenaContent: {
       padding: '3px 8px 0px',
@@ -1787,87 +1732,7 @@ export default function CupAnimatedField({
   return (
     <div style={styles.wrapper}>
       
-      {/* TOP BAR */}
-      <div style={styles.topBar}>
-        
-        {isMobile && (
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            style={{
-              background: `${theme.primary}20`,
-              border: `1px solid ${theme.primary}50`,
-              color: theme.primary,
-              padding: '8px 12px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '20px'
-            }}
-          >
-            ☰
-          </button>
-        )}
-  
-        <div style={styles.logo}>
-          {theme.icon} {theme.name}
-        </div>
-        
-        <div style={{ fontSize: '14px', color: theme.textDim }}>
-          {homeTeam} vs {awayTeam}
-        </div>
-      </div>
-  
-      {/* MAIN CONTENT */}
-      <div style={styles.mainContent}>
-        
-        {isMobile && (
-          <div
-            style={{
-              ...styles.mobileOverlay,
-              ...(mobileMenuOpen ? styles.mobileOverlayVisible : {})
-            }}
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
-  
-        {/* SIDEBAR */}
-        <div style={{
-          ...(isMobile ? styles.sidebarMobile : styles.sidebar),
-          ...(isMobile && mobileMenuOpen ? styles.sidebarMobileOpen : {})
-        }}>
-          
-          {isMobile && (
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                alignSelf: 'flex-end',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: 'white',
-                fontSize: '24px',
-                cursor: 'pointer',
-                padding: '5px 10px',
-                borderRadius: '6px'
-              }}
-            >
-              ✕
-            </button>
-          )}
-  
-          <div style={{
-            padding: '15px',
-            background: `${theme.primary}10`,
-            borderRadius: '12px',
-            border: `1px solid ${theme.primary}30`,
-            textAlign: 'center' as const
-          }}>
-            <div style={{ fontSize: '32px', marginBottom: '10px' }}>
-              {theme.icon}
-            </div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.primary }}>
-              {theme.name}
-            </div>
-          </div>
-        </div>
+      
   
         {/* ARENA */}
         <div style={styles.arena}>
@@ -2235,6 +2100,6 @@ export default function CupAnimatedField({
           )}
         </div>
       </div> 
-    </div> 
+    
   );
 }

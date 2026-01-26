@@ -47,7 +47,7 @@ interface Match {
   };
 }
 
-export default function CupMatches({ cupId, onBack }: CupMatchesProps) {
+export default function CupMatches({ cupId }: CupMatchesProps) {
   const [playedMatches, setPlayedMatches] = useState<Match[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -125,13 +125,13 @@ export default function CupMatches({ cupId, onBack }: CupMatchesProps) {
 
   if (loading) {
     return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: baseBg,
+        <div style={{
+          position: 'fixed',
+          top: '60px',  // <-- Lascia spazio per la top bar
+          left: isMobile ? 0 : '322px',  // Mobile: tutto schermo, Desktop: dopo sidebar
+          right: 0,
+          bottom: 0,
+          backgroundColor: baseBg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -147,13 +147,13 @@ export default function CupMatches({ cupId, onBack }: CupMatchesProps) {
 
   if (error) {
     return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: baseBg,
+        <div style={{
+          position: 'fixed',
+          top: '60px',  // <-- Lascia spazio per la top bar
+          left: isMobile ? 0 : '322px',  // Mobile: tutto schermo, Desktop: dopo sidebar
+          right: 0,
+          bottom: 0,
+          backgroundColor: baseBg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -257,13 +257,13 @@ if (viewState === 'analysis' && selectedMatch) {
   // ✅ MOSTRA LOADING SIMULAZIONE
   if (viewState === 'simulating') {
     return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: baseBg,
+        <div style={{
+          position: 'fixed',
+          top: '60px',  // <-- Lascia spazio per la top bar
+          left: isMobile ? 0 : '322px',  // Mobile: tutto schermo, Desktop: dopo sidebar
+          right: 0,
+          bottom: 0,
+          backgroundColor: baseBg,
         backgroundImage: `radial-gradient(circle at 50% 0%, ${theme.primary}20, ${baseBg} 70%)`,
         display: 'flex',
         flexDirection: 'column',
@@ -307,8 +307,8 @@ if (viewState === 'analysis' && selectedMatch) {
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
+      top: '60px',  // <-- Lascia spazio per la top bar
+      left: isMobile ? 0 : '322px',  // Mobile: tutto schermo, Desktop: dopo sidebar
       right: 0,
       bottom: 0,
       backgroundColor: baseBg,
@@ -320,59 +320,7 @@ if (viewState === 'analysis' && selectedMatch) {
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        {/* HEADER */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '15px',
-          marginBottom: '30px'
-        }}>
-          <button
-            onClick={onBack}
-            style={{
-              background: 'transparent',
-              border: `2px solid ${theme.primary}`,
-              color: theme.secondary,
-              fontSize: '24px',
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = theme.primary;
-              e.currentTarget.style.color = 'white';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = theme.secondary;
-            }}
-          >
-            ←
-          </button>
-          <div>
-            <h1 style={{
-              fontSize: isMobile ? '24px' : '36px',
-              fontWeight: '900',
-              color: 'white',
-              margin: 0,
-              textShadow: `0 0 30px ${theme.glow}`
-            }}>
-              {theme.icon} {theme.name}
-            </h1>
-            <p style={{
-            fontSize: '14px',
-            color: textDim,
-            margin: '5px 0 0 0'
-            }}>
-            {playedMatches.length + upcomingMatches.length} partite ({playedMatches.length} giocate, {upcomingMatches.length} prossime)
-            </p>
-          </div>
-        </div>
+        
 
         {/* LISTA PARTITE */}
 <div>

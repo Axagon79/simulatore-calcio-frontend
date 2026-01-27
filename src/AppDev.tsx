@@ -181,6 +181,44 @@ const LEAGUES_MAP: League[] = [
   { id: 'J1_LEAGUE', name: 'J1 League', country: 'Japan' },
 ];
 
+
+// --- URL BASE STEMMI ---
+const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
+
+const STEMMI_CAMPIONATI: Record<string, string> = {
+  'SERIE_A': `${STEMMI_BASE}campionati%2Fserie_a.png?alt=media`,
+  'SERIE_B': `${STEMMI_BASE}campionati%2Fserie_b.png?alt=media`,
+  'SERIE_C_A': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_B': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'PREMIER_LEAGUE': `${STEMMI_BASE}campionati%2Fpremier_league.png?alt=media`,
+  'LA_LIGA': `${STEMMI_BASE}campionati%2Fla_liga.png?alt=media`,
+  'BUNDESLIGA': `${STEMMI_BASE}campionati%2Fbundesliga.png?alt=media`,
+  'LIGUE_1': `${STEMMI_BASE}campionati%2Fligue_1.png?alt=media`,
+  'LIGA_PORTUGAL': `${STEMMI_BASE}campionati%2Fliga_portugal.png?alt=media`,
+  'CHAMPIONSHIP': `${STEMMI_BASE}campionati%2Fchampionship.png?alt=media`,
+  'LA_LIGA_2': `${STEMMI_BASE}campionati%2Fla_liga_2.png?alt=media`,
+  'BUNDESLIGA_2': `${STEMMI_BASE}campionati%2Fbundesliga_2.png?alt=media`,
+  'LIGUE_2': `${STEMMI_BASE}campionati%2Fligue_2.png?alt=media`,
+  'EREDIVISIE': `${STEMMI_BASE}campionati%2Feredivisie.png?alt=media`,
+  'SCOTTISH_PREMIERSHIP': `${STEMMI_BASE}campionati%2Fscottish_premiership.png?alt=media`,
+  'ALLSVENSKAN': `${STEMMI_BASE}campionati%2Fallsvenskan.png?alt=media`,
+  'ELITESERIEN': `${STEMMI_BASE}campionati%2Feliteserien.png?alt=media`,
+  'SUPERLIGAEN': `${STEMMI_BASE}campionati%2Fsuperligaen.png?alt=media`,
+  'JUPILER_PRO_LEAGUE': `${STEMMI_BASE}campionati%2Fjupiler_pro_league.png?alt=media`,
+  'SUPER_LIG': `${STEMMI_BASE}campionati%2Fsuper_lig.png?alt=media`,
+  'LEAGUE_OF_IRELAND': `${STEMMI_BASE}campionati%2Fleague_of_ireland.png?alt=media`,
+  'BRASILEIRAO': `${STEMMI_BASE}campionati%2Fbrasileiro.png?alt=media`,
+  'PRIMERA_DIVISION_ARG': `${STEMMI_BASE}campionati%2Fprimera_division_arg.png?alt=media`,
+  'MLS': `${STEMMI_BASE}campionati%2Fmls.png?alt=media`,
+  'J1_LEAGUE': `${STEMMI_BASE}campionati%2Fj1_league.png?alt=media`,
+};
+
+const STEMMI_COPPE: Record<string, string> = {
+  'UCL': `${STEMMI_BASE}coppe%2Fucl.png?alt=media`,
+  'UEL': `${STEMMI_BASE}coppe%2Fuel.png?alt=media`,
+};
+
 // --- TEMA NEON / SCI-FI ---
 const theme = {
   bg: '#05070a',
@@ -6150,120 +6188,142 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       {/* TOP BAR UNIFICATA - Nascosta quando sei nelle Coppe */}
       
       <div style={styles.topBar}>
+      {/* HAMBURGER MENU (Solo Mobile) */}
+      {isMobile && (
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          style={{
+            background: 'rgba(0, 240, 255, 0.1)',
+            border: '1px solid rgba(0, 240, 255, 0.3)',
+            color: '#00f0ff',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            fontSize: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          ☰
+        </button>
+      )}
 
-        {/* HAMBURGER MENU (Solo Mobile) */}
-        {isMobile && (
+      {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (RIPRISTINATI ORIGINALI: gap 120px, paddingLeft 60px) */}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px', zIndex: 10 }}>
           <button
-            onClick={() => setMobileMenuOpen(true)}
+            onClick={() => {
+              if (selectedCup) {
+                setSelectedCup('');
+                setActiveLeague(null);
+              } else {
+                setActiveLeague(null);
+              }
+            }}
             style={{
               background: 'rgba(0, 240, 255, 0.1)',
               border: '1px solid rgba(0, 240, 255, 0.3)',
               color: '#00f0ff',
-              padding: '8px 12px',
+              padding: '8px 16px',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '20px',
+              fontWeight: 'bold',
+              fontSize: '12px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              gap: '8px',
+              transition: 'all 0.2s'
             }}
           >
-            ☰
+            <span>⟵</span> DASHBOARD
           </button>
-        )}
 
-        {/* GRUPPO SINISTRA: Tasto Indietro + Logo (Desktop) */}
-        {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px' }}>
-            <button
-              onClick={() => {
-                if (selectedCup) {
-                  setSelectedCup('');
-                  setActiveLeague(null);
-                } else {
-                  setActiveLeague(null);
-                }
-              }}
-              style={{
-                background: 'rgba(0, 240, 255, 0.1)',
-                border: '1px solid rgba(0, 240, 255, 0.3)',
-                color: '#00f0ff',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.2)'}}
-              onMouseLeave={(e) => { if (e.currentTarget) e.currentTarget.style.borderColor = 'rgba(0, 240, 255, 0.1)'}}
-            >
-              ⟵ DASHBOARD
-            </button>
-
-            <div style={{ ...styles.logo, display: 'flex', alignItems: 'center' }}>
-              {selectedCup ? (
-                <>
-                  <span style={{ marginRight: '10px', fontSize: '24px' }}>
-                    {selectedCup === 'UCL' ? '⭐' : '🌟'}
-                  </span>
-                  {selectedCup === 'UCL' ? 'UEFA Champions League' : 'UEFA Europa League'}
-                </>
-              ) : (
-                <>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
-                    alt="Logo"
-                    style={{
-                      height: '28px',
-                      width: 'auto',
-                      marginRight: '15px',
-                      filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)'
-                    }}
-                  />
-                  AI SIMULATOR PRO
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* LOGO CENTRATO (Solo Mobile) */}
-        {isMobile && (
-          <div style={{
-            ...styles.logo,
-            fontSize: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)'
-          }}>
+          <div style={{ ...styles.logo, display: 'flex', alignItems: 'center' }}>
             <img
               src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
               alt="Logo"
               style={{
-                height: '24px',
+                height: '28px',
                 width: 'auto',
-                marginRight: '8px',
+                marginRight: '15px',
                 filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)'
               }}
             />
-            <span style={{ display: isMobile ? 'none' : 'inline' }}>AI SIMULATOR</span>
+            AI SIMULATOR PRO
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Badge Admin nella TopBar */}
+      {/* 2. 🏆 IDENTITÀ COMPETIZIONE (TRASPARENTE, LUNGO e CENTRATO SOPRA LA GIORNATA) */}
+      {!isMobile && (league || selectedCup) && (
+        <div style={{
+          position: 'absolute',
+          left: '280px', // Allineato con l'inizio dell'Arena (sidebar è 280px)
+          right: '0',
+          display: 'flex',
+          justifyContent: 'center', // Centratura matematica sopra la sezione dei match/giornate
+          pointerEvents: 'none',
+          height: '100%',
+          alignItems: 'center'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '25px',
+            padding: '5px 120px', // Reso più lungo come richiesto
+            background: 'transparent', // Richiesta Trasparenza
+            pointerEvents: 'auto',
+            animation: 'fadeIn 0.5s ease'
+          }}>
+            <img 
+              src={selectedCup ? STEMMI_COPPE[selectedCup] : STEMMI_CAMPIONATI[league]}
+              alt="Stemma"
+              style={{
+                height: '42px',
+                width: '42px',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 0 10px rgba(0, 240, 255, 0.4))'
+              }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{
+                fontSize: '15px',
+                fontWeight: '900',
+                color: 'white',
+                lineHeight: '1.1',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
+                {selectedCup 
+                  ? (selectedCup === 'UCL' ? 'Champions League' : 'Europa League')
+                  : leagues.find(l => l.id === league)?.name || league
+              }
+              </span>
+              <span style={{
+                fontSize: '10px',
+                color: '#00f0ff',
+                fontWeight: 'bold',
+                opacity: 0.9,
+                letterSpacing: '2px',
+                marginTop: '2px'
+              }}>
+                {selectedCup ? 'UEFA TOURNAMENT' : (availableCountries.find(c => c.code === country)?.name || country).toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. SEZIONE DESTRA: Admin, Crediti, Luna e User (RIPRISTINATI ORIGINALI) */}
+      <div style={{ display: 'flex', gap: isMobile ? '10px' : '20px', alignItems: 'center', marginLeft: 'auto', zIndex: 10 }}>
         {isAdmin && (
           <div style={{
             background: 'linear-gradient(135deg, #ff0080, #ff8c00)',
             padding: '4px 12px',
             borderRadius: '4px',
             fontSize: '10px',
-            marginLeft: 'auto',
             fontWeight: 'bold',
             letterSpacing: '1px',
             boxShadow: '0 0 15px rgba(255, 0, 128, 0.5)',
@@ -6272,31 +6332,29 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             👑 ADMIN MODE
           </div>
         )}
-
-        {/* PARTE DESTRA */}
-        <div style={{ display: 'flex', gap: isMobile ? '10px' : '20px', alignItems: 'center', marginLeft: 'auto' }}>
-          {!isMobile && (
-            <div style={{ fontSize: '12px', color: theme.textDim }}>
-              Crediti: <span style={{ color: theme.success }}>∞</span>
-            </div>
-          )}
-          {!isMobile && (
-            <button onClick={() => alert('Tema toggle')} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🌙</button>
-          )}
-          <div style={{
-            width: isMobile ? '28px' : '32px',
-            height: isMobile ? '28px' : '32px',
-            borderRadius: '50%',
-            background: theme.purple,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 'bold',
-            boxShadow: `0 0 10px ${theme.purple}`,
-            fontSize: isMobile ? '14px' : '16px'
-          }}>U</div>
-        </div>
+        
+        {!isMobile && (
+          <div style={{ fontSize: '12px', color: '#8b9bb4' }}>
+            Crediti: <span style={{ color: '#05f9b6' }}>∞</span>
+          </div>
+        )}
+        {!isMobile && (
+          <button onClick={() => alert('Tema toggle')} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🌙</button>
+        )}
+        <div style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          background: '#bc13fe',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          boxShadow: `0 0 10px #bc13fe`,
+          fontSize: '16px'
+        }}>U</div>
       </div>
+    </div>
     
       <div style={styles.mainContent}>
 
@@ -6444,6 +6502,56 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
           {/* --- FINE BLOCCO SELEZIONE --- */}
 
+          {/* --- BOX RIEPILOGO SELEZIONE --- */}
+          {(league || selectedCup) && (
+            <div style={{
+              marginTop: '20px',
+              padding: '15px',
+              background: 'rgba(0, 240, 255, 0.05)',
+              border: `1px solid ${selectedCup ? '#0066cc' : theme.cyan}`,
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              {/* STEMMA */}
+              <img 
+                src={selectedCup ? STEMMI_COPPE[selectedCup] : STEMMI_CAMPIONATI[league]}
+                alt="Stemma"
+                style={{
+                  width: '45px',
+                  height: '45px',
+                  objectFit: 'contain'
+                }}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+              
+              {/* INFO */}
+              <div>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '800',
+                  color: 'white',
+                  lineHeight: '1.2'
+                }}>
+                  {selectedCup 
+                    ? (selectedCup === 'UCL' ? 'UEFA Champions League' : 'UEFA Europa League')
+                    : leagues.find(l => l.id === league)?.name || league
+                  }
+                </div>
+                <div style={{
+                  fontSize: '11px',
+                  color: theme.textDim,
+                  marginTop: '2px'
+                }}>
+                  {selectedCup 
+                    ? (selectedCup === 'UCL' ? '⭐ Europa' : '🌟 Europa')
+                    : availableCountries.find(c => c.code === country)?.flag + ' ' + country
+                  }
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 🔥 BOX RIEPILOGO - APPARE SIA PER MASSIVO CHE SINGOLO */}
           {((configMode >= 1 && configMode <= 3 && matches.length > 0) || 

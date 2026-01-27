@@ -6201,14 +6201,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             fontSize: '20px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            zIndex: 20
           }}
         >
           ☰
         </button>
       )}
 
-      {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (RIPRISTINATI ORIGINALI: gap 120px, paddingLeft 60px) */}
+      {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (Desktop) */}
       {!isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px', zIndex: 10 }}>
           <button
@@ -6231,8 +6232,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               fontSize: '12px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
+              gap: '8px'
             }}
           >
             <span>⟵</span> DASHBOARD
@@ -6254,24 +6254,25 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         </div>
       )}
 
-      {/* 2. 🏆 IDENTITÀ COMPETIZIONE (TRASPARENTE, LUNGO e CENTRATO SOPRA LA GIORNATA) */}
-      {!isMobile && (league || selectedCup) && (
+      {/* 2. 🏆 IDENTITÀ COMPETIZIONE (Visibile ora anche su MOBILE) */}
+      {(league || selectedCup) && (
         <div style={{
           position: 'absolute',
-          left: '280px', // Allineato con l'inizio dell'Arena (sidebar è 280px)
+          left: isMobile ? '0' : '280px', // Su mobile centra su tutto, su desktop sopra l'arena (sidebar 280px)
           right: '0',
           display: 'flex',
-          justifyContent: 'center', // Centratura matematica sopra la sezione dei match/giornate
-          pointerEvents: 'none',
+          justifyContent: 'center',
+          pointerEvents: 'none', // Non blocca i click sotto
           height: '100%',
-          alignItems: 'center'
+          alignItems: 'center',
+          zIndex: 5
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '25px',
-            padding: '5px 120px', // Reso più lungo come richiesto
-            background: 'transparent', // Richiesta Trasparenza
+            gap: isMobile ? '10px' : '25px',
+            padding: isMobile ? '5px 15px' : '5px 120px', // "Lungo" su desktop, compatto su mobile
+            background: 'transparent', // Trasparente come richiesto
             pointerEvents: 'auto',
             animation: 'fadeIn 0.5s ease'
           }}>
@@ -6279,8 +6280,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               src={selectedCup ? STEMMI_COPPE[selectedCup] : STEMMI_CAMPIONATI[league]}
               alt="Stemma"
               style={{
-                height: '42px',
-                width: '42px',
+                height: isMobile ? '30px' : '42px', // Più piccolo su mobile per non affollare
+                width: 'auto',
                 objectFit: 'contain',
                 filter: 'drop-shadow(0 0 10px rgba(0, 240, 255, 0.4))'
               }}
@@ -6289,36 +6290,39 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{
-                fontSize: '15px',
+                fontSize: isMobile ? '12px' : '15px',
                 fontWeight: '900',
                 color: 'white',
                 lineHeight: '1.1',
                 textTransform: 'uppercase',
-                letterSpacing: '1px'
+                letterSpacing: '0.5px'
               }}>
                 {selectedCup 
-                  ? (selectedCup === 'UCL' ? 'Champions League' : 'Europa League')
+                  ? (selectedCup === 'UCL' ? 'Champions' : 'Europa L.')
                   : leagues.find(l => l.id === league)?.name || league
-              }
+                }
               </span>
-              <span style={{
-                fontSize: '10px',
-                color: '#00f0ff',
-                fontWeight: 'bold',
-                opacity: 0.9,
-                letterSpacing: '2px',
-                marginTop: '2px'
-              }}>
-                {selectedCup ? 'UEFA TOURNAMENT' : (availableCountries.find(c => c.code === country)?.name || country).toUpperCase()}
-              </span>
+              {/* Mostra la nazione solo su desktop per risparmiare spazio su mobile */}
+              {!isMobile && (
+                <span style={{
+                  fontSize: '10px',
+                  color: '#00f0ff',
+                  fontWeight: 'bold',
+                  opacity: 0.9,
+                  letterSpacing: '2px',
+                  marginTop: '2px'
+                }}>
+                  {selectedCup ? 'UEFA TOURNAMENT' : (availableCountries.find(c => c.code === country)?.name || country).toUpperCase()}
+                </span>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. SEZIONE DESTRA: Admin, Crediti, Luna e User (RIPRISTINATI ORIGINALI) */}
-      <div style={{ display: 'flex', gap: isMobile ? '10px' : '20px', alignItems: 'center', marginLeft: 'auto', zIndex: 10 }}>
-        {isAdmin && (
+      {/* 3. SEZIONE DESTRA: Admin, Crediti, User */}
+      <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto', zIndex: 10, paddingRight: isMobile ? '10px' : '20px' }}>
+        {isAdmin && !isMobile && (
           <div style={{
             background: 'linear-gradient(135deg, #ff0080, #ff8c00)',
             padding: '4px 12px',
@@ -6338,9 +6342,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             Crediti: <span style={{ color: '#05f9b6' }}>∞</span>
           </div>
         )}
-        {!isMobile && (
-          <button onClick={() => alert('Tema toggle')} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🌙</button>
-        )}
+        
+        <button onClick={() => alert('Tema toggle')} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🌙</button>
+        
         <div style={{
           width: '32px',
           height: '32px',
@@ -6351,7 +6355,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           justifyContent: 'center',
           fontWeight: 'bold',
           boxShadow: `0 0 10px #bc13fe`,
-          fontSize: '16px'
+          fontSize: '16px',
+          color: 'white'
         }}>U</div>
       </div>
     </div>

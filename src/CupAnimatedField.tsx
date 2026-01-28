@@ -51,6 +51,13 @@ const cupTheme = {
   }
 };
 
+// Funzione per costruire URL stemma squadra
+const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
+  const folder = cupId === 'UCL' ? 'Champions_League' : 'Europa_League';
+  return `https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fsquadre%2F${folder}%2F${mongoId}.png?alt=media`;
+};
+
+
 export default function CupAnimatedField({ 
   cupId, 
   homeTeam, 
@@ -785,26 +792,40 @@ export default function CupAnimatedField({
           </div>
   
           {/* SQUADRA CASA */}
-          <div style={{ width: '120px', textAlign: 'right' }}>
-            <div style={{
-              fontSize: '14px',
-              color: theme.cyan,
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              opacity: 0.7,
-              marginBottom: '2px'
-            }}>{homeTeam}</div>
-            <div style={{
-              fontSize: isMobile ? '14px' : '16px',
-              fontWeight: '900',
-              color: 'white',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>{selectedMatch?.home}</div>
-          </div>
+            <div style={{ width: '120px', textAlign: 'right' }}>
+              <div style={{
+                fontSize: '14px',
+                color: theme.cyan,
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                opacity: 0.7,
+                marginBottom: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '8px'
+              }}>
+                {homeTeam}
+                {selectedMatch?.home_mongo_id && (
+                  <img 
+                    src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)}
+                    alt=""
+                    style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
+              </div>
+              <div style={{
+                fontSize: isMobile ? '14px' : '16px',
+                fontWeight: '900',
+                color: 'white',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>{selectedMatch?.home}</div>
+            </div>
   
           {/* PUNTEGGIO CENTRALE */}
           <div style={{
@@ -838,26 +859,40 @@ export default function CupAnimatedField({
           </div>
   
           {/* SQUADRA OSPITE */}
-          <div style={{ width: '120px', textAlign: 'left' }}>
-            <div style={{
-              fontSize: '14px',
-              color: theme.danger,
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              opacity: 0.7,
-              marginBottom: '2px'
-            }}>{awayTeam}</div>
-            <div style={{
-              fontSize: isMobile ? '14px' : '16px',
-              fontWeight: '900',
-              color: 'white',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>{selectedMatch?.away}</div>
-          </div>
+            <div style={{ width: '120px', textAlign: 'left' }}>
+              <div style={{
+                fontSize: '14px',
+                color: theme.danger,
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                opacity: 0.7,
+                marginBottom: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                gap: '8px'
+              }}>
+                {selectedMatch?.away_mongo_id && (
+                  <img 
+                    src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)}
+                    alt=""
+                    style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
+                {awayTeam}
+              </div>
+              <div style={{
+                fontSize: isMobile ? '14px' : '16px',
+                fontWeight: '900',
+                color: 'white',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>{selectedMatch?.away}</div>
+            </div>
         </div>
 
   

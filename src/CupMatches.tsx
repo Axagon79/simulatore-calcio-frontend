@@ -25,6 +25,12 @@ const cupTheme = {
 const baseBg = '#05070a';
 const textDim = '#8b9bb4';
 
+// Funzione per costruire URL stemma squadra
+const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
+  const folder = cupId === 'UCL' ? 'Champions_League' : 'Europa_League';
+  return `https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fsquadre%2F${folder}%2F${mongoId}.png?alt=media`;
+};
+
 interface CupMatchesProps {
   cupId: 'UCL' | 'UEL';
   onBack: () => void;
@@ -34,6 +40,8 @@ interface Match {
   id?: string;
   home_team: string;
   away_team: string;
+  home_mongo_id?: string;
+  away_mongo_id?: string;
   match_date: string;
   odds?: {
     home: number;
@@ -446,8 +454,20 @@ if (viewState === 'analysis' && selectedMatch) {
                         textAlign: 'center',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px'
                     }}>
+                        {match.home_mongo_id && (
+                          <img 
+                            src={getStemmaUrl(cupId, match.home_mongo_id)}
+                            alt=""
+                            style={{ width: '18px', height: '18px', objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
                         {match.home_team}
                     </div>
                     
@@ -471,8 +491,20 @@ if (viewState === 'analysis' && selectedMatch) {
                         textAlign: 'center',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px'
                     }}>
+                        {match.away_mongo_id && (
+                          <img 
+                            src={getStemmaUrl(cupId, match.away_mongo_id)}
+                            alt=""
+                            style={{ width: '18px', height: '18px', objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
                         {match.away_team}
                     </div>
                     
@@ -495,9 +527,21 @@ if (viewState === 'analysis' && selectedMatch) {
                           textAlign: 'right',
                           fontWeight: 'bold',
                           fontSize: '15px',
-                          color: 'white'
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '10px'
                         }}>
                           {match.home_team}
+                          {match.home_mongo_id && (
+                            <img 
+                              src={getStemmaUrl(cupId, match.home_mongo_id)}
+                              alt=""
+                              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
                         </div>
                         <div style={{
                           background: `${theme.primary}30`,
@@ -519,8 +563,20 @@ if (viewState === 'analysis' && selectedMatch) {
                           textAlign: 'left',
                           fontWeight: 'bold',
                           fontSize: '15px',
-                          color: 'white'
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-start',
+                          gap: '10px'
                         }}>
+                          {match.away_mongo_id && (
+                            <img 
+                              src={getStemmaUrl(cupId, match.away_mongo_id)}
+                              alt=""
+                              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
                           {match.away_team}
                         </div>
                       </div>
@@ -787,17 +843,29 @@ if (viewState === 'analysis' && selectedMatch) {
                         padding: '0 10px'
                         }}>
                         {/* CASA */}
-                        <div style={{
-                            fontSize: '13px',
-                            fontWeight: 'bold',
-                            color: 'white',
-                            textAlign: 'center',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>
-                            {match.home_team}
-                        </div>
+                          <div style={{
+                              fontSize: '13px',
+                              fontWeight: 'bold',
+                              color: 'white',
+                              textAlign: 'center',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px'
+                          }}>
+                              {match.home_mongo_id && (
+                                <img 
+                                  src={getStemmaUrl(cupId, match.home_mongo_id)}
+                                  alt=""
+                                  style={{ width: '18px', height: '18px', objectFit: 'contain' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
+                              {match.home_team}
+                          </div>
                         
                         {/* RISULTATO/VS */}
                         <div style={{
@@ -812,17 +880,29 @@ if (viewState === 'analysis' && selectedMatch) {
                         </div>
                         
                         {/* OSPITE */}
-                        <div style={{
-                            fontSize: '13px',
-                            fontWeight: 'bold',
-                            color: 'white',
-                            textAlign: 'center',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>
-                            {match.away_team}
-                        </div>
+                          <div style={{
+                              fontSize: '13px',
+                              fontWeight: 'bold',
+                              color: 'white',
+                              textAlign: 'center',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px'
+                          }}>
+                              {match.away_mongo_id && (
+                                <img 
+                                  src={getStemmaUrl(cupId, match.away_mongo_id)}
+                                  alt=""
+                                  style={{ width: '18px', height: '18px', objectFit: 'contain' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
+                              {match.away_team}
+                          </div>
                         
                         {/* FRECCIA */}
                         <div style={{ fontSize: '18px', color: theme.secondary, textAlign: 'right' }}>▼</div>
@@ -839,13 +919,25 @@ if (viewState === 'analysis' && selectedMatch) {
                             gap: '20px'
                         }}>
                             <div style={{
-                            flex: 1,
-                            textAlign: 'right',
-                            fontWeight: 'bold',
-                            fontSize: '15px',
-                            color: 'white'
+                              flex: 1,
+                              textAlign: 'right',
+                              fontWeight: 'bold',
+                              fontSize: '15px',
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-end',
+                              gap: '10px'
                             }}>
-                            {match.home_team}
+                              {match.home_team}
+                              {match.home_mongo_id && (
+                                <img 
+                                  src={getStemmaUrl(cupId, match.home_mongo_id)}
+                                  alt=""
+                                  style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
                             </div>
                             <div style={{
                             background: `${theme.primary}30`,
@@ -861,13 +953,25 @@ if (viewState === 'analysis' && selectedMatch) {
                             VS
                             </div>
                             <div style={{
-                            flex: 1,
-                            textAlign: 'left',
-                            fontWeight: 'bold',
-                            fontSize: '15px',
-                            color: 'white'
+                              flex: 1,
+                              textAlign: 'left',
+                              fontWeight: 'bold',
+                              fontSize: '15px',
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-start',
+                              gap: '10px'
                             }}>
-                            {match.away_team}
+                              {match.away_mongo_id && (
+                                <img 
+                                  src={getStemmaUrl(cupId, match.away_mongo_id)}
+                                  alt=""
+                                  style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
+                              {match.away_team}
                             </div>
                         </div>
 

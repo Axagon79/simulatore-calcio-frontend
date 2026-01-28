@@ -24,6 +24,12 @@ const cupTheme = {
 const baseBg = '#05070a';
 const textDim = '#8b9bb4';
 
+// Funzione per costruire URL stemma squadra
+const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
+  const folder = cupId === 'UCL' ? 'Champions_League' : 'Europa_League';
+  return `https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fsquadre%2F${folder}%2F${mongoId}.png?alt=media`;
+};
+
 interface CupMatchAnalysisProps {
   cupId: 'UCL' | 'UEL';
   match: any;
@@ -205,8 +211,20 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   fontSize: '20px',
                   fontWeight: 'bold',
                   color: 'white',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
                 }}>
+                  {match.home_mongo_id && (
+                    <img 
+                      src={getStemmaUrl(cupId, match.home_mongo_id)}
+                      alt=""
+                      style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  )}
                   {match.home_team}
                 </div>
                 <div style={{
@@ -221,8 +239,20 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   fontSize: '20px',
                   fontWeight: 'bold',
                   color: 'white',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
                 }}>
+                  {match.away_mongo_id && (
+                    <img 
+                      src={getStemmaUrl(cupId, match.away_mongo_id)}
+                      alt=""
+                      style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  )}
                   {match.away_team}
                 </div>
               </div>

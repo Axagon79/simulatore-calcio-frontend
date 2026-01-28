@@ -38,6 +38,8 @@ interface BvsData {
 
 interface Match {
   id: string; home: string; away: string;
+  home_id: number; // Aggiungi questo
+  away_id: number; // Aggiungi questo
   real_score?: string | null; match_time: string;
   status: string; date_obj: string; h2h_data?: BvsData & any
   odds?: { [key: string]: any };

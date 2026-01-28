@@ -40,6 +40,8 @@ interface Match {
   id: string; home: string; away: string;
   home_id: number; // Aggiungi questo
   away_id: number; // Aggiungi questo
+  home_mongo_id?: string; // <--- AGGIUNGI QUESTO
+  away_mongo_id?: string; // <--- AGGIUNGI QUESTO
   real_score?: string | null; match_time: string;
   status: string; date_obj: string; h2h_data?: BvsData & any
   odds?: { [key: string]: any };
@@ -435,6 +437,92 @@ export default function AppDev() {
     // In futuro, qui chiamerai la tua API di Gemini o GPT passando 'promptTecnico'
     console.log("Dati inviati all'IA:", promptTecnico);
   };
+
+
+// --- Funzione Helper Stemmi (FIX DEFINITIVO: Legge il Menù locale) ---
+const getStemmaLeagueUrl = (mongoId?: string) => {
+  if (!mongoId) return '';
+
+  // 1. TRUCCO: Leggiamo "league" (lo stato del menù) che è quello aggiornato.
+  // Se "league" è vuoto o undefined, usiamo "activeLeague" come fallback.
+  // (Nota: "league" è la variabile che usi nel value={...} del menù a tendina)
+  const currentLeague = (typeof league !== 'undefined' && league) ? league : activeLeague;
+
+  // 2. Normalizziamo il testo (Maiuscolo e senza spazi ai lati)
+  const input = currentLeague ? currentLeague.toUpperCase().trim() : '';
+
+  let folder = 'Altro';
+
+  switch (input) {
+      // --- ITALIA ---
+      case 'SERIE_A': case 'SERIE A': 
+      case 'SERIE_B': case 'SERIE B': 
+      case 'SERIE_C_A': case 'SERIE_C_B': case 'SERIE_C_C': case 'SERIE C':
+          folder = 'Italy'; break;
+
+      // --- INGHILTERRA ---
+      case 'PREMIER_LEAGUE': case 'PREMIER LEAGUE': 
+      case 'CHAMPIONSHIP':
+          folder = 'England'; break;
+
+      // --- SPAGNA ---
+      case 'LA_LIGA': case 'LA LIGA': 
+      case 'LA_LIGA_2': case 'LA LIGA 2':
+          folder = 'Spain'; break;
+
+      // --- GERMANIA ---
+      case 'BUNDESLIGA': case 'BUNDESLIGA_2': case 'BUNDESLIGA 2':
+          folder = 'Germany'; break;
+
+      // --- FRANCIA ---
+      case 'LIGUE_1': case 'LIGUE 1': 
+      case 'LIGUE_2': case 'LIGUE 2':
+          folder = 'France'; break;
+
+      // --- PORTOGALLO ---
+      case 'LIGA_PORTUGAL': case 'LIGA PORTUGAL': case 'PRIMEIRA_LIGA':
+          folder = 'Portugal'; break;
+
+      // --- OLANDA ---
+      case 'EREDIVISIE':
+          folder = 'Netherlands'; break;
+
+      // --- SCOZIA ---
+      case 'SCOTTISH_PREMIERSHIP': case 'SCOTTISH PREMIERSHIP':
+          folder = 'Scotland'; break;
+
+      // --- NORD EUROPA ---
+      case 'ALLSVENSKAN':
+          folder = 'Sweden'; break;
+      case 'ELITESERIEN':
+          folder = 'Norway'; break;
+      case 'SUPERLIGAEN': case 'SUPERLIGA':
+          folder = 'Denmark'; break;
+      case 'LEAGUE_OF_IRELAND': case 'LEAGUE OF IRELAND':
+          folder = 'Ireland'; break;
+
+      // --- BELGIO & TURCHIA ---
+      case 'JUPILER_PRO_LEAGUE': case 'JUPILER PRO LEAGUE':
+          folder = 'Belgium'; break;
+      case 'SUPER_LIG': case 'SUPER LIG':
+          folder = 'Turkey'; break;
+
+      // --- RESTO DEL MONDO ---
+      case 'BRASILEIRAO':
+          folder = 'Brazil'; break;
+      case 'PRIMERA_DIVISION_ARG': case 'PRIMERA DIVISION': case 'LIGA PROFESIONAL':
+          folder = 'Argentina'; break;
+      case 'MLS':
+          folder = 'USA'; break;
+      case 'J1_LEAGUE': case 'J1 LEAGUE': case 'J LEAGUE':
+          folder = 'Japan'; break;
+
+      default:
+          folder = 'Altro';
+  }
+
+  return `${STEMMI_BASE}squadre%2F${folder}%2F${mongoId}.png?alt=media`;
+};
 
 
   const [availableCountries, setAvailableCountries] = useState<{code: string, name: string, flag: string}[]>([]);
@@ -1673,7 +1761,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   alignItems: 'center',
                   gap: '2px',
                   background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
-                  padding: isMobile ? '4px 8px' : '5px 10px',
+                  padding: isMobile ? '4px 4px' : '5px 10px',
                   borderRadius: '8px',
                   border: '1px solid rgba(0, 240, 255, 0.1)', // Bordino ciano sottile
                 }}>
@@ -1702,49 +1790,94 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 </div>
               </div>
 
-              {/* VERSIONE MOBILE COMPATTA */}
+              {/* VERSIONE MOBILE - VS BLOCCATO + PUNTINI */}
               {isMobile && !isExpanded ? (
                 <>
-                  {/* 1. NOME SQUADRE */}
+                  {/* CONTENITORE SQUADRE (50px margine, VS bloccato) */}
                   <div style={{
                     flex: 1,
-                    textAlign: 'center', // Manteniamo centrato
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    color: 'white',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    padding: '0 20px',
-                    maxWidth: '200px',
-                    marginRight: '0px',
-                    marginLeft: '50px' // <--- QUESTA È LA MODIFICA: Spinge i nomi a destra
-                  }}>
-                    {match.home.substring(0, 12)} vs {match.away.substring(0, 12)}
-                  </div>
-
-                  {/* 2. CAPSULA RISULTATO */}
-                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(111, 149, 170, 0.13)',
-                    border: '1px solid rgba(0, 240, 255, 0.1)',
-                    borderRadius: '8px',
-                    padding: '2px 8px',
-                    height: '24px',
-                    marginLeft: '0px',
-                    marginRight: '0px'
+                    justifyContent: 'space-between',
+                    marginLeft: '65px',   // Il tuo margine fisso originale
+                    marginRight: '5px',
+                    minWidth: 0           // Impedisce al contenitore di allargarsi troppo
                   }}>
-                    <span style={{
-                      fontSize: '11px',
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      fontFamily: 'monospace'
+                    
+                    {/* 1. LATO SINISTRO (Flex 1) -> Spinge verso il VS */}
+                    <div style={{ 
+                        flex: 1, 
+                        display: 'flex', 
+                        justifyContent: 'flex-end', 
+                        alignItems: 'center', 
+                        gap: '4px', 
+                        minWidth: 0 // Fondamentale per i puntini
                     }}>
-                      {(match as any).status === 'Finished' && (match as any).real_score
-                        ? (match as any).real_score
-                        : '-:-'}
+                        <span style={{
+                           maxWidth: '65px',  // Taglia con puntini se troppo lungo
+                           whiteSpace: 'nowrap', 
+                           overflow: 'hidden', 
+                           textOverflow: 'ellipsis',
+                           fontSize: '12px', fontWeight: 'bold', color: 'white', textAlign: 'right'
+                        }}>
+                           {match.home}
+                        </span>
+                        <img 
+                            src={getStemmaLeagueUrl(match.home_mongo_id)} 
+                            alt=""
+                            style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0 }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                    </div>
+
+                    {/* 2. CENTRO (VS BLOCCATO) */}
+                    <div style={{ width: '20px', textAlign: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>vs</span>
+                    </div>
+
+                    {/* 3. LATO DESTRO (Flex 1) -> Spinge verso il VS */}
+                    <div style={{ 
+                        flex: 1, 
+                        display: 'flex', 
+                        justifyContent: 'flex-start', 
+                        alignItems: 'center', 
+                        gap: '4px', 
+                        minWidth: 0 // Fondamentale per i puntini
+                    }}>
+                        <img 
+                            src={getStemmaLeagueUrl(match.away_mongo_id)} 
+                            alt=""
+                            style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0 }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                        <span style={{
+                           maxWidth: '65px', // Taglia con puntini se troppo lungo
+                           whiteSpace: 'nowrap', 
+                           overflow: 'hidden', 
+                           textOverflow: 'ellipsis',
+                           fontSize: '12px', fontWeight: 'bold', color: 'white', textAlign: 'left'
+                        }}>
+                           {match.away}
+                        </span>
+                    </div>
+                  </div>
+
+                  {/* CAPSULA RISULTATO (A destra) */}
+                  <div style={{
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'rgba(111, 149, 170, 0.13)', 
+                    border: '1px solid rgba(0, 240, 255, 0.1)',
+                    borderRadius: '8px', 
+                    padding: '2px 8px', 
+                    height: '24px',
+                    marginLeft: '0px', 
+                    marginRight: '0px',
+                    flexShrink: 0 // Non si schiaccia mai
+                  }}>
+                    <span style={{ fontSize: '11px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                      {(match as any).status === 'Finished' && (match as any).real_score ? (match as any).real_score : '-:-'}
                     </span>
                   </div>
                 </>
@@ -1766,6 +1899,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       alignItems: 'center',
                       gap: '12px'
                     }}>
+                      
+                      {/* BARRA LUCIFERO (Invariata) */}
                       {showLucifero && (
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           <span style={{ fontSize: '10px', color: 'rgb(5, 249, 182)', marginRight: '6px', fontWeight: 'bold', width: '30px', textAlign: 'right' }}>
@@ -1783,7 +1918,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         </div>
                       )}
 
+                      {/* GRUPPO: CLASSIFICA + NOME + STEMMA */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        
+                        {/* BADGE CLASSIFICA (Invariato) */}
                         {(match as any).h2h_data?.home_rank && (
                           <span className="badge-classifica home">
                             <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
@@ -1792,6 +1930,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                             )}
                           </span>
                         )}
+                        
+                        {/* NOME SQUADRA (Invariato) */}
                         <div style={{
                           fontWeight: 'bold', fontSize: '15px', color: 'white',
                           textAlign: 'right', width: '130px', whiteSpace: 'nowrap',
@@ -1799,6 +1939,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         }}>
                           {match.home}
                         </div>
+
+                        {/* STEMMA */}
+                        <img 
+                          src={getStemmaLeagueUrl(match.home_mongo_id)}  // <--- USA L'ID QUI
+                          alt={match.home}
+                          style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+
                       </div>
                     </div>
 
@@ -1822,6 +1971,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       gap: '12px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        
+                        {/* STEMMA */}
+                        <img 
+                          src={getStemmaLeagueUrl(match.away_mongo_id)}  // <--- USA L'ID QUI
+                          alt={match.away}
+                          style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+
+                        {/* NOME SQUADRA (Invariato) */}
                         <div style={{
                           fontWeight: 'bold', fontSize: '15px', color: 'white',
                           textAlign: 'left', width: '130px', whiteSpace: 'nowrap',
@@ -1829,6 +1988,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         }}>
                           {match.away}
                         </div>
+
+                        {/* BADGE CLASSIFICA (Invariato) */}
                         {(match as any).h2h_data?.away_rank && (
                           <span className="badge-classifica away">
                             <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
@@ -1838,6 +1999,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                           </span>
                         )}
                       </div>
+
+                      {/* BARRA LUCIFERO (Invariata) */}
                       {showLucifero && (
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
@@ -6259,8 +6422,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       {/* 2. 🏆 IDENTITÀ COMPETIZIONE (Visibile ora anche su MOBILE) */}
       {(league || selectedCup) && (
         <div style={{
-          position: 'absolute',
-          left: isMobile ? '0' : '280px', // Su mobile centra su tutto, su desktop sopra l'arena (sidebar 280px)
+          position: isMobile ? 'relative' : 'absolute',
+          left: isMobile ? '30px' : '280px', // Su mobile centra su tutto, su desktop sopra l'arena (sidebar 280px)
           right: '0',
           display: 'flex',
           justifyContent: 'center',

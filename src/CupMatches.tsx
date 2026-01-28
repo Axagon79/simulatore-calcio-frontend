@@ -416,102 +416,132 @@ if (viewState === 'analysis' && selectedMatch) {
                     }
                   }}
                 >
-                  {/* DATA */}
+                  {/* 1. DATA (Versione Ridotta per Mobile) */}
                   <div style={{
-                    width: isMobile ? '80px' : '120px',
-                    flexShrink: 0
-                  }}>
-                    <div style={{
-                      background: `${theme.primary}20`,
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.primary}40`,
-                      fontSize: '11px',
-                      color: theme.secondary,
-                      fontWeight: 'bold',
-                      textAlign: 'center'
+                        width: isMobile ? '55px' : '120px', // RIDOTTO: da 80px a 55px
+                        flexShrink: 0
                     }}>
-                      {formatMatchDate(match.match_date)}
-                    </div>
-                  </div>
-
-                  {/* MOBILE COMPACT */}
-                {isMobile && !isExpanded ? (
-                <>
-                    <div style={{
-                    flex: 1,
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 30px 1fr 20px',
-                    gap: '5px',
-                    alignItems: 'center',
-                    padding: '0 10px'
-                    }}>
-                    {/* CASA */}
-                    <div style={{
-                        fontSize: '13px',
-                        fontWeight: 'bold',
-                        color: 'white',
-                        textAlign: 'center',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '5px'
-                    }}>
-                        {match.home_mongo_id && (
-                          <img 
-                            src={getStemmaUrl(cupId, match.home_mongo_id)}
-                            alt=""
-                            style={{ width: '18px', height: '18px', objectFit: 'contain' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        )}
-                        {match.home_team}
-                    </div>
-                    
-                    {/* RISULTATO/VS */}
-                    <div style={{
-                        fontSize: '13px',
-                        fontWeight: 'bold',
+                        <div style={{
+                        background: `${theme.primary}20`,
+                        padding: isMobile ? '4px 2px' : '6px 10px', // RIDOTTO PADDING
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.primary}40`,
+                        fontSize: isMobile ? '10px' : '11px',       // FONT PIU PICCOLO
                         color: theme.secondary,
-                        textAlign: 'center'
-                    }}>
-                        {match.status === 'finished' && match.result?.home_score !== undefined && match.result?.away_score !== undefined
-                        ? `${match.result.home_score}-${match.result.away_score}`
-                        : 'vs'}
-                    </div>
-                    
-                    {/* OSPITE */}
-                    <div style={{
-                        fontSize: '13px',
                         fontWeight: 'bold',
-                        color: 'white',
                         textAlign: 'center',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '5px'
-                    }}>
-                        {match.away_mongo_id && (
-                          <img 
-                            src={getStemmaUrl(cupId, match.away_mongo_id)}
-                            alt=""
-                            style={{ width: '18px', height: '18px', objectFit: 'contain' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        )}
-                        {match.away_team}
+                        overflow: 'hidden'
+                        }}>
+                        {formatMatchDate(match.match_date)}
+                        </div>
                     </div>
-                    
-                    {/* FRECCIA */}
-                    <div style={{ fontSize: '18px', color: theme.secondary, textAlign: 'right' }}>▼</div>
-                    </div>
-                </>
+
+                    {/* 2. MOBILE COMPACT (Versione Geometrica Perfetta) */}
+                    {isMobile && !isExpanded ? (
+                    <>
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            height: '24px', // Altezza fissa riga
+                            position: 'relative' // Per gestire layout precisi
+                        }}>
+                        
+                        {/* SQUADRA CASA (Sinistra) - Occupa esattamente il 50% dello spazio disponibile a sx */}
+                        <div style={{
+                            flex: 1,            // Cresce
+                            width: 0,           // TRUCCO: forza la divisione equa dello spazio
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end', // Spinge tutto verso il centro
+                            gap: '4px',
+                            paddingRight: '2px' // Minimo respiro dal centro
+                        }}>
+                            <span style={{
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'right'
+                            }}>
+                                {match.home_team}
+                            </span>
+                            {match.home_mongo_id && (
+                                <img 
+                                    src={getStemmaUrl(cupId, match.home_mongo_id)}
+                                    alt=""
+                                    style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                            )}
+                        </div>
+                        
+                        {/* CENTRO (Risultato/VS) - LARGHEZZA FISSA E IMMUTABILE */}
+                        <div style={{
+                            width: '46px',        // LARGHEZZA FISSA: Non si muove mai
+                            flexShrink: 0,        // Non si schiaccia mai
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            color: theme.secondary,
+                            textAlign: 'center'
+                        }}>
+                            {match.status === 'finished' && match.result?.home_score !== undefined
+                            ? `${match.result.home_score}-${match.result.away_score}`
+                            : 'vs'}
+                        </div>
+                        
+                        {/* SQUADRA OSPITE (Destra) - Occupa esattamente il 50% dello spazio disponibile a dx */}
+                        <div style={{
+                            flex: 1,            // Cresce identico alla squadra di casa
+                            width: 0,           // TRUCCO: forza la divisione equa
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start', // Spinge tutto verso il centro
+                            gap: '4px',
+                            paddingLeft: '2px'
+                        }}>
+                            {match.away_mongo_id && (
+                                <img 
+                                    src={getStemmaUrl(cupId, match.away_mongo_id)}
+                                    alt=""
+                                    style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                            )}
+                            <span style={{
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'left'
+                            }}>
+                                {match.away_team}
+                            </span>
+                        </div>
+                        
+                        {/* FRECCIA (Posizionata assoluta per non rubare spazio al centro) */}
+                        <div style={{ 
+                            position: 'absolute',
+                            right: '-5px', // Fuori dal flusso, all'estrema destra
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            fontSize: '14px', 
+                            color: theme.secondary 
+                        }}>
+                            ▼
+                        </div>
+
+                        </div>
+                    </>
                 ) : !isMobile ? (
                     // DESKTOP
                     <>
@@ -622,47 +652,101 @@ if (viewState === 'analysis' && selectedMatch) {
                     </>
                   ) : null}
 
-                  {/* MOBILE EXPANDED */}
+                  {/* SEZIONE ESPANDIBILE (Solo Mobile) */}
                   {isMobile && isExpanded && (
-                    <div style={{
-                      marginTop: '15px',
-                      paddingTop: '15px',
-                      borderTop: `1px solid ${theme.primary}30`
-                    }}>
-                      <div style={{
-                        textAlign: 'center',
-                        marginBottom: '15px'
-                      }}>
                         <div style={{
-                          fontSize: '16px',
-                          fontWeight: 'bold',
-                          color: 'white',
-                          marginBottom: '10px'
+                            marginTop: '15px',
+                            paddingTop: '15px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            animation: 'fadeIn 0.3s ease'
                         }}>
-                          {match.home_team}
-                        </div>
-                        <div style={{
-                          background: `${theme.primary}30`,
-                          border: `1px solid ${theme.primary}`,
-                          padding: '8px',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          color: theme.secondary,
-                          margin: '10px 0'
-                        }}>
-                          {match.home_team.substring(0, 15)} {match.result?.home_score !== undefined ? `${match.result.home_score}-${match.result.away_score}` : 
-                          'vs'} {match.away_team.substring(0, 15)}
-                        </div>
-                        <div style={{
-                          fontSize: '16px',
-                          fontWeight: 'bold',
-                          color: 'white',
-                          marginTop: '10px'
-                        }}>
-                          {match.away_team}
-                        </div>
-                      </div>
+                            
+                            {/* --- INIZIO NUOVO BLOCCO SQUADRE CON STEMMI --- */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: '20px'
+                            }}>
+                                {/* SQUADRA CASA (Colonna: Stemma sopra, Nome sotto) */}
+                                <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    {match.home_mongo_id && (
+                                        <img 
+                                            src={getStemmaUrl(cupId, match.home_mongo_id)}
+                                            alt=""
+                                            style={{ 
+                                                width: '45px',  // Più grandi qui nel dettaglio
+                                                height: '45px', 
+                                                objectFit: 'contain',
+                                                filter: `drop-shadow(0 0 10px ${theme.primary}60)` // Effetto neon leggero
+                                            }}
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    )}
+                                    <span style={{ 
+                                        fontSize: '14px', 
+                                        fontWeight: 'bold', 
+                                        color: 'white', 
+                                        textAlign: 'center',
+                                        lineHeight: '1.2'
+                                    }}>
+                                        {match.home_team}
+                                    </span>
+                                </div>
+
+                                {/* VS CENTRALE */}
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    color: textDim,
+                                    margin: '0 10px',
+                                    marginTop: '-15px' // Lo alzo un po' per centrarlo con gli stemmi
+                                }}>
+                                    VS
+                                </div>
+
+                                {/* SQUADRA OSPITE (Colonna: Stemma sopra, Nome sotto) */}
+                                <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    {match.away_mongo_id && (
+                                        <img 
+                                            src={getStemmaUrl(cupId, match.away_mongo_id)}
+                                            alt=""
+                                            style={{ 
+                                                width: '45px', 
+                                                height: '45px', 
+                                                objectFit: 'contain',
+                                                filter: `drop-shadow(0 0 10px ${theme.secondary}60)`
+                                            }}
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    )}
+                                    <span style={{ 
+                                        fontSize: '14px', 
+                                        fontWeight: 'bold', 
+                                        color: 'white', 
+                                        textAlign: 'center',
+                                        lineHeight: '1.2'
+                                    }}>
+                                        {match.away_team}
+                                    </span>
+                                </div>
+                            </div>
+                            {/* --- FINE NUOVO BLOCCO SQUADRE --- */}
+
+                            {/* SOTTO QUI C'È IL RESTO DEL CODICE (QUOTE E BOTTONE) */}
+                            {/* Assicurati di mantenere il codice delle quote che c'era già... */}
 
                       {/* QUOTE */}
                       <div style={{
@@ -812,100 +896,130 @@ if (viewState === 'analysis' && selectedMatch) {
                         }
                     }}
                     >
-                    {/* DATA */}
+                    {/* 1. DATA (Versione Ridotta per Mobile) */}
                     <div style={{
-                        width: isMobile ? '80px' : '120px',
+                        width: isMobile ? '55px' : '120px', // RIDOTTO: da 80px a 55px
                         flexShrink: 0
                     }}>
                         <div style={{
                         background: `${theme.primary}20`,
-                        padding: '6px 10px',
+                        padding: isMobile ? '4px 2px' : '6px 10px', // RIDOTTO PADDING
                         borderRadius: '8px',
                         border: `1px solid ${theme.primary}40`,
-                        fontSize: '11px',
+                        fontSize: isMobile ? '10px' : '11px',       // FONT PIU PICCOLO
                         color: theme.secondary,
                         fontWeight: 'bold',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden'
                         }}>
                         {formatMatchDate(match.match_date)}
                         </div>
                     </div>
 
-                    {/* MOBILE COMPACT */}
+                    {/* 2. MOBILE COMPACT (Versione Geometrica Perfetta) */}
                     {isMobile && !isExpanded ? (
                     <>
                         <div style={{
-                        flex: 1,
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 30px 1fr 20px',
-                        gap: '5px',
-                        alignItems: 'center',
-                        padding: '0 10px'
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            height: '24px', // Altezza fissa riga
+                            position: 'relative' // Per gestire layout precisi
                         }}>
-                        {/* CASA */}
-                          <div style={{
-                              fontSize: '13px',
-                              fontWeight: 'bold',
-                              color: 'white',
-                              textAlign: 'center',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '5px'
-                          }}>
-                              {match.home_mongo_id && (
-                                <img 
-                                  src={getStemmaUrl(cupId, match.home_mongo_id)}
-                                  alt=""
-                                  style={{ width: '18px', height: '18px', objectFit: 'contain' }}
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                />
-                              )}
-                              {match.home_team}
-                          </div>
                         
-                        {/* RISULTATO/VS */}
+                        {/* SQUADRA CASA (Sinistra) - Occupa esattamente il 50% dello spazio disponibile a sx */}
                         <div style={{
-                            fontSize: '13px',
+                            flex: 1,            // Cresce
+                            width: 0,           // TRUCCO: forza la divisione equa dello spazio
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end', // Spinge tutto verso il centro
+                            gap: '4px',
+                            paddingRight: '2px' // Minimo respiro dal centro
+                        }}>
+                            <span style={{
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'right'
+                            }}>
+                                {match.home_team}
+                            </span>
+                            {match.home_mongo_id && (
+                                <img 
+                                    src={getStemmaUrl(cupId, match.home_mongo_id)}
+                                    alt=""
+                                    style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                            )}
+                        </div>
+                        
+                        {/* CENTRO (Risultato/VS) - LARGHEZZA FISSA E IMMUTABILE */}
+                        <div style={{
+                            width: '46px',        // LARGHEZZA FISSA: Non si muove mai
+                            flexShrink: 0,        // Non si schiaccia mai
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            fontSize: '11px',
                             fontWeight: 'bold',
                             color: theme.secondary,
                             textAlign: 'center'
                         }}>
-                            {match.status === 'finished' && match.result?.home_score !== undefined && match.result?.away_score !== undefined
+                            {match.status === 'finished' && match.result?.home_score !== undefined
                             ? `${match.result.home_score}-${match.result.away_score}`
                             : 'vs'}
                         </div>
                         
-                        {/* OSPITE */}
-                          <div style={{
-                              fontSize: '13px',
-                              fontWeight: 'bold',
-                              color: 'white',
-                              textAlign: 'center',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '5px'
-                          }}>
-                              {match.away_mongo_id && (
+                        {/* SQUADRA OSPITE (Destra) - Occupa esattamente il 50% dello spazio disponibile a dx */}
+                        <div style={{
+                            flex: 1,            // Cresce identico alla squadra di casa
+                            width: 0,           // TRUCCO: forza la divisione equa
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start', // Spinge tutto verso il centro
+                            gap: '4px',
+                            paddingLeft: '2px'
+                        }}>
+                            {match.away_mongo_id && (
                                 <img 
-                                  src={getStemmaUrl(cupId, match.away_mongo_id)}
-                                  alt=""
-                                  style={{ width: '18px', height: '18px', objectFit: 'contain' }}
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    src={getStemmaUrl(cupId, match.away_mongo_id)}
+                                    alt=""
+                                    style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
-                              )}
-                              {match.away_team}
-                          </div>
+                            )}
+                            <span style={{
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'left'
+                            }}>
+                                {match.away_team}
+                            </span>
+                        </div>
                         
-                        {/* FRECCIA */}
-                        <div style={{ fontSize: '18px', color: theme.secondary, textAlign: 'right' }}>▼</div>
+                        {/* FRECCIA (Posizionata assoluta per non rubare spazio al centro) */}
+                        <div style={{ 
+                            position: 'absolute',
+                            right: '-5px', // Fuori dal flusso, all'estrema destra
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            fontSize: '14px', 
+                            color: theme.secondary 
+                        }}>
+                            ▼
+                        </div>
+
                         </div>
                     </>
                     ) : !isMobile ? (
@@ -1016,46 +1130,101 @@ if (viewState === 'analysis' && selectedMatch) {
                         </>
                     ) : null}
 
-                    {/* MOBILE EXPANDED */}
+                    {/* SEZIONE ESPANDIBILE (Solo Mobile) */}
                     {isMobile && isExpanded && (
                         <div style={{
-                        marginTop: '15px',
-                        paddingTop: '15px',
-                        borderTop: `1px solid ${theme.primary}30`
+                            marginTop: '15px',
+                            paddingTop: '15px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            animation: 'fadeIn 0.3s ease'
                         }}>
-                        <div style={{
-                            textAlign: 'center',
-                            marginBottom: '15px'
-                        }}>
+                            
+                            {/* --- INIZIO NUOVO BLOCCO SQUADRE CON STEMMI --- */}
                             <div style={{
-                            fontSize: '16px',
-                            fontWeight: 'bold',
-                            color: 'white',
-                            marginBottom: '10px'
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: '20px'
                             }}>
-                            {match.home_team}
+                                {/* SQUADRA CASA (Colonna: Stemma sopra, Nome sotto) */}
+                                <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    {match.home_mongo_id && (
+                                        <img 
+                                            src={getStemmaUrl(cupId, match.home_mongo_id)}
+                                            alt=""
+                                            style={{ 
+                                                width: '45px',  // Più grandi qui nel dettaglio
+                                                height: '45px', 
+                                                objectFit: 'contain',
+                                                filter: `drop-shadow(0 0 10px ${theme.primary}60)` // Effetto neon leggero
+                                            }}
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    )}
+                                    <span style={{ 
+                                        fontSize: '14px', 
+                                        fontWeight: 'bold', 
+                                        color: 'white', 
+                                        textAlign: 'center',
+                                        lineHeight: '1.2'
+                                    }}>
+                                        {match.home_team}
+                                    </span>
+                                </div>
+
+                                {/* VS CENTRALE */}
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    color: textDim,
+                                    margin: '0 10px',
+                                    marginTop: '-15px' // Lo alzo un po' per centrarlo con gli stemmi
+                                }}>
+                                    VS
+                                </div>
+
+                                {/* SQUADRA OSPITE (Colonna: Stemma sopra, Nome sotto) */}
+                                <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    {match.away_mongo_id && (
+                                        <img 
+                                            src={getStemmaUrl(cupId, match.away_mongo_id)}
+                                            alt=""
+                                            style={{ 
+                                                width: '45px', 
+                                                height: '45px', 
+                                                objectFit: 'contain',
+                                                filter: `drop-shadow(0 0 10px ${theme.secondary}60)`
+                                            }}
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    )}
+                                    <span style={{ 
+                                        fontSize: '14px', 
+                                        fontWeight: 'bold', 
+                                        color: 'white', 
+                                        textAlign: 'center',
+                                        lineHeight: '1.2'
+                                    }}>
+                                        {match.away_team}
+                                    </span>
+                                </div>
                             </div>
-                            <div style={{
-                            background: `${theme.primary}30`,
-                            border: `1px solid ${theme.primary}`,
-                            padding: '8px',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            color: theme.secondary,
-                            margin: '10px 0'
-                            }}>
-                            VS
-                            </div>
-                            <div style={{
-                            fontSize: '16px',
-                            fontWeight: 'bold',
-                            color: 'white',
-                            marginTop: '10px'
-                            }}>
-                            {match.away_team}
-                            </div>
-                        </div>
+                            {/* --- FINE NUOVO BLOCCO SQUADRE --- */}
+
+                            {/* SOTTO QUI C'È IL RESTO DEL CODICE (QUOTE E BOTTONE) */}
+                            {/* Assicurati di mantenere il codice delle quote che c'era già... */}
 
                         {/* QUOTE */}
                         <div style={{

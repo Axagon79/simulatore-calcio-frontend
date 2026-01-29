@@ -544,6 +544,8 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   const [simResult, setSimResult] = useState<SimulationResult | null>(null);
 
+  const [error, setError] = useState<string | null>(null); // <--- AGGIUNGI QUESTO
+
   // ✅ STATI PER FORMAZIONI E RISCALDAMENTO
   const [formations, setFormations] = useState<{
     home_team: string;
@@ -1043,12 +1045,11 @@ const JerseySVG = ({ color, size = 20 }: { color: string; size?: number }) => (
   </svg>
 );
 
-// ✅ VERSIONE AGGIORNATA E VELOCE
+// ✅ VERSIONE AGGIORNATA, VELOCE E FIXATA PER IL BACKEND
 const startSimulation = async (algoOverride: number | null = null, cyclesOverride: number | null = null) => {
   if (!selectedMatch) return;
 
   // 1. DETERMINAZIONE PARAMETRI (Priorità ai valori passati dal popup)
-  // Se ricevo algoOverride/cyclesOverride uso quelli, altrimenti quelli dello stato
   const useAlgo = algoOverride !== null ? algoOverride : configAlgo;
   const useCycles = cyclesOverride !== null ? cyclesOverride : customCycles;
 
@@ -1060,16 +1061,20 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   // ✅ FASE 1: Reset Stati e Avvio Grafica
   setViewState('simulating');
   setIsWarmingUp(true);
-  setIsVarActive(false); // 👈 Aggiungi questo reset iniziale
+  setIsVarActive(false); 
   setWarmupProgress(0);
   setFormations(null);
   setPlayerEvents({});
   
-  // Parametri finali per la chiamata (considerando anche il Flash)
+  // Parametri finali
   const finalAlgo = isFlashActive ? 1 : useAlgo;
   const finalCycles = isFlashActive ? 1 : useCycles;
 
   console.log(`🚀 AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
+
+  // FIX LEAGUE: Calcoliamo il nome del campionato in modo robusto
+  // (Prende quello del menu, o quello globale, o quello del match, o fallback)
+  const currentLeague = league || activeLeague || (selectedMatch as any).league || 'SERIE_A';
 
   // Prepara il popup formazioni
   setShowFormationsPopup(true);
@@ -1085,37 +1090,52 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   
   try {
     // ✅ CARICA FORMAZIONI
-    loadFormations(selectedMatch.home, selectedMatch.away, league).then(success => {
+    loadFormations(selectedMatch.home, selectedMatch.away, currentLeague).then(success => {
       if (success) {
         console.log("✅ Formazioni caricate!");
-        setTimeout(() => setPopupOpacity(1), 8000);
+        setTimeout(() => setPopupOpacity(1), 8000); // Mostra popup dopo un po'
       }
     });
     
-    // ✅ FASE 2: Chiamata al Backend (USIAMO finalAlgo e finalCycles)
+    // ✅ FASE 2: Chiamata al Backend (CON FIX BULK_CACHE)
     const res = await fetch(AI_ENGINE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        // Dati Standard
         main_mode: 4,
-        nation: country.toUpperCase(),
-        league: league,
+        nation: country ? country.toUpperCase() : 'ITALY',
+        
+        // Passiamo l'intero oggetto match per sicurezza (il backend spesso lo vuole)
+        match: selectedMatch, 
+
         home: selectedMatch.home,
         away: selectedMatch.away,
         round: selectedRound?.name,
-        algo_id: finalAlgo,      // <--- VALORE CORRETTO
-        cycles: finalCycles,     // <--- VALORE CORRETTO
-        save_db: configSaveDb
+        
+        // Parametri Algoritmo
+        algo_id: finalAlgo,      
+        algo_mode: finalAlgo,    // Invio doppio per sicurezza (alcune versioni backend usano _mode)
+        cycles: finalCycles,     
+        save_db: configSaveDb,
+
+        // 🔥 FIX FONDAMENTALE PER ERRORE PYTHON 🔥
+        bulk_cache: {
+            league: currentLeague, // Qui è dove il backend cerca la cartella!
+            LEAGUE_STATS: {}
+        }
       })
     });
 
     const responseJson = await res.json();
     console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
 
-    if (!responseJson.success || !responseJson.algo_name) {
-      throw new Error(responseJson.error || 'Risposta del server incompleta');
+    if (!responseJson.success) {
+      // Se c'è un errore, mostriamo quello del backend
+      throw new Error(responseJson.error || 'Errore generico dal backend');
     }
     
+    // Se tutto ok, completiamo la barra
     clearInterval(warmupInterval);
     setWarmupProgress(100);
     
@@ -1123,8 +1143,9 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
     setIsWarmingUp(false);
       
     const enrichedData = {
-      ...responseJson,
-      report_scommesse: responseJson.report_scommesse || {
+      ...responseJson.data, // Di solito i dati sono dentro .data, ma il tuo backend potrebbe mandarli alla radice
+      ...responseJson,      // Merge per sicurezza
+      report_scommesse: responseJson.report_scommesse || responseJson.data?.report_scommesse || {
         Bookmaker: {},
         Analisi_Profonda: {
           Confidence_Globale: "N/D",
@@ -1140,8 +1161,8 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
         setShowFormationsPopup(false);
         if (isFlashActive || simMode === 'fast') {
           setSimResult(enrichedData);
-          setViewState('result');
-          addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score}.`);
+          setViewState('result'); // O 'results' a seconda di come hai chiamato la stringa
+          addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score || '-:-'}.`);
         } else {
           runAnimation(enrichedData);
         }
@@ -1152,7 +1173,8 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
     console.error("Errore Simulazione:", e);
     clearInterval(warmupInterval);
     setIsWarmingUp(false);
-    setViewState('pre-match');
+    setViewState('list'); // Torna alla lista se fallisce
+    setError(e.message || 'Errore di connessione');
     alert(`Errore simulazione: ${e.message || 'Errore sconosciuto'}`);
   }
 };
@@ -2158,17 +2180,18 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       position: 'relative',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center', // Questo centra il NOME
+                      justifyContent: 'center', // Centra il contenuto
+                      gap: '8px',               // <--- SPAZIO TRA STEMMA E NOME
                       marginBottom: '12px',
-                      minHeight: '24px' // Altezza minima per il badge
+                      minHeight: '24px'
                     }}>
 
                       {/* IL BADGE: Posizionato in 'absolute' a sinistra */}
                       {(match as any).h2h_data?.home_rank && (
                         <span className="badge-classifica home" style={{
-                          position: 'absolute', // Esce dal flusso
-                          left: 0,              // Inchiodato a sinistra
-                          top: '50%',           // Centrato verticalmente
+                          position: 'absolute',
+                          left: 0,
+                          top: '50%',
                           transform: 'translateY(-50%)'
                         }}>
                           <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
@@ -2178,13 +2201,21 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         </span>
                       )}
 
-                      {/* IL NOME: Ora si centra perfettamente rispetto al contenitore padre */}
+                      {/* 1. STEMMA CASA (AGGIUNTO QUI) */}
+                      <img 
+                          src={getStemmaLeagueUrl((match as any).home_mongo_id)} 
+                          alt=""
+                          style={{ width: '25px', height: '25px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+
+                      {/* IL NOME */}
                       <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
                         {match.home}
                       </span>
                     </div>
 
-                    {/* BARRA LUCIFERO (Rimasta uguale) */}
+                    {/* BARRA LUCIFERO */}
                     {showLucifero && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
@@ -2225,7 +2256,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                       position: 'relative',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center', // Centra il NOME
+                      justifyContent: 'center',
+                      gap: '8px',             // <--- SPAZIO TRA STEMMA E NOME
                       marginBottom: '12px',
                       minHeight: '24px'
                     }}>
@@ -2238,7 +2270,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                           top: '50%',
                           transform: 'translateY(-50%)'
                         }}>
-                          {/* Qui mantengo l'ordine standard, il CSS farà il resto se necessario */}
                           <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
                           {(match as any).h2h_data.away_points && (
                             <span className="badge-points">{(match as any).h2h_data.away_points}pt</span>
@@ -2246,12 +2277,20 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         </span>
                       )}
 
+                      {/* 2. STEMMA OSPITE (AGGIUNTO QUI) */}
+                      <img 
+                          src={getStemmaLeagueUrl((match as any).away_mongo_id)} 
+                          alt=""
+                          style={{ width: '25px', height: '25px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+
                       <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
                         {match.away}
                       </span>
                     </div>
 
-                    {/* BARRA LUCIFERO OSPITE (Rimasta uguale) */}
+                    {/* BARRA LUCIFERO OSPITE */}
                     {showLucifero && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
@@ -2327,6 +2366,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 </div>
               )}
 
+
             </div>
 
           );
@@ -2386,163 +2426,218 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           </span>
         </div>
   
-        {/* ✅ HEADER LIVE SCORE CON CRONOMETRO */}
+        {/* ✅ HEADER LIVE SCORE: MOBILE (Custom) vs DESKTOP (Originale Blindato) */}
         <div 
           className="sim-header"
           style={{
-            marginBottom: '25px',
+            marginBottom: isMobile ? '0px' : '25px',
             background: 'rgba(0, 0, 0, 0.95)',
-            marginTop: '-20px',
+            marginTop: isMobile ? '0px' : '10px',
             backdropFilter: 'blur(20px)',
-            marginLeft: '300px',
-            margin: '0 auto',
-            padding: '15px 20px',
+            // Larghezze differenziate
+            width: isMobile ? '96%' : '580px', 
+            marginLeft: 'auto', 
+            marginRight: 'auto',
+            // Padding differenziato
+            padding: isMobile ? '10px 15px' : '15px 20px',
             borderRadius: '16px',
             border: '2px solid rgba(0, 240, 255, 0.3)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
             zIndex: 90,
-            width: isMobile ? '90%' : '580px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            gap: isMobile ? '0px' : '5px'
           }}
         >
-          {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
-          <div style={{
-                width: isMobile ? '30px' : '130px',
-                flexShrink: 0, // Leggermente più largo per ospitare il testo in linea
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-              }}>
-                {/* Il Contenitore "Capsula" */}
-                <div style={{
-                  display: 'flex',
-                  height: '30px',
-                  alignItems: 'center',
-                  gap: '2px',
-                  background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
-                  padding: isMobile ? '4px 8px' : '5px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(0, 240, 255, 0.1)', // Bordino ciano sottile
-                }}>
-                  {/* DATA */}
-                  <span style={{
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontWeight: 'bold'
-                  }}>
-                    {(selectedMatch as any).date_obj
-                      ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
-                      : '00/00'}
-                  </span>
+          
+          {/* ==============================================
+              📱 VERSIONE MOBILE: ALLINEAMENTO "A PIOMBO"
+             ============================================== */}
+          {isMobile ? (
+            <>
+              {/* COLONNA SINISTRA: SQUADRE */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flex: 1 }}>
+                
+                {/* RIGA 1: SQUADRA CASA */}
+                <div style={{ display: 'flex', alignItems: 'center' }}> 
+                   
+                   {/* 1. COLONNA STEMMA RIGIDA (40px fissi) */}
+                   <div style={{ 
+                       width: '40px',          // Larghezza fissa "blindata"
+                       display: 'flex', 
+                       justifyContent: 'center', // Stemma centrato nei suoi 40px
+                       alignItems: 'center',
+                       flexShrink: 0           // Impedisce di schiacciarsi
+                   }}>
+                       <img 
+                          src={getStemmaLeagueUrl((selectedMatch as any)?.home_mongo_id)} 
+                          alt=""
+                          style={{ width: '28px', marginTop: '5px', height: '28px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                       />
+                   </div>
 
-                  {/* Separatore verticale sottile */}
-                  <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+                   {/* 2. COLONNA TESTO (Parte sempre dopo i 40px) */}
+                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      {/* Etichetta CASA */}
+                      <span style={{ fontSize: '9px', marginBottom: '5px', color: theme.cyan, textTransform: 'uppercase', lineHeight: 1, fontWeight: 'bold', marginLeft: '2px' }}>
+                        CASA
+                      </span>
+                      {/* Nome Squadra */}
+                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                        {selectedMatch?.home}
+                      </span>
+                   </div>
+                </div>
 
-                  {/* ORA */}
-                  <span style={{
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontWeight: 'bold'
-                  }}>
-                    {(selectedMatch as any).match_time || '--:--'}
-                  </span>
+                {/* RIGA 2: SQUADRA OSPITE */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                   
+                   {/* 1. COLONNA STEMMA RIGIDA (Identica a sopra) */}
+                   <div style={{ 
+                       width: '40px', 
+                       display: 'flex', 
+                       justifyContent: 'center',
+                       alignItems: 'center',
+                       flexShrink: 0 
+                   }}>
+                       <img 
+                          src={getStemmaLeagueUrl((selectedMatch as any)?.away_mongo_id)} 
+                          alt=""
+                          style={{ width: '28px',marginTop:'5px', height: '28px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                       />
+                   </div>
+
+                   {/* 2. COLONNA TESTO */}
+                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      {/* Etichetta OSPITE */}
+                      <span style={{ fontSize: '9px',marginBottom: '5px', color: theme.danger, textTransform: 'uppercase', lineHeight: 1, fontWeight: 'bold', marginLeft: '2px' }}>
+                        OSPITE
+                      </span>
+                      {/* Nome Squadra */}
+                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                        {selectedMatch?.away}
+                      </span>
+                   </div>
                 </div>
               </div>
-          {/* CRONOMETRO */}
-          <div style={{ width: '55px', textAlign: 'center' }}>
-            <div 
-              className={isVarActive ? 'sim-timer-pulsing' : ''} // <--- AGGIUNTO QUI
-              style={{
-                fontSize: isMobile ? '24px' : '24px',
-                fontWeight: '900',
-                color: isVarActive ? '#ff2e2e' : theme.purple, // Diventa rosso se VAR è attivo
-                fontFamily: 'monospace',
-                textShadow: isVarActive 
-                  ? `0 0 15px #ff2e2e` 
-                  : `0 0 10px ${theme.purple}`,
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {timer}'
-            </div>
-          </div>
-  
-          {/* SQUADRA CASA */}
-          <div style={{ width: '120px', textAlign: 'right' }}>
-            <div style={{
-              fontSize: '10px',
-              color: theme.cyan,
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              opacity: 0.7,
-              marginBottom: '2px'
-            }}>Casa</div>
-            <div style={{
-              fontSize: isMobile ? '14px' : '16px',
-              fontWeight: '900',
-              color: 'white',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>{selectedMatch?.home}</div>
-          </div>
-  
-          {/* PUNTEGGIO CENTRALE */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '0px 5px',
-            background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
-            borderRadius: '10px',
-            border: '1px solid rgba(0, 240, 255, 0.3)'
-          }}>
-            <div style={{
-              fontSize: isMobile ? '24px' : '30px',
-              fontWeight: '900',
-              color: theme.cyan,
-              fontFamily: 'monospace',
-              textShadow: `0 0 10px ${theme.cyan}`,
-              width: '30px',
-              textAlign: 'center'
-            }}>{liveScore.home}</div>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
-            <div style={{
-              fontSize: isMobile ? '24px' : '30px',
-              fontWeight: '900',
-              color: theme.danger,
-              fontFamily: 'monospace',
-              textShadow: `0 0 10px ${theme.danger}`,
-              width: '30px',
-              textAlign: 'center'
-            }}>{liveScore.away}</div>
-          </div>
-  
-          {/* SQUADRA OSPITE */}
-          <div style={{ width: '120px', textAlign: 'left' }}>
-            <div style={{
-              fontSize: '10px',
-              color: theme.danger,
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              opacity: 0.7,
-              marginBottom: '2px'
-            }}>Ospite</div>
-            <div style={{
-              fontSize: isMobile ? '14px' : '16px',
-              fontWeight: '900',
-              color: 'white',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>{selectedMatch?.away}</div>
-          </div>
+
+              {/* COLONNA DESTRA: CRONOMETRO E RISULTATO (Resta invariata) */}
+              <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginRight: '5px',
+                  background: 'rgba(255,255,255,0.05)',
+                  padding: '15px 8px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  flexShrink: 0
+              }}>
+                <div 
+                  className={isVarActive ? 'sim-timer-pulsing' : ''}
+                  style={{
+                    fontSize: '25px', fontWeight: '900', color: isVarActive ? '#ff2e2e' : theme.purple,
+                    fontFamily: 'monospace', textShadow: isVarActive ? `0 0 10px #ff2e2e` : 'none',
+                    minWidth: '35px', textAlign: 'center'
+                  }}
+                >
+                  {timer}'
+                </div>
+                <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }}></div>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '25px', fontWeight: '900', color: theme.cyan, fontFamily: 'monospace' }}>{liveScore.home}</span>
+                  <span style={{ fontSize: '14px', color: '#666' }}>-</span>
+                  <span style={{ fontSize: '25px', fontWeight: '900', color: theme.danger, fontFamily: 'monospace' }}>{liveScore.away}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+
+          /* =================================================================================
+             💻 VERSIONE DESKTOP: Layout ORIGINALE (Quello che mi hai fornito)
+             ================================================================================= */
+            <>
+              {/* A. DATA E ORA */}
+              <div style={{
+                    width: '130px',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      height: '30px',
+                      alignItems: 'center',
+                      gap: '2px',
+                      background: 'rgba(111, 149, 170, 0.13)',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(0, 240, 255, 0.1)',
+                    }}>
+                      <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
+                        {(selectedMatch as any).date_obj
+                          ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+                          : '00/00'}
+                      </span>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
+                        {(selectedMatch as any).match_time || '--:--'}
+                      </span>
+                    </div>
+              </div>
+
+              {/* CRONOMETRO */}
+              <div style={{ width: '55px', textAlign: 'center' }}>
+                <div 
+                  className={isVarActive ? 'sim-timer-pulsing' : ''}
+                  style={{
+                    fontSize: '24px',
+                    marginLeft: '-20px',
+                    fontWeight: '900',
+                    color: isVarActive ? '#ff2e2e' : theme.purple,
+                    fontFamily: 'monospace',
+                    textShadow: isVarActive ? `0 0 15px #ff2e2e` : `0 0 10px ${theme.purple}`,
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {timer}'
+                </div>
+              </div>
+      
+              {/* SQUADRA CASA */}
+              <div style={{ width: '120px', textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: theme.cyan, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '2px' }}>Casa</div>
+                <div style={{ fontSize: '16px', fontWeight: '900', color: 'white', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedMatch?.home}</div>
+              </div>
+      
+              {/* PUNTEGGIO CENTRALE */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '0px 5px',
+                background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
+                borderRadius: '10px',
+                border: '1px solid rgba(0, 240, 255, 0.3)'
+              }}>
+                <div style={{ fontSize: '30px', fontWeight: '900', color: theme.cyan, fontFamily: 'monospace', textShadow: `0 0 10px ${theme.cyan}`, width: '30px', textAlign: 'center' }}>{liveScore.home}</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
+                <div style={{ fontSize: '30px', fontWeight: '900', color: theme.danger, fontFamily: 'monospace', textShadow: `0 0 10px ${theme.danger}`, width: '30px', textAlign: 'center' }}>{liveScore.away}</div>
+              </div>
+      
+              {/* SQUADRA OSPITE */}
+              <div style={{ width: '120px', textAlign: 'left' }}>
+                <div style={{ fontSize: '10px', color: theme.danger, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '2px' }}>Ospite</div>
+                <div style={{ fontSize: '16px', fontWeight: '900', color: 'white', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedMatch?.away}</div>
+              </div>
+            </>
+          )}
+
         </div>
 
   
@@ -3662,28 +3757,50 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 Analysis Core
               </div>
 
-              {/* GRID DI SIMMETRIA SPECCHIATA */}
+              {/* GRID DI SIMMETRIA SPECCHIATA (Con Stemmi) */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '125px 35px 125px' : '250px 50px 250px', // DUE BLOCCHI IDENTICI DA 250PX
+                gridTemplateColumns: isMobile ? '125px 35px 125px' : '250px 50px 250px', // DUE BLOCCHI IDENTICI
                 alignItems: 'center',
                 fontSize: isMobile ? '15px' : '25px',
                 fontWeight: '900',
                 color: '#fff',
                 lineHeight: '35px'
               }}>
-                {/* Casa - Allineata a destra verso il VS */}
+                
+                {/* 1. CASA - Allineata a destra verso il VS (Testo + Stemma) */}
                 <div style={{
-                  textAlign: isMobile ? 'right' : 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: isMobile ? 'flex-end' : 'center', // Mobile: spinge a destra | Desktop: centra
+                  gap: '8px', // Spazio tra nome e stemma
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  width: '100%'
                 }}>
+                  {/* Nome Squadra */}
+                  <span style={{ 
+                      whiteSpace: 'nowrap', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis' 
+                  }}>
+                    {selectedMatch?.home}
+                  </span>
 
-                  {selectedMatch?.home}
+                  {/* Stemma Casa */}
+                  <img 
+                      src={getStemmaLeagueUrl((selectedMatch as any)?.home_mongo_id)} 
+                      alt=""
+                      style={{ 
+                          width: isMobile ? '22px' : '32px', 
+                          height: isMobile ? '22px' : '32px', 
+                          objectFit: 'contain',
+                          flexShrink: 0 
+                      }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 </div>
 
-                {/* VS - IL CENTRO ASSOLUTO */}
+                {/* 2. VS - IL CENTRO ASSOLUTO */}
                 <div style={{
                   textAlign: 'center',
                   color: theme.textDim,
@@ -3694,14 +3811,36 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   vs
                 </div>
 
-                {/* Ospite - Allineata a sinistra verso il VS */}
+                {/* 3. OSPITE - Allineata a sinistra verso il VS (Stemma + Testo) */}
                 <div style={{
-                  textAlign: isMobile ? 'left' : 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: isMobile ? 'flex-start' : 'center', // Mobile: spinge a sinistra | Desktop: centra
+                  gap: '8px', // Spazio tra stemma e nome
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  width: '100%'
                 }}>
-                  {selectedMatch?.away}
+                  {/* Stemma Ospite */}
+                  <img 
+                      src={getStemmaLeagueUrl((selectedMatch as any)?.away_mongo_id)} 
+                      alt=""
+                      style={{ 
+                          width: isMobile ? '22px' : '32px', 
+                          height: isMobile ? '22px' : '32px', 
+                          objectFit: 'contain',
+                          flexShrink: 0 
+                      }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+
+                  {/* Nome Squadra */}
+                  <span style={{ 
+                      whiteSpace: 'nowrap', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis' 
+                  }}>
+                    {selectedMatch?.away}
+                  </span>
                 </div>
               </div>
             </div>
@@ -6527,7 +6666,40 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     </div>
     
       <div style={styles.mainContent}>
-
+      {/* --- MOSTRA ERRORE SE PRESENTE --- */}
+      {error && (
+              <div style={{
+                background: 'rgba(255, 68, 68, 0.1)', 
+                border: '1px solid #ff4444', 
+                color: '#ff4444', 
+                padding: '15px', 
+                borderRadius: '8px', 
+                margin: '20px', 
+                textAlign: 'center', 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                animation: 'fadeIn 0.3s ease'
+              }}>
+                <span>⚠️</span>
+                {error}
+                <button 
+                  onClick={() => setError(null)} 
+                  style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: '#ff4444', 
+                    cursor: 'pointer', 
+                    marginLeft: '10px',
+                    fontSize: '16px'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
         {/* OVERLAY MOBILE (quando menu aperto) */}
         {isMobile && (
           <div

@@ -132,19 +132,6 @@ const API_BASE = window.location.hostname === 'localhost'
 const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
 
 
-// 1. MANTENIAMO I TUOI CODICI ORIGINALI (Nomi completi in inglese)
-/*const COUNTRIES = [
-  { code: 'ALL', name: 'Tutto il Mondo', flag: '🌍' },
-  { code: 'Italy', name: 'Italia', flag: '🇮🇹' },
-  { code: 'England', name: 'Inghilterra', flag: '🇬🇧' },
-  { code: 'Spain', name: 'Spagna', flag: '🇪🇸' },
-  { code: 'Germany', name: 'Germania', flag: '🇩🇪' },
-  { code: 'France', name: 'Francia', flag: '🇫🇷' },
-  { code: 'Netherlands', name: 'Olanda', flag: '🇳🇱' },
-  { code: 'Portugal', name: 'Portogallo', flag: '🇵🇹' }
-];
-*/
-
 const LEAGUES_MAP: League[] = [
   // ITALIA
   { id: 'SERIE_A', name: 'Serie A', country: 'Italy' },
@@ -446,7 +433,8 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   // 1. TRUCCO: Leggiamo "league" (lo stato del menù) che è quello aggiornato.
   // Se "league" è vuoto o undefined, usiamo "activeLeague" come fallback.
   // (Nota: "league" è la variabile che usi nel value={...} del menù a tendina)
-  const currentLeague = (typeof league !== 'undefined' && league) ? league : activeLeague;
+  // // modificato per: includere le coppe nella determinazione della lega corrente
+const currentLeague = (typeof league !== 'undefined' && league) ? league : (activeLeague || selectedCup);
 
   // 2. Normalizziamo il testo (Maiuscolo e senza spazi ai lati)
   const input = currentLeague ? currentLeague.toUpperCase().trim() : '';
@@ -618,6 +606,10 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     expandedMatch: null as string | null,
     viewState: 'list',
     activeLeague: null as string | null,
+    
+    // // modificato per: tracciare la coppa selezionata nel sistema di navigazione
+    selectedCup: '', 
+    
     rounds: [] as any
   });
   
@@ -789,10 +781,12 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
       expandedMatch: expandedMatch,
       viewState: viewState, 
       activeLeague: activeLeague,
+      // // modificato per: risolvere errore TS2741 e sincronizzare la coppa
+      selectedCup: selectedCup,
       rounds: rounds
     };
   }, [showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, 
-      chatOpen, mobileMenuOpen, expandedMatch, viewState, activeLeague, rounds]);
+      chatOpen, mobileMenuOpen, expandedMatch, viewState, activeLeague, rounds, selectedCup]);
 
 
   // 3. MOTORE: SCRIVE L'URL (Rispetta il semaforo isBackNav)
@@ -821,16 +815,20 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     else if (expandedMatch) {
         if (window.location.hash !== '#detail') window.history.pushState(null, '', '#detail');
     }
-    // --- Livello 1: Lista Partite ---
-    else if (activeLeague) {
-        // Se siamo su #home o vuoto, andiamo a #list
-        if (window.location.hash === '' || window.location.hash === '#home') {
-             window.history.pushState(null, '', '#list');
-        }
-        // Se veniamo da stati profondi (#match, #detail), puliamo l'URL
-        else if (['#match', '#detail', '#menu', '#dialog'].includes(window.location.hash)) {
-             window.history.replaceState(null, '', '#list');
-        }
+   
+    // --- Livello 1: Lista Partite (AGGIORNATO) ---
+    else if (activeLeague || selectedCup) {
+      const targetHash = selectedCup ? '#cuplist' : '#list';
+
+      // 1. Se siamo in Home, spingiamo l'URL nuovo nella cronologia
+      if (window.location.hash === '' || window.location.hash === '#home') {
+          window.history.pushState(null, '', targetHash);
+      }
+      // 2. Se l'URL è sbagliato (es. siamo su #list ma serve #cuplist, o torniamo da un popup)
+      // // modificato per: sincronizzazione immediata hash quando si cambia tipo di competizione
+      else if (window.location.hash !== targetHash) {
+          window.history.replaceState(null, '', targetHash);
+      }
     }
     // --- Livello 0: Dashboard (#home) ---
     else {
@@ -838,7 +836,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
             window.history.replaceState(null, '', '#home');
         }
     }
-  }, [viewState, expandedMatch, activeLeague, mobileMenuOpen, showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, chatOpen]);
+  }, [viewState, expandedMatch, activeLeague, mobileMenuOpen, showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, chatOpen, selectedCup]);
 
 
   // 4. GESTIONE TASTO INDIETRO (Logica Aggressiva)
@@ -896,6 +894,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
           setViewState('list');
           setExpandedMatch(null);
           setActiveLeague(null);
+          setSelectedCup(''); // <--- AGGIUNGI QUESTO PER PULIRE LA COPPA
           setMobileMenuOpen(false);
       }
     };
@@ -2532,7 +2531,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   gap: '10px',
                   marginRight: '5px',
                   background: 'rgba(255,255,255,0.05)',
-                  padding: '15px 8px',
+                  padding: isMobile ? '20px 5px' : '15px 8px',
                   borderRadius: '10px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   flexShrink: 0
@@ -6103,17 +6102,22 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     );
   };
 
-  // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta) ---
+    // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta e Pulita) ---
   if (!activeLeague) {
     return (
       <DashboardHome
         onSelectLeague={(id) => {
-          // ✅ GESTIONE COPPE EUROPEE
+          // ✅ GESTIONE COPPE EUROPEE (UCL / UEL)
           if (id === 'UCL' || id === 'UEL') {
             setActiveLeague(id);
-            setSelectedCup(id);  // <-- AGGIUNGI QUESTA RIGA!
+            // // modificato per: attivazione specifica visualizzazione coppe
+            setSelectedCup(id);  
             return;
           }
+
+          // ---------------------------------------------------------
+          // GESTIONE CAMPIONATI NAZIONALI
+          // ---------------------------------------------------------
 
           // 1. Cerchiamo il campionato nella mappa costante
           const campionatoTrovato = LEAGUES_MAP.find(L => L.id === id);
@@ -6131,6 +6135,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           // 3. Impostiamo gli stati per forzare il caricamento dei dati
           setCountry(nazioneGiusta);
           setLeague(id);
+          
+          // // modificato per: pulizia obbligatoria dello stato coppa per evitare conflitti
+          setSelectedCup(''); 
 
           // 4. Reset degli stati di visualizzazione
           setViewState('list');
@@ -6524,6 +6531,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               } else {
                 setActiveLeague(null);
               }
+              
+              // Modifiche necessarie per pulire lo stato ed evitare il bug:
+              setExpandedMatch(null); // // modificato per: chiudere dettagli aperti
+              setViewState('list');   // // modificato per: tornare alla visualizzazione base
             }}
             style={{
               background: 'rgba(0, 240, 255, 0.1)',
@@ -6825,7 +6836,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               if (cup && cup !== "") {
                 setMobileMenuOpen(false);
-                // Qui poi collegheremo la navigazione a CupMatches
+                
+                // // modificato per: attivare la navigazione e pulire lo stato precedente
+                setActiveLeague(cup);   // Dice al Motore di cambiare URL
+                setExpandedMatch(null); // Chiude eventuali partite aperte
+                setViewState('list');   // Forza la visualizzazione della lista
               }
             }}
             style={{ 

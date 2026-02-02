@@ -26,7 +26,7 @@ const API_BASE = window.location.hostname === 'localhost'
 
 // --- MAPPA LEGA → CARTELLA STEMMI ---
 const LEAGUE_TO_FOLDER: Record<string, string> = {
-  'Serie A': 'Italy', 'Serie B': 'Italy', 'Serie C - Gir A': 'Italy', 'Serie C - Gir B': 'Italy', 'Serie C - Gir C': 'Italy',
+  'Serie A': 'Italy', 'Serie B': 'Italy', 'Serie C - Girone A': 'Italy', 'Serie C - Girone B': 'Italy', 'Serie C - Girone C': 'Italy',
   'Premier League': 'England', 'Championship': 'England',
   'La Liga': 'Spain', 'LaLiga 2': 'Spain',
   'Bundesliga': 'Germany', '2. Bundesliga': 'Germany',
@@ -46,11 +46,61 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'J1 League': 'Japan',
 };
 
+const LEAGUE_TO_LOGO: Record<string, string> = {
+    'Serie A': 'serie_a', 'Serie B': 'serie_b',
+    'Serie C - Girone A': 'serie_c', 'Serie C - Girone B': 'serie_c', 'Serie C - Girone C': 'serie_c',
+    'Premier League': 'premier_league', 'Championship': 'championship',
+    'La Liga': 'la_liga', 'LaLiga 2': 'la_liga_2',
+    'Bundesliga': 'bundesliga', '2. Bundesliga': 'bundesliga_2',
+    'Ligue 1': 'ligue_1', 'Ligue 2': 'ligue_2',
+    'Liga Portugal': 'liga_portugal', 'Primeira Liga': 'liga_portugal',
+    'Eredivisie': 'eredivisie',
+    'Scottish Prem.': 'scottish_premiership', 'Scottish Premiership': 'scottish_premiership',
+    'Allsvenskan': 'allsvenskan',
+    'Eliteserien': 'eliteserien',
+    'Superligaen': 'superligaen',
+    'Jupiler Pro': 'jupiler_pro_league', 'Jupiler Pro League': 'jupiler_pro_league',
+    'Süper Lig': 'super_lig', 'Super Lig': 'super_lig',
+    'League of Ireland': 'league_of_ireland',
+    'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao',
+    'Primera División': 'primera_division_arg',
+    'MLS': 'mls',
+    'J1 League': 'j1_league',
+  };
+  
+  const getLeagueLogoUrl = (league: string): string => {
+    const file = LEAGUE_TO_LOGO[league];
+    if (!file) return '';
+    return `https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fcampionati%2F${file}.png?alt=media`;
+  };
+
 const getStemmaUrl = (mongoId: string | undefined, league: string): string => {
   if (!mongoId) return '';
   const folder = LEAGUE_TO_FOLDER[league] || 'Altro';
   return `${STEMMI_BASE}squadre%2F${folder}%2F${mongoId}.png?alt=media`;
 };
+
+const LEAGUE_TO_COUNTRY_CODE: Record<string, string> = {
+    'Serie A': 'it', 'Serie B': 'it',
+    'Serie C - Girone A': 'it', 'Serie C - Girone B': 'it', 'Serie C - Girone C': 'it',
+    'Premier League': 'gb-eng', 'Championship': 'gb-eng',
+    'La Liga': 'es', 'LaLiga 2': 'es',
+    'Bundesliga': 'de', '2. Bundesliga': 'de',
+    'Ligue 1': 'fr', 'Ligue 2': 'fr',
+    'Liga Portugal': 'pt', 'Primeira Liga': 'pt',
+    'Eredivisie': 'nl',
+    'Scottish Prem.': 'gb-sct', 'Scottish Premiership': 'gb-sct',
+    'Allsvenskan': 'se',
+    'Eliteserien': 'no',
+    'Superligaen': 'dk',
+    'Jupiler Pro': 'be', 'Jupiler Pro League': 'be',
+    'Süper Lig': 'tr', 'Super Lig': 'tr',
+    'League of Ireland': 'ie',
+    'Brasileirão': 'br', 'Brasileirao': 'br',
+    'Primera División': 'ar',
+    'MLS': 'us',
+    'J1 League': 'jp',
+  };
 
 // --- INTERFACCE ---
 interface Prediction {
@@ -886,7 +936,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
                   bombs.forEach(b => { (groupedBombs[b.league] = groupedBombs[b.league] || []).push(b); });
                   return Object.entries(groupedBombs).map(([leagueName, lBombs]) => {
                     const key = `bomb-${leagueName}`;
-                    const isCollapsed = collapsedLeagues.has(key);
+                    const isCollapsed = !collapsedLeagues.has(key);
                     return (
                       <div key={key} style={{ marginBottom: '16px' }}>
                         <div
@@ -900,7 +950,9 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
                           onClick={() => toggleLeague(key)}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>{leagueName}</span>
+                            <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>{leagueName}</span>
                             <span style={{
                               fontSize: '10px', color: theme.textDim,
                               background: 'rgba(255,255,255,0.05)',
@@ -934,7 +986,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
                 </h2>
 
                 {Object.entries(groupedByLeague).map(([leagueName, preds]) => {
-                  const isCollapsed = collapsedLeagues.has(leagueName);
+                  const isCollapsed = !collapsedLeagues.has(leagueName);
                   return (
                   <div key={leagueName} style={{ marginBottom: '16px' }}>
                     {/* HEADER LEGA - CLICCABILE */}
@@ -949,7 +1001,9 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
                       onClick={() => toggleLeague(leagueName)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>{leagueName}</span>
+                        <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>{leagueName}</span>
                         <span style={{
                           fontSize: '10px', color: theme.textDim,
                           background: 'rgba(255,255,255,0.05)',

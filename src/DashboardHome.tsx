@@ -350,6 +350,54 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                 +15 Disponibili
               </div>
             </div>
+
+            {/* CARD PRONOSTICI DEL GIORNO */}
+            <div 
+              key="PREDICTIONS_CARD"
+              onClick={() => onSelectLeague('PREDICTIONS')}
+              style={{
+                background: 'linear-gradient(135deg, rgba(138,43,226,0.15), rgba(0,240,255,0.08))',
+                backdropFilter: 'blur(10px)',
+                border: '2px solid rgba(188,19,254,0.4)',
+                borderRadius: isMobile ? '16px' : '20px',
+                padding: isMobile ? '18px' : '25px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                height: isMobile ? '120px' : '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 10px 40px rgba(188,19,254,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>🔮</div>
+              <div style={{
+                fontSize: isMobile ? '18px' : '22px',
+                fontWeight: '800',
+                color: 'white',
+                marginBottom: '8px'
+              }}>
+                Pronostici del Giorno
+              </div>
+              <div style={{
+                fontSize: isMobile ? '12px' : '14px',
+                color: '#bc13fe',
+                fontWeight: 'bold'
+              }}>
+                AI Predictions
+              </div>
+            </div>
               
             {/* CARD COPPE EUROPEE - CON STEMMI UCL + UEL */}
             <div 

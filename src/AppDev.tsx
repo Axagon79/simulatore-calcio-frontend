@@ -8,6 +8,7 @@ import SimulationResultView from './components/SimulationResultView';
 import './styles/SimulationAnimation.css';
 import './styles/SimulationAnimation-responsive.css'; // NUOVO
 import { ArrowLeft, /* altre icone */ } from 'lucide-react'; //
+import DailyPredictions from './DailyPredictions';
 
 
 // --- INTERFACCE & TIPI ---
@@ -6102,6 +6103,16 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     );
   };
 
+
+  // --- BLOCCO 0: PAGINA PRONOSTICI ---
+  if (activeLeague === 'PREDICTIONS') {
+    return (
+      <DailyPredictions
+        onBack={() => setActiveLeague(null)}
+      />
+    );
+  }
+
     // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta e Pulita) ---
   if (!activeLeague) {
     return (
@@ -6112,6 +6123,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             setActiveLeague(id);
             // // modificato per: attivazione specifica visualizzazione coppe
             setSelectedCup(id);  
+            return;
+          }
+
+          // ✅ GESTIONE PRONOSTICI DEL GIORNO
+          if (id === 'PREDICTIONS') {
+            setActiveLeague('PREDICTIONS');
+            setSelectedCup('');
+            setLeague('');
             return;
           }
 
@@ -6858,6 +6877,44 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           </select>
 
           {/* --- FINE BLOCCO SELEZIONE --- */}
+
+
+          {/* --- SEZIONE STRUMENTI --- */}
+          <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>
+            STRUMENTI
+          </div>
+
+          <button
+            onClick={() => {
+              setActiveLeague('PREDICTIONS');
+              setSelectedCup('');
+              setLeague('');
+              setMobileMenuOpen(false);
+            }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: activeLeague === 'PREDICTIONS' 
+                ? 'rgba(188, 19, 254, 0.15)' 
+                : 'rgba(255,255,255,0.03)',
+              border: activeLeague === 'PREDICTIONS' 
+                ? `1px solid ${theme.purple}` 
+                : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '8px',
+              color: activeLeague === 'PREDICTIONS' ? theme.purple : theme.textDim,
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: activeLeague === 'PREDICTIONS' ? '700' : '500',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s'
+            }}
+          >
+            🔮 Pronostici del Giorno
+          </button>
+          {/* --- FINE SEZIONE STRUMENTI --- */}
 
           {/* --- BOX RIEPILOGO SELEZIONE --- */}
           {(league || selectedCup) && (

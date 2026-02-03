@@ -6918,7 +6918,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           {/* --- BOX RIEPILOGO SELEZIONE --- */}
           {(league || selectedCup) && (
             <div style={{
-              marginTop:isMobile ? '2px': '5px',
+              marginTop:isMobile ? '10px': '5px',
               padding: '10px',
               background: 'rgba(0, 240, 255, 0.05)',
               border: `1px solid ${selectedCup ? '#0066cc' : theme.cyan}`,
@@ -7137,12 +7137,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     onClick={() => setActiveLeague('PREDICTIONS')}
                     style={{ 
                       ...styles.card, 
-                      padding: '10px', 
+                      padding: isMobile ? '15px' : '10px',
                       position: 'relative', 
-                      marginBottom : '10px',
+                      marginBottom : isMobile ?  '20px': '10px',
                       overflow: 'hidden', 
                       cursor: 'pointer',
-                      top: isMobile ? '-30px': '-10px',
+                      top: isMobile ? '-5px': '-5px',
                       marginTop: idx > 0 ? '8px' : '0'
                     }}
                   >

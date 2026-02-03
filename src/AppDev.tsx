@@ -651,6 +651,9 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
 
   const [showMatchSummary, setShowMatchSummary] = useState(false);
 
+  // STATO PER PRONOSTICI SIDEBAR
+  const [sidebarPredictions, setSidebarPredictions] = useState<any[]>([]);
+
   // --- LOGICA DI CARICAMENTO NAZIONI DINAMICHE ---
   useEffect(() => {
   const fetchNations = async () => {
@@ -764,7 +767,24 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-
+// --- CARICA PRONOSTICI PER SIDEBAR ---
+useEffect(() => {
+  const fetchSidebarPredictions = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`${API_BASE}/simulation/daily-predictions?date=${today}`);
+      const data = await response.json();
+      if (data.success && data.predictions && data.predictions.length > 0) {
+        // Prendi 3 pronostici random
+        const shuffled = [...data.predictions].sort(() => 0.5 - Math.random());
+        setSidebarPredictions(shuffled.slice(0, 3));
+      }
+    } catch (err) {
+      console.error('Errore caricamento pronostici sidebar:', err);
+    }
+  };
+  fetchSidebarPredictions();
+}, []);
 
 // =========================================================================
   //       NAVIGAZIONE DEFINITIVA (FIX: isBackNav + TORNA A CASA)
@@ -6746,25 +6766,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           ...(isMobile ? styles.sidebarMobile : styles.sidebar),
           ...(isMobile && mobileMenuOpen ? styles.sidebarMobileOpen : {})
         }}>
-          {/* Bottone chiudi (solo mobile) */}
-          {isMobile && (
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                alignSelf: 'flex-end',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: 'white',
-                fontSize: '24px',
-                cursor: 'pointer',
-                padding: '5px 10px',
-                borderRadius: '6px',
-                marginBottom: '10px'
-              }}
-            >
-              ✕
-            </button>
-          )}
 
           {/* --- INIZIO BLOCCO SELEZIONE NAZIONE/CAMPIONATO --- */}
                     
@@ -6879,11 +6880,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           {/* --- FINE BLOCCO SELEZIONE --- */}
 
 
-          {/* --- SEZIONE STRUMENTI --- */}
-          <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>
-            STRUMENTI
-          </div>
-
           <button
             onClick={() => {
               setActiveLeague('PREDICTIONS');
@@ -6893,34 +6889,37 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             }}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '14px 12px',
               background: activeLeague === 'PREDICTIONS' 
-                ? 'rgba(188, 19, 254, 0.15)' 
-                : 'rgba(255,255,255,0.03)',
-              border: activeLeague === 'PREDICTIONS' 
-                ? `1px solid ${theme.purple}` 
-                : '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '8px',
-              color: activeLeague === 'PREDICTIONS' ? theme.purple : theme.textDim,
+                ? `linear-gradient(135deg, ${theme.purple}, ${theme.cyan})` 
+                : `linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))`,
+              border: 'revert',
+              borderRadius: '10px',
+              color: 'white',
               cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: activeLeague === 'PREDICTIONS' ? '700' : '500',
+              fontSize: '14px',
+              fontWeight: '700',
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
               gap: '8px',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(188, 19, 254, 0.3)'
             }}
           >
-            🔮 Pronostici del Giorno
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🔮 <span style={{ marginLeft: '4px' }}>Pronostici del Giorno</span>
+            </span>
+            <span style={{ fontSize: '18px',marginLeft: '20px', fontWeight: 'bold' }}>›</span>
           </button>
           {/* --- FINE SEZIONE STRUMENTI --- */}
 
           {/* --- BOX RIEPILOGO SELEZIONE --- */}
           {(league || selectedCup) && (
             <div style={{
-              marginTop: '20px',
-              padding: '15px',
+              marginTop:isMobile ? '2px': '5px',
+              padding: '10px',
               background: 'rgba(0, 240, 255, 0.05)',
               border: `1px solid ${selectedCup ? '#0066cc' : theme.cyan}`,
               borderRadius: '12px',
@@ -7123,22 +7122,45 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               </div>
           )}
 
-          {/* Widget Highlights */}
-          <div style={{ marginTop: 'auto' }}>
-            <div style={{ fontSize: '12px', color: theme.textDim, marginBottom: '10px' }}>HIGHLIGHTS</div>
-            <div style={{ ...styles.card, padding: '15px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-              <div style={getWidgetGlow(theme.success)} />
-              <div style={{ fontSize: '11px', color: theme.textDim }}>BEST BET</div>
-              <div style={{ fontWeight: 'bold', marginTop: '5px' }}>Napoli vs Roma</div>
-              <div style={{ color: theme.success, fontSize: '12px' }}>1 + Over 1.5</div>
+          {/* Widget Pronostici del Giorno */}
+          {sidebarPredictions.length > 0 && (
+            <div style={{ marginTop: 'auto' }}>
+              {sidebarPredictions.map((pred, idx) => {
+                const mainPronostico = pred.pronostici?.[0];
+                const stars = mainPronostico?.stars || 0;
+                const confidence = mainPronostico?.confidence || 0;
+                const glowColor = confidence >= 70 ? theme.success : confidence >= 50 ? theme.cyan : theme.warning;
+                
+                return (
+                  <div 
+                    key={idx}
+                    onClick={() => setActiveLeague('PREDICTIONS')}
+                    style={{ 
+                      ...styles.card, 
+                      padding: '10px', 
+                      position: 'relative', 
+                      marginBottom : '10px',
+                      overflow: 'hidden', 
+                      cursor: 'pointer',
+                      top: isMobile ? '-30px': '-10px',
+                      marginTop: idx > 0 ? '8px' : '0'
+                    }}
+                  >
+                    <div style={getWidgetGlow(glowColor)} />
+                    <div style={{ fontSize: '10px', color: theme.textDim, marginBottom: '4px' }}>
+                      {pred.league} • {'⭐'.repeat(Math.floor(stars))}
+                    </div>
+                    <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                      {pred.home} vs {pred.away}
+                    </div>
+                    <div style={{ color: glowColor, fontSize: '12px', marginTop: '4px' }}>
+                      {mainPronostico?.pronostico || '-'}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div style={{ ...styles.card, padding: '15px', position: 'relative', overflow: 'hidden', cursor: 'pointer', marginTop: '10px' }}>
-              <div style={getWidgetGlow(theme.danger)} />
-              <div style={{ fontSize: '11px', color: theme.textDim }}>RISCHIO ALTO</div>
-              <div style={{ fontWeight: 'bold', marginTop: '5px' }}>Lecce vs Verona</div>
-              <div style={{ color: theme.danger, fontSize: '12px' }}>Possibile X</div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* MAIN ARENA */}

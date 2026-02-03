@@ -372,7 +372,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
     const frase_random = frasi_equilibrio[Math.floor(Math.random() * frasi_equilibrio.length)];
     
     return (
-      <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+      <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: label === 'Fattore Campo' ? 'none' : '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
         {/* Linea verticale divisoria - solo desktop */}
         {!isMobile && (
           <div style={{
@@ -745,7 +745,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           )}
             {pred.gol_dettaglio && pred.confidence_gol > 0 && (
             <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.purple, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              {/* Divisore tra Segno e Gol */}
+              <div style={{ 
+                height: '5px', 
+                background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
+                marginBottom: '20px',
+                marginTop: '-10px'
+              }} />
+              <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 ⚽ Dettaglio Gol
               </div>
               {Object.entries(pred.gol_dettaglio).map(([key, val]) => (

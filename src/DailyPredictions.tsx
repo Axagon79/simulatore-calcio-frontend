@@ -373,20 +373,34 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
     
     return (
       <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
-        {/* Linea verticale divisoria */}
-        <div style={{
-          position: 'absolute',
-          right: '105px',
-          top: '25px',
-          bottom: '12px',
-          width: '1px',
-          background: 'rgba(255,255,255,0.1)'
-        }} />
-        {/* Titolo metrica */}
-        <div style={{ marginBottom: '8px' }}>
+        {/* Linea verticale divisoria - solo desktop */}
+        {!isMobile && (
+          <div style={{
+            position: 'absolute',
+            right: '105px',
+            top: '25px',
+            bottom: '12px',
+            width: '1px',
+            background: 'rgba(255,255,255,0.1)'
+          }} />
+        )}
+        {/* Titolo metrica + Vantaggio su mobile */}
+        <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '15px', fontWeight: 'bold', color: theme.text }}>
             {label}
           </span>
+          {isMobile && (
+            <span style={{ 
+              fontSize: '11px', 
+              fontWeight: '800',
+              color: favored ? theme.success : theme.textDim,
+              background: favored ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.05)',
+              padding: '2px 6px',
+              borderRadius: '4px'
+            }}>
+              {favored ? `+${diffPct.toFixed(0)}% ${favored}` : frase_random}
+            </span>
+          )}
         </div>
         
         {/* Barra Affidabilità */}
@@ -416,6 +430,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
           <span style={{ fontSize: '14px', color: theme.text, fontWeight: 'bold', minWidth: '35px' }}>{typeof awayValue === 'number' ? awayValue.toFixed(1) : awayValue}</span>
         </div>
         {/* Vantaggio posizionato a destra */}
+        {!isMobile && (
         <span style={{ 
           position: 'absolute',
           right: '0',
@@ -432,9 +447,11 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
         }}>
           {favored ? `+${diffPct.toFixed(0)}% ${favored}` : frase_random}
         </span>
-              </div>
-            );
-          };
+               )}
+          </div>
+          )}
+           
+        
 
 // --- RENDER DETTAGLIO GOL CON DIREZIONE ---
 const renderGolDetailBar = (value: number, label: string, direction?: string) => {
@@ -460,21 +477,36 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   
   return (
     <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
-      {/* Linea verticale divisoria */}
-      <div style={{
-        position: 'absolute',
-        right: '105px',
-        top: '5px',
-        bottom: '12px',
-        width: '1px',
-        background: 'rgba(255,255,255,0.1)'
-      }} />
+     
+      {/* Linea verticale divisoria - solo desktop */}
+      {!isMobile && (
+        <div style={{
+          position: 'absolute',
+          right: '105px',
+          top: '5px',
+          bottom: '12px',
+          width: '1px',
+          background: 'rgba(255,255,255,0.1)'
+        }} />
+      )}
       
-      {/* Titolo metrica */}
-      <div style={{ marginBottom: '8px' }}>
+      {/* Titolo metrica + Direzione su mobile */}
+      <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '15px', fontWeight: 'bold', color: theme.text }}>
           {label}
         </span>
+        {isMobile && (
+        <span style={{ 
+          fontSize: '11px', 
+          fontWeight: '800',
+          color: dirColor,
+          background: 'rgba(255,255,255,0.05)',
+          padding: '2px 6px',
+          borderRadius: '4px'
+        }}>
+          {dirIcon || 'Neutro'}
+        </span>
+      )}
       </div>
       
       {/* Barra valore */}
@@ -487,6 +519,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       </div>
       
       {/* Direzione posizionata a destra */}
+      {!isMobile && (
       <span style={{ 
         position: 'absolute',
         right: '0',
@@ -503,6 +536,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }}>
         {dirIcon || 'Neutro'}
       </span>
+      )}
     </div>
   );
 };

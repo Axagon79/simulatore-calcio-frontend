@@ -62,7 +62,7 @@ const LEAGUE_TO_LOGO: Record<string, string> = {
     'Jupiler Pro': 'jupiler_pro_league', 'Jupiler Pro League': 'jupiler_pro_league',
     'Süper Lig': 'super_lig', 'Super Lig': 'super_lig',
     'League of Ireland': 'league_of_ireland',
-    'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao',
+    'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao', 'Brasileirão Serie A': 'brasileirao', 'Brasileirao Serie A': 'brasileirao',
     'Primera División': 'primera_division_arg',
     'MLS': 'mls',
     'J1 League': 'j1_league',
@@ -96,7 +96,7 @@ const LEAGUE_TO_COUNTRY_CODE: Record<string, string> = {
     'Jupiler Pro': 'be', 'Jupiler Pro League': 'be',
     'Süper Lig': 'tr', 'Super Lig': 'tr',
     'League of Ireland': 'ie',
-    'Brasileirão': 'br', 'Brasileirao': 'br',
+    'Brasileirão': 'br', 'Brasileirao': 'br','Brasileirão Serie A': 'br', 'Brasileirao Serie A': 'br',
     'Primera División': 'ar',
     'MLS': 'us',
     'J1 League': 'jp',
@@ -122,6 +122,16 @@ interface Prediction {
   segno_dettaglio: Record<string, number>;
   gol_dettaglio: Record<string, number>;
   gol_directions?: Record<string, string>;
+  segno_dettaglio_raw?: {
+    bvs?: { home: number; away: number; scala: string };
+    quote?: { home: number; away: number; scala: string };
+    lucifero?: { home: number; away: number; scala: string };
+    affidabilita?: { home: string; away: string; home_num: number; away_num: number; scala: string };
+    dna?: { home: number; away: number; scala: string };
+    motivazioni?: { home: number; away: number; scala: string };
+    h2h?: { home: number; away: number; matches: number; scala: string };
+    campo?: { home: number; away: number; scala: string };
+  };
   expected_total_goals?: number;
   league_avg_goals?: number;
   // Risultati reali (dal backend)
@@ -192,8 +202,14 @@ const shiftDate = (dateStr: string, days: number): string => {
 
 // Etichette leggibili per i dettagli
 const SEGNO_LABELS: Record<string, string> = {
-  bvs: 'BVS Index', quote: 'Quote', lucifero: 'Lucifero', affidabilita: 'Affidabilità',
-  dna: 'DNA Tecnico', motivazioni: 'Motivazioni', h2h: 'H2H', campo: 'Fattore Campo'
+  bvs: 'MAP Index',
+  quote: 'Quote',
+  lucifero: 'Forma Recente',
+  affidabilita: 'Coerenza Squadre',
+  dna: 'DNA Tecnico',
+  motivazioni: 'Motivazioni',
+  h2h: 'Scontri Diretti',
+  campo: 'Fattore Campo'
 };
 const GOL_LABELS: Record<string, string> = {
   media_gol: 'Media Gol', att_vs_def: 'Att vs Def', xg: 'xG',
@@ -295,6 +311,203 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
       </div>
     );
   };
+
+  // --- RENDER DETTAGLIO CON CONFRONTO SQUADRE ---
+  const renderDetailBarWithTeams = (
+    label: string,
+    homeValue: number | string,
+    awayValue: number | string,
+    affidabilita: number,
+    scala: string,
+    homeName: string,
+    awayName: string
+  ) => {
+    // Determina i valori numerici per le barre
+    let homeNum = typeof homeValue === 'number' ? homeValue : 0;
+    let awayNum = typeof awayValue === 'number' ? awayValue : 0;
+    
+    // Per affidabilità lettera (A=10, B=7, C=4, D=1)
+    if (typeof homeValue === 'string' && scala === 'A-D') {
+      const letterToNum: Record<string, number> = { 'A': 10, 'B': 7, 'C': 4, 'D': 1 };
+      homeNum = letterToNum[homeValue] || 5;
+      awayNum = letterToNum[awayValue as string] || 5;
+    }
+    
+    // Calcola il max per la scala
+    let maxVal = 100;
+    if (scala === '/25') maxVal = 25;
+    else if (scala === '/15') maxVal = 15;
+    else if (scala === '/10') maxVal = 10;
+    else if (scala === '/7') maxVal = 7;
+    else if (scala === '±7') maxVal = 7;
+    else if (scala === 'A-D') maxVal = 10;
+    
+    // Percentuali per le barre
+    const homePct = Math.min(100, Math.max(0, (Math.abs(homeNum) / maxVal) * 100));
+    const awayPct = Math.min(100, Math.max(0, (Math.abs(awayNum) / maxVal) * 100));
+    
+    // Calcola chi è favorito e di quanto
+    let diffPct = 0;
+    let favored = '';
+    if (scala === '%') {
+      diffPct = Math.abs(homeNum - awayNum);
+      favored = homeNum > awayNum ? homeName : awayNum > homeNum ? awayName : '';
+    } else if (scala === '±7') {
+      // BVS: valore positivo = favorisce quella squadra
+      diffPct = Math.abs(homeNum - awayNum) / 14 * 100;
+      favored = homeNum > awayNum ? homeName : awayNum > homeNum ? awayName : '';
+    } else {
+      const total = homeNum + awayNum;
+      if (total > 0) {
+        diffPct = Math.abs(homeNum - awayNum) / total * 100;
+      }
+      favored = homeNum > awayNum ? homeName : awayNum > homeNum ? awayName : '';
+    }
+    
+    // Colore barra affidabilità
+    const affColor = affidabilita >= 70 ? theme.success : affidabilita >= 50 ? theme.cyan : affidabilita >= 35 ? theme.warning : theme.danger;
+    
+    // Frasi per equilibrio
+    const frasi_equilibrio = ['Equilibrio', 'Alla pari', 'Nessun vantaggio', 'Situazione bilanciata', 'Pari condizioni'];
+    const frase_random = frasi_equilibrio[Math.floor(Math.random() * frasi_equilibrio.length)];
+    
+    return (
+      <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+        {/* Linea verticale divisoria */}
+        <div style={{
+          position: 'absolute',
+          right: '105px',
+          top: '25px',
+          bottom: '12px',
+          width: '1px',
+          background: 'rgba(255,255,255,0.1)'
+        }} />
+        {/* Titolo metrica */}
+        <div style={{ marginBottom: '8px' }}>
+          <span style={{ fontSize: '15px', fontWeight: 'bold', color: theme.text }}>
+            {label}
+          </span>
+        </div>
+        
+        {/* Barra Affidabilità */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+        <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Affidabilità:</span>
+          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
+            <div style={{ height: '100%', width: `${affidabilita}%`, background: affColor, borderRadius: '2px' }} />
+          </div>
+          <span style={{ fontSize: '14px', color: affColor, fontWeight: 'bold', minWidth: '35px' }}>{affidabilita.toFixed(1)}</span>
+        </div>
+        
+        {/* Barra squadra casa */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{homeName}:</span>
+          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px' }}>
+            <div style={{ height: '100%', width: `${homePct}%`, background: theme.cyan, borderRadius: '2px' }} />
+          </div>
+          <span style={{ fontSize: '14px', color: theme.text, fontWeight: 'bold', minWidth: '35px' }}>{typeof homeValue === 'number' ? homeValue.toFixed(1) : homeValue}</span>
+          </div>
+        
+        {/* Barra squadra trasferta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{awayName}:</span>
+          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
+            <div style={{ height: '100%', width: `${awayPct}%`, background: theme.purple, borderRadius: '2px' }} />
+          </div>
+          <span style={{ fontSize: '14px', color: theme.text, fontWeight: 'bold', minWidth: '35px' }}>{typeof awayValue === 'number' ? awayValue.toFixed(1) : awayValue}</span>
+        </div>
+        {/* Vantaggio posizionato a destra */}
+        <span style={{ 
+          position: 'absolute',
+          right: '0',
+          top: '55%',
+          transform: 'translateY(-50%)',
+          fontSize: '13px', 
+          fontWeight: '800',
+          color: 'rgb(48 203 9)',
+          background: 'rgb(72 67 64 / 15%)',
+          padding: favored ? '30px 0px' : '0',
+          borderRadius: '4px',
+          width: '100px',
+          textAlign: 'center'
+        }}>
+          {favored ? `+${diffPct.toFixed(0)}% ${favored}` : frase_random}
+        </span>
+              </div>
+            );
+          };
+
+// --- RENDER DETTAGLIO GOL CON DIREZIONE ---
+const renderGolDetailBar = (value: number, label: string, direction?: string) => {
+  const pct = Math.min(100, Math.max(0, value));
+  const color = value >= 70 ? theme.success : value >= 50 ? theme.cyan : value >= 35 ? theme.warning : theme.danger;
+  
+  // Icona direzione
+  let dirIcon = '';
+  let dirColor = theme.textDim;
+  if (direction === 'over') {
+    dirIcon = '▲ Over';
+    dirColor = theme.success;
+  } else if (direction === 'under') {
+    dirIcon = '▼ Under';
+    dirColor = theme.purple;
+  } else if (direction === 'goal') {
+    dirIcon = '⚽ Goal';
+    dirColor = theme.success;
+  } else if (direction === 'nogoal') {
+    dirIcon = '🚫 NoGoal';
+    dirColor = theme.warning;
+  }
+  
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+      {/* Linea verticale divisoria */}
+      <div style={{
+        position: 'absolute',
+        right: '105px',
+        top: '5px',
+        bottom: '12px',
+        width: '1px',
+        background: 'rgba(255,255,255,0.1)'
+      }} />
+      
+      {/* Titolo metrica */}
+      <div style={{ marginBottom: '8px' }}>
+        <span style={{ fontSize: '15px', fontWeight: 'bold', color: theme.text }}>
+          {label}
+        </span>
+      </div>
+      
+      {/* Barra valore */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Indice:</span>
+        <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px' }} />
+        </div>
+        <span style={{ fontSize: '14px', color: color, fontWeight: 'bold', minWidth: '35px' }}>{value.toFixed(1)}</span>
+      </div>
+      
+      {/* Direzione posizionata a destra */}
+      <span style={{ 
+        position: 'absolute',
+        right: '0',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        fontSize: '13px', 
+        fontWeight: '800',
+        color: dirColor,
+        background: direction ? 'rgba(255,255,255,0.05)' : 'transparent',
+        padding: direction ? '20px 0px' : '0',
+        borderRadius: '4px',
+        width: '100px',
+        textAlign: 'center'
+      }}>
+        {dirIcon || 'Neutro'}
+      </span>
+    </div>
+  );
+};
+
+  
 
   const toggleLeague = (leagueName: string) => {
     setCollapsedLeagues(prev => {
@@ -461,23 +674,51 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
             animation: 'fadeIn 0.3s ease'
           }}>
             {pred.segno_dettaglio && (
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  📊 Dettaglio Segno
-                </div>
-                {Object.entries(pred.segno_dettaglio).map(([key, val]) => (
-                  renderDetailBar(val, SEGNO_LABELS[key] || key)
-                ))}
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                📊 Dettaglio Segno
               </div>
-            )}
+              {pred.segno_dettaglio_raw ? (
+                // Nuovo layout con confronto squadre
+                Object.entries(pred.segno_dettaglio).map(([key, affidabilita]) => {
+                  const raw = pred.segno_dettaglio_raw?.[key as keyof typeof pred.segno_dettaglio_raw];
+                  if (!raw) return <div key={key}>{renderDetailBar(affidabilita, SEGNO_LABELS[key] || key)}</div>;
+                  
+                  const homeVal = key === 'affidabilita' ? (raw as any).home_num : raw.home;
+                  const awayVal = key === 'affidabilita' ? (raw as any).away_num : raw.away;
+                  
+                  return (
+                    <div key={key}>
+                      {renderDetailBarWithTeams(
+                        SEGNO_LABELS[key] || key,
+                        homeVal,
+                        awayVal,
+                        affidabilita,
+                        raw.scala,
+                        pred.home,
+                        pred.away
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                // Fallback vecchio layout
+                Object.entries(pred.segno_dettaglio).map(([key, val]) => (
+                  <div key={key}>{renderDetailBar(val, SEGNO_LABELS[key] || key)}</div>
+                ))
+              )}
+            </div>
+          )}
             {pred.gol_dettaglio && pred.confidence_gol > 0 && (
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.purple, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  ⚽ Dettaglio Gol
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.purple, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                ⚽ Dettaglio Gol
+              </div>
+              {Object.entries(pred.gol_dettaglio).map(([key, val]) => (
+                <div key={key}>
+                  {renderGolDetailBar(val, GOL_LABELS[key] || key, pred.gol_directions?.[key])}
                 </div>
-                {Object.entries(pred.gol_dettaglio).map(([key, val]) => (
-                  renderDetailBar(val, GOL_LABELS[key] || key)
-                ))}
+              ))}
                 {pred.expected_total_goals && (
                   <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '10px' }}>
                     <span style={{ color: theme.textDim }}>Gol attesi: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.expected_total_goals.toFixed(1)}</span></span>
@@ -697,11 +938,13 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <h1 style={{
             fontSize: isMobile ? '28px' : '40px', fontWeight: '900', margin: '0 0 8px 0',
-            background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             letterSpacing: '-1px'
           }}>
-            🔮 Pronostici del Giorno
+            <span>🔮</span>
+            <span style={{
+              background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+            }}> Pronostici del Giorno</span>
           </h1>
           <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
             Analisi automatica basata su AI multi-indicatore

@@ -1947,7 +1947,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         {(match as any).h2h_data?.home_rank && (
                           <span className="badge-classifica home">
                             <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
-                            {(match as any).h2h_data.home_points && (
+                            {(match as any).h2h_data.home_points !== undefined && (
                               <span className="badge-points">{(match as any).h2h_data.home_points}pt</span>
                             )}
                           </span>
@@ -2015,7 +2015,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                         {(match as any).h2h_data?.away_rank && (
                           <span className="badge-classifica away">
                             <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
-                            {(match as any).h2h_data.away_points && (
+                            {(match as any).h2h_data.away_points !== undefined && (
                               <span className="badge-points">{(match as any).h2h_data.away_points}pt</span>
                             )}
                           </span>
@@ -2195,7 +2195,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                           transform: 'translateY(-50%)'
                         }}>
                           <span className="badge-rank">{(match as any).h2h_data.home_rank}°</span>
-                          {(match as any).h2h_data.home_points && (
+                          {(match as any).h2h_data.home_points !== undefined && (
                             <span className="badge-points">{(match as any).h2h_data.home_points}pt</span>
                           )}
                         </span>
@@ -2271,7 +2271,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                           transform: 'translateY(-50%)'
                         }}>
                           <span className="badge-rank">{(match as any).h2h_data.away_rank}°</span>
-                          {(match as any).h2h_data.away_points && (
+                          {(match as any).h2h_data.away_points !== undefined && (
                             <span className="badge-points">{(match as any).h2h_data.away_points}pt</span>
                           )}
                         </span>

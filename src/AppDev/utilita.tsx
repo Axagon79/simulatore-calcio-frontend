@@ -1,4 +1,3 @@
-import React from 'react';
 import { STEMMI_BASE } from './costanti';
 
 // --- Funzione Helper Stemmi ---

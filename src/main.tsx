@@ -8,7 +8,9 @@ import TuningMixer from './pages/TuningMixer';
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <Routes>
-      <Route path="/mixer" element={<TuningMixer />} />
+      {import.meta.env.DEV && (
+        <Route path="/mixer" element={<TuningMixer />} />
+      )}
       <Route path="/*" element={<AppDev />} />
     </Routes>
   </BrowserRouter>

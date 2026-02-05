@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+﻿import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import DashboardHome from './DashboardHome';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
@@ -22,296 +22,59 @@ import ElementoPartita from './AppDev/ElementoPartita';
 import PopupRiepilogo from './AppDev/PopupRiepilogo';
 import ImpostazioniSimulazione from './AppDev/ImpostazioniSimulazione';
 import VistaPrePartita from './AppDev/VistaPrePartita';
+import AnimazionePartita from './AppDev/AnimazionePartita';
 
 // --- INTERFACCE & TIPI ---
 import type {
-  League,
-  RoundInfo,
   Match,
   SimulationResult,
   ChatMessage
 } from './types';
 
-// --- CONFIGURAZIONE ---
+// --- COSTANTI (estratte) ---
+import {
+  AI_ENGINE_URL,
+  LEAGUES_MAP,
+  STEMMI_CAMPIONATI,
+  STEMMI_COPPE,
+  theme,
+  SPEED_PRESETS
+} from './AppDev/costanti';
 
-// 1. API Node.js (Questa puoi lasciarla così se l'emulatore Node funziona, o forzala al cloud anche lei)
-const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
-  : 'https://api-6b34yfzjia-uc.a.run.app';
+// --- STILI (estratti) ---
+import { styles, getWidgetGlow } from './AppDev/stili';
 
-// 2. NUOVA API PYTHON AI -> FORZIAMO IL CLOUD!
-// Usiamo sempre il link di produzione perché l'emulatore Python locale è rognoso da configurare con tutte le librerie.
-const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
+// --- UTILITY (estratte) ---
+import {
+  getStemmaLeagueUrl as _getStemmaLeagueUrl,
+  FORMATION_MAPPING,
+  normalizeModulo,
+  getFormationPositions,
+  JerseySVG
+} from './AppDev/utilita';
+import type { FormationPositions } from './AppDev/utilita';
 
-
-const LEAGUES_MAP: League[] = [
-  // ITALIA
-  { id: 'SERIE_A', name: 'Serie A', country: 'Italy' },
-  { id: 'SERIE_B', name: 'Serie B', country: 'Italy' },
-  { id: 'SERIE_C_GIRONE_A', name: 'Serie C - Gir A', country: 'Italy' },
-  { id: 'SERIE_C_GIRONE_B', name: 'Serie C - Gir B', country: 'Italy' },
-  { id: 'SERIE_C_GIRONE_C', name: 'Serie C - Gir C', country: 'Italy' },
-  
-  // EUROPA TOP
-  { id: 'PREMIER_LEAGUE', name: 'Premier League', country: 'England' },
-  { id: 'LA_LIGA', name: 'La Liga', country: 'Spain' },
-  { id: 'BUNDESLIGA', name: 'Bundesliga', country: 'Germany' },
-  { id: 'LIGUE_1', name: 'Ligue 1', country: 'France' },
-  { id: 'EREDIVISIE', name: 'Eredivisie', country: 'Netherlands' },
-  { id: 'LIGA_PORTUGAL', name: 'Liga Portugal', country: 'Portugal' },
-  
-  // 🆕 EUROPA SERIE B
-  { id: 'CHAMPIONSHIP', name: 'Championship', country: 'England' },
-  { id: 'LA_LIGA_2', name: 'LaLiga 2', country: 'Spain' },
-  { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: 'Germany' },
-  { id: 'LIGUE_2', name: 'Ligue 2', country: 'France' },
-  
-  // 🆕 EUROPA NORDICI + EXTRA
-  { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Prem.', country: 'Scotland' },
-  { id: 'ALLSVENSKAN', name: 'Allsvenskan', country: 'Sweden' },
-  { id: 'ELITESERIEN', name: 'Eliteserien', country: 'Norway' },
-  { id: 'SUPERLIGAEN', name: 'Superligaen', country: 'Denmark' },
-  { id: 'JUPILER_PRO_LEAGUE', name: 'Jupiler Pro', country: 'Belgium' },
-  { id: 'SUPER_LIG', name: 'Süper Lig', country: 'Turkey' },
-  { id: 'LEAGUE_OF_IRELAND', name: 'League of Ireland', country: 'Ireland' },
-  
-  // 🆕 AMERICHE
-  { id: 'BRASILEIRAO', name: 'Brasileirão', country: 'Brazil' },
-  { id: 'PRIMERA_DIVISION_ARG', name: 'Primera División', country: 'Argentina' },
-  { id: 'MLS', name: 'MLS', country: 'USA' },
-  
-  // 🆕 ASIA
-  { id: 'J1_LEAGUE', name: 'J1 League', country: 'Japan' },
-];
-
-
-// --- URL BASE STEMMI ---
-const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
-
-const STEMMI_CAMPIONATI: Record<string, string> = {
-  'SERIE_A': `${STEMMI_BASE}campionati%2Fserie_a.png?alt=media`,
-  'SERIE_B': `${STEMMI_BASE}campionati%2Fserie_b.png?alt=media`,
-  'SERIE_C_A': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
-  'SERIE_C_B': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
-  'SERIE_C_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
-  'PREMIER_LEAGUE': `${STEMMI_BASE}campionati%2Fpremier_league.png?alt=media`,
-  'LA_LIGA': `${STEMMI_BASE}campionati%2Fla_liga.png?alt=media`,
-  'BUNDESLIGA': `${STEMMI_BASE}campionati%2Fbundesliga.png?alt=media`,
-  'LIGUE_1': `${STEMMI_BASE}campionati%2Fligue_1.png?alt=media`,
-  'LIGA_PORTUGAL': `${STEMMI_BASE}campionati%2Fliga_portugal.png?alt=media`,
-  'CHAMPIONSHIP': `${STEMMI_BASE}campionati%2Fchampionship.png?alt=media`,
-  'LA_LIGA_2': `${STEMMI_BASE}campionati%2Fla_liga_2.png?alt=media`,
-  'BUNDESLIGA_2': `${STEMMI_BASE}campionati%2Fbundesliga_2.png?alt=media`,
-  'LIGUE_2': `${STEMMI_BASE}campionati%2Fligue_2.png?alt=media`,
-  'EREDIVISIE': `${STEMMI_BASE}campionati%2Feredivisie.png?alt=media`,
-  'SCOTTISH_PREMIERSHIP': `${STEMMI_BASE}campionati%2Fscottish_premiership.png?alt=media`,
-  'ALLSVENSKAN': `${STEMMI_BASE}campionati%2Fallsvenskan.png?alt=media`,
-  'ELITESERIEN': `${STEMMI_BASE}campionati%2Feliteserien.png?alt=media`,
-  'SUPERLIGAEN': `${STEMMI_BASE}campionati%2Fsuperligaen.png?alt=media`,
-  'JUPILER_PRO_LEAGUE': `${STEMMI_BASE}campionati%2Fjupiler_pro_league.png?alt=media`,
-  'SUPER_LIG': `${STEMMI_BASE}campionati%2Fsuper_lig.png?alt=media`,
-  'LEAGUE_OF_IRELAND': `${STEMMI_BASE}campionati%2Fleague_of_ireland.png?alt=media`,
-  'BRASILEIRAO': `${STEMMI_BASE}campionati%2Fbrasileirao.png?alt=media`,
-  'PRIMERA_DIVISION_ARG': `${STEMMI_BASE}campionati%2Fprimera_division_arg.png?alt=media`,
-  'MLS': `${STEMMI_BASE}campionati%2Fmls.png?alt=media`,
-  'J1_LEAGUE': `${STEMMI_BASE}campionati%2Fj1_league.png?alt=media`,
-};
-
-const STEMMI_COPPE: Record<string, string> = {
-  'UCL': `${STEMMI_BASE}coppe%2Fucl.png?alt=media`,
-  'UEL': `${STEMMI_BASE}coppe%2Fuel.png?alt=media`,
-};
-
-// --- TEMA NEON / SCI-FI ---
-const theme = {
-  bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.85)',
-  panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
-  cyan: '#00f0ff',
-  purple: '#bc13fe',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6',
-  warning: '#ff9f43',
-  font: '"Inter", "Segoe UI", sans-serif'
-};
-
-// --- HELPER STILI ---
-const getWidgetGlow = (color: string): React.CSSProperties => ({
-  position: 'absolute', top: 0, left: 0, width: '4px', height: '100%',
-  backgroundColor: color, boxShadow: `0 0 15px ${color}`
-});
-
-// --- STILI CSS-IN-JS ---
-const styles: Record<string, React.CSSProperties> = {
-  wrapper: {
-    width: '100vw', minHeight: '100vh', backgroundColor: theme.bg,
-    color: theme.text, fontFamily: theme.font,
-    backgroundImage: `radial-gradient(circle at 50% 10%, #1a1c4b 0%, ${theme.bg} 60%)`,
-    display: 'flex', flexDirection: 'column', overflow: 'hidden'
-  },
-  topBar: {
-    height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '0 25px', borderBottom: theme.panelBorder, backdropFilter: 'blur(10px)', zIndex: 20
-  },
-  logo: {
-    fontSize: '22px', fontWeight: '900',
-    background: `linear-gradient(to right, ${theme.cyan}, ${theme.purple})`,
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '2px'
-  },
-  mainContent: {
-    display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden'
-  },
-
-  // SIDEBAR NAVIGAZIONE
-  sidebar: {
-    width: '280px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px',
-    borderRight: theme.panelBorder, background: 'rgba(0,0,0,0.3)', overflowY: 'auto',
-    transition: 'transform 0.3s ease'
-  },
-  sidebarMobile: {
-    position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px',
-    background: 'rgba(5, 7, 10, 0.98)', backdropFilter: 'blur(20px)',
-    zIndex: 1000, padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px',
-    overflowY: 'auto', transform: 'translateX(-100%)', transition: 'transform 0.3s ease',
-    boxShadow: '4px 0 20px rgba(0,0,0,0.5)'
-  },
-  sidebarMobileOpen: {
-    transform: 'translateX(0)'
-  },
-  mobileOverlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.7)', zIndex: 999, opacity: 0,
-    pointerEvents: 'none', transition: 'opacity 0.3s ease'
-  },
-  mobileOverlayVisible: {
-    opacity: 1, pointerEvents: 'auto'
-  },
-
-  // ARENA CENTRALE
-  arena: {
-    flex: 1, position: 'relative', display: 'flex', flexDirection: 'column',
-    overflowY: 'auto', padding: '0'
-  },
-  arenaContent: {
-    padding: '3px 8px 0px',
-    overflowX: 'hidden',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    width: '100%'
-  },
-
-  // CARDS GENERICHE
-  card: {
-    background: theme.panel, border: theme.panelBorder, borderRadius: '12px',
-    padding: '20px', marginBottom: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-  },
-  matchRow: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '12px 15px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-    cursor: 'pointer', transition: 'background 0.2s', borderRadius: '8px'
-  },
-
-  // DETTAGLI PRE-MATCH
-  statBlock: {
-    background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '8px',
-    marginBottom: '10px', display: 'flex', justifyContent: 'space-between'
-  },
-
-  // ANIMAZIONE SIMULAZIONE
-  animContainer: {
-    width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', position: 'relative'
-  },
-  pitch: {
-    width: '80%', 
-    maxWidth: '700px', 
-    height: '300px',
-    marginLeft: '100px',
-    marginTop: '40px',
-    border: `1px solid rgba(255, 255, 255, 0.2)`,
-    borderRadius: '10px',
-    position: 'relative', 
-    overflow: 'hidden', 
-    background: 'linear-gradient(135deg, #0a4d2e 0%, #0d6b3f 50%, #0a4d2e 100%)',
-    boxShadow: `
-      0 0 20px rgba(255, 255, 255, 0.1),
-      inset 0 0 100px rgba(0, 0, 0, 0.3)
-    `
-  },
-  momentumBar: {
-    height: '100%',
-    width: '4px',
-    position: 'absolute',
-    top: 0,
-    left: '50%',
-    transition: 'left 0.5s ease-out',
-    zIndex: 10,
-    pointerEvents: 'none'
-  },
-  timerDisplay: {
-    fontSize: '48px', fontWeight: '900', color: theme.text,
-    textShadow: `0 0 20px ${theme.cyan}`, marginBottom: '20px'
-  },
-  eventFeed: {
-    marginTop: '20px',
-    width: '500px',
-    maxWidth: '600px',
-    height: '300px',
-    marginLeft: '-50px',
-    overflowY: 'auto',
-    background: 'rgba(0, 0, 0, 0.7)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '12px',
-    padding: '15px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-    scrollBehavior: 'smooth',
-    scrollbarWidth: 'thin',
-    scrollbarColor: `${theme.cyan}40 rgba(255,255,255,0.1)`
-  },
-
-  // CHAT BOT
-  chatWidget: {
-    position: 'fixed', bottom: '80px', right: '20px', width: '340px', height: '450px',
-    background: 'rgba(12, 14, 28, 0.95)', border: theme.panelBorder, borderRadius: '16px',
-    display: 'flex', flexDirection: 'column', boxShadow: '0 10px 50px rgba(0,0,0,0.7)',
-    zIndex: 100, overflow: 'hidden', backdropFilter: 'blur(20px)'
-  },
-  chatHeader: {
-    padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)',
-    background: `linear-gradient(90deg, rgba(188,19,254,0.2) 0%, rgba(0,0,0,0) 100%)`,
-    fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-  },
-  chatBody: {
-    flex: 1, padding: '15px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px'
-  },
-  msgBubble: {
-    padding: '10px 14px', borderRadius: '12px', fontSize: '13px', lineHeight: '1.4',
-    maxWidth: '85%'
-  },
-  userMsg: {
-    alignSelf: 'flex-end', background: theme.cyan, color: '#000',
-    borderRadius: '12px 12px 0 12px'
-  },
-  botMsg: {
-    alignSelf: 'flex-start', background: 'rgba(255,255,255,0.1)', color: theme.text,
-    borderRadius: '12px 12px 12px 0'
-  }
-};
+// --- HOOK (estratti) ---
+import { useDatiCampionato } from './AppDev/hooks/useDatiCampionato';
 
 
 
 export default function AppDev() {
+  // --- DATI CAMPIONATO (hook estratto) ---
+  const {
+    country, setCountry,
+    leagues,
+    league, setLeague,
+    rounds,
+    selectedRound, setSelectedRound,
+    matches,
+    availableCountries,
+    isLoadingNations,
+    sidebarPredictions,
+  } = useDatiCampionato();
+
   // --- STATO APPLICAZIONE ---
-  const [country, setCountry] = useState('');
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [league, setLeague] = useState('');
   const [selectedCup, setSelectedCup] = useState('');
-  const [rounds, setRounds] = useState<RoundInfo[]>([]);
-  const [selectedRound, setSelectedRound] = useState<RoundInfo | null>(null);
-  const [matches, setMatches] = useState<Match[]>([]);
   const [activeLeague, setActiveLeague] = useState<string | null>(null);
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -330,7 +93,7 @@ export default function AppDev() {
       Spiega all'utente il motivo di questo pronostico basandoti sui dati.
     `;
   
-    // Inviamo il messaggio al sistema di chat che hai già
+    // Inviamo il messaggio al sistema di chat che hai giÃ 
     addBotMessage("Sto analizzando i dati del DeepAnalyzer per spiegarti il pronostico..."); //
     
     // In futuro, qui chiamerai la tua API di Gemini o GPT passando 'promptTecnico'
@@ -338,95 +101,11 @@ export default function AppDev() {
   };
 
 
-// --- Funzione Helper Stemmi (FIX DEFINITIVO: Legge il Menù locale) ---
+// Wrapper locale: passa automaticamente la lega corrente alla funzione estratta
 const getStemmaLeagueUrl = (mongoId?: string) => {
-  if (!mongoId) return '';
-
-  // 1. TRUCCO: Leggiamo "league" (lo stato del menù) che è quello aggiornato.
-  // Se "league" è vuoto o undefined, usiamo "activeLeague" come fallback.
-  // (Nota: "league" è la variabile che usi nel value={...} del menù a tendina)
-  // // modificato per: includere le coppe nella determinazione della lega corrente
-const currentLeague = (typeof league !== 'undefined' && league) ? league : (activeLeague || selectedCup);
-
-  // 2. Normalizziamo il testo (Maiuscolo e senza spazi ai lati)
-  const input = currentLeague ? currentLeague.toUpperCase().trim() : '';
-
-  let folder = 'Altro';
-
-  switch (input) {
-      // --- ITALIA ---
-      case 'SERIE_A': case 'SERIE A': 
-      case 'SERIE_B': case 'SERIE B': 
-      case 'SERIE_C_A': case 'SERIE_C_B': case 'SERIE_C_C': case 'SERIE C':
-          folder = 'Italy'; break;
-
-      // --- INGHILTERRA ---
-      case 'PREMIER_LEAGUE': case 'PREMIER LEAGUE': 
-      case 'CHAMPIONSHIP':
-          folder = 'England'; break;
-
-      // --- SPAGNA ---
-      case 'LA_LIGA': case 'LA LIGA': 
-      case 'LA_LIGA_2': case 'LA LIGA 2':
-          folder = 'Spain'; break;
-
-      // --- GERMANIA ---
-      case 'BUNDESLIGA': case 'BUNDESLIGA_2': case 'BUNDESLIGA 2':
-          folder = 'Germany'; break;
-
-      // --- FRANCIA ---
-      case 'LIGUE_1': case 'LIGUE 1': 
-      case 'LIGUE_2': case 'LIGUE 2':
-          folder = 'France'; break;
-
-      // --- PORTOGALLO ---
-      case 'LIGA_PORTUGAL': case 'LIGA PORTUGAL': case 'PRIMEIRA_LIGA':
-          folder = 'Portugal'; break;
-
-      // --- OLANDA ---
-      case 'EREDIVISIE':
-          folder = 'Netherlands'; break;
-
-      // --- SCOZIA ---
-      case 'SCOTTISH_PREMIERSHIP': case 'SCOTTISH PREMIERSHIP':
-          folder = 'Scotland'; break;
-
-      // --- NORD EUROPA ---
-      case 'ALLSVENSKAN':
-          folder = 'Sweden'; break;
-      case 'ELITESERIEN':
-          folder = 'Norway'; break;
-      case 'SUPERLIGAEN': case 'SUPERLIGA':
-          folder = 'Denmark'; break;
-      case 'LEAGUE_OF_IRELAND': case 'LEAGUE OF IRELAND':
-          folder = 'Ireland'; break;
-
-      // --- BELGIO & TURCHIA ---
-      case 'JUPILER_PRO_LEAGUE': case 'JUPILER PRO LEAGUE':
-          folder = 'Belgium'; break;
-      case 'SUPER_LIG': case 'SUPER LIG':
-          folder = 'Turkey'; break;
-
-      // --- RESTO DEL MONDO ---
-      case 'BRASILEIRAO':
-          folder = 'Brazil'; break;
-      case 'PRIMERA_DIVISION_ARG': case 'PRIMERA DIVISION': case 'LIGA PROFESIONAL':
-          folder = 'Argentina'; break;
-      case 'MLS':
-          folder = 'USA'; break;
-      case 'J1_LEAGUE': case 'J1 LEAGUE': case 'J LEAGUE':
-          folder = 'Japan'; break;
-
-      default:
-          folder = 'Altro';
-  }
-
-  return `${STEMMI_BASE}squadre%2F${folder}%2F${mongoId}.png?alt=media`;
+  const currentLeague = (typeof league !== 'undefined' && league) ? league : (activeLeague || selectedCup);
+  return _getStemmaLeagueUrl(mongoId, currentLeague);
 };
-
-
-  const [availableCountries, setAvailableCountries] = useState<{code: string, name: string, flag: string}[]>([]);
-  const [isLoadingNations, setIsLoadingNations] = useState(true); // Consigliato: per mostrare un caricamento
 
 
   // Legge se sei admin usando la funzione che hai importato
@@ -446,7 +125,7 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
 
   const [error, setError] = useState<string | null>(null); // <--- AGGIUNGI QUESTO
 
-  // ✅ STATI PER FORMAZIONI E RISCALDAMENTO
+  // âœ… STATI PER FORMAZIONI E RISCALDAMENTO
   const [formations, setFormations] = useState<{
     home_team: string;
     away_team: string;
@@ -468,7 +147,7 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
   void playerEvents;
 
   // STATO ANIMAZIONE
-  // E cambiala in questa (così accetta sia numeri che scritte):
+  // E cambiala in questa (cosÃ¬ accetta sia numeri che scritte):
   const [timer, setTimer] = useState<number | string>(0);
   const [animEvents, setAnimEvents] = useState<string[]>([]);
   const [momentum, setMomentum] = useState(50); // 0 = Away domina, 100 = Home domina
@@ -478,7 +157,7 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
 
   const [pitchMsg, setPitchMsg] = useState<{testo: string, colore: string} | null>(null);
 
-  // Stato per gestire quale radar è visibile: 'all' (tutti), 'home' (solo casa), 'away' (solo ospite)
+  // Stato per gestire quale radar Ã¨ visibile: 'all' (tutti), 'home' (solo casa), 'away' (solo ospite)
   const [radarFocus, setRadarFocus] = useState<'all' | 'home' | 'away'>('all');
 
   // Stato per il tooltip del singolo punto (quando passi sulle punte)
@@ -511,7 +190,7 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
 
 
   
-  // Questo ref conterrà SEMPRE lo stato aggiornato dell'app
+  // Questo ref conterrÃ  SEMPRE lo stato aggiornato dell'app
   const stateRef = useRef({
     isPopupOpen: false,
     mobileMenu: false,
@@ -528,20 +207,7 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
   
 
 
-  // --- INCOLLA QUESTO BLOCCO INSIEME AGLI ALTRI useState ---
-
-  // 1. Definiamo i preset di velocità (serve per il menu Master/MonteCarlo)
-  const SPEED_PRESETS = [
-    { id: 1, label: '⚡ TURBO', cycles: 100, desc: '~3 sec/match' },
-    { id: 2, label: '🏃 RAPIDO', cycles: 250, desc: '~6 sec/match' },
-    { id: 3, label: '🚶 VELOCE', cycles: 500, desc: '~12 sec/match' },
-    { id: 4, label: '⚖️ STANDARD', cycles: 20, desc: '🚀 RAPIDO' },
-    { id: 5, label: '🎯 ACCURATO', cycles: 2500, desc: '~60 sec/match' },
-    { id: 6, label: '🔬 PRECISO', cycles: 5000, desc: '~2 min/match' },
-    { id: 7, label: '💎 ULTRA', cycles: 12500, desc: '~5 min/match' },
-    { id: 8, label: '✏️ CUSTOM', cycles: 0, desc: 'Manuale' },
-  ];
-  // 2. Definiamo lo stato per memorizzare la scelta
+  // Stato velocitÃ  simulazione
   const [selectedSpeed, setSelectedSpeed] = useState(4); // Default Standard
   const [customCycles, setCustomCycles] = useState(50);  // Valore manuale
   // ---------------------------------------------------------
@@ -554,112 +220,18 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
 
   const [selectedPeriod, setSelectedPeriod] = useState<'previous' | 'current' | 'next'>('current');
 
-  // ✅ NUOVO: Stato per gestire la fine partita
+  // âœ… NUOVO: Stato per gestire la fine partita
   const [simulationEnded, setSimulationEnded] = useState(false);
 
-  // ✅ NUOVO: Punteggio live durante la simulazione
+  // âœ… NUOVO: Punteggio live durante la simulazione
   const [liveScore, setLiveScore] = useState<{home: number, away: number}>({home: 0, away: 0});
 
   const [showMatchSummary, setShowMatchSummary] = useState(false);
 
-  // STATO PER PRONOSTICI SIDEBAR
-  const [sidebarPredictions, setSidebarPredictions] = useState<any[]>([]);
-
-  // --- LOGICA DI CARICAMENTO NAZIONI DINAMICHE ---
-  useEffect(() => {
-  const fetchNations = async () => {
-    setIsLoadingNations(true); // Risolve errore 6133: ora la funzione viene letta
-    try {
-      // Sostituisci con il tuo URL reale di Firebase
-      // Cerca questo punto nel tuo useEffect
-      const response = await fetch('https://us-central1-puppals-456c7.cloudfunctions.net/get_nations');
-      const nationsFromDb = await response.json(); // Risolve errore 2304: 'data' non trovato (usiamo nationsFromDb)
-      
-      if (Array.isArray(nationsFromDb)) {
-        // Specifichiamo (n: string) per risolvere errore 7006 (tipo any)
-        const formatted = nationsFromDb.map((n: string) => ({
-          code: n,
-          name: n,
-          flag: n === 'Italy' ? '🇮🇹' : n === 'Spain' ? '🇪🇸' : n === 'England' ? '🇬🇧' : n === 'Germany' ? '🇩🇪' : n === 'France' ? '🇫🇷' : n === 'Netherlands' ? '🇳🇱' : n === 'Portugal' ? '🇵🇹' : n === 'Argentina' ? '🇦🇷' : n === 'Belgium' ? '🇧🇪' : n === 'Brazil' ? '🇧🇷' : n === 'Denmark' ? '🇩🇰' : n === 'Ireland' ? '🇮🇪' : n === 'Japan' ? '🇯🇵' : n === 'Norway' ? '🇳🇴' : n === 'Scotland' ? '🇬🇧' : n === 'Sweden' ? '🇸🇪' : n === 'Turkey' ? '🇹🇷' : n === 'USA' ? '🇺🇸' : '🌍'
-        }));
-        
-        setAvailableCountries(formatted); // Risolve errore 6133: ora lo stato viene aggiornato
-        
-        // Imposta la prima nazione trovata come scelta predefinita
-        if (formatted.length > 0) {
-          setCountry(formatted[0].code);
-        }
-      }
-    } catch (err) {
-      console.error("Errore API nazioni:", err);
-    } finally {
-      setIsLoadingNations(false);
-    }
-  };
-
-  fetchNations();
-}, []);
-
-
-    // --- 2. FUNZIONE getCycles (Sostituisci quella vecchia con questa) ---
-    // Questa versione è "pulita": restituisce semplicemente il numero scelto dall'utente.
+    // --- FUNZIONE getCycles ---
     const getCycles = (): number => {
       return customCycles;
     };
-
-    // --- 3. FUNZIONE RESET DEFAULT ---
-    // Da collegare al tastino nel pannello di controllo
-  /*  const handleSetDefault = () => {
-      setConfigAlgo(5);      // Torna al Master AI
-      setCustomCycles(50); // Torna a 50 cicli (ottimale per Algo 5)
-    }; */
-
-
-// --- FETCH DATI ---
-  useEffect(() => {
-    // Se non c'è nazione, non fare nulla
-    if (!country) return;
-
-    fetch(`${API_BASE}/leagues?country=${country}`)
-      .then(r => r.json())
-      .then(d => { 
-          setLeagues(d); 
-          
-          // 🔥 LOGICA INTELLIGENTE (Salva-Dashboard)
-          // Cerchiamo se la lega attuale (league) esiste nella lista appena scaricata (d)
-          const isCurrentLeagueValid = d.find((l: any) => l.id === league);
-
-          if (isCurrentLeagueValid) {
-              // CASO 1: Vengo dalla Dashboard (es. Serie A è valida per l'Italia)
-              // NON faccio nulla, mantengo la selezione!
-          } else {
-              // CASO 2: Ho cambiato nazione a mano (es. Serie A non esiste in Inghilterra)
-              // Resetto su "Seleziona"
-              setLeague(""); 
-          }
-      });
-      
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country]);
-
-  useEffect(() => {
-    if (!league) return;
-    fetch(`${API_BASE}/rounds?league=${league}`).then(r => r.json()).then(d => {
-      setRounds(d.rounds || []);
-      const curr = d.rounds?.find((r: any) => r.type === 'current');
-      if (curr) setSelectedRound(curr);
-    });
-  }, [league]);
-
-  useEffect(() => {
-    if (!league || !selectedRound) return;
-    fetch(`${API_BASE}/matches?league=${league}&round=${selectedRound.name}`)
-  .then(r => r.json())
-  .then(data => {
-    const validMatches = Array.isArray(data) ? data.filter(m => m && m.date_obj) : [];
-    setMatches(validMatches);
-  });
-  }, [league, selectedRound]);
 
   // Scroll Chat
   useEffect(() => {
@@ -677,25 +249,6 @@ const currentLeague = (typeof league !== 'undefined' && league) ? league : (acti
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-// --- CARICA PRONOSTICI PER SIDEBAR ---
-useEffect(() => {
-  const fetchSidebarPredictions = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`${API_BASE}/simulation/daily-predictions?date=${today}`);
-      const data = await response.json();
-      if (data.success && data.predictions && data.predictions.length > 0) {
-        // Prendi 3 pronostici random
-        const shuffled = [...data.predictions].sort(() => 0.5 - Math.random());
-        setSidebarPredictions(shuffled.slice(0, 3));
-      }
-    } catch (err) {
-      console.error('Errore caricamento pronostici sidebar:', err);
-    }
-  };
-  fetchSidebarPredictions();
-}, []);
 
 // =========================================================================
   //       NAVIGAZIONE DEFINITIVA (FIX: isBackNav + TORNA A CASA)
@@ -729,7 +282,7 @@ useEffect(() => {
         return; 
     }
 
-    // --- Priorità Assolute (Menu e Popup) ---
+    // --- PrioritÃ  Assolute (Menu e Popup) ---
     if (mobileMenuOpen) {
         if (window.location.hash !== '#menu') window.history.pushState(null, '', '#menu');
         return;
@@ -756,7 +309,7 @@ useEffect(() => {
       if (window.location.hash === '' || window.location.hash === '#home') {
           window.history.pushState(null, '', targetHash);
       }
-      // 2. Se l'URL è sbagliato (es. siamo su #list ma serve #cuplist, o torniamo da un popup)
+      // 2. Se l'URL Ã¨ sbagliato (es. siamo su #list ma serve #cuplist, o torniamo da un popup)
       // // modificato per: sincronizzazione immediata hash quando si cambia tipo di competizione
       else if (window.location.hash !== targetHash) {
           window.history.replaceState(null, '', targetHash);
@@ -774,7 +327,7 @@ useEffect(() => {
   // 4. GESTIONE TASTO INDIETRO (Logica Aggressiva)
   useEffect(() => {
     const handleHashChange = () => {
-      // 🛑 ATTIVIAMO IL SEMAFORO
+      // ðŸ›‘ ATTIVIAMO IL SEMAFORO
       isBackNav.current = true;
 
       const currentHash = window.location.hash;
@@ -800,7 +353,7 @@ useEffect(() => {
       // 3. Tornati alla LISTA (#list)
       else if (currentHash === '#list' || currentHash.startsWith('#round')) {
           
-          // 🔥 UX FIX: Se sono già sulla lista e premo indietro -> Vado alla Home (chiudo tutto)
+          // ðŸ”¥ UX FIX: Se sono giÃ  sulla lista e premo indietro -> Vado alla Home (chiudo tutto)
           // Questo risolve il problema di dover premere indietro 10 volte se hai cambiato 10 nazioni
           if (current.viewState === 'list' && !current.expandedMatch) {
               setActiveLeague(null); // Chiude la lega
@@ -847,9 +400,9 @@ useEffect(() => {
 
 const prepareSimulation = (match: Match) => {
   setSelectedMatch(match);
-  // 👇 AGGIUNGI QUESTA RIGA 👇
+  // ðŸ‘‡ AGGIUNGI QUESTA RIGA ðŸ‘‡
   setExpandedMatch(null); 
-  // 👆 RISOLVE IL BUG DEL TASTO INDIETRO
+  // ðŸ‘† RISOLVE IL BUG DEL TASTO INDIETRO
   
   setViewState('pre-match');
   setSimResult(null);
@@ -861,7 +414,7 @@ const prepareSimulation = (match: Match) => {
   addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
 };
 
-// ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
+// âœ… FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
 const loadFormations = async (home: string, away: string, league: string) => {
   try {
     const response = await fetch('https://us-central1-puppals-456c7.cloudfunctions.net/get_formations', {
@@ -881,106 +434,12 @@ const loadFormations = async (home: string, away: string, league: string) => {
   }
 };
 
-// ✅ TIPO PER POSIZIONI FORMAZIONE
-type FormationPositions = {
-  GK: {x: number; y: number}[];
-  DEF: {x: number; y: number}[];
-  MID: {x: number; y: number}[];
-  ATT: {x: number; y: number}[];
-};
 
-// ✅ MAPPING MODULI (4 cifre → 3 cifre)
-const FORMATION_MAPPING: {[key: string]: string} = {
-  "3-4-2-1": "3-4-3",
-  "4-2-2-2": "4-4-2",
-  "4-2-3-1": "4-5-1",
-  "4-3-1-2": "4-3-3",
-};
-
-// ✅ FUNZIONE PER NORMALIZZARE IL MODULO (per visualizzazione)
-const normalizeModulo = (modulo: string): string => {
-  return FORMATION_MAPPING[modulo] || modulo;
-};
-
-// ✅ MAPPA POSIZIONI GIOCATORI - REALISTICHE
-const getFormationPositions = (modulo: string, isHome: boolean): FormationPositions => {
-  const moduloNorm = FORMATION_MAPPING[modulo] || modulo;
-  
-  // Posizioni REALISTICHE - attaccanti meno avanzati per non sovrapporsi
-  const positions: {[key: string]: FormationPositions} = {
-    "3-4-3": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 18, y: 25}, {x: 15, y: 50}, {x: 18, y: 75}],
-      MID: [{x: 30, y: 12}, {x: 26, y: 38}, {x: 26, y: 62}, {x: 30, y: 88}],
-      ATT: [{x: 40, y: 22}, {x: 44, y: 50}, {x: 40, y: 78}]
-    },
-    "3-5-2": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 18, y: 25}, {x: 15, y: 50}, {x: 18, y: 75}],
-      MID: [{x: 32, y: 8}, {x: 26, y: 30}, {x: 23, y: 50}, {x: 26, y: 70}, {x: 32, y: 92}],
-      ATT: [{x: 42, y: 35}, {x: 42, y: 65}]
-    },
-    "4-3-3": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 22, y: 12}, {x: 16, y: 35}, {x: 16, y: 65}, {x: 22, y: 88}],
-      MID: [{x: 30, y: 28}, {x: 26, y: 50}, {x: 30, y: 72}],
-      ATT: [{x: 40, y: 18}, {x: 44, y: 50}, {x: 40, y: 82}]
-    },
-    "4-4-2": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 22, y: 12}, {x: 16, y: 35}, {x: 16, y: 65}, {x: 22, y: 88}],
-      MID: [{x: 32, y: 12}, {x: 26, y: 38}, {x: 26, y: 62}, {x: 32, y: 88}],
-      ATT: [{x: 42, y: 35}, {x: 42, y: 65}]
-    },
-    "4-5-1": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 22, y: 12}, {x: 16, y: 35}, {x: 16, y: 65}, {x: 22, y: 88}],
-      MID: [{x: 32, y: 8}, {x: 26, y: 30}, {x: 23, y: 50}, {x: 26, y: 70}, {x: 32, y: 92}],
-      ATT: [{x: 44, y: 50}]
-    },
-    "5-3-2": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 24, y: 8}, {x: 18, y: 28}, {x: 15, y: 50}, {x: 18, y: 72}, {x: 24, y: 92}],
-      MID: [{x: 30, y: 28}, {x: 26, y: 50}, {x: 30, y: 72}],
-      ATT: [{x: 42, y: 35}, {x: 42, y: 65}]
-    },
-    "5-4-1": {
-      GK: [{x: 6, y: 50}],
-      DEF: [{x: 24, y: 8}, {x: 18, y: 28}, {x: 15, y: 50}, {x: 18, y: 72}, {x: 24, y: 92}],
-      MID: [{x: 32, y: 15}, {x: 28, y: 38}, {x: 28, y: 62}, {x: 32, y: 85}],
-      ATT: [{x: 44, y: 50}]
-    }
-  };
-  
-  const formation = positions[moduloNorm] || positions["4-3-3"];
-  
-  // Per squadra OSPITE: specchia orizzontalmente
-  if (!isHome) {
-    return {
-      GK: formation.GK.map(p => ({ x: 100 - p.x, y: p.y })),
-      DEF: formation.DEF.map(p => ({ x: 100 - p.x, y: p.y })),
-      MID: formation.MID.map(p => ({ x: 100 - p.x, y: p.y })),
-      ATT: formation.ATT.map(p => ({ x: 100 - p.x, y: p.y }))
-    };
-  }
-  
-  return formation;
-};
-
-// ✅ COMPONENTE MAGLIETTA SVG
-const JerseySVG = ({ color, size = 20 }: { color: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
-    <path d="M6.5 2L2 6.5V10h3v10h14V10h3V6.5L17.5 2h-4L12 4l-1.5-2h-4zM8 4h2l2 2 2-2h2l3 3v2h-2v9H7v-9H5V7l3-3z"/>
-    <path d="M7 10h10v9H7z" fill={color}/>
-    <path d="M5 7l3-3h2l2 2 2-2h2l3 3v2h-2v-1H7v1H5V7z" fill={color} opacity="0.8"/>
-  </svg>
-);
-
-// ✅ VERSIONE AGGIORNATA, VELOCE E FIXATA PER IL BACKEND
+// âœ… VERSIONE AGGIORNATA, VELOCE E FIXATA PER IL BACKEND
 const startSimulation = async (algoOverride: number | null = null, cyclesOverride: number | null = null) => {
   if (!selectedMatch) return;
 
-  // 1. DETERMINAZIONE PARAMETRI (Priorità ai valori passati dal popup)
+  // 1. DETERMINAZIONE PARAMETRI (PrioritÃ  ai valori passati dal popup)
   const useAlgo = algoOverride !== null ? algoOverride : configAlgo;
   const useCycles = cyclesOverride !== null ? cyclesOverride : customCycles;
 
@@ -989,7 +448,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
       setSimMode('fast');
   }
 
-  // ✅ FASE 1: Reset Stati e Avvio Grafica
+  // âœ… FASE 1: Reset Stati e Avvio Grafica
   setViewState('simulating');
   setIsWarmingUp(true);
   setIsVarActive(false); 
@@ -1001,7 +460,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   const finalAlgo = isFlashActive ? 1 : useAlgo;
   const finalCycles = isFlashActive ? 1 : useCycles;
 
-  console.log(`🚀 AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
+  console.log(`ðŸš€ AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
 
   // FIX LEAGUE: Calcoliamo il nome del campionato in modo robusto
   // (Prende quello del menu, o quello globale, o quello del match, o fallback)
@@ -1020,15 +479,15 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   }, 200);
   
   try {
-    // ✅ CARICA FORMAZIONI
+    // âœ… CARICA FORMAZIONI
     loadFormations(selectedMatch.home, selectedMatch.away, currentLeague).then(success => {
       if (success) {
-        console.log("✅ Formazioni caricate!");
+        console.log("âœ… Formazioni caricate!");
         setTimeout(() => setPopupOpacity(1), 8000); // Mostra popup dopo un po'
       }
     });
     
-    // ✅ FASE 2: Chiamata al Backend (CON FIX BULK_CACHE)
+    // âœ… FASE 2: Chiamata al Backend (CON FIX BULK_CACHE)
     const res = await fetch(AI_ENGINE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1050,19 +509,19 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
         cycles: finalCycles,     
         save_db: configSaveDb,
 
-        // 🔥 FIX FONDAMENTALE PER ERRORE PYTHON 🔥
+        // ðŸ”¥ FIX FONDAMENTALE PER ERRORE PYTHON ðŸ”¥
         bulk_cache: {
-            league: currentLeague, // Qui è dove il backend cerca la cartella!
+            league: currentLeague, // Qui Ã¨ dove il backend cerca la cartella!
             LEAGUE_STATS: {}
         }
       })
     });
 
     const responseJson = await res.json();
-    console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
+    console.log("ðŸ”¥ RISPOSTA PYTHON GREZZA:", responseJson);
 
     if (!responseJson.success) {
-      // Se c'è un errore, mostriamo quello del backend
+      // Se c'Ã¨ un errore, mostriamo quello del backend
       throw new Error(responseJson.error || 'Errore generico dal backend');
     }
     
@@ -1116,7 +575,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
     let injuryTimeCounter = 0; 
     let isInjuryTime = false;  
     let isPaused = false;
-    let isVarChecking = false;  // ← AGGIUNGI QUESTO FLAG
+    let isVarChecking = false;  // â† AGGIUNGI QUESTO FLAG
     
     const totalDurationMs = 30000; 
     const intervalMs = 100;
@@ -1186,7 +645,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // FINE PRIMO TEMPO
         if (baseMin === 45 && injuryTimeCounter >= recuperoPT) {
           isPaused = true;
-          setIsVarActive(false); // 👈 Spegni il VAR all'intervallo
+          setIsVarActive(false); // ðŸ‘ˆ Spegni il VAR all'intervallo
           isInjuryTime = false;
           injuryTimeCounter = 0;
           t = 46;
@@ -1223,7 +682,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // FINE SECONDO TEMPO  
         if (baseMin === 90 && injuryTimeCounter >= recuperoST) {
           clearInterval(interval);
-          setIsVarActive(false); // 👈 Spegni il VAR a fine partita
+          setIsVarActive(false); // ðŸ‘ˆ Spegni il VAR a fine partita
           setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
           
           setSimResult(finalData);
@@ -1236,7 +695,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }
       }
   
-      // ✅ LOGICA EVENTI CON MOMENTUM FLUIDO (CORRETTA)
+      // âœ… LOGICA EVENTI CON MOMENTUM FLUIDO (CORRETTA)
       if (finalData.cronaca) {
         // CALCOLA IL MINUTO CORRETTO ANCHE PER I RECUPERI
         let minutoEvento = currentMinForEvents;
@@ -1263,7 +722,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA GOL ---
               if (matchEvent.tipo === "gol") {
-                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
+                if (isVarChecking) return;  // â† BLOCCA se VAR attivo
                 setLiveScore(prev => ({
                   home: matchEvent.squadra === "casa" ? prev.home + 1 : prev.home,
                   away: matchEvent.squadra === "ospite" ? prev.away + 1 : prev.away
@@ -1274,7 +733,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 
                 // Scritta sul campo
                 setPitchMsg({ 
-                  testo: "⚽ GOOOL!", 
+                  testo: "âš½ GOOOL!", 
                   colore: matchEvent.squadra === "casa" ? theme.cyan : theme.danger 
                 });
                 setTimeout(() => setPitchMsg(null), 2000);
@@ -1282,23 +741,23 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA RIGORE FISCHIATO ---
               else if (matchEvent.tipo === "rigore_fischio") {
-                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
+                if (isVarChecking) return;  // â† BLOCCA se VAR attivo
                 setMomentum(prev => 
                   matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
                 );
                 
-                setPitchMsg({ testo: "🚨 RIGORE!", colore: "#ff9f43" });
+                setPitchMsg({ testo: "ðŸš¨ RIGORE!", colore: "#ff9f43" });
                 setTimeout(() => setPitchMsg(null), 2000);
               }
               
               // --- LOGICA ROSSO ---
               else if (matchEvent.tipo === "rosso") {
-                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
+                if (isVarChecking) return;  // â† BLOCCA se VAR attivo
                 setMomentum(prev => 
                   matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
                 );
                 
-                setPitchMsg({ testo: "🟥 ROSSO!", colore: theme.danger });
+                setPitchMsg({ testo: "ðŸŸ¥ ROSSO!", colore: theme.danger });
                 setTimeout(() => setPitchMsg(null), 2000);
               }
             }
@@ -1313,14 +772,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               const varType = (matchEvent as any).var_type || "gol";
               let checkMsg = "";
               
-              if (varType === "gol") checkMsg = "⚠️ VAR: CHECK GOL...";
-              else if (varType === "rigore") checkMsg = "⚠️ VAR: VERIFICA RIGORE...";
-              else if (varType === "rigore_on_field_review") checkMsg = "⚠️ VAR: ON-FIELD REVIEW...";
-              else if (varType === "rosso") checkMsg = "⚠️ VAR: CHECK ROSSO...";
-              else if (varType === "gol_fantasma") checkMsg = "⚠️ VAR: CONTROLLO...";
-              else checkMsg = "⚠️ VAR CHECK...";
+              if (varType === "gol") checkMsg = "âš ï¸ VAR: CHECK GOL...";
+              else if (varType === "rigore") checkMsg = "âš ï¸ VAR: VERIFICA RIGORE...";
+              else if (varType === "rigore_on_field_review") checkMsg = "âš ï¸ VAR: ON-FIELD REVIEW...";
+              else if (varType === "rosso") checkMsg = "âš ï¸ VAR: CHECK ROSSO...";
+              else if (varType === "gol_fantasma") checkMsg = "âš ï¸ VAR: CONTROLLO...";
+              else checkMsg = "âš ï¸ VAR CHECK...";
               
-              // 💀 MODO CATTIVO: Ridisegna la scritta ogni 100ms per 6 secondi
+              // ðŸ’€ MODO CATTIVO: Ridisegna la scritta ogni 100ms per 6 secondi
               let varTicks = 0;
               const varInterval = setInterval(() => {
                 setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
@@ -1349,15 +808,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     let annullaMsg = "";
                     
                     if (varType === "gol" || varType === "gol_fantasma") {
-                      annullaMsg = "❌ GOL ANNULLATO";
+                      annullaMsg = "âŒ GOL ANNULLATO";
                       setLiveScore(prev => ({
                         home: matchEvent.squadra === "casa" ? Math.max(0, prev.home - 1) : prev.home,
                         away: matchEvent.squadra === "ospite" ? Math.max(0, prev.away - 1) : prev.away
                       }));
                     } else if (varType === "rigore" || varType === "rigore_on_field_review") {
-                      annullaMsg = "❌ RIGORE ANNULLATO";
+                      annullaMsg = "âŒ RIGORE ANNULLATO";
                     } else if (varType === "rosso") {
-                      annullaMsg = "⚠️ ROSSO REVOCATO";
+                      annullaMsg = "âš ï¸ ROSSO REVOCATO";
                     }
                     
                     setPitchMsg({ testo: annullaMsg, colore: "#ff2a6d" });
@@ -1365,10 +824,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   } else {
                     let confermaMsg = "";
                     
-                    if (varType === "gol") confermaMsg = "✅ GOL VALIDO";
-                    else if (varType === "rigore" || varType === "rigore_on_field_review") confermaMsg = "✅ RIGORE CONFERMATO";
-                    else if (varType === "rosso") confermaMsg = "✅ ROSSO CONFERMATO";
-                    else confermaMsg = "✅ DECISIONE CONFERMATA";
+                    if (varType === "gol") confermaMsg = "âœ… GOL VALIDO";
+                    else if (varType === "rigore" || varType === "rigore_on_field_review") confermaMsg = "âœ… RIGORE CONFERMATO";
+                    else if (varType === "rosso") confermaMsg = "âœ… ROSSO CONFERMATO";
+                    else confermaMsg = "âœ… DECISIONE CONFERMATA";
                     
                     setPitchMsg({ testo: confermaMsg, colore: "#05f9b6" });
                   }
@@ -1381,7 +840,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   }, 3000);
                   
                 } else {
-                  setPitchMsg({ testo: "✅ CONTROLLO COMPLETATO", colore: "#05f9b6" });
+                  setPitchMsg({ testo: "âœ… CONTROLLO COMPLETATO", colore: "#05f9b6" });
                   setTimeout(() => {
                     setPitchMsg(null);
                     setIsVarActive(false);
@@ -1392,9 +851,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             }
             
             
-            // ===== VAR_VERDICT - Già gestito nel setTimeout di VAR_PROCESS =====
+            // ===== VAR_VERDICT - GiÃ  gestito nel setTimeout di VAR_PROCESS =====
             else if (matchEvent.tipo === "VAR_VERDICT") {
-              // Non fare nulla, già mostrato
+              // Non fare nulla, giÃ  mostrato
               return;
             }
             
@@ -1413,12 +872,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }
       }
       
-      // ✅ OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
+      // âœ… OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
       setMomentum(prev => {
         // Micro-oscillazione casuale sempre attiva (-2 a +2)
         const microMove = (Math.random() - 0.5) * 4;
         
-        // Ogni tanto (20% probabilità) crea un "momento di pressione"
+        // Ogni tanto (20% probabilitÃ ) crea un "momento di pressione"
         const pressione = Math.random();
         let nuovoMomentum = prev + microMove;
         
@@ -1434,7 +893,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // Limiti: non va mai sotto 15 o sopra 85
         nuovoMomentum = Math.max(0, Math.min(100, nuovoMomentum));
         
-        // 🎯 CAMBIO POSSESSO SOLO SE MOVIMENTO SIGNIFICATIVO
+        // ðŸŽ¯ CAMBIO POSSESSO SOLO SE MOVIMENTO SIGNIFICATIVO
         const differenza = nuovoMomentum - lastSignificantMomentum;
         
         if (Math.abs(differenza) > 10) {
@@ -1468,14 +927,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       let response = "Non ho capito, puoi riformulare?";
       const lower = userText.toLowerCase();
 
-      if (lower.includes('perché') || lower.includes('spiegami')) {
+      if (lower.includes('perchÃ©') || lower.includes('spiegami')) {
         if (simResult) {
-          response = `Il mio algoritmo ${simResult.algo_name} ha analizzato ${simResult.top3.length} scenari. Il punteggio ${simResult.predicted_score} è il più probabile basato sulla forma recente e gli scontri diretti.`;
+          response = `Il mio algoritmo ${simResult.algo_name} ha analizzato ${simResult.top3.length} scenari. Il punteggio ${simResult.predicted_score} Ã¨ il piÃ¹ probabile basato sulla forma recente e gli scontri diretti.`;
         } else {
           response = "Devi prima simulare una partita per avere una spiegazione tecnica.";
         }
       } else if (lower.includes('rischio') || lower.includes('sicura')) {
-        response = simResult ? "Questa partita ha un indice di volatilità medio. Ti consiglio di coprire con una doppia chance." : "Seleziona un match per calcolare il rischio.";
+        response = simResult ? "Questa partita ha un indice di volatilitÃ  medio. Ti consiglio di coprire con una doppia chance." : "Seleziona un match per calcolare il rischio.";
       } else if (lower.includes('consiglio') || lower.includes('scommessa')) {
         response = simResult ? `Consiglio principale: ${simResult.sign}. Alternativa interessante: Over 2.5.` : "Posso darti un consiglio appena avviamo l'analisi.";
       }
@@ -1555,7 +1014,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
       {/* 2. LISTA PARTITE (Stile Card "Pixel Perfect") */}
       
-      {/* Se è selezionata una coppa, mostra CupMatches */}
+      {/* Se Ã¨ selezionata una coppa, mostra CupMatches */}
       {selectedCup ? (
       <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Caricamento...</div>}>
         <CupMatches
@@ -1587,1144 +1046,39 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
   // --- FUNZIONE MANCANTE: ANIMAZIONE GRAFICA ---
   const renderAnimation = () => (
-    <div style={{
-      flex: 1,
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      overflowY: 'auto',
-      overflowX: 'hidden',  // 👈 AGGIUNGI questa riga
-      padding: '0',
-      maxWidth: '100vw',    // 👈 AGGIUNGI questa riga
-      width: '100%'          // 👈 AGGIUNGI questa riga
-    }}>
-  
-      <div style={{
-        padding: isMobile ? '3px 8px 0px' : styles.arenaContent.padding,
-        maxWidth: '1400px',
-        margin: '0 auto',
-        width: '100%',
-        overflowX: 'hidden'  // 👈 AGGIUNGI SOLO QUESTA RIGA
-      }}>
-  
-        {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
-        <div 
-          className="sim-badges-top"
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(10px)',
-            padding: '8px 14px',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            fontSize: '11px',
-            color: '#888',
-            zIndex: 50,
-          }}
-        >
-          <span style={{ color: '#00f0ff', fontWeight: '700' }}>
-            Algo {configAlgo}
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-          <span style={{ color: '#bc13fe', fontWeight: '700' }}>
-            {customCycles} cicli
-          </span>
-        </div>
-  
-        {/* ✅ HEADER LIVE SCORE: MOBILE (Custom) vs DESKTOP (Originale Blindato) */}
-        <div 
-          className="sim-header"
-          style={{
-            marginBottom: isMobile ? '0px' : '25px',
-            background: 'rgba(0, 0, 0, 0.95)',
-            marginTop: isMobile ? '0px' : '10px',
-            backdropFilter: 'blur(20px)',
-            // Larghezze differenziate
-            width: isMobile ? '96%' : '580px', 
-            marginLeft: 'auto', 
-            marginRight: 'auto',
-            // Padding differenziato
-            padding: isMobile ? '10px 15px' : '15px 20px',
-            borderRadius: '16px',
-            border: '2px solid rgba(0, 240, 255, 0.3)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-            zIndex: 90,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: isMobile ? '0px' : '5px'
-          }}
-        >
-          
-          {/* ==============================================
-              📱 VERSIONE MOBILE: ALLINEAMENTO "A PIOMBO"
-             ============================================== */}
-          {isMobile ? (
-            <>
-              {/* COLONNA SINISTRA: SQUADRE */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flex: 1 }}>
-                
-                {/* RIGA 1: SQUADRA CASA */}
-                <div style={{ display: 'flex', alignItems: 'center' }}> 
-                   
-                   {/* 1. COLONNA STEMMA RIGIDA (40px fissi) */}
-                   <div style={{ 
-                       width: '40px',          // Larghezza fissa "blindata"
-                       display: 'flex', 
-                       justifyContent: 'center', // Stemma centrato nei suoi 40px
-                       alignItems: 'center',
-                       flexShrink: 0           // Impedisce di schiacciarsi
-                   }}>
-                       <img 
-                          src={getStemmaLeagueUrl((selectedMatch as any)?.home_mongo_id)} 
-                          alt=""
-                          style={{ width: '28px', marginTop: '5px', height: '28px', objectFit: 'contain' }}
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                       />
-                   </div>
-
-                   {/* 2. COLONNA TESTO (Parte sempre dopo i 40px) */}
-                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                      {/* Etichetta CASA */}
-                      <span style={{ fontSize: '9px', marginBottom: '5px', color: theme.cyan, textTransform: 'uppercase', lineHeight: 1, fontWeight: 'bold', marginLeft: '2px' }}>
-                        CASA
-                      </span>
-                      {/* Nome Squadra */}
-                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2 }}>
-                        {selectedMatch?.home}
-                      </span>
-                   </div>
-                </div>
-
-                {/* RIGA 2: SQUADRA OSPITE */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                   
-                   {/* 1. COLONNA STEMMA RIGIDA (Identica a sopra) */}
-                   <div style={{ 
-                       width: '40px', 
-                       display: 'flex', 
-                       justifyContent: 'center',
-                       alignItems: 'center',
-                       flexShrink: 0 
-                   }}>
-                       <img 
-                          src={getStemmaLeagueUrl((selectedMatch as any)?.away_mongo_id)} 
-                          alt=""
-                          style={{ width: '28px',marginTop:'5px', height: '28px', objectFit: 'contain' }}
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                       />
-                   </div>
-
-                   {/* 2. COLONNA TESTO */}
-                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                      {/* Etichetta OSPITE */}
-                      <span style={{ fontSize: '9px',marginBottom: '5px', color: theme.danger, textTransform: 'uppercase', lineHeight: 1, fontWeight: 'bold', marginLeft: '2px' }}>
-                        OSPITE
-                      </span>
-                      {/* Nome Squadra */}
-                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2 }}>
-                        {selectedMatch?.away}
-                      </span>
-                   </div>
-                </div>
-              </div>
-
-              {/* COLONNA DESTRA: CRONOMETRO E RISULTATO (Resta invariata) */}
-              <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'row', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginRight: '5px',
-                  background: 'rgba(255,255,255,0.05)',
-                  padding: isMobile ? '20px 5px' : '15px 8px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  flexShrink: 0
-              }}>
-                <div 
-                  className={isVarActive ? 'sim-timer-pulsing' : ''}
-                  style={{
-                    fontSize: '25px', fontWeight: '900', color: isVarActive ? '#ff2e2e' : theme.purple,
-                    fontFamily: 'monospace', textShadow: isVarActive ? `0 0 10px #ff2e2e` : 'none',
-                    minWidth: '35px', textAlign: 'center'
-                  }}
-                >
-                  {timer}'
-                </div>
-                <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }}></div>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '25px', fontWeight: '900', color: theme.cyan, fontFamily: 'monospace' }}>{liveScore.home}</span>
-                  <span style={{ fontSize: '14px', color: '#666' }}>-</span>
-                  <span style={{ fontSize: '25px', fontWeight: '900', color: theme.danger, fontFamily: 'monospace' }}>{liveScore.away}</span>
-                </div>
-              </div>
-            </>
-          ) : (
-
-          /* =================================================================================
-             💻 VERSIONE DESKTOP: Layout ORIGINALE (Quello che mi hai fornito)
-             ================================================================================= */
-            <>
-              {/* A. DATA E ORA */}
-              <div style={{
-                    width: '130px',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      height: '30px',
-                      alignItems: 'center',
-                      gap: '2px',
-                      background: 'rgba(111, 149, 170, 0.13)',
-                      padding: '5px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(0, 240, 255, 0.1)',
-                    }}>
-                      <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
-                        {(selectedMatch as any).date_obj
-                          ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
-                          : '00/00'}
-                      </span>
-                      <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
-                      <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
-                        {(selectedMatch as any).match_time || '--:--'}
-                      </span>
-                    </div>
-              </div>
-
-              {/* CRONOMETRO */}
-              <div style={{ width: '55px', textAlign: 'center' }}>
-                <div 
-                  className={isVarActive ? 'sim-timer-pulsing' : ''}
-                  style={{
-                    fontSize: '24px',
-                    marginLeft: '-20px',
-                    fontWeight: '900',
-                    color: isVarActive ? '#ff2e2e' : theme.purple,
-                    fontFamily: 'monospace',
-                    textShadow: isVarActive ? `0 0 15px #ff2e2e` : `0 0 10px ${theme.purple}`,
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {timer}'
-                </div>
-              </div>
-      
-              {/* SQUADRA CASA */}
-              <div style={{ width: '120px', textAlign: 'right' }}>
-                <div style={{ fontSize: '10px', color: theme.cyan, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '2px' }}>Casa</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: 'white', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedMatch?.home}</div>
-              </div>
-      
-              {/* PUNTEGGIO CENTRALE */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '0px 5px',
-                background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
-                borderRadius: '10px',
-                border: '1px solid rgba(0, 240, 255, 0.3)'
-              }}>
-                <div style={{ fontSize: '30px', fontWeight: '900', color: theme.cyan, fontFamily: 'monospace', textShadow: `0 0 10px ${theme.cyan}`, width: '30px', textAlign: 'center' }}>{liveScore.home}</div>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
-                <div style={{ fontSize: '30px', fontWeight: '900', color: theme.danger, fontFamily: 'monospace', textShadow: `0 0 10px ${theme.danger}`, width: '30px', textAlign: 'center' }}>{liveScore.away}</div>
-              </div>
-      
-              {/* SQUADRA OSPITE */}
-              <div style={{ width: '120px', textAlign: 'left' }}>
-                <div style={{ fontSize: '10px', color: theme.danger, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '2px' }}>Ospite</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: 'white', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedMatch?.away}</div>
-              </div>
-            </>
-          )}
-
-        </div>
-
-  
-        {/* ✅ CONTENITORE CAMPO + CRONACA AFFIANCATI */}
-        <div 
-          className="sim-main-layout"
-          style={{
-            display: 'flex',
-            gap: '25px',
-            width: '100%',
-            justifyContent: 'center',
-            alignItems: 'stretch'
-          }}
-        >
-          
-          
-          {/* CAMPO DA GIOCO */}
-          <div 
-            className="sim-field-section"
-            style={{
-              flexShrink: 0
-            }}
-          >
-            <div 
-              className="sim-pitch"
-              style={{
-                ...styles.pitch,
-                marginTop: '25px'
-              }}
-            >
-            {/* ✅ MODULI SQUADRE */}
-            {isWarmingUp && formations && (
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        width: isMobile ? '90%' : '900px',
-                        marginBottom: '10px'
-                      }}>
-                        <span style={{
-                          color: theme.cyan,
-                          fontSize: isMobile ? '10px' : '16px',
-                          fontWeight: 'bold',
-                          textShadow: `0 0 8px ${theme.cyan}`,
-                          marginLeft: '10px'
-                        }}>
-                          {normalizeModulo(formations.home_formation?.modulo || '4-3-3')}
-                        </span>
-                        <span style={{
-                          color: theme.danger,
-                          fontSize: isMobile ? '10px' : '16px',
-                          fontWeight: 'bold',
-                          textShadow: `0 0 8px ${theme.danger}`,
-                          marginRight: isMobile ? '-25px' :  '250px'
-                        }}>
-                          {normalizeModulo(formations.away_formation?.modulo || '4-3-3')}
-                        </span>
-                      </div>
-                    )}
-
-              {pitchMsg && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0, left: 0, right: 0, bottom: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  zIndex: 100,
-                  pointerEvents: 'none'
-                }}>
-                  <div style={{
-                    fontSize: isMobile ? '35px' : '60px',
-                    fontWeight: '900',
-                    color: pitchMsg.colore,
-                    textShadow: `0 0 20px ${pitchMsg.colore}`,
-                    textTransform: 'uppercase',
-                    transform: 'rotate(-5deg)',
-                    animation: 'pulse 0.6s infinite alternate'
-                  }}>
-                    {pitchMsg.testo}
-                  </div>
-                </div>
-              )}
-  
-              {/* Linea di metà campo */}
-              <div style={{ 
-                position: 'absolute', 
-                left: '50%', 
-                height: '100%', 
-                borderLeft: '2px solid rgba(255,255,255,0.5)',
-                boxShadow: '0 0 10px rgba(255,255,255,0.3)'
-              }}></div>
-
-              <div style={{ 
-                position: 'absolute', 
-                top: '50%', 
-                left: '50%', 
-                transform: 'translate(-50%, -50%)', 
-                width: '80px', 
-                height: '80px', 
-                border: '2px solid rgba(255,255,255,0.5)', 
-                borderRadius: '50%',
-                boxShadow: '0 0 10px rgba(255,255,255,0.2)'
-              }}></div>
-  
-              {/* Area grande SINISTRA (casa) */}
-              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderRight: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
-  
-              {/* Area piccola SINISTRA (casa) */}
-              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderRight: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
-  
-              {/* Area grande DESTRA (ospite) */}
-              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '16%', height: '60%', borderLeft: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
-  
-              {/* Area piccola DESTRA (ospite) */}
-              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: '6%', height: '30%', borderLeft: '2px solid rgba(255,255,255,0.5)', borderTop: '2px solid rgba(255,255,255,0.5)', borderBottom: '2px solid rgba(255,255,255,0.5)' }}></div>
-               
-              {/* Dischetto rigore CASA */}
-              <div style={{
-                position: 'absolute',
-                left: '11%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.7)',
-                boxShadow: '0 0 8px rgba(255,255,255,0.5)'
-              }}></div>
-
-              {/* Dischetto rigore OSPITE */}
-              <div style={{
-                position: 'absolute',
-                right: '11%',
-                top: '50%',
-                transform: 'translate(50%, -50%)',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.7)',
-                boxShadow: '0 0 8px rgba(255,255,255,0.5)'
-              }}></div>
-
-              {/* Punto centrale */}
-              <div style={{
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '5px',
-                height: '5px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.8)',
-                boxShadow: '0 0 8px rgba(255,255,255,0.6)',
-                zIndex: 5
-              }}></div>
-
-              {/* Mezzaluna area rigore CASA - semicerchio che sporge FUORI dall'area */}
-              <div style={{
-                position: 'absolute',
-                left: !isMobile ? '85%' : '87%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                border: '2px solid rgba(255,255,255,0.5)',
-                borderLeft: '50%',
-                clipPath: 'inset(0 50px 0 0)'
-              }}></div>
-
-              {/* Mezzaluna area rigore OSPITE - semicerchio che sporge FUORI dall'area */}
-              <div style={{
-                position: 'absolute',
-                left: !isMobile ? '15%' : '13%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                border: '2px solid rgba(255,255,255,0.5)',
-                borderLeft: '50%',
-                clipPath: 'inset(0 0 0 50px)'
-              }}></div>
-
-              {/* Archi d'angolo PIÙ PICCOLI MA PIÙ GROSSI - ALTO SX */}
-              <div style={{
-                position: 'absolute',
-                left: '-8px',
-                top: '-8px',
-                width: '16px',
-                height: '16px',
-                border: '3px solid rgba(255,255,255,0.7)',
-                borderRadius: '50%',
-                borderRight: 'none',
-                borderBottom: 'none'
-              }}></div>
-
-              {/* Archi d'angolo - BASSO SX */}
-              <div style={{
-                position: 'absolute',
-                left: '-8px',
-                bottom: '-8px',
-                width: '16px',
-                height: '16px',
-                border: '3px solid rgba(255,255,255,0.7)',
-                borderRadius: '50%',
-                borderRight: 'none',
-                borderTop: 'none'
-              }}></div>
-
-              {/* Archi d'angolo - ALTO DX */}
-              <div style={{
-                position: 'absolute',
-                right: '-8px',
-                top: '-8px',
-                width: '16px',
-                height: '16px',
-                border: '3px solid rgba(255,255,255,0.7)',
-                borderRadius: '50%',
-                borderLeft: 'none',
-                borderBottom: 'none'
-              }}></div>
-
-              {/* Archi d'angolo - BASSO DX */}
-              <div style={{
-                position: 'absolute',
-                right: '-8px',
-                bottom: '-8px',
-                width: '16px',
-                height: '16px',
-                border: '3px solid rgba(255,255,255,0.7)',
-                borderRadius: '50%',
-                borderLeft: 'none',
-                borderTop: 'none'
-              }}></div>
-
-              {/* Bandierine FUORI DAL CAMPO - ALTO SX */}
-              <div style={{
-                position: 'absolute',
-                left: '-3px',
-                top: '-3px',
-                width: '2px',
-                height: '20px',
-                background: 'rgba(255,255,255,0.8)',
-                transform: 'rotate(0deg)',
-                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  left: '2px',
-                  width: 0,
-                  height: 0,
-                  borderLeft: '10px solid rgba(255,60,60,0.9)',
-                  borderTop: '7px solid transparent',
-                  borderBottom: '7px solid transparent',
-                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
-                }}></div>
-              </div>
-
-              {/* Bandierine - BASSO SX */}
-              <div style={{
-                position: 'absolute',
-                left: '-3px',
-                bottom: '-3px',
-                width: '2px',
-                height: '20px',
-                background: 'rgba(255,255,255,0.8)',
-                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  left: '2px',
-                  width: 0,
-                  height: 0,
-                  borderLeft: '10px solid rgba(255,60,60,0.9)',
-                  borderTop: '7px solid transparent',
-                  borderBottom: '7px solid transparent',
-                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
-                }}></div>
-              </div>
-
-              {/* Bandierine - ALTO DX */}
-              <div style={{
-                position: 'absolute',
-                right: '-3px',
-                top: '-3px',
-                width: '2px',
-                height: '20px',
-                background: 'rgba(255,255,255,0.8)',
-                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '2px',
-                  width: 0,
-                  height: 0,
-                  borderRight: '10px solid rgba(255,60,60,0.9)',
-                  borderTop: '7px solid transparent',
-                  borderBottom: '7px solid transparent',
-                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
-                }}></div>
-              </div>
-
-              {/* Bandierine - BASSO DX */}
-              <div style={{
-                position: 'absolute',
-                right: '-3px',
-                bottom: '-3px',
-                width: '2px',
-                height: '20px',
-                background: 'rgba(255,255,255,0.8)',
-                boxShadow: '0 0 4px rgba(255,255,255,0.5)'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '2px',
-                  width: 0,
-                  height: 0,
-                  borderRight: '10px solid rgba(255,60,60,0.9)',
-                  borderTop: '7px solid transparent',
-                  borderBottom: '7px solid transparent',
-                  filter: 'drop-shadow(0 0 4px rgba(255,60,60,0.6))'
-                }}></div>
-              </div>
-
-              {/* ✅ MAGLIETTE GIOCATORI DURANTE RISCALDAMENTO */}
-              {isWarmingUp && formations && (
-                <>
-                  {(() => {
-                    const pos = getFormationPositions(formations.home_formation?.modulo || '4-3-3', true);
-                    const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
-                    return allPos.map((p, idx) => (
-                      <div key={`home-${idx}`} style={{
-                        position: 'absolute',
-                        left: `${p.x}%`,
-                        top: `${(p.y + (isMobile ? 2 : 0))}%`,
-                        transform: 'translate(-50%, -50%)'
-                      }}>
-                        <JerseySVG color={theme.cyan} size={28} />
-                      </div>
-                    ));
-                  })()}
-                  {(() => {
-                    const pos = getFormationPositions(formations.away_formation?.modulo || '4-3-3', false);
-                    const allPos = [...pos.GK, ...pos.DEF, ...pos.MID, ...pos.ATT];
-                    return allPos.map((p, idx) => (
-                      <div key={`away-${idx}`} style={{
-                        position: 'absolute',
-                        left: `${p.x}%`,
-                        top: `${(p.y + (isMobile ? 2 : 0))}%`,
-                        transform: 'translate(-50%, -50%)'
-                      }}>
-                        <JerseySVG color={theme.danger} size={28} />
-                      </div>
-                    ));
-                  })()}
-                </>
-              )}
-  
-              {/* Barra Momentum con Scia */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                overflow: 'hidden'
-              }}>
-                {/* SCIA SFUMATA POTENTE */}
-                {!isWarmingUp && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: `${momentum}%`,
-                  width: isMobile ? '400px' : '800px',  // ← CONTROLLA QUESTO
-                  height: '100%',
-                  background: momentumDirection === 'ospite'
-                    ? `linear-gradient(to left, ${theme.cyan}FF, ${theme.cyan}66, ${theme.cyan}44, transparent)`
-                    : `linear-gradient(to right, ${theme.danger}FF, ${theme.danger}66, ${theme.danger}44, transparent)`,
-                  transform: momentumDirection === 'ospite' ? `translateX(${isMobile ? '-400px' : '-800px'})` : 'translateX(0)',
-                  transition: 'left 0.5s ease-out, background 0.3s ease',
-                  opacity: 0.9,
-                  filter: 'blur(5px)',
-                  boxShadow: momentumDirection === 'ospite'
-                    ? `-50px 0 100px 50px ${theme.cyan}88`
-                    : `50px 0 100px 50px ${theme.danger}88`,
-                  zIndex: 1
-                }} />
-                )}
-                
-                {/* BARRA PRINCIPALE */}
-                <div style={{
-                  ...styles.momentumBar,
-                  left: `${momentum}%`,
-                  background: momentum > 50 ? theme.cyan : theme.danger,
-                  boxShadow: `
-                    0 0 15px 3px ${momentum > 50 ? theme.cyan : theme.danger},
-                    0 0 30px 6px ${momentum > 50 ? theme.cyan : theme.danger}80
-                  `,
-                  filter: 'brightness(1.2)'
-                }} />
-              </div>
-            </div>
-          </div>
-  
-          {/* CRONACA EVENTI */}
-          <div 
-            className="sim-events-section"
-            style={{
-              flexShrink: 0
-            }}
-          >
-            <div 
-              className="sim-events-feed"
-              style={{
-                ...styles.eventFeed
-              }}
-            >
-              {animEvents.length === 0 ? (
-                <div style={{
-                  color: '#666',
-                  textAlign: 'center',
-                  fontSize: '13px',
-                  padding: '20px',
-                  fontStyle: 'italic'
-                }}>
-                  ⚽ Fischio d'inizio...
-                </div>
-              ) : (
-                animEvents.map((e, i) => {
-                  const homeUpper = selectedMatch?.home.toUpperCase() || '';
-                  const awayUpper = selectedMatch?.away.toUpperCase() || '';
-                  const isCasa = e.includes(`[${homeUpper}]`);
-                  const isOspite = e.includes(`[${awayUpper}]`);
-                  const isSistema = e.includes('[SISTEMA]');
-                  const isGol = e.includes('⚽') || e.includes('GOOOL');
-                  const isRigore = e.includes('🎯') || e.includes('RIGORE');
-                  const isCartellino = e.includes('🟨') || e.includes('🟥');
-
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        marginBottom: '8px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        lineHeight: '1.4',
-                        textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
-                        color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
-                        fontWeight: isSistema ? 'bold' : isGol ? '900' : 'normal',
-                        
-                        // SFONDO SPECIALE PER GOL
-                        background: isGol
-                          ? (isCasa
-                              ? `linear-gradient(90deg, ${theme.cyan}30, transparent)`
-                              : isOspite
-                              ? `linear-gradient(270deg, ${theme.danger}30, transparent)`
-                              : 'rgba(255, 255, 255, 0.05)')
-                          : isRigore
-                          ? 'rgba(255, 159, 67, 0.15)'
-                          : isCartellino
-                          ? 'rgba(255, 193, 7, 0.1)'
-                          : 'rgba(255, 255, 255, 0.02)',
-                        
-                        // BORDO COLORATO
-                        borderLeft: isCasa && isGol ? `4px solid ${theme.cyan}` : 'none',
-                        borderRight: isOspite && isGol ? `4px solid ${theme.danger}` : 'none',
-                        
-                        // GLOW PER GOL
-                        boxShadow: isGol
-                          ? (isCasa
-                              ? `0 0 20px ${theme.cyan}40, inset 0 0 20px ${theme.cyan}10`
-                              : `0 0 20px ${theme.danger}40, inset 0 0 20px ${theme.danger}10`)
-                          : 'none',
-                        
-                        // ANIMAZIONE FADE-IN
-                        animation: 'eventFadeIn 0.4s ease-out',
-                        
-                        // HOVER EFFECT
-                        transition: 'all 0.2s ease',
-                        cursor: 'default'
-                      }}
-                      onMouseEnter={(el) => {
-                        el.currentTarget.style.background = isGol
-                          ? (isCasa
-                              ? `linear-gradient(90deg, ${theme.cyan}40, transparent)`
-                              : `linear-gradient(270deg, ${theme.danger}40, transparent)`)
-                          : 'rgba(255, 255, 255, 0.08)';
-                      }}
-                      onMouseLeave={(el) => {
-                        el.currentTarget.style.background = isGol
-                          ? (isCasa
-                              ? `linear-gradient(90deg, ${theme.cyan}30, transparent)`
-                              : `linear-gradient(270deg, ${theme.danger}30, transparent)`)
-                          : 'rgba(255, 255, 255, 0.02)';
-                      }}
-                    >
-                      {e}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* AGGIUNGI ANIMAZIONE CSS */}
-          <style>{`
-            @keyframes eventFadeIn {
-              from {
-                opacity: 0;
-                transform: translateY(-10px);
-              }
-              to {
-                opacity: 1;
-                transform: translateY(0);
-              }
-            }
-            
-            .sim-events-feed::-webkit-scrollbar {
-              width: 6px;
-            }
-            
-            .sim-events-feed::-webkit-scrollbar-track {
-              background: rgba(255, 255, 255, 0.05);
-              border-radius: 10px;
-            }
-            
-            .sim-events-feed::-webkit-scrollbar-thumb {
-              background: ${theme.cyan}60;
-              border-radius: 10px;
-            }
-            
-            .sim-events-feed::-webkit-scrollbar-thumb:hover {
-              background: ${theme.cyan}90;
-            }
-          `}</style>
-        </div>
-
-        <div style={{
-        position: 'absolute',
-        marginTop: '-140px', 
-        marginLeft: '-350px',
-        width: '100%',
-        textAlign: 'center',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: simulationEnded ? theme.cyan : theme.success,  // 👈 Cambia colore
-        textShadow: simulationEnded 
-          ? `0 0 10px ${theme.cyan}` 
-          : `0 0 10px ${theme.success}`,
-        animation: simulationEnded ? 'none' : 'pulse 2s infinite',  // 👈 Ferma animazione
-        pointerEvents: 'none'
-      }}>
-        {simulationEnded 
-          ? <>
-          ⚙️ ELABORAZIONE AI CONCLUSA<br/>
-          {'\u00A0'.repeat(12)}✅ VERIFICA I DATI DEL RESOCONTO 📊
-        </>
-
-          : '✅ ELABORAZIONE DATI IN TEMPO REALE...'}
-      </div>
-
-  
-        {/* ✅ BARRA RISCALDAMENTO */}
-        {isWarmingUp && (
-          <div style={{ width: '100%', maxWidth: '900px', marginTop: '15px' }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '8px'
-            }}>
-              <span style={{ color: theme.cyan, fontSize: '14px', fontWeight: 'bold' }}>
-                🏃 RISCALDAMENTO PRE-PARTITA
-              </span>
-              <span style={{ color: theme.text, fontSize: '14px' }}>
-                {Math.round(warmupProgress)}%
-              </span>
-            </div>
-            <div style={{
-              width: '100%',
-              height: '8px',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${warmupProgress}%`,
-                height: '100%',
-                backgroundColor: theme.cyan,
-                boxShadow: `0 0 10px ${theme.cyan}`,
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-        )}
-  
-        {/* ✅ BOTTONI TOP RIGHT (FORMAZIONI + RIEPILOGO) */}
-        <div className="sim-top-right-buttons">
-          {/* BOTTONE FORMAZIONI */}
-          {formations && (
-            <button
-              className="btn-formazioni"  // 👈 AGGIUNGI QUESTA CLASSE
-              onClick={() => {
-                setShowFormationsPopup(true);
-                setPopupOpacity(1);
-              }}
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                border: `1px solid ${theme.cyan}`,
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: theme.cyan,
-                position: 'relative',
-                cursor: 'pointer',
-                fontSize: '12px',
-                zIndex: 50
-                // Togli position/marginTop qui, li gestiamo in CSS
-              }}
-            >
-              📋 Formazioni
-            </button>
-          )}
-
-          {/* BOTTONE RIEPILOGO PARTITA */}
-          {simulationEnded && (
-            <button
-              className="btn-riepilogo"  // 👈 AGGIUNGI QUESTA CLASSE
-              onClick={() => setShowMatchSummary(true)}
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                border: `1px solid ${theme.purple}`,
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: theme.purple,
-                cursor: 'pointer',
-                fontSize: '12px',
-                zIndex: 50
-              }}
-            >
-              📊 Riepilogo
-            </button>
-          )}
-        </div>
-
-  
-        <div style={{ 
-          position: 'absolute',
-          marginTop: '-30px', 
-          color: theme.cyan, 
-          letterSpacing: '2px',
-          marginLeft: '980px', 
-          marginBottom: '10px',
-          fontSize: '10px', 
-          animation: 'pulse 2s infinite',
-          textAlign: 'center',
-          pointerEvents: 'none'
-        }}>
-          SIMULAZIONE LIVE DAL CORE AI
-        </div>
-        {/* QUOTE - Stile migliorato */}
-        <div style={{ 
-          position: 'absolute',
-          background: 'linear-gradient(135deg, rgba(0,240,255,0.15), rgba(138,43,226,0.15))',
-          marginTop: '-89px', 
-          color: theme.cyan,
-          border: '2px solid rgba(0,240,255,0.3)', 
-          borderRadius: '12px',
-          letterSpacing: '5px',
-          marginLeft: '820px', 
-          padding: '11px 15px',
-          fontSize: '11px', 
-          fontWeight: 'bold',
-          boxShadow: '0 0 20px rgba(0,240,255,0.2)',
-          animation: 'pulse 2s infinite',
-          textAlign: 'center',
-          pointerEvents: 'none',
-          backdropFilter: 'blur(10px)'
-        }}>
-          ⚡ QUOTE
-        </div>
-
-        <div style={{
-            position: 'absolute',
-            display: 'flex',
-            alignItems: 'stretch',
-            gap: '10px',
-            height: '30px',
-            marginTop: '-100px',
-            marginLeft: '960px',
-            paddingTop: '12px'
-          }}>
-            {['1', 'X', '2'].map((label, idx) => {
-              const val = selectedMatch?.odds?.[label] ?? '-';
-              const colors = [
-                'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,200,255,0.1))',
-                'linear-gradient(135deg, rgba(138,43,226,0.2), rgba(138,43,226,0.1))',
-                'linear-gradient(135deg, rgba(255,20,147,0.2), rgba(255,20,147,0.1))'
-              ];
-              const borderColors = [
-                'rgba(0,240,255,0.4)',
-                'rgba(138,43,226,0.4)',
-                'rgba(255,20,147,0.4)'
-              ];
-              
-              return (
-                <div key={label} style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: colors[idx],
-                  paddingRight: '35px',
-                  paddingLeft: '25px',
-                  paddingBottom: '30px',
-                  paddingTop: '5px',
-                  borderRadius: '12px',
-                  border: `2px solid ${borderColors[idx]}`,
-                  boxShadow: `0 0 15px ${borderColors[idx]}`,
-                  backdropFilter: 'blur(10px)',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <span style={{ 
-                    fontSize: '9px', 
-                    color: 'rgba(255,255,255,0.6)', 
-                    fontWeight: 'bold', 
-                    marginBottom: '10px',
-                    marginLeft: '10px',
-                    letterSpacing: '2px'
-                  }}>
-                    {label}
-                  </span>
-                  <span style={{ 
-                    fontSize: '18px', 
-                    color: '#fff', 
-                    fontWeight: 'black', 
-                    fontFamily: 'monospace',
-                    marginLeft: '8px',
-                    textShadow: '0 0 10px rgba(255,255,255,0.3)'
-                  }}>
-                    {val}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-        {/* ✅ BOTTONI FINE PARTITA */}
-        {simulationEnded && (
-          <div 
-            className="sim-end-buttons"
-            style={{
-              marginTop: '-10px',
-              marginBottom: '20px',
-              display: 'flex',
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '15px',
-              animation: 'fadeIn 0.5s ease-in'
-            }}
-          >
-            
-  
-            <button
-              onClick={() => {
-                setViewState('result');
-                setSimulationEnded(false);
-              }}
-              style={{
-                padding: '15px 40px',
-                background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-                border: 'none',
-                borderRadius: '12px',
-                color: '#000',
-                fontSize: '16px',
-                marginLeft: '260px',
-                fontWeight: '900',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                boxShadow: `0 0 30px rgba(0, 240, 255, 0.5)`,
-                transition: 'all 0.3s ease',
-                letterSpacing: '1px'
-              }}
-              onMouseEnter={(e) => {
-                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
-                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
-              }}
-              onMouseLeave={(e) => {
-                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
-                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 0 30px rgba(0, 240, 255, 0.5)`;
-              }}
-            >
-              📊 VAI AL RESOCONTO COMPLETO
-            </button>
-  
-            <button
-              onClick={() => {
-                setViewState('list');
-                setSimulationEnded(false);
-                setSimResult(null);
-              }}
-              style={{
-                padding: '10px 30px',
-                background: 'transparent',
-                border: `2px solid ${theme.textDim}`,
-                borderRadius: '8px',
-                color: theme.textDim,
-                marginLeft: '-1200px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
-                if (e.currentTarget) e.currentTarget.style.borderColor = theme.cyan;
-                if (e.currentTarget) e.currentTarget.style.color = theme.cyan;
-              }}
-              onMouseLeave={(e) => {
-                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
-                if (e.currentTarget) e.currentTarget.style.borderColor = theme.textDim;
-                if (e.currentTarget) e.currentTarget.style.color = theme.textDim;
-              }}
-            >
-              ← Torna alla Lista Partite
-            </button>
-  
-            <button
-              onClick={handleResimulate}
-              style={{
-                padding: '15px 30px',
-                background: 'linear-gradient(135deg, #00f0ff, #bc13fe)',
-                border: 'none',
-                borderRadius: '12px',
-                color: '#000',
-                fontSize: '14px',
-                marginLeft: '10px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1.05)';
-                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 0 40px rgba(0, 240, 255, 0.8)`;
-              }}
-              onMouseLeave={(e) => {
-                if (e.currentTarget) e.currentTarget.style.transform = 'scale(1)';
-                if (e.currentTarget) e.currentTarget.style.boxShadow = `0 4px 20px rgba(0, 240, 255, 0.3)`;
-              }}
-            >
-              🔄 SIMULA DI NUOVO
-            </button>
-          </div>
-        )}
-  
-      </div>
-    </div>
+    <AnimazionePartita
+      isMobile={isMobile}
+      selectedMatch={selectedMatch}
+      timer={timer}
+      liveScore={liveScore}
+      isVarActive={isVarActive}
+      formations={formations}
+      isWarmingUp={isWarmingUp}
+      warmupProgress={warmupProgress}
+      animEvents={animEvents}
+      momentum={momentum}
+      momentumDirection={momentumDirection}
+      pitchMsg={pitchMsg}
+      simulationEnded={simulationEnded}
+      configAlgo={configAlgo}
+      customCycles={customCycles}
+      setViewState={setViewState}
+      setSimulationEnded={setSimulationEnded}
+      setShowFormationsPopup={setShowFormationsPopup}
+      setPopupOpacity={setPopupOpacity}
+      setShowMatchSummary={setShowMatchSummary}
+      setSimResult={setSimResult}
+      getStemmaLeagueUrl={getStemmaLeagueUrl}
+      handleResimulate={handleResimulate}
+    />
   );
+  // renderResult segue sotto
   const renderResult = () => {
-    console.log("🎯 renderResult chiamata! viewState:", viewState);
-    console.log("🎯 simResult:", simResult);
+    console.log("ðŸŽ¯ renderResult chiamata! viewState:", viewState);
+    console.log("ðŸŽ¯ simResult:", simResult);
     
     if (!simResult || !simResult.success) {
-      console.log("❌ simResult non valido!");
+      console.log("âŒ simResult non valido!");
       return (
         <div style={{...styles.arenaContent, textAlign: 'center', padding: '40px'}}>
           <p style={{color: theme.textDim}}>Nessun risultato disponibile</p>
@@ -2732,15 +1086,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       );
     }
     
-    console.log("✅ Rendering SimulationResultView...");
+    console.log("âœ… Rendering SimulationResultView...");
 
   
-    // ✅ VERIFICA CHE I DATI ESSENZIALI ESISTANO
+    // âœ… VERIFICA CHE I DATI ESSENZIALI ESISTANO
     if (simResult.gh === undefined || simResult.gh === null) {
       console.error("Dati simulazione incompleti:", simResult);
       return (
         <div style={{...styles.arenaContent, textAlign: 'center', padding: '40px'}}>
-          <p style={{color: theme.danger}}>❌ Errore: Dati simulazione non validi</p>
+          <p style={{color: theme.danger}}>âŒ Errore: Dati simulazione non validi</p>
         </div>
       );
     }
@@ -2792,7 +1146,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     return (
       <DashboardHome
         onSelectLeague={(id) => {
-          // ✅ GESTIONE COPPE EUROPEE (UCL / UEL)
+          // âœ… GESTIONE COPPE EUROPEE (UCL / UEL)
           if (id === 'UCL' || id === 'UEL') {
             setActiveLeague(id);
             // // modificato per: attivazione specifica visualizzazione coppe
@@ -2800,7 +1154,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             return;
           }
 
-          // ✅ GESTIONE PRONOSTICI DEL GIORNO
+          // âœ… GESTIONE PRONOSTICI DEL GIORNO
           if (id === 'PREDICTIONS') {
             setActiveLeague('PREDICTIONS');
             setSelectedCup('');
@@ -2841,7 +1195,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     );
   }
 
-  // ✅ GESTIONE COPPE EUROPEE
+  // âœ… GESTIONE COPPE EUROPEE
  /* if (activeLeague === 'UCL' || activeLeague === 'UEL') {
     return (
       <CupMatches
@@ -2858,7 +1212,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
       @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
       
-      /* ✅ NUOVO: Animazione FadeIn per il bottone */
+      /* âœ… NUOVO: Animazione FadeIn per il bottone */
       @keyframes fadeIn { 
         from { 
           opacity: 0; 
@@ -2905,7 +1259,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             WebkitTextFillColor: 'transparent',
             textAlign: 'center',
           }}>
-            🔄 Simula di Nuovo
+            ðŸ”„ Simula di Nuovo
           </h2>
           
           <p style={{
@@ -2962,7 +1316,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
               }}
             >
-              ✅ MANTIENI E SIMULA
+              âœ… MANTIENI E SIMULA
             </button>
             
             <button
@@ -2980,7 +1334,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 transition: 'all 0.3s',
               }}
             >
-              ⚙️ MODIFICA
+              âš™ï¸ MODIFICA
             </button>
           </div>
 
@@ -2999,7 +1353,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               cursor: 'pointer',
             }}
           >
-            ✕ Annulla
+            âœ• Annulla
           </button>
         </div>
       </div>
@@ -3033,7 +1387,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             color: '#fff',
             textAlign: 'center',
           }}>
-            ⚙️ Modifica Settaggi
+            âš™ï¸ Modifica Settaggi
           </h2>
 
           {/* ALGORITMO */}
@@ -3167,7 +1521,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               marginBottom: '12px',
             }}
           >
-            🚀 AVVIA SIMULAZIONE
+            ðŸš€ AVVIA SIMULAZIONE
           </button>
           
           <button
@@ -3183,7 +1537,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               cursor: 'pointer',
             }}
           >
-            ← Indietro
+            â† Indietro
           </button>
         </div>
       </div>
@@ -3232,7 +1586,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 gap: '10px',
                 animation: 'fadeIn 0.3s ease'
               }}>
-                <span>⚠️</span>
+                <span>âš ï¸</span>
                 {error}
                 <button 
                   onClick={() => setError(null)} 
@@ -3245,7 +1599,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     fontSize: '16px'
                   }}
                 >
-                  ✕
+                  âœ•
                 </button>
               </div>
             )}

@@ -45,14 +45,7 @@ import {
 import { styles, getWidgetGlow } from './AppDev/stili';
 
 // --- UTILITY (estratte) ---
-import {
-  getStemmaLeagueUrl as _getStemmaLeagueUrl,
-  FORMATION_MAPPING,
-  normalizeModulo,
-  getFormationPositions,
-  JerseySVG
-} from './AppDev/utilita';
-import type { FormationPositions } from './AppDev/utilita';
+import { getStemmaLeagueUrl as _getStemmaLeagueUrl } from './AppDev/utilita';
 
 // --- HOOK (estratti) ---
 import { useDatiCampionato } from './AppDev/hooks/useDatiCampionato';

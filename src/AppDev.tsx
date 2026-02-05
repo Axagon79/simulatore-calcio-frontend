@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import DashboardHome from './DashboardHome';
-import CupMatches from './CupMatches';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
 import { checkAdmin, PERMISSIONS } from './permissions';
-import SimulationResultView from './components/SimulationResultView';
 import './styles/SimulationAnimation.css';
-import './styles/SimulationAnimation-responsive.css'; // NUOVO
-import { ArrowLeft, /* altre icone */ } from 'lucide-react'; //
-import DailyPredictions from './DailyPredictions';
+import './styles/SimulationAnimation-responsive.css';
+import { ArrowLeft } from 'lucide-react';
+
+// Lazy loading per componenti pesanti
+const CupMatches = lazy(() => import('./CupMatches'));
+const DailyPredictions = lazy(() => import('./DailyPredictions'));
+const SimulationResultView = lazy(() => import('./components/SimulationResultView'));
 
 // Componenti estratti
 import SelettoreGiornata from './AppDev/SelettoreGiornata';
@@ -1555,13 +1557,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       
       {/* Se è selezionata una coppa, mostra CupMatches */}
       {selectedCup ? (
-      <CupMatches 
-        cupId={selectedCup as 'UCL' | 'UEL'} 
-        onBack={() => {
-          setSelectedCup('');
-          setActiveLeague(null);  // Torna alla dashboard
-        }}
-      />
+      <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Caricamento...</div>}>
+        <CupMatches
+          cupId={selectedCup as 'UCL' | 'UEL'}
+          onBack={() => {
+            setSelectedCup('');
+            setActiveLeague(null);
+          }}
+        />
+      </Suspense>
       ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Nessuna partita trovata</div>
       ) : (
@@ -2759,12 +2763,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           <ArrowLeft size={16} /> Torna alla lista
         </button>
   
-        <SimulationResultView 
-          data={simResult}
-          homeName={selectedMatch?.home || 'Team Casa'} 
-          awayName={selectedMatch?.away || 'Team Ospite'} 
-          onOpenAIExplanation={() => handleAskAI(simResult)}
-        />
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px' }}>Caricamento risultati...</div>}>
+          <SimulationResultView
+            data={simResult}
+            homeName={selectedMatch?.home || 'Team Casa'}
+            awayName={selectedMatch?.away || 'Team Ospite'}
+            onOpenAIExplanation={() => handleAskAI(simResult)}
+          />
+        </Suspense>
       </div>
     );
   };
@@ -2773,9 +2779,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   // --- BLOCCO 0: PAGINA PRONOSTICI ---
   if (activeLeague === 'PREDICTIONS') {
     return (
-      <DailyPredictions
-        onBack={() => setActiveLeague(null)}
-      />
+      <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px' }}>Caricamento pronostici...</div>}>
+        <DailyPredictions
+          onBack={() => setActiveLeague(null)}
+        />
+      </Suspense>
     );
   }
 

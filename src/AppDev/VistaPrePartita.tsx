@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction, CSSProperties } from 'react';
+import type { Match } from '../types';
 
 // ============================================================
 // TYPES & INTERFACES
@@ -16,22 +17,6 @@ interface Theme {
   success: string;
   danger: string;
   panelBorder: string;
-}
-
-interface Match {
-  id: string;
-  home: string;
-  away: string;
-  home_id: number;
-  away_id: number;
-  home_mongo_id?: string;
-  away_mongo_id?: string;
-  real_score?: string | null;
-  match_time: string;
-  status: string;
-  date_obj: string;
-  h2h_data?: any;
-  odds?: { [key: string]: any };
 }
 
 interface PointTooltip {

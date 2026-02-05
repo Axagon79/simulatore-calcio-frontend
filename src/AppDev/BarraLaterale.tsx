@@ -1,31 +1,10 @@
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
+import type { League, Match } from '../types';
 
 interface Country {
   code: string;
   name: string;
   flag: string;
-}
-
-interface League {
-  id: string;
-  name: string;
-  country: string;
-}
-
-interface Match {
-  id: string;
-  home: string;
-  away: string;
-  home_id: number;
-  away_id: number;
-  home_mongo_id?: string;
-  away_mongo_id?: string;
-  real_score?: string | null;
-  match_time: string;
-  status: string;
-  date_obj: string;
-  h2h_data?: any;
-  odds?: { [key: string]: any };
 }
 
 type ViewState = 'list' | 'pre-match' | 'simulating' | 'settings' | 'result';

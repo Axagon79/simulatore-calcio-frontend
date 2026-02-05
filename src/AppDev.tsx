@@ -22,114 +22,13 @@ import ImpostazioniSimulazione from './AppDev/ImpostazioniSimulazione';
 import VistaPrePartita from './AppDev/VistaPrePartita';
 
 // --- INTERFACCE & TIPI ---
-
-interface League { id: string; name: string; country: string }
-interface RoundInfo { name: string; label: string; type: 'previous' | 'current' | 'next' }
-
-interface BvsData {
-  // Le 3 Linee Grafiche
-  bvs_match_index: number; // Linea Generale (-7 a +7)
-  bvs_index: number;       // Forza Casa
-  bvs_away: number;        // Forza Ospite
-
-  // Il "Semaforo" e i Testi
-  tip_market: string;      // Es: "CONSIGLIO TECNICO: SEGNO 1"
-  tip_sign: string;        // Es: "1" o "---"
-  bvs_advice: string;      // La frase narrativa
-  classification: string;  // "PURO", "SEMI", "NON_BVS"
-
-  // Affidabilità
-  trust_home_letter: string; // "A", "B", "C"...
-  trust_away_letter: string;
-
-  // Quote per il confronto (Gap)
-  qt_1: number;
-  gap_reale?: number;      // Opzionale
-}
-
-interface Match {
-  id: string; home: string; away: string;
-  home_id: number; // Aggiungi questo
-  away_id: number; // Aggiungi questo
-  home_mongo_id?: string; // <--- AGGIUNGI QUESTO
-  away_mongo_id?: string; // <--- AGGIUNGI QUESTO
-  real_score?: string | null; match_time: string;
-  status: string; date_obj: string; h2h_data?: BvsData & any
-  odds?: { [key: string]: any };
-}
-
-interface SimulationResult {
-  // Dati identificativi e stato
-  success: boolean;
-  predicted_score: string;
-  gh: number;
-  ga: number;
-  sign: string;
-  algo_name: string;
-  top3: string[];
-  
-  // Dati per la visualizzazione (devono combaciare con SimulationResultView)
-  statistiche: Record<string, [string | number, string | number]>;
-  cronaca: { 
-    minuto: number; 
-    squadra?: 'casa' | 'ospite'; 
-    tipo: "gol" | "cartellino" | "cambio" | "info" | "rigore_fischio" | "rigore_sbagliato" | "rosso" | "VAR_PROCESS" | "VAR_VERDICT" | "formazione";
-    var_type?: "gol" | "rigore" | "rigore_on_field_review" | "rosso" | "gol_fantasma";
-    decision?: "confermato" | "annullato";
-
-    testo: string 
-  }[];
-
-  // Modulo Scommesse (Indispensabile per il componente)
-  report_scommesse: {
-    Bookmaker: Record<string, string>;
-    Analisi_Profonda: {
-      Confidence_Globale: string;
-      Deviazione_Standard_Totale: number;
-      Affidabilita_Previsione: string;
-    };
-  };
-
-  // NUOVO: Modulo Scommesse Professionale (Dati da Universal Simulator)
-  report_scommesse_pro?: {
-    analisi_dispersione: {
-      std_dev: number;           // Deviazione Standard reale
-      score_imprevedibilita: number; // 0-100 (più è alto, più è rischiosa)
-      is_dispersed: boolean;     // Se true, attiva l'allarme giallo
-      warning: string | null;    // Il messaggio di raccomandazione
-    };
-    probabilita_1x2: Record<string, number>; // Percentuali esatte (es. 43.5)
-    value_bets: Record<string, {
-      ia_prob: number;
-      book_prob: number;
-      diff: number;
-      is_value: boolean;         // Se true, attiva la stella dorata ⭐
-    }>;
-    scommessa_consigliata: string; // "CONSIGLIATA", "RISCHIOSA", ecc.
-    under_over: Record<string, number>;
-    gol_nogol: Record<string, number>;
-    top_risultati: Array<{ score: string; prob: number }>; // I 5 risultati del terminale
-  };
-
-  // Informazioni di contesto
-  info_extra?: {
-    valore_mercato: string;
-    motivazione: string;
-  };
-
-  // Metadati tecnici
-  result?: any;
-  timestamp?: string;
-  execution_time?: number;
-  match?: any;
-}
-
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'bot';
-  text: string;
-  timestamp: Date;
-}
+import type {
+  League,
+  RoundInfo,
+  Match,
+  SimulationResult,
+  ChatMessage
+} from './types';
 
 // --- CONFIGURAZIONE ---
 

@@ -1,16 +1,9 @@
-interface CronacaEvent {
-  tipo: string;
-  minuto: number;
-  testo: string;
-  squadra?: 'casa' | 'ospite';
-  decision?: string;
-  var_type?: string;
-}
+import type { MatchEvent } from '../types';
 
 interface SimResult {
   gh: number;
   ga: number;
-  cronaca?: CronacaEvent[];
+  cronaca?: MatchEvent[];
   statistiche?: { [key: string]: [string | number, string | number] };
 }
 

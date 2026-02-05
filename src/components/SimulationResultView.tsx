@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  Trophy, Activity, BarChart3, Clock, ShieldAlert, 
-  TrendingUp, MessageSquare, DollarSign, Star, AlertTriangle, 
+import {
+  Trophy, Activity, BarChart3, Clock, ShieldAlert,
+  TrendingUp, MessageSquare, DollarSign, Star, AlertTriangle,
   ChevronRight, Target, Info, Zap, ChevronDown, ChevronUp
 } from 'lucide-react';
-
-interface MatchEvent {
-  minuto: number;
-  squadra?: 'casa' | 'ospite' | 'info';
-  tipo: "gol" | "cartellino" | "cambio" | "info" | "rigore_fischio" | "rigore_sbagliato" | "rosso" | "VAR_PROCESS" | "VAR_VERDICT" | "formazione";
-  testo: string;
-  var_type?: "gol" | "rigore" | "rigore_on_field_review" | "rosso" | "gol_fantasma";
-  decision?: "confermato" | "annullato";
-}
+import type { MatchEvent } from '../types';
 
 
 const modalStyles = `

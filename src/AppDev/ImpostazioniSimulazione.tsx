@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import type { League, Match, SpeedPreset } from '../types';
 
 // ============================================================
 // TYPES & INTERFACES
@@ -18,22 +19,6 @@ interface Theme {
   panelBorder: string;
 }
 
-interface Match {
-  id: string;
-  home: string;
-  away: string;
-  home_id: number;
-  away_id: number;
-  home_mongo_id?: string;
-  away_mongo_id?: string;
-  real_score?: string | null;
-  match_time: string;
-  status: string;
-  date_obj: string;
-  h2h_data?: any;
-  odds?: { [key: string]: any };
-}
-
 interface Round {
   type: PeriodType;
   name: string;
@@ -45,18 +30,6 @@ interface Country {
   code: string;
   name: string;
   flag: string;
-}
-
-interface League {
-  id: string;
-  name: string;
-  country: string;
-}
-
-interface SpeedPreset {
-  id: number;
-  label: string;
-  cycles?: number;
 }
 
 interface Permissions {

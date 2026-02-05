@@ -298,7 +298,7 @@ export default function VistaPrePartita({
               order: isMobile ? 2 : 1,
               pointerEvents: 'auto'
             }}>
-              <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).date_obj ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : '27/12'}</span>
+              <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).date_obj ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }) : '27/12'}</span>
               <span style={{ opacity: 0.2 }}>|</span>
               <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).match_time || '18:00'}</span>
             </div>

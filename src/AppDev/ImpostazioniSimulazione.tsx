@@ -927,7 +927,8 @@ export default function ImpostazioniSimulazione({
                                                 day: '2-digit',
                                                 month: '2-digit',
                                                 hour: '2-digit',
-                                                minute: '2-digit'
+                                                minute: '2-digit',
+                                                timeZone: 'UTC'
                                             }) : 'Data N/D'}
                                         </div>
                                     </div>

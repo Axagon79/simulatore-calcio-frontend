@@ -1787,7 +1787,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     }}>
                       <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
                         {(selectedMatch as any).date_obj
-                          ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+                          ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
                           : '00/00'}
                       </span>
                       <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>

@@ -5,3 +5,4 @@ export { default as PopupFormazioni } from './PopupFormazioni';
 export { default as BarraSuperiore } from './BarraSuperiore';
 export { default as BarraLaterale } from './BarraLaterale';
 export { default as ElementoPartita } from './ElementoPartita';
+export { default as PopupRiepilogo } from './PopupRiepilogo';

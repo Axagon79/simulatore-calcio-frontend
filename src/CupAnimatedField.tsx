@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
 import './styles/SimulationAnimation.css';
 import './styles/SimulationAnimation-responsive.css';
+import type { MatchEvent, SimulationResult } from './types';
+
+// Il match delle coppe ha struttura variabile dal backend
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CupMatch = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CupSimResult = any;
 
 interface CupAnimatedFieldProps {
   cupId: 'UCL' | 'UEL';
   homeTeam: string;
   awayTeam: string;
-  selectedMatch: any;
-  onComplete: (result: any) => void;
+  selectedMatch: CupMatch;
+  onComplete: (result: CupSimResult) => void;
   config: {
     algoId: number;
     cycles: number;
@@ -70,9 +77,9 @@ export default function CupAnimatedField({
   const theme = cupTheme[cupId];
   const isMobile = window.innerWidth < 768;
   
-  const [, setSimulationData] = useState<any>(null);
+  const [, setSimulationData] = useState<{ loading?: boolean } & Partial<SimulationResult> | null>(null);
   const [, setIsSimulating] = useState(false);
-  const [simResult, setSimResult] = useState<any>(null);
+  const [simResult, setSimResult] = useState<SimulationResult | null>(null);
   
   const configAlgo = config.algoId;
   const customCycles = config.cycles;
@@ -399,22 +406,22 @@ export default function CupAnimatedField({
     runSimulation();
   }, [cupId, homeTeam, awayTeam, config.algoId, config.cycles]);
 
-  const runEventAnimation = (finalData: any) => {
+  const runEventAnimation = (finalData: SimulationResult) => {
     let t = 0;
     let isPaused = false;
     let injuryTimeCounter = 0;
     let isInjuryTime = false;
-    
+
     const totalDurationMs = 30000;
     const intervalMs = 100;
     const regularStep = 90 / (totalDurationMs / intervalMs);
-    
+
     const eventiMostrati = new Set<string>();
-    
+
     // Estrai minuti di recupero dalla cronaca (se presenti)
-    const estraiRecupero = (cronaca: any[], tempo: 'pt' | 'st'): number => {
+    const estraiRecupero = (cronaca: MatchEvent[], tempo: 'pt' | 'st'): number => {
       const minutoRiferimento = tempo === 'pt' ? 45 : 90;
-      const evento = cronaca?.find((e: any) =>
+      const evento = cronaca?.find((e: MatchEvent) =>
         e.minuto === minutoRiferimento &&
         e.tipo === 'info' &&
         e.testo?.includes('minuti di recupero')
@@ -514,9 +521,9 @@ export default function CupAnimatedField({
           minutoEvento = baseMin + extra;
         }
         
-        const eventiDelMinuto = finalData.cronaca.filter((e: any) => e.minuto === minutoEvento);
-        
-        eventiDelMinuto.forEach((matchEvent: any) => {
+        const eventiDelMinuto = finalData.cronaca.filter((e: MatchEvent) => e.minuto === minutoEvento);
+
+        eventiDelMinuto.forEach((matchEvent: MatchEvent) => {
           const eventoId = `${matchEvent.minuto}-${matchEvent.tipo}-${matchEvent.testo}`;
           
           if (!eventiMostrati.has(eventoId)) {
@@ -580,7 +587,7 @@ export default function CupAnimatedField({
               setTimeout(() => {
                 clearInterval(varInterval);
                 
-                const sentenzaVAR = finalData.cronaca.find((e: any) =>
+                const sentenzaVAR = finalData.cronaca.find((e: MatchEvent) =>
                   e.minuto >= matchEvent.minuto &&
                   e.tipo === "VAR_VERDICT" &&
                   e.var_type === varType
@@ -1851,7 +1858,7 @@ export default function CupAnimatedField({
                       🏠 {formations.home_team} ({normalizeModulo(formations.home_formation?.modulo || '4-3-3')})
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {formations.home_formation?.titolari?.map((player: any, idx: number) => (
+                      {formations.home_formation?.titolari?.map((player: { role: string; player: string }, idx: number) => (
                         <div key={idx} style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1889,7 +1896,7 @@ export default function CupAnimatedField({
                       ✈️ {formations.away_team} ({normalizeModulo(formations.away_formation?.modulo || '4-3-3')})
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {formations.away_formation?.titolari?.map((player: any, idx: number) => (
+                      {formations.away_formation?.titolari?.map((player: { role: string; player: string }, idx: number) => (
                         <div key={idx} style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1992,18 +1999,18 @@ export default function CupAnimatedField({
                 <div style={{ marginBottom: '15px' }}>
                   <div style={{ fontSize: '12px', color: theme.textDim, marginBottom: '8px' }}>⚽ MARCATORI</div>
                   <div style={{ fontSize: '13px', color: theme.text }}>
-                    {simResult.cronaca?.filter((e: any) => {
+                    {simResult.cronaca?.filter((e: MatchEvent) => {
                       if (e.tipo !== 'gol') return false;
-                      
-                      const varAnnullato = simResult.cronaca?.find((v: any) => 
-                        v.minuto === e.minuto && 
-                        v.tipo === 'VAR_VERDICT' && 
+
+                      const varAnnullato = simResult.cronaca?.find((v: MatchEvent) =>
+                        v.minuto === e.minuto &&
+                        v.tipo === 'VAR_VERDICT' &&
                         v.decision === 'annullato' &&
                         v.var_type === 'gol'
                       );
-                      
+
                       return !varAnnullato;
-                    }).map((e: any, i: number) => {
+                    }).map((e: MatchEvent, i: number) => {
                       const testoPulito = e.testo
                         .replace(/^\d+'/, '')
                         .replace('⚽ ', '')

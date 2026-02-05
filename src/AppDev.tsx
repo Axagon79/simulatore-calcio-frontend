@@ -14,6 +14,7 @@ import DailyPredictions from './DailyPredictions';
 import SelettoreGiornata from './AppDev/SelettoreGiornata';
 import ChatBot from './AppDev/ChatBot';
 import PopupFormazioni from './AppDev/PopupFormazioni';
+import BarraSuperiore from './AppDev/BarraSuperiore';
 
 // --- INTERFACCE & TIPI ---
 
@@ -6464,185 +6465,30 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       </div>
     )}
 
-      {/* TOP BAR UNIFICATA - Nascosta quando sei nelle Coppe */}
-      
-      <div style={styles.topBar}>
-      {/* HAMBURGER MENU (Solo Mobile) */}
-      {isMobile && (
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          style={{
-            background: 'rgba(0, 240, 255, 0.1)',
-            border: '1px solid rgba(0, 240, 255, 0.3)',
-            color: '#00f0ff',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            fontSize: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 20
-          }}
-        >
-          ☰
-        </button>
-      )}
-
-      {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (Desktop) */}
-      {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px', zIndex: 10 }}>
-          <button
-            onClick={() => {
-              if (selectedCup) {
-                setSelectedCup('');
-                setActiveLeague(null);
-              } else {
-                setActiveLeague(null);
-              }
-              
-              // Modifiche necessarie per pulire lo stato ed evitare il bug:
-              setExpandedMatch(null); // // modificato per: chiudere dettagli aperti
-              setViewState('list');   // // modificato per: tornare alla visualizzazione base
-            }}
-            style={{
-              background: 'rgba(0, 240, 255, 0.1)',
-              border: '1px solid rgba(0, 240, 255, 0.3)',
-              color: '#00f0ff',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <span>⟵</span> DASHBOARD
-          </button>
-
-          <div style={{ ...styles.logo, display: 'flex', alignItems: 'center' }}>
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
-              alt="Logo"
-              style={{
-                height: '28px',
-                width: 'auto',
-                marginRight: '15px',
-                filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)'
-              }}
-            />
-            AI SIMULATOR PRO
-          </div>
-        </div>
-      )}
-
-      {/* 2. 🏆 IDENTITÀ COMPETIZIONE (Visibile ora anche su MOBILE) */}
-      {(league || selectedCup) && (
-        <div style={{
-          position: isMobile ? 'relative' : 'absolute',
-          left: isMobile ? '30px' : '280px', // Su mobile centra su tutto, su desktop sopra l'arena (sidebar 280px)
-          right: '0',
-          display: 'flex',
-          justifyContent: 'center',
-          pointerEvents: 'none', // Non blocca i click sotto
-          height: '100%',
-          alignItems: 'center',
-          zIndex: 5
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: isMobile ? '10px' : '25px',
-            padding: isMobile ? '5px 15px' : '5px 120px', // "Lungo" su desktop, compatto su mobile
-            background: 'transparent', // Trasparente come richiesto
-            pointerEvents: 'auto',
-            animation: 'fadeIn 0.5s ease'
-          }}>
-            <img 
-              src={selectedCup ? STEMMI_COPPE[selectedCup] : STEMMI_CAMPIONATI[league]}
-              alt="Stemma"
-              style={{
-                height: isMobile ? '30px' : '42px', // Più piccolo su mobile per non affollare
-                width: 'auto',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 0 10px rgba(0, 240, 255, 0.4))'
-              }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
-            
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{
-                fontSize: isMobile ? '12px' : '15px',
-                fontWeight: '900',
-                color: 'white',
-                lineHeight: '1.1',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                {selectedCup 
-                  ? (selectedCup === 'UCL' ? 'Champions' : 'Europa L.')
-                  : leagues.find(l => l.id === league)?.name || league
-                }
-              </span>
-              {/* Mostra la nazione solo su desktop per risparmiare spazio su mobile */}
-              {!isMobile && (
-                <span style={{
-                  fontSize: '10px',
-                  color: '#00f0ff',
-                  fontWeight: 'bold',
-                  opacity: 0.9,
-                  letterSpacing: '2px',
-                  marginTop: '2px'
-                }}>
-                  {selectedCup ? 'UEFA TOURNAMENT' : (availableCountries.find(c => c.code === country)?.name || country).toUpperCase()}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. SEZIONE DESTRA: Admin, Crediti, User */}
-      <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto', zIndex: 10, paddingRight: isMobile ? '10px' : '20px' }}>
-        {isAdmin && !isMobile && (
-          <div style={{
-            background: 'linear-gradient(135deg, #ff0080, #ff8c00)',
-            padding: '4px 12px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            letterSpacing: '1px',
-            boxShadow: '0 0 15px rgba(255, 0, 128, 0.5)',
-            animation: 'pulse 2s infinite'
-          }}>
-            👑 ADMIN MODE
-          </div>
-        )}
-        
-        {!isMobile && (
-          <div style={{ fontSize: '12px', color: '#8b9bb4' }}>
-            Crediti: <span style={{ color: '#05f9b6' }}>∞</span>
-          </div>
-        )}
-        
-        <button onClick={() => alert('Tema toggle')} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🌙</button>
-        
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          background: '#bc13fe',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-          boxShadow: `0 0 10px #bc13fe`,
-          fontSize: '16px',
-          color: 'white'
-        }}>U</div>
-      </div>
-    </div>
+      {/* TOP BAR */}
+      <BarraSuperiore
+        isMobile={isMobile}
+        isAdmin={isAdmin}
+        league={league}
+        leagues={leagues}
+        selectedCup={selectedCup}
+        country={country}
+        availableCountries={availableCountries}
+        stemmiCampionati={STEMMI_CAMPIONATI}
+        stemmiCoppe={STEMMI_COPPE}
+        styles={styles}
+        onMobileMenuOpen={() => setMobileMenuOpen(true)}
+        onDashboard={() => {
+          if (selectedCup) {
+            setSelectedCup('');
+            setActiveLeague(null);
+          } else {
+            setActiveLeague(null);
+          }
+          setExpandedMatch(null);
+          setViewState('list');
+        }}
+      />
     
       <div style={styles.mainContent}>
       {/* --- MOSTRA ERRORE SE PRESENTE --- */}

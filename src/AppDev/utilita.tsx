@@ -62,6 +62,12 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
       case 'SUPER_LIG': case 'SUPER LIG':
           folder = 'Turkey'; break;
 
+      // --- COPPE EUROPEE ---
+      case 'UCL': case 'CHAMPIONS_LEAGUE': case 'CHAMPIONS LEAGUE':
+          folder = 'Champions_League'; break;
+      case 'UEL': case 'EUROPA_LEAGUE': case 'EUROPA LEAGUE':
+          folder = 'Europa_League'; break;
+
       // --- RESTO DEL MONDO ---
       case 'BRASILEIRAO':
           folder = 'Brazil'; break;

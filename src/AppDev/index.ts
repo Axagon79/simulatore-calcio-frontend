@@ -7,3 +7,4 @@ export { default as BarraLaterale } from './BarraLaterale';
 export { default as ElementoPartita } from './ElementoPartita';
 export { default as PopupRiepilogo } from './PopupRiepilogo';
 export { default as ImpostazioniSimulazione } from './ImpostazioniSimulazione';
+export { default as VistaPrePartita } from './VistaPrePartita';

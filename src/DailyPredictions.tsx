@@ -118,7 +118,10 @@ interface Prediction {
   stars_segno: number;
   stars_gol: number;
   comment: { segno?: string; gol?: string; doppia_chance?: string; gol_extra?: string };
-  odds: { '1': number; '2': number; 'X': number; src?: string };
+  odds: { '1': number; '2': number; 'X': number; src?: string;
+    over_15?: number; under_15?: number; over_25?: number; under_25?: number;
+    over_35?: number; under_35?: number; gg?: number; ng?: number;
+    src_ou_gg?: string; };
   segno_dettaglio: Record<string, number>;
   gol_dettaglio: Record<string, number>;
   gol_directions?: Record<string, string>;
@@ -152,7 +155,10 @@ interface Bomb {
   confidence: number;
   stars: number;
   dettaglio: Record<string, number>;
-  odds: { '1': number; '2': number; 'X': number; src?: string };
+  odds: { '1': number; '2': number; 'X': number; src?: string;
+    over_15?: number; under_15?: number; over_25?: number; under_25?: number;
+    over_35?: number; under_35?: number; gg?: number; ng?: number;
+    src_ou_gg?: string; };
   comment: string;
   // Risultati reali (dal backend)
   real_score?: string | null;
@@ -162,6 +168,17 @@ interface Bomb {
 }
 
 // --- HELPERS ---
+const getGolQuota = (pronostico: string, odds: any): number | null => {
+  const map: Record<string, string> = {
+    'Over 1.5': 'over_15', 'Under 1.5': 'under_15',
+    'Over 2.5': 'over_25', 'Under 2.5': 'under_25',
+    'Over 3.5': 'over_35', 'Under 3.5': 'under_35',
+    'Goal': 'gg', 'NoGoal': 'ng',
+  };
+  const key = map[pronostico];
+  return key && odds[key] != null ? odds[key] : null;
+};
+
 const getConfidenceColor = (conf: number): string => {
   if (conf >= 70) return theme.success;
   if (conf >= 55) return theme.cyan;
@@ -631,7 +648,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,255,255,0.04)';
               const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.1)';
               const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
-              const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null);
+              const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
+                || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
               return (
                 <div key={i} style={{
                   background: pillBg, border: `1px solid ${pillBorder}`,
@@ -658,10 +676,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           paddingLeft: '8px', paddingTop: '6px',
           borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '11px'
         }}>
-          <div style={{ display: 'flex', gap: '10px', color: theme.textDim }}>
+          <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap' }}>
             <span>1: <span style={{ color: theme.text }}>{pred.odds?.['1']}</span></span>
             <span>X: <span style={{ color: theme.text }}>{pred.odds?.['X']}</span></span>
             <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2']}</span></span>
+            {pred.odds?.over_25 != null && <>
+              <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+              <span>O2.5: <span style={{ color: theme.text }}>{pred.odds.over_25}</span></span>
+              <span>U2.5: <span style={{ color: theme.text }}>{pred.odds.under_25}</span></span>
+            </>}
+            {pred.odds?.gg != null && <>
+              <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+              <span>GG: <span style={{ color: theme.text }}>{pred.odds.gg}</span></span>
+              <span>NG: <span style={{ color: theme.text }}>{pred.odds.ng}</span></span>
+            </>}
           </div>
         </div>
 

@@ -39,7 +39,7 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Superligaen': 'Denmark',
   'Jupiler Pro': 'Belgium', 'Jupiler Pro League': 'Belgium',
   'Süper Lig': 'Turkey', 'Super Lig': 'Turkey',
-  'League of Ireland': 'Ireland',
+  'League of Ireland': 'Ireland', 'League of Ireland Premier Division': 'Ireland',
   'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil',
   'Primera División': 'Argentina',
   'MLS': 'USA',
@@ -61,7 +61,7 @@ const LEAGUE_TO_LOGO: Record<string, string> = {
     'Superligaen': 'superligaen',
     'Jupiler Pro': 'jupiler_pro_league', 'Jupiler Pro League': 'jupiler_pro_league',
     'Süper Lig': 'super_lig', 'Super Lig': 'super_lig',
-    'League of Ireland': 'league_of_ireland',
+    'League of Ireland': 'league_of_ireland', 'League of Ireland Premier Division': 'league_of_ireland',
     'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao', 'Brasileirão Serie A': 'brasileirao', 'Brasileirao Serie A': 'brasileirao',
     'Primera División': 'primera_division_arg',
     'MLS': 'mls',
@@ -95,7 +95,7 @@ const LEAGUE_TO_COUNTRY_CODE: Record<string, string> = {
     'Superligaen': 'dk',
     'Jupiler Pro': 'be', 'Jupiler Pro League': 'be',
     'Süper Lig': 'tr', 'Super Lig': 'tr',
-    'League of Ireland': 'ie',
+    'League of Ireland': 'ie', 'League of Ireland Premier Division': 'ie',
     'Brasileirão': 'br', 'Brasileirao': 'br','Brasileirão Serie A': 'br', 'Brasileirao Serie A': 'br',
     'Primera División': 'ar',
     'MLS': 'us',
@@ -234,6 +234,13 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const [mode, setMode] = useState<'prod' | 'sandbox'>('prod');
+
+  // Reset UI state al cambio modalità PROD/SANDBOX
+  useEffect(() => {
+    setExpandedSections(new Set());
+    setCollapsedLeagues(new Set());
+    setActiveTab('all');
+  }, [mode]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -1108,7 +1115,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
             padding: '12px 20px', textAlign: 'center', minWidth: '120px'
           }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.cyan }}>{predictions.length}</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.cyan }}>{predictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}</div>
             <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Pronostici</div>
           </div>
           <div style={{
@@ -1282,11 +1289,42 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   return Object.entries(groupedBombs).map(([leagueName, lBombs]) => {
                     const key = `bomb-${leagueName}`;
                     const isCollapsed = !collapsedLeagues.has(key);
+                    const now = new Date();
+                    const finished = lBombs.filter(b => b.real_score != null).length;
+                    const live = lBombs.filter(b => b.real_score == null && b.date && b.match_time && new Date(`${b.date}T${b.match_time}:00`) <= now).length;
+                    const toPlay = lBombs.length - finished - live;
+                    const hits = lBombs.filter(b => b.hit === true).length;
+                    const misses = lBombs.filter(b => b.hit === false).length;
+                    const verifiedB = hits + misses;
+                    const hitRateB = verifiedB > 0 ? Math.round((hits / verifiedB) * 1000) / 10 : null;
+                    const statusBg = finished === 0 ? 'rgba(255,255,255,0.05)' : finished === lBombs.length ? `${theme.success}30` : `${theme.warning}30`;
+                    const statusColor = finished === 0 ? theme.textDim : finished === lBombs.length ? theme.success : theme.warning;
+                    const missRate = verifiedB > 0 ? misses / verifiedB : 0;
+                    const hitColor = hits === 0 ? theme.textDim : theme.success;
+                    const missColor = misses === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+                    // Colore progressivo hit rate: 0%=rosso, 50%=giallo-verde, 100%=verde
+                    const hrHueB = hitRateB !== null ? Math.min(130, hitRateB * 1.3) : 0;
+                    const hrColorB = hitRateB !== null ? `hsl(${Math.round(hrHueB)}, 85%, 48%)` : theme.textDim;
+                    const hrBgB = hitRateB !== null ? `hsla(${Math.round(hrHueB)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                    const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                    const statsEls = (
+                      <>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {lBombs.length}</span>
+                        {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
+                        {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                        {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits} {hits === 1 ? 'centrato' : 'centrati'}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses} {misses === 1 ? 'mancato' : 'mancati'}</span>
+                        {verifiedB > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColorB, fontWeight: '800', background: hrBgB, padding: '1px 8px', borderRadius: '10px' }}>{hitRateB}%</span></>}
+                      </>
+                    );
                     return (
                       <div key={key} style={{ marginBottom: '16px' }}>
                         <div
                           style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
                             background: 'rgba(255,215,0,0.03)', borderRadius: '8px',
                             cursor: 'pointer', userSelect: 'none' as const,
@@ -1294,17 +1332,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           }}
                           onClick={() => toggleLeague(key)}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>{leagueName}</span>
-                            <span style={{
-                              fontSize: '10px', color: theme.textDim,
-                              background: 'rgba(255,255,255,0.05)',
-                              padding: '1px 7px', borderRadius: '4px'
-                            }}>{lBombs.length}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '240px', minWidth: '240px', flexShrink: 0 }) }}>
+                                <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{leagueName}</span>
+                              </div>
+                              {!isMobile && <><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</>}
+                            </div>
+                            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                           </div>
-                          <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                          {isMobile && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                              {statsEls}
+                            </div>
+                          )}
                         </div>
                         {!isCollapsed && lBombs.map((bomb) => renderBombCard(bomb))}
                       </div>
@@ -1326,18 +1369,51 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     fontSize: '11px', background: `${theme.cyan}20`, color: theme.cyan,
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
                   }}>
-                    {predictions.length}
+                    {predictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
                   </span>
                 </h2>
 
                 {Object.entries(groupedByLeague).map(([leagueName, preds]) => {
                   const isCollapsed = !collapsedLeagues.has(leagueName);
+                  const now = new Date();
+                  const finished = preds.filter(p => p.real_score != null).length;
+                  const live = preds.filter(p => p.real_score == null && p.date && p.match_time && new Date(`${p.date}T${p.match_time}:00`) <= now).length;
+                  const toPlay = preds.length - finished - live;
+                  // Conteggio per singolo pronostico
+                  const allP = preds.flatMap(p => p.pronostici || []);
+                  const hits = allP.filter(x => x.hit === true).length;
+                  const misses = allP.filter(x => x.hit === false).length;
+                  const verifiedP = hits + misses;
+                  const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
+                  const statusBg = finished === 0 ? 'rgba(255,255,255,0.05)' : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
+                  const statusColor = finished === 0 ? theme.textDim : finished === preds.length ? theme.success : theme.warning;
+                  const missRate = verifiedP > 0 ? misses / verifiedP : 0;
+                  const hitColor = hits === 0 ? theme.textDim : theme.success;
+                  const missColor = misses === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+                  // Colore progressivo hit rate: 0%=rosso, 50%=giallo-verde, 100%=verde
+                  const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+                  const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+                  const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                  const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                  const statsEls = (
+                    <>
+                      <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                      <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
+                      {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
+                      {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                      {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                      {sep}
+                      <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits} {hits === 1 ? 'centrato' : 'centrati'}</span>
+                      {sep}
+                      <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses} {misses === 1 ? 'mancato' : 'mancati'}</span>
+                      {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                    </>
+                  );
                   return (
                   <div key={leagueName} style={{ marginBottom: '16px' }}>
                     {/* HEADER LEGA - CLICCABILE */}
                     <div
                       style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
                         background: 'rgba(255,255,255,0.03)', borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
@@ -1345,19 +1421,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>{leagueName}</span>
-                        <span style={{
-                          fontSize: '10px', color: theme.textDim,
-                          background: 'rgba(255,255,255,0.05)',
-                          padding: '1px 7px', borderRadius: '4px'
-                        }}>
-                          {preds.length}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '240px', minWidth: '240px', flexShrink: 0 }) }}>
+                            <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{leagueName}</span>
+                          </div>
+                          {!isMobile && <><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</>}
+                        </div>
+                        <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>
-                      <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                      {isMobile && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                          {statsEls}
+                        </div>
+                      )}
                     </div>
 
                     {/* CARDS */}

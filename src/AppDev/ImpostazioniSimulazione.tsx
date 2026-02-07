@@ -402,6 +402,35 @@ export default function ImpostazioniSimulazione({
           </button>
         )}
 
+        {import.meta.env.DEV && (
+          <button
+            onClick={() => window.location.href = '/track-record'}
+            style={{
+              background: 'rgba(0, 200, 150, 0.1)',
+              border: '1px solid rgba(0, 200, 150, 0.3)',
+              color: '#00c896',
+              padding: '15px 22px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (e.currentTarget) e.currentTarget.style.borderColor = theme.cyan;
+              if (e.currentTarget) e.currentTarget.style.color = theme.cyan;
+            }}
+            onMouseLeave={(e) => {
+              if (e.currentTarget) e.currentTarget.style.borderColor = 'rgba(0, 200, 150, 0.3)';
+              if (e.currentTarget) e.currentTarget.style.color = '#00c896';
+            }}
+          >
+            📊 Track Record
+          </button>
+        )}
+
         <button
           onClick={() => setViewState('pre-match')}
           style={{

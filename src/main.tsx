@@ -4,12 +4,16 @@ import './index.css';
 
 import AppDev from './AppDev';
 import TuningMixer from './pages/TuningMixer';
+import TrackRecord from './pages/TrackRecord';
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <Routes>
       {import.meta.env.DEV && (
         <Route path="/mixer" element={<TuningMixer />} />
+      )}
+      {import.meta.env.DEV && (
+        <Route path="/track-record" element={<TrackRecord onBack={() => window.history.back()} />} />
       )}
       <Route path="/*" element={<AppDev />} />
     </Routes>

@@ -162,19 +162,6 @@ interface Bomb {
 }
 
 // --- HELPERS ---
-const renderStars = (stars: number, size = 16) => {
-  const full = Math.floor(stars);
-  const half = stars % 1 >= 0.3;
-  const empty = 5 - full - (half ? 1 : 0);
-  return (
-    <span style={{ fontSize: `${size}px`, letterSpacing: '1px' }}>
-      {'★'.repeat(full)}
-      {half && '½'}
-      {'☆'.repeat(Math.max(0, empty))}
-    </span>
-  );
-};
-
 const getConfidenceColor = (conf: number): string => {
   if (conf >= 70) return theme.success;
   if (conf >= 55) return theme.cyan;
@@ -644,6 +631,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,255,255,0.04)';
               const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.1)';
               const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
+              const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null);
               return (
                 <div key={i} style={{
                   background: pillBg, border: `1px solid ${pillBorder}`,
@@ -651,8 +639,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
                   <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
-                  <span style={{ fontSize: '10px', color: theme.gold }}>{renderStars(p.stars || 0, 10)}</span>
+                  <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                    <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${p.confidence || 0}%`, color: theme.gold }}>★</span>
+                  </span>
                   <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
+                  {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
                   {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                 </div>
               );
@@ -865,7 +857,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
                   <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
-                  <span style={{ fontSize: '10px', color: theme.gold }}>{renderStars(bomb.stars || 0, 10)}</span>
+                  <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                    <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
+                  </span>
                   <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
                   {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                 </div>

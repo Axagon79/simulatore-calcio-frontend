@@ -233,6 +233,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
   const [predStats, setPredStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<'prod' | 'sandbox'>('prod');
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -246,9 +247,11 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
       setLoading(true);
       setError(null);
       try {
+        const predEndpoint = mode === 'sandbox' ? 'daily-predictions-sandbox' : 'daily-predictions';
+        const bombEndpoint = mode === 'sandbox' ? 'daily-bombs-sandbox' : 'daily-bombs';
         const [predRes, bombRes] = await Promise.all([
-          fetch(`${API_BASE}/simulation/daily-predictions?date=${date}`),
-          fetch(`${API_BASE}/simulation/daily-bombs?date=${date}`)
+          fetch(`${API_BASE}/simulation/${predEndpoint}?date=${date}`),
+          fetch(`${API_BASE}/simulation/${bombEndpoint}?date=${date}`)
         ]);
 
         const predData = await predRes.json();
@@ -276,7 +279,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
       }
     };
     fetchData();
-  }, [date]);
+  }, [date, mode]);
 
   // Raggruppamento per lega
   const groupedByLeague = predictions.reduce<Record<string, Prediction[]>>((acc, p) => {
@@ -975,6 +978,24 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           ← Dashboard
         </button>
 
+        {/* BANNER SANDBOX */}
+        {mode === 'sandbox' && (
+          <div style={{
+            background: 'rgba(255, 152, 0, 0.15)',
+            border: '1px solid rgba(255, 152, 0, 0.4)',
+            borderRadius: '8px',
+            padding: '10px 20px',
+            textAlign: 'center',
+            marginBottom: '15px',
+            color: '#ff9800',
+            fontWeight: '700',
+            fontSize: '13px',
+            letterSpacing: '1px'
+          }}>
+            🧪 MODALITA SANDBOX — Dati da daily_predictions_sandbox
+          </div>
+        )}
+
         {/* HEADER */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <h1 style={{
@@ -990,6 +1011,46 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
             Analisi automatica basata su AI multi-indicatore
           </p>
+
+          {/* Toggle PROD/SANDBOX — solo DEV */}
+          {import.meta.env.DEV && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
+              <button
+                onClick={() => setMode('prod')}
+                style={{
+                  background: mode === 'prod' ? 'rgba(0, 240, 255, 0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${mode === 'prod' ? theme.cyan : 'rgba(255,255,255,0.1)'}`,
+                  color: mode === 'prod' ? theme.cyan : theme.textDim,
+                  padding: '6px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase' as const,
+                  transition: 'all 0.2s'
+                }}
+              >
+                PROD
+              </button>
+              <button
+                onClick={() => setMode('sandbox')}
+                style={{
+                  background: mode === 'sandbox' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${mode === 'sandbox' ? '#ff9800' : 'rgba(255,255,255,0.1)'}`,
+                  color: mode === 'sandbox' ? '#ff9800' : theme.textDim,
+                  padding: '6px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase' as const,
+                  transition: 'all 0.2s'
+                }}
+              >
+                SANDBOX
+              </button>
+            </div>
+          )}
         </div>
 
         {/* NAVIGAZIONE DATA */}

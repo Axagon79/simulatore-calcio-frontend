@@ -431,6 +431,35 @@ export default function ImpostazioniSimulazione({
           </button>
         )}
 
+        {import.meta.env.DEV && (
+          <button
+            onClick={() => window.location.href = '/predictions-mixer'}
+            style={{
+              background: 'rgba(255, 152, 0, 0.1)',
+              border: '1px solid rgba(255, 152, 0, 0.3)',
+              color: '#ff9800',
+              padding: '15px 22px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (e.currentTarget) e.currentTarget.style.borderColor = '#ffb74d';
+              if (e.currentTarget) e.currentTarget.style.color = '#ffb74d';
+            }}
+            onMouseLeave={(e) => {
+              if (e.currentTarget) e.currentTarget.style.borderColor = 'rgba(255, 152, 0, 0.3)';
+              if (e.currentTarget) e.currentTarget.style.color = '#ff9800';
+            }}
+          >
+            🔮 Predictions Mixer
+          </button>
+        )}
+
         <button
           onClick={() => setViewState('pre-match')}
           style={{

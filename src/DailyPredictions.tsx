@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
+type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 
 // --- TEMA (identico ad AppDev) ---
 const theme = {
@@ -238,6 +240,9 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const [mode, setMode] = useState<'prod' | 'sandbox'>('prod');
+  const [statusFilters, setStatusFilters] = useState<Record<'prod' | 'sandbox', StatusFilter>>({ prod: 'tutte', sandbox: 'tutte' });
+  const statusFilter = statusFilters[mode];
+  const setStatusFilter = (f: StatusFilter) => setStatusFilters(prev => ({ ...prev, [mode]: f }));
 
   // Reset UI state al cambio modalità PROD/SANDBOX
   useEffect(() => {
@@ -245,6 +250,11 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
     setCollapsedLeagues(new Set());
     setActiveTab('all');
   }, [mode]);
+
+  // Reset filtro al cambio data (solo modalità corrente)
+  useEffect(() => {
+    setStatusFilter('tutte');
+  }, [date]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -291,13 +301,6 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
     };
     fetchData();
   }, [date, mode]);
-
-  // Raggruppamento per lega
-  const groupedByLeague = predictions.reduce<Record<string, Prediction[]>>((acc, p) => {
-    if (!acc[p.league]) acc[p.league] = [];
-    acc[p.league].push(p);
-    return acc;
-  }, {});
 
   const toggleSection = (key: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -565,6 +568,79 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       return next;
     });
   };
+
+  // --- HELPERS STATUS FILTRO ---
+  const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null }): 'finished' | 'live' | 'to_play' => {
+    if (item.real_score != null) return 'finished';
+    if (item.date && item.match_time) {
+      const kickoff = new Date(`${item.date}T${item.match_time}:00`);
+      if (kickoff <= new Date()) return 'live';
+    }
+    return 'to_play';
+  };
+
+  const predMatchesFilter = (pred: Prediction, filter: StatusFilter): boolean => {
+    if (filter === 'tutte') return true;
+    const status = getMatchStatus(pred);
+    if (filter === 'live') return status === 'live';
+    if (filter === 'da_giocare') return status === 'to_play';
+    if (filter === 'finite') return status === 'finished';
+    if (filter === 'centrate') return pred.pronostici?.some(p => p.hit === true) ?? false;
+    if (filter === 'mancate') return pred.pronostici?.some(p => p.hit === false) ?? false;
+    return true;
+  };
+
+  const bombMatchesFilter = (bomb: Bomb, filter: StatusFilter): boolean => {
+    if (filter === 'tutte') return true;
+    const status = getMatchStatus(bomb);
+    if (filter === 'live') return status === 'live';
+    if (filter === 'da_giocare') return status === 'to_play';
+    if (filter === 'finite') return status === 'finished';
+    if (filter === 'centrate') return bomb.hit === true;
+    if (filter === 'mancate') return bomb.hit === false;
+    return true;
+  };
+
+  // --- DATI FILTRATI ---
+  const filteredPredictions = statusFilter === 'tutte' ? predictions : predictions.filter(p => predMatchesFilter(p, statusFilter));
+  const filteredBombs = statusFilter === 'tutte' ? bombs : bombs.filter(b => bombMatchesFilter(b, statusFilter));
+  const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
+    if (!acc[p.league]) acc[p.league] = [];
+    acc[p.league].push(p);
+    return acc;
+  }, {});
+
+  // --- CONTEGGI FILTRI ---
+  const filterCounts = useMemo(() => {
+    const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
+    const includePreds = activeTab === 'all' || activeTab === 'predictions';
+    const includeBombs = activeTab === 'all' || activeTab === 'bombs';
+    if (includePreds) {
+      predictions.forEach(pred => {
+        counts.tutte++;
+        const s = getMatchStatus(pred);
+        if (s === 'live') counts.live++;
+        else if (s === 'to_play') counts.da_giocare++;
+        else counts.finite++;
+        pred.pronostici?.forEach(p => {
+          if (p.hit === true) counts.centrate++;
+          if (p.hit === false) counts.mancate++;
+        });
+      });
+    }
+    if (includeBombs) {
+      bombs.forEach(bomb => {
+        counts.tutte++;
+        const s = getMatchStatus(bomb);
+        if (s === 'live') counts.live++;
+        else if (s === 'to_play') counts.da_giocare++;
+        else counts.finite++;
+        if (bomb.hit === true) counts.centrate++;
+        if (bomb.hit === false) counts.mancate++;
+      });
+    }
+    return counts;
+  }, [predictions, bombs, activeTab]);
 
   // --- RENDER CARD PRONOSTICO ---
   const renderPredictionCard = (pred: Prediction) => {
@@ -1138,21 +1214,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
             padding: '12px 20px', textAlign: 'center', minWidth: '120px'
           }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.cyan }}>{predictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.cyan }}>{filteredPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}</div>
             <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Pronostici</div>
           </div>
           <div style={{
             background: 'rgba(255,215,0,0.05)', border: `1px solid ${theme.gold}30`, borderRadius: '10px',
             padding: '12px 20px', textAlign: 'center', minWidth: '120px'
           }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.gold }}>{bombs.length}</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.gold }}>{filteredBombs.length}</div>
             <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Bombe 💣</div>
           </div>
           <div style={{
             background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
             padding: '12px 20px', textAlign: 'center', minWidth: '120px'
           }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.purple }}>{Object.keys(groupedByLeague).length}</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.purple }}>{Object.keys(filteredGroupedByLeague).length}</div>
             <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Leghe</div>
           </div>
         </div>
@@ -1186,6 +1262,68 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           ))}
         </div>
 
+        {/* STATUS FILTERS — Due sezioni: Partite + Pronostici */}
+        {(() => {
+          const renderFilterBtn = (f: { id: StatusFilter; label: string; icon: string; color: string }) => (
+            <button
+              key={f.id}
+              onClick={() => setStatusFilter(f.id)}
+              style={{
+                background: statusFilter === f.id ? `${f.color}20` : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${statusFilter === f.id ? f.color : 'rgba(255,255,255,0.06)'}`,
+                color: statusFilter === f.id ? f.color : theme.textDim,
+                padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
+                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+              }}
+            >
+              {f.icon} {f.label}
+              {filterCounts[f.id] > 0 && (
+                <span style={{
+                  fontSize: '9px', fontWeight: '800',
+                  background: statusFilter === f.id ? `${f.color}30` : 'rgba(255,255,255,0.06)',
+                  padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
+                }}>
+                  {filterCounts[f.id]}
+                </span>
+              )}
+            </button>
+          );
+          const capsuleStyle: React.CSSProperties = {
+            fontSize: '8px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px',
+            color: theme.textDim, background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+            padding: '3px 10px', marginBottom: '8px', textAlign: 'center'
+          };
+          const boxStyle: React.CSSProperties = {
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '12px', padding: '10px 14px'
+          };
+          return (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' as const, alignItems: 'stretch' }}>
+              {/* Box Partite */}
+              <div style={boxStyle}>
+                <span style={capsuleStyle}>Partite</span>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
+                  {renderFilterBtn({ id: 'tutte', label: 'Tutte', icon: '📋', color: theme.purple })}
+                  {renderFilterBtn({ id: 'live', label: 'LIVE', icon: '🔴', color: theme.danger })}
+                  {renderFilterBtn({ id: 'da_giocare', label: 'Da giocare', icon: '⏳', color: theme.textDim })}
+                  {renderFilterBtn({ id: 'finite', label: 'Finite', icon: '✅', color: theme.success })}
+                </div>
+              </div>
+              {/* Box Pronostici */}
+              <div style={boxStyle}>
+                <span style={capsuleStyle}>Pronostici</span>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
+                  {renderFilterBtn({ id: 'centrate', label: 'Centrati', icon: '✓', color: '#00ff88' })}
+                  {renderFilterBtn({ id: 'mancate', label: 'Mancati', icon: '✗', color: '#ff4466' })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* LOADING */}
         {loading && (
           <div style={{
@@ -1218,6 +1356,27 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             Nessun pronostico disponibile per questa data.
             <br />
             <span style={{ fontSize: '12px' }}>Prova a selezionare un altro giorno.</span>
+          </div>
+        )}
+
+        {/* NESSUN RISULTATO PER FILTRO */}
+        {!loading && !error && statusFilter !== 'tutte' && filteredPredictions.length === 0 && filteredBombs.length === 0 && (predictions.length > 0 || bombs.length > 0) && (
+          <div style={{
+            textAlign: 'center', padding: '40px 0', color: theme.textDim, fontSize: '13px'
+          }}>
+            <div style={{ fontSize: '36px', marginBottom: '10px' }}>🔍</div>
+            Nessun pronostico corrisponde al filtro selezionato.
+            <br />
+            <button
+              onClick={() => setStatusFilter('tutte')}
+              style={{
+                marginTop: '10px', background: `${theme.purple}20`, border: `1px solid ${theme.purple}`,
+                color: theme.purple, padding: '6px 16px', borderRadius: '8px',
+                cursor: 'pointer', fontSize: '12px', fontWeight: '600'
+              }}
+            >
+              Mostra tutte
+            </button>
           </div>
         )}
 
@@ -1292,7 +1451,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </div>
             )}
             {/* SEZIONE BOMBE (in alto se presenti) */}
-            {(activeTab === 'all' || activeTab === 'bombs') && bombs.length > 0 && (
+            {(activeTab === 'all' || activeTab === 'bombs') && filteredBombs.length > 0 && (
               <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
                 <h2 style={{
                   fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: theme.gold,
@@ -1303,12 +1462,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     fontSize: '11px', background: `${theme.gold}20`, color: theme.gold,
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
                   }}>
-                    {bombs.length}
+                    {filteredBombs.length}
                   </span>
                 </h2>
                 {(() => {
                   const groupedBombs: Record<string, Bomb[]> = {};
-                  bombs.forEach(b => { (groupedBombs[b.league] = groupedBombs[b.league] || []).push(b); });
+                  filteredBombs.forEach(b => { (groupedBombs[b.league] = groupedBombs[b.league] || []).push(b); });
                   return Object.entries(groupedBombs).map(([leagueName, lBombs]) => {
                     const key = `bomb-${leagueName}`;
                     const isCollapsed = !collapsedLeagues.has(key);
@@ -1357,12 +1516,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '240px', minWidth: '240px', flexShrink: 0 }) }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                                 <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                 <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{leagueName}</span>
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1 }}>{leagueName}</span>
                               </div>
-                              {!isMobile && <><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</>}
+                              {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                           </div>
@@ -1381,7 +1540,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             )}
 
             {/* SEZIONE PRONOSTICI (raggruppati per lega) */}
-            {(activeTab === 'all' || activeTab === 'predictions') && predictions.length > 0 && (
+            {(activeTab === 'all' || activeTab === 'predictions') && filteredPredictions.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
                 <h2 style={{
                   fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: theme.cyan,
@@ -1392,11 +1551,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     fontSize: '11px', background: `${theme.cyan}20`, color: theme.cyan,
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
                   }}>
-                    {predictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
+                    {filteredPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
                   </span>
                 </h2>
 
-                {Object.entries(groupedByLeague).map(([leagueName, preds]) => {
+                {Object.entries(filteredGroupedByLeague).map(([leagueName, preds]) => {
                   const isCollapsed = !collapsedLeagues.has(leagueName);
                   const now = new Date();
                   const finished = preds.filter(p => p.real_score != null).length;
@@ -1445,13 +1604,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       onClick={() => toggleLeague(leagueName)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '240px', minWidth: '240px', flexShrink: 0 }) }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                             <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{leagueName}</span>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1 }}>{leagueName}</span>
                           </div>
-                          {!isMobile && <><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</>}
+                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>

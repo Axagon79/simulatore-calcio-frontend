@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
+type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'solo_prod' | 'solo_sandbox';
 
 // --- TEMA (identico ad AppDev) ---
 const theme = {
@@ -234,26 +235,34 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'all' | 'predictions' | 'bombs'>('all');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [predStats, setPredStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
-  const [mode, setMode] = useState<'prod' | 'sandbox'>('prod');
+  const [mode, setMode] = useState<'prod' | 'sandbox' | 'confronto'>('prod');
   const [statusFilters, setStatusFilters] = useState<Record<'prod' | 'sandbox', StatusFilter>>({ prod: 'tutte', sandbox: 'tutte' });
-  const statusFilter = statusFilters[mode];
-  const setStatusFilter = (f: StatusFilter) => setStatusFilters(prev => ({ ...prev, [mode]: f }));
+  const statusFilter = mode !== 'confronto' ? statusFilters[mode] : 'tutte';
+  const setStatusFilter = (f: StatusFilter) => { if (mode !== 'confronto') setStatusFilters(prev => ({ ...prev, [mode]: f })); };
+  const [confrontoData, setConfrontoData] = useState<{
+    prodPredictions: Prediction[]; prodBombs: Bomb[];
+    sandboxPredictions: Prediction[]; sandboxBombs: Bomb[];
+  }>({ prodPredictions: [], prodBombs: [], sandboxPredictions: [], sandboxBombs: [] });
+  const [confrontoFilter, setConfrontoFilter] = useState<ConfrontoFilter>('tutte');
 
   // Reset UI state al cambio modalità PROD/SANDBOX
   useEffect(() => {
     setExpandedSections(new Set());
     setCollapsedLeagues(new Set());
     setActiveTab('all');
+    setConfrontoFilter('tutte');
   }, [mode]);
 
   // Reset filtro al cambio data (solo modalità corrente)
   useEffect(() => {
     setStatusFilter('tutte');
+    setConfrontoFilter('tutte');
   }, [date]);
 
   useEffect(() => {
@@ -268,30 +277,48 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
       setLoading(true);
       setError(null);
       try {
-        const predEndpoint = mode === 'sandbox' ? 'daily-predictions-sandbox' : 'daily-predictions';
-        const bombEndpoint = mode === 'sandbox' ? 'daily-bombs-sandbox' : 'daily-bombs';
-        const [predRes, bombRes] = await Promise.all([
-          fetch(`${API_BASE}/simulation/${predEndpoint}?date=${date}`),
-          fetch(`${API_BASE}/simulation/${bombEndpoint}?date=${date}`)
-        ]);
-
-        const predData = await predRes.json();
-        const bombData = await bombRes.json();
-
-        if (predData.success) {
-          setPredictions(predData.predictions || []);
-          if (predData.stats) setPredStats(predData.stats);
+        if (mode === 'confronto') {
+          // Fetch parallelo di ENTRAMBI i sistemi
+          const [ppRes, pbRes, spRes, sbRes] = await Promise.all([
+            fetch(`${API_BASE}/simulation/daily-predictions?date=${date}`),
+            fetch(`${API_BASE}/simulation/daily-bombs?date=${date}`),
+            fetch(`${API_BASE}/simulation/daily-predictions-sandbox?date=${date}`),
+            fetch(`${API_BASE}/simulation/daily-bombs-sandbox?date=${date}`)
+          ]);
+          const [ppData, pbData, spData, sbData] = await Promise.all([
+            ppRes.json(), pbRes.json(), spRes.json(), sbRes.json()
+          ]);
+          setConfrontoData({
+            prodPredictions: ppData.success ? (ppData.predictions || []) : [],
+            prodBombs: pbData.success ? (pbData.bombs || []) : [],
+            sandboxPredictions: spData.success ? (spData.predictions || []) : [],
+            sandboxBombs: sbData.success ? (sbData.bombs || []) : []
+          });
         } else {
-          setPredictions([]);
-        }
+          const predEndpoint = mode === 'sandbox' ? 'daily-predictions-sandbox' : 'daily-predictions';
+          const bombEndpoint = mode === 'sandbox' ? 'daily-bombs-sandbox' : 'daily-bombs';
+          const [predRes, bombRes] = await Promise.all([
+            fetch(`${API_BASE}/simulation/${predEndpoint}?date=${date}`),
+            fetch(`${API_BASE}/simulation/${bombEndpoint}?date=${date}`)
+          ]);
 
-        if (bombData.success) {
-          setBombs(bombData.bombs || []);
-          if (bombData.stats) setBombStats(bombData.stats);
-        } else {
-          setBombs([]);
-        }
+          const predData = await predRes.json();
+          const bombData = await bombRes.json();
 
+          if (predData.success) {
+            setPredictions(predData.predictions || []);
+            if (predData.stats) setPredStats(predData.stats);
+          } else {
+            setPredictions([]);
+          }
+
+          if (bombData.success) {
+            setBombs(bombData.bombs || []);
+            if (bombData.stats) setBombStats(bombData.stats);
+          } else {
+            setBombs([]);
+          }
+        }
       } catch (err: any) {
         console.error('Errore fetch pronostici:', err);
         setError(err.message || 'Errore di connessione');
@@ -311,6 +338,25 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
       return next;
     });
   };
+
+  // Chiudi popover tip quando si clicca fuori
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setExpandedSections(prev => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const key of next) {
+          if (key.endsWith('-tips')) {
+            next.delete(key);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   // --- RENDER DETTAGLIO ESPANDIBILE ---
   const renderDetailBar = (value: number, label: string, maxVal = 100) => {
@@ -601,6 +647,113 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return true;
   };
 
+  // --- HELPERS CONFRONTO ---
+  type MatchComparison = {
+    home: string; away: string; league: string; date: string; match_time: string;
+    home_mongo_id?: string; away_mongo_id?: string;
+    prodPred?: Prediction; sandboxPred?: Prediction;
+    prodBomb?: Bomb; sandboxBomb?: Bomb;
+    status: 'both' | 'prod_only' | 'sandbox_only';
+    predsDifferent: boolean; bombsDifferent: boolean;
+  };
+
+  const compareMatches = useMemo(() => {
+    if (mode !== 'confronto') return [];
+    const { prodPredictions: pp, sandboxPredictions: sp, prodBombs: pb, sandboxBombs: sb } = confrontoData;
+    const map = new Map<string, MatchComparison>();
+    const key = (h: string, a: string, l: string) => `${l}|${h}|${a}`;
+
+    pp.forEach(p => {
+      const k = key(p.home, p.away, p.league);
+      map.set(k, { home: p.home, away: p.away, league: p.league, date: p.date, match_time: p.match_time,
+        home_mongo_id: p.home_mongo_id, away_mongo_id: p.away_mongo_id,
+        prodPred: p, status: 'prod_only', predsDifferent: false, bombsDifferent: false });
+    });
+    pb.forEach(b => {
+      const k = key(b.home, b.away, b.league);
+      const e = map.get(k);
+      if (e) { e.prodBomb = b; }
+      else map.set(k, { home: b.home, away: b.away, league: b.league, date: b.date, match_time: b.match_time,
+        prodBomb: b, status: 'prod_only', predsDifferent: false, bombsDifferent: false });
+    });
+    sp.forEach(p => {
+      const k = key(p.home, p.away, p.league);
+      const e = map.get(k);
+      if (e) {
+        e.sandboxPred = p; e.status = 'both';
+        if (!e.home_mongo_id) e.home_mongo_id = p.home_mongo_id;
+        if (!e.away_mongo_id) e.away_mongo_id = p.away_mongo_id;
+        // Confronta pronostici
+        const aSet = new Set((e.prodPred?.pronostici || []).map(x => `${x.tipo}-${x.pronostico}`));
+        const bSet = new Set((p.pronostici || []).map(x => `${x.tipo}-${x.pronostico}`));
+        e.predsDifferent = aSet.size !== bSet.size || [...aSet].some(x => !bSet.has(x));
+      } else {
+        map.set(k, { home: p.home, away: p.away, league: p.league, date: p.date, match_time: p.match_time,
+          home_mongo_id: p.home_mongo_id, away_mongo_id: p.away_mongo_id,
+          sandboxPred: p, status: 'sandbox_only', predsDifferent: false, bombsDifferent: false });
+      }
+    });
+    sb.forEach(b => {
+      const k = key(b.home, b.away, b.league);
+      const e = map.get(k);
+      if (e) {
+        e.sandboxBomb = b;
+        if (e.status === 'prod_only') e.status = 'both';
+        e.bombsDifferent = !e.prodBomb || e.prodBomb.segno_bomba !== b.segno_bomba;
+      } else {
+        map.set(k, { home: b.home, away: b.away, league: b.league, date: b.date, match_time: b.match_time,
+          sandboxBomb: b, status: 'sandbox_only', predsDifferent: false, bombsDifferent: false });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.league.localeCompare(b.league) || a.match_time.localeCompare(b.match_time));
+  }, [mode, confrontoData]);
+
+  const confrontoStats = useMemo(() => {
+    if (mode !== 'confronto') return null;
+    const { prodPredictions: pp, prodBombs: pb, sandboxPredictions: sp, sandboxBombs: sb } = confrontoData;
+    const prodPredCount = pp.reduce((s, p) => s + (p.pronostici?.length || 0), 0);
+    const sandPredCount = sp.reduce((s, p) => s + (p.pronostici?.length || 0), 0);
+
+    const calcHR = (preds: Prediction[]) => {
+      const tips = preds.flatMap(p => p.pronostici || []).filter(t => t.hit != null);
+      if (tips.length === 0) return null;
+      return Math.round((tips.filter(t => t.hit === true).length / tips.length) * 1000) / 10;
+    };
+
+    const identiche = compareMatches.filter(c => c.status === 'both' && !c.predsDifferent && !c.bombsDifferent).length;
+    const diverse = compareMatches.filter(c => c.status === 'both' && (c.predsDifferent || c.bombsDifferent)).length;
+    const soloProd = compareMatches.filter(c => c.status === 'prod_only').length;
+    const soloSandbox = compareMatches.filter(c => c.status === 'sandbox_only').length;
+
+    return { prodPredCount, sandPredCount, prodBombs: pb.length, sandBombs: sb.length,
+      prodHR: calcHR(pp), sandHR: calcHR(sp), identiche, diverse, soloProd, soloSandbox };
+  }, [mode, confrontoData, compareMatches]);
+
+  // --- FILTRI CONFRONTO ---
+  const confrontoFilterCounts = useMemo(() => {
+    const counts: Record<ConfrontoFilter, number> = { tutte: 0, identiche: 0, diverse: 0, solo_prod: 0, solo_sandbox: 0 };
+    compareMatches.forEach(c => {
+      counts.tutte++;
+      if (c.status === 'both' && !c.predsDifferent && !c.bombsDifferent) counts.identiche++;
+      else if (c.status === 'both' && (c.predsDifferent || c.bombsDifferent)) counts.diverse++;
+      else if (c.status === 'prod_only') counts.solo_prod++;
+      else if (c.status === 'sandbox_only') counts.solo_sandbox++;
+    });
+    return counts;
+  }, [compareMatches]);
+
+  const filteredCompareMatches = useMemo(() => {
+    if (confrontoFilter === 'tutte') return compareMatches;
+    return compareMatches.filter(c => {
+      if (confrontoFilter === 'identiche') return c.status === 'both' && !c.predsDifferent && !c.bombsDifferent;
+      if (confrontoFilter === 'diverse') return c.status === 'both' && (c.predsDifferent || c.bombsDifferent);
+      if (confrontoFilter === 'solo_prod') return c.status === 'prod_only';
+      if (confrontoFilter === 'solo_sandbox') return c.status === 'sandbox_only';
+      return true;
+    });
+  }, [compareMatches, confrontoFilter]);
+
   // --- DATI FILTRATI ---
   const filteredPredictions = statusFilter === 'tutte' ? predictions : predictions.filter(p => predMatchesFilter(p, statusFilter));
   const filteredBombs = statusFilter === 'tutte' ? bombs : bombs.filter(b => bombMatchesFilter(b, statusFilter));
@@ -652,6 +805,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const hasComment = pred.comment?.segno || pred.comment?.gol || pred.comment?.doppia_chance || pred.comment?.gol_extra;
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
     const barColor = pred.real_score ? (pred.hit ? '#00ff88' : '#ff4466') : getConfidenceColor(bestConf);
+    const isCardExpanded = expandedCards.has(cardKey);
+    const tipsKey = `${cardKey}-tips`;
+    const isTipsOpen = expandedSections.has(tipsKey);
 
     return (
       <div
@@ -660,10 +816,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           background: theme.panel,
           border: theme.panelBorder,
           borderRadius: '10px',
-          padding: isMobile ? '10px 12px' : '12px 16px',
-          marginBottom: '8px',
+          padding: isMobile ? '6px 10px' : '8px 14px',
+          marginBottom: '4px',
           position: 'relative',
-          overflow: 'hidden'
+          zIndex: isTipsOpen ? 50 : 'auto' as any
         }}
       >
         {/* BARRA LATERALE */}
@@ -672,204 +828,267 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           background: barColor
         }} />
 
-        {/* RIGA 1: Orario + Lega */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', paddingLeft: '8px' }}>
-          <span style={{ fontSize: '10px', color: theme.textDim }}>🕐 {pred.match_time}</span>
-          <span style={{ fontSize: '10px', color: theme.textDim, opacity: 0.6 }}>|</span>
-          <span style={{ fontSize: '10px', color: theme.textDim }}>{pred.league}</span>
-        </div>
+        {/* RIGA UNICA COMPATTA — click ovunque espande */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '8px', cursor: 'pointer' }}
+          onClick={() => setExpandedCards(prev => {
+            const next = new Set(prev);
+            if (next.has(cardKey)) next.delete(cardKey);
+            else next.add(cardKey);
+            return next;
+          })}
+        >
+          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>🕐 {pred.match_time}</span>
 
-        {/* RIGA 2: Squadre + Finale */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '8px', gap: '8px', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+          {/* Squadre — larghezza naturale, si restringe se serve */}
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
             <img
               src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt=""
-              style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
+              style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
-            <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {pred.home}
             </span>
-            <span style={{ fontSize: '11px', color: theme.textDim, margin: '0 2px' }}>vs</span>
-            <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {pred.away}
             </span>
             <img
               src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt=""
-              style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
+              style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
           </div>
-          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <span style={{ fontSize: '10px', color: theme.textDim, marginRight: '6px' }}>Finale:</span>
+
+          {/* Risultato + Freccia — spinto a destra */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {pred.real_score ? (
-              <span style={{
-                fontSize: '15px', fontWeight: '900',
-                color: pred.hit ? '#00ff88' : '#ff4466',
-              }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466' }}>
                 {pred.real_score.replace(':', ' - ')}
               </span>
             ) : (
-              <span style={{ fontSize: '15px', fontWeight: '900', color: theme.textDim }}>–</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
             )}
+            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </div>
         </div>
 
-        {/* RIGA 3: Pronostici (pillole con stelle + confidence) */}
-        <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
-          <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostici</div>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {pred.pronostici?.map((p, i) => {
-              const isHit = pred.real_score ? p.hit : null;
-              const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,255,255,0.04)';
-              const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.1)';
-              const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
-              const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
-                || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
-              return (
-                <div key={i} style={{
-                  background: pillBg, border: `1px solid ${pillBorder}`,
-                  borderRadius: '6px', padding: '4px 10px',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
-                  <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
-                    <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${p.confidence || 0}%`, color: theme.gold }}>★</span>
-                  </span>
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
-                  {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
-                  {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
-                </div>
-              );
-            })}
+        {/* Badge "Tip" — ABSOLUTE, sganciato dal flex */}
+        <div
+          style={{
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: '100px',
+            zIndex: 5
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'baseline', gap: '6px', cursor: 'pointer',
+              background: isTipsOpen ? 'rgba(0,240,255,0.15)' : 'rgba(0,240,255,0.06)',
+              border: `1px solid ${isTipsOpen ? 'rgba(0,240,255,0.4)' : 'rgba(0,240,255,0.18)'}`,
+              borderRadius: '4px', padding: '4px 12px',
+              transition: 'all 0.2s', userSelect: 'none' as const
+            }}
+            onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
+          >
+            <span style={{ fontSize: '9px', fontWeight: '600', color: theme.cyan, letterSpacing: '0.3px' }}>
+              {pred.pronostici?.length || 0} tip
+            </span>
+            <span style={{ fontSize: '9px', color: theme.cyan, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </div>
-        </div>
 
-        {/* RIGA 4: Quote */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          paddingLeft: '8px', paddingTop: '6px',
-          borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '11px'
-        }}>
-          <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap' }}>
-            <span>1: <span style={{ color: theme.text }}>{pred.odds?.['1']}</span></span>
-            <span>X: <span style={{ color: theme.text }}>{pred.odds?.['X']}</span></span>
-            <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2']}</span></span>
-            {pred.odds?.over_25 != null && <>
-              <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
-              <span>O2.5: <span style={{ color: theme.text }}>{pred.odds.over_25}</span></span>
-              <span>U2.5: <span style={{ color: theme.text }}>{pred.odds.under_25}</span></span>
-            </>}
-            {pred.odds?.gg != null && <>
-              <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
-              <span>GG: <span style={{ color: theme.text }}>{pred.odds.gg}</span></span>
-              <span>NG: <span style={{ color: theme.text }}>{pred.odds.ng}</span></span>
-            </>}
-          </div>
-        </div>
-
-        {/* RIGA 5: Bottoni Commento + Dettaglio */}
-        <div style={{
-          display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
-          borderTop: '1px solid rgba(255,255,255,0.04)'
-        }}>
-          {hasComment && (
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-              onClick={(e) => toggleSection(commentKey, e)}
-            >
-              <span>💬 Commento</span>
-              <span style={{ transition: 'transform 0.2s', transform: isCommentOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          {/* POPOVER FLOTTANTE */}
+          {isTipsOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 1000,
+              background: '#1a1a24', border: '1px solid rgba(0,240,255,0.45)',
+              borderRadius: '8px', padding: '8px 10px',
+              boxShadow: '0 0 12px rgba(0,240,255,0.15), 0 6px 24px rgba(0,0,0,0.9)',
+              minWidth: '160px', whiteSpace: 'nowrap' as const
+            }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {pred.pronostici?.map((p, i) => {
+                  const isHit = pred.real_score ? p.hit : null;
+                  const pillBg = isHit === true ? 'rgba(0,255,136,0.15)' : isHit === false ? 'rgba(255,68,102,0.15)' : 'rgba(255,255,255,0.06)';
+                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.12)';
+                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
+                  const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
+                    || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
+                  return (
+                    <span key={i} style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: '4px', padding: '2px 8px',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      fontSize: '11px'
+                    }}>
+                      <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
+                      {quota && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
+                      {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           )}
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-            onClick={(e) => toggleSection(detailKey, e)}
-          >
-            <span>📊 Dettaglio</span>
-            <span style={{ transition: 'transform 0.2s', transform: isDetailOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </div>
         </div>
 
-        {/* SEZIONE COMMENTO (espandibile indipendente) */}
-        {isCommentOpen && (
-          <div style={{
-            marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
-            borderTop: `1px solid ${theme.cyan}20`,
-            animation: 'fadeIn 0.3s ease', fontSize: '11px', color: theme.textDim, fontStyle: 'italic', lineHeight: '1.5'
-          }}>
-            {pred.comment?.segno && <div>🔹 {pred.comment.segno.replace(/BVS/g, 'MAP')}</div>}
-            {pred.comment?.gol && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.gol.replace(/BVS/g, 'MAP')}</div>}
-            {pred.comment?.doppia_chance && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.doppia_chance.replace(/BVS/g, 'MAP')}</div>}
-            {pred.comment?.gol_extra && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.gol_extra.replace(/BVS/g, 'MAP')}</div>}
-          </div>
-        )}
+        {/* DETTAGLIO ESPANSO (identico a prima) */}
+        {isCardExpanded && (
+          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', animation: 'fadeIn 0.3s ease' }}>
 
-        {/* SEZIONE DETTAGLIO (espandibile indipendente) */}
-        {isDetailOpen && (
-          <div style={{
-            marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
-            borderTop: `1px solid ${theme.cyan}20`,
-            animation: 'fadeIn 0.3s ease'
-          }}>
-            {pred.segno_dettaglio && (
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                📊 Dettaglio Segno
-              </div>
-              {pred.segno_dettaglio_raw ? (
-                // Nuovo layout con confronto squadre
-                Object.entries(pred.segno_dettaglio).map(([key, affidabilita]) => {
-                  const raw = pred.segno_dettaglio_raw?.[key as keyof typeof pred.segno_dettaglio_raw];
-                  if (!raw) return <div key={key}>{renderDetailBar(affidabilita, SEGNO_LABELS[key] || key)}</div>;
-                  
-                  const homeVal = key === 'affidabilita' ? (raw as any).home_num : raw.home;
-                  const awayVal = key === 'affidabilita' ? (raw as any).away_num : raw.away;
-                  
+            {/* Pronostici completi con stelle + confidence */}
+            <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostici</div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {pred.pronostici?.map((p, i) => {
+                  const isHit = pred.real_score ? p.hit : null;
+                  const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,255,255,0.04)';
+                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.1)';
+                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
+                  const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
+                    || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
                   return (
-                    <div key={key}>
-                      {renderDetailBarWithTeams(
-                        SEGNO_LABELS[key] || key,
-                        homeVal,
-                        awayVal,
-                        affidabilita,
-                        raw.scala,
-                        pred.home,
-                        pred.away
-                      )}
+                    <div key={i} style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: '6px', padding: '4px 10px',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
+                      <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
+                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                        <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${p.confidence || 0}%`, color: theme.gold }}>★</span>
+                      </span>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
+                      {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
+                      {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                     </div>
                   );
-                })
-              ) : (
-                // Fallback vecchio layout
-                Object.entries(pred.segno_dettaglio).map(([key, val]) => (
-                  <div key={key}>{renderDetailBar(val, SEGNO_LABELS[key] || key)}</div>
-                ))
-              )}
-            </div>
-          )}
-            {pred.gol_dettaglio && pred.confidence_gol > 0 && (
-            <div style={{ marginBottom: '14px' }}>
-              {/* Divisore tra Segno e Gol */}
-              <div style={{ 
-                height: '5px', 
-                background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
-                marginBottom: '20px',
-                marginTop: '-10px'
-              }} />
-              <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                ⚽ Dettaglio Gol
+                })}
               </div>
-              {Object.entries(pred.gol_dettaglio).map(([key, val]) => (
-                <div key={key}>
-                  {renderGolDetailBar(val, GOL_LABELS[key] || key, pred.gol_directions?.[key])}
+            </div>
+
+            {/* Quote */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              paddingLeft: '8px', paddingTop: '6px',
+              borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '11px'
+            }}>
+              <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap' }}>
+                <span>1: <span style={{ color: theme.text }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
+                <span>X: <span style={{ color: theme.text }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
+                <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
+                {pred.odds?.over_25 != null && <>
+                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                  <span>O2.5: <span style={{ color: theme.text }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
+                  <span>U2.5: <span style={{ color: theme.text }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
+                </>}
+                {pred.odds?.gg != null && <>
+                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                  <span>GG: <span style={{ color: theme.text }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
+                  <span>NG: <span style={{ color: theme.text }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
+                </>}
+              </div>
+            </div>
+
+            {/* Bottoni Commento + Dettaglio */}
+            <div style={{
+              display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
+              borderTop: '1px solid rgba(255,255,255,0.04)'
+            }}>
+              {hasComment && (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
+                  onClick={(e) => toggleSection(commentKey, e)}
+                >
+                  <span>💬 Commento</span>
+                  <span style={{ transition: 'transform 0.2s', transform: isCommentOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                 </div>
-              ))}
-                {pred.expected_total_goals && (
-                  <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '10px' }}>
-                    <span style={{ color: theme.textDim }}>Gol attesi: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.expected_total_goals.toFixed(1)}</span></span>
-                    <span style={{ color: theme.textDim }}>Media lega: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.league_avg_goals?.toFixed(1)}</span></span>
+              )}
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
+                onClick={(e) => toggleSection(detailKey, e)}
+              >
+                <span>📊 Dettaglio</span>
+                <span style={{ transition: 'transform 0.2s', transform: isDetailOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+              </div>
+            </div>
+
+            {/* SEZIONE COMMENTO (espandibile indipendente) */}
+            {isCommentOpen && (
+              <div style={{
+                marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
+                borderTop: `1px solid ${theme.cyan}20`,
+                animation: 'fadeIn 0.3s ease', fontSize: '11px', color: theme.textDim, fontStyle: 'italic', lineHeight: '1.5'
+              }}>
+                {pred.comment?.segno && <div>🔹 {pred.comment.segno.replace(/BVS/g, 'MAP')}</div>}
+                {pred.comment?.gol && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.gol.replace(/BVS/g, 'MAP')}</div>}
+                {pred.comment?.doppia_chance && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.doppia_chance.replace(/BVS/g, 'MAP')}</div>}
+                {pred.comment?.gol_extra && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.gol_extra.replace(/BVS/g, 'MAP')}</div>}
+              </div>
+            )}
+
+            {/* SEZIONE DETTAGLIO (espandibile indipendente) */}
+            {isDetailOpen && (
+              <div style={{
+                marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
+                borderTop: `1px solid ${theme.cyan}20`,
+                animation: 'fadeIn 0.3s ease'
+              }}>
+                {pred.segno_dettaglio && (
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    📊 Dettaglio Segno
+                  </div>
+                  {pred.segno_dettaglio_raw ? (
+                    Object.entries(pred.segno_dettaglio).map(([key, affidabilita]) => {
+                      const raw = pred.segno_dettaglio_raw?.[key as keyof typeof pred.segno_dettaglio_raw];
+                      if (!raw) return <div key={key}>{renderDetailBar(affidabilita, SEGNO_LABELS[key] || key)}</div>;
+                      const homeVal = key === 'affidabilita' ? (raw as any).home_num : raw.home;
+                      const awayVal = key === 'affidabilita' ? (raw as any).away_num : raw.away;
+                      return (
+                        <div key={key}>
+                          {renderDetailBarWithTeams(
+                            SEGNO_LABELS[key] || key,
+                            homeVal,
+                            awayVal,
+                            affidabilita,
+                            raw.scala,
+                            pred.home,
+                            pred.away
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    Object.entries(pred.segno_dettaglio).map(([key, val]) => (
+                      <div key={key}>{renderDetailBar(val, SEGNO_LABELS[key] || key)}</div>
+                    ))
+                  )}
+                </div>
+              )}
+                {pred.gol_dettaglio && pred.confidence_gol > 0 && (
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{
+                    height: '5px',
+                    background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
+                    marginBottom: '20px',
+                    marginTop: '-10px'
+                  }} />
+                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    ⚽ Dettaglio Gol
+                  </div>
+                  {Object.entries(pred.gol_dettaglio).map(([key, val]) => (
+                    <div key={key}>
+                      {renderGolDetailBar(val, GOL_LABELS[key] || key, pred.gol_directions?.[key])}
+                    </div>
+                  ))}
+                    {pred.expected_total_goals && (
+                      <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '10px' }}>
+                        <span style={{ color: theme.textDim }}>Gol attesi: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.expected_total_goals.toFixed(1)}</span></span>
+                        <span style={{ color: theme.textDim }}>Media lega: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.league_avg_goals?.toFixed(1)}</span></span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -887,6 +1106,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const detailKey = `${cardKey}-detail`;
     const isCommentOpen = !expandedSections.has(commentKey);
     const isDetailOpen = expandedSections.has(detailKey);
+    const isCardExpanded = expandedCards.has(cardKey);
+    const tipsKey = `${cardKey}-tips`;
+    const isTipsOpen = expandedSections.has(tipsKey);
 
     return (
       <div
@@ -895,10 +1117,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           background: 'linear-gradient(135deg, rgba(255,215,0,0.04), rgba(255,42,109,0.04))',
           border: `1px solid ${theme.gold}40`,
           borderRadius: '10px',
-          padding: isMobile ? '10px 12px' : '12px 16px',
-          marginBottom: '8px',
+          padding: isMobile ? '6px 10px' : '8px 14px',
+          marginBottom: '4px',
           position: 'relative',
-          overflow: 'hidden'
+          zIndex: isTipsOpen ? 50 : 'auto' as any
         }}
       >
         {/* BARRA LATERALE */}
@@ -907,135 +1129,195 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           background: bomb.real_score ? (bomb.hit ? '#00ff88' : '#ff4466') : `linear-gradient(180deg, ${theme.gold}, ${theme.danger})`
         }} />
 
-        {/* RIGA 1: Orario + Lega + Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', paddingLeft: '8px' }}>
-          <span style={{ fontSize: '10px', color: theme.textDim }}>🕐 {bomb.match_time}</span>
-          <span style={{ fontSize: '10px', color: theme.textDim, opacity: 0.6 }}>|</span>
-          <span style={{ fontSize: '10px', color: theme.textDim }}>{bomb.league}</span>
-          <span style={{
-            background: `linear-gradient(135deg, ${theme.gold}, #ff8c00)`,
-            color: '#000', fontSize: '9px', fontWeight: '900',
-            padding: '1px 7px', borderRadius: '10px'
-          }}>💣</span>
-        </div>
+        {/* RIGA UNICA COMPATTA — click ovunque espande */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '8px', cursor: 'pointer' }}
+          onClick={() => setExpandedCards(prev => {
+            const next = new Set(prev);
+            if (next.has(cardKey)) next.delete(cardKey);
+            else next.add(cardKey);
+            return next;
+          })}
+        >
+          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>🕐 {bomb.match_time}</span>
 
-        {/* RIGA 2: Squadre + Finale */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '8px', gap: '8px', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {/* Squadre — larghezza naturale, si restringe se serve */}
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {bomb.home}
             </span>
-            <span style={{ fontSize: '11px', color: theme.textDim, margin: '0 2px' }}>vs</span>
-            <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {bomb.away}
             </span>
           </div>
-          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <span style={{ fontSize: '10px', color: theme.textDim, marginRight: '6px' }}>Finale:</span>
+
+          {/* Risultato + Freccia — spinto a destra */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {bomb.real_score ? (
-              <span style={{
-                fontSize: '15px', fontWeight: '900',
-                color: bomb.hit ? '#00ff88' : '#ff4466',
-              }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.hit ? '#00ff88' : '#ff4466' }}>
                 {bomb.real_score.replace(':', ' - ')}
               </span>
             ) : (
-              <span style={{ fontSize: '15px', fontWeight: '900', color: theme.textDim }}>–</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
             )}
+            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </div>
         </div>
 
-        {/* RIGA 3: Pronostico bomba (pillola con stelle + confidence) */}
-        <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
-          <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostico</div>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {(() => {
-              const isHit = bomb.real_score ? bomb.hit : null;
-              const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,215,0,0.08)';
-              const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : `${theme.gold}30`;
-              const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.gold;
-              return (
-                <div style={{
-                  background: pillBg, border: `1px solid ${pillBorder}`,
-                  borderRadius: '6px', padding: '4px 10px',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
-                  <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
-                    <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
-                  </span>
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
-                  {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
+        {/* Badge Bomba — ABSOLUTE, sganciato dal flex */}
+        <div
+          style={{
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: '100px',
+            zIndex: 5
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'baseline', gap: '6px', cursor: 'pointer',
+              background: isTipsOpen ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.06)',
+              border: `1px solid ${isTipsOpen ? 'rgba(255,215,0,0.4)' : 'rgba(255,215,0,0.18)'}`,
+              borderRadius: '4px', padding: '4px 12px',
+              transition: 'all 0.2s', userSelect: 'none' as const
+            }}
+            onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
+          >
+            <span style={{ fontSize: '9px' }}>💣</span>
+            <span style={{ fontSize: '9px', fontWeight: '600', color: theme.gold, letterSpacing: '0.3px' }}>tip</span>
+            <span style={{ fontSize: '9px', color: theme.gold, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          </div>
+
+          {/* POPOVER FLOTTANTE */}
+          {isTipsOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 1000,
+              background: '#1a1a24', border: '1px solid rgba(255,215,0,0.45)',
+              borderRadius: '8px', padding: '8px 10px',
+              boxShadow: '0 0 12px rgba(255,215,0,0.15), 0 6px 24px rgba(0,0,0,0.9)',
+              minWidth: '160px', whiteSpace: 'nowrap' as const
+            }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {(() => {
+                  const isHit = bomb.real_score ? bomb.hit : null;
+                  const pillBg = isHit === true ? 'rgba(0,255,136,0.15)' : isHit === false ? 'rgba(255,68,102,0.15)' : 'rgba(255,215,0,0.1)';
+                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : `${theme.gold}30`;
+                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.gold;
+                  return (
+                    <span style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: '4px', padding: '2px 8px',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      fontSize: '11px'
+                    }}>
+                      <span style={{ fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
+                      {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
+                    </span>
+                  );
+                })()}
+                <span style={{ fontSize: '10px', color: theme.gold }}>⚡ {bomb.sfavorita}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* DETTAGLIO ESPANSO (identico a prima) */}
+        {isCardExpanded && (
+          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,215,0,0.08)', paddingTop: '10px', animation: 'fadeIn 0.3s ease' }}>
+
+            {/* Pronostico bomba completo con stelle + confidence */}
+            <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostico</div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {(() => {
+                  const isHit = bomb.real_score ? bomb.hit : null;
+                  const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,215,0,0.08)';
+                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : `${theme.gold}30`;
+                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.gold;
+                  return (
+                    <div style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: '6px', padding: '4px 10px',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
+                      <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
+                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                        <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
+                      </span>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
+                      {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
+                    </div>
+                  );
+                })()}
+                <span style={{ fontSize: '10px', color: theme.gold }}>⚡ {bomb.sfavorita}</span>
+              </div>
+            </div>
+
+            {/* Quote */}
+            <div style={{
+              display: 'flex', alignItems: 'center', paddingLeft: '8px', paddingTop: '6px',
+              borderTop: '1px solid rgba(255,215,0,0.06)', fontSize: '11px'
+            }}>
+              <div style={{ display: 'flex', gap: '10px', color: theme.textDim }}>
+                <span>1: <span style={{ color: theme.text }}>{bomb.odds?.['1'] != null ? Number(bomb.odds['1']).toFixed(2) : '-'}</span></span>
+                <span>X: <span style={{ color: theme.text }}>{bomb.odds?.['X'] != null ? Number(bomb.odds['X']).toFixed(2) : '-'}</span></span>
+                <span>2: <span style={{ color: theme.text }}>{bomb.odds?.['2'] != null ? Number(bomb.odds['2']).toFixed(2) : '-'}</span></span>
+              </div>
+            </div>
+
+            {/* Bottoni Commento + Dettaglio */}
+            <div style={{
+              display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
+              borderTop: '1px solid rgba(255,215,0,0.06)'
+            }}>
+              {bomb.comment && (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
+                  onClick={(e) => toggleSection(commentKey, e)}
+                >
+                  <span>💬 Commento</span>
+                  <span style={{ transition: 'transform 0.2s', transform: isCommentOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                 </div>
-              );
-            })()}
-            <span style={{ fontSize: '10px', color: theme.gold }}>⚡ {bomb.sfavorita}</span>
-          </div>
-        </div>
-
-        {/* RIGA 4: Quote */}
-        <div style={{
-          display: 'flex', alignItems: 'center', paddingLeft: '8px', paddingTop: '6px',
-          borderTop: '1px solid rgba(255,215,0,0.06)', fontSize: '11px'
-        }}>
-          <div style={{ display: 'flex', gap: '10px', color: theme.textDim }}>
-            <span>1: <span style={{ color: theme.text }}>{bomb.odds?.['1']}</span></span>
-            <span>X: <span style={{ color: theme.text }}>{bomb.odds?.['X']}</span></span>
-            <span>2: <span style={{ color: theme.text }}>{bomb.odds?.['2']}</span></span>
-          </div>
-        </div>
-
-        {/* RIGA 5: Bottoni Commento + Dettaglio */}
-        <div style={{
-          display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
-          borderTop: '1px solid rgba(255,215,0,0.06)'
-        }}>
-          {bomb.comment && (
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-              onClick={(e) => toggleSection(commentKey, e)}
-            >
-              <span>💬 Commento</span>
-              <span style={{ transition: 'transform 0.2s', transform: isCommentOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+              )}
+              {bomb.dettaglio && (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
+                  onClick={(e) => toggleSection(detailKey, e)}
+                >
+                  <span>🔍 Dettaglio</span>
+                  <span style={{ transition: 'transform 0.2s', transform: isDetailOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                </div>
+              )}
             </div>
-          )}
-          {bomb.dettaglio && (
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-              onClick={(e) => toggleSection(detailKey, e)}
-            >
-              <span>🔍 Dettaglio</span>
-              <span style={{ transition: 'transform 0.2s', transform: isDetailOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-            </div>
-          )}
-        </div>
 
-        {/* SEZIONE COMMENTO */}
-        {isCommentOpen && bomb.comment && (
-          <div style={{
-            marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
-            borderTop: `1px solid ${theme.gold}20`,
-            animation: 'fadeIn 0.3s ease', fontSize: '11px', color: theme.textDim, fontStyle: 'italic'
-          }}>
-            💬 {typeof bomb.comment === 'string' ? bomb.comment.replace(/BVS/g, 'MAP') : bomb.comment}
-          </div>
-        )}
+            {/* SEZIONE COMMENTO */}
+            {isCommentOpen && bomb.comment && (
+              <div style={{
+                marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
+                borderTop: `1px solid ${theme.gold}20`,
+                animation: 'fadeIn 0.3s ease', fontSize: '11px', color: theme.textDim, fontStyle: 'italic'
+              }}>
+                💬 {typeof bomb.comment === 'string' ? bomb.comment.replace(/BVS/g, 'MAP') : bomb.comment}
+              </div>
+            )}
 
-        {/* SEZIONE DETTAGLIO */}
-        {isDetailOpen && bomb.dettaglio && (
-          <div style={{
-            marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
-            borderTop: `1px solid ${theme.gold}20`,
-            animation: 'fadeIn 0.3s ease'
-          }}>
-            <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.gold, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              🔍 Dettaglio Bomba
-            </div>
-            {Object.entries(bomb.dettaglio).map(([key, val]) => {
-              const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-              return renderDetailBar(val, label);
-            })}
+            {/* SEZIONE DETTAGLIO */}
+            {isDetailOpen && bomb.dettaglio && (
+              <div style={{
+                marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
+                borderTop: `1px solid ${theme.gold}20`,
+                animation: 'fadeIn 0.3s ease'
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.gold, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  🔍 Dettaglio Bomba
+                </div>
+                {Object.entries(bomb.dettaglio).map(([key, val]) => {
+                  const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                  return renderDetailBar(val, label);
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1101,6 +1383,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             🧪 MODALITA SANDBOX — Dati da daily_predictions_sandbox
           </div>
         )}
+        {/* BANNER CONFRONTO */}
+        {mode === 'confronto' && (
+          <div style={{
+            background: 'rgba(188, 19, 254, 0.15)',
+            border: '1px solid rgba(188, 19, 254, 0.4)',
+            borderRadius: '8px',
+            padding: '10px 20px',
+            textAlign: 'center',
+            marginBottom: '15px',
+            color: theme.purple,
+            fontWeight: '700',
+            fontSize: '13px',
+            letterSpacing: '1px'
+          }}>
+            ⚖️ MODALITA CONFRONTO — Produzione vs Sandbox
+          </div>
+        )}
 
         {/* HEADER */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
@@ -1155,6 +1454,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               >
                 SANDBOX
               </button>
+              <button
+                onClick={() => setMode('confronto')}
+                style={{
+                  background: mode === 'confronto' ? 'rgba(188, 19, 254, 0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${mode === 'confronto' ? theme.purple : 'rgba(255,255,255,0.1)'}`,
+                  color: mode === 'confronto' ? theme.purple : theme.textDim,
+                  padding: '6px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase' as const,
+                  transition: 'all 0.2s'
+                }}
+              >
+                CONFRONTO
+              </button>
             </div>
           )}
         </div>
@@ -1205,6 +1521,315 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </button>
         </div>
 
+        {/* ==================== VISTA CONFRONTO v2 ==================== */}
+        {mode === 'confronto' && !loading && !error && confrontoStats && (() => {
+          const s = confrontoStats;
+          const byLeague = filteredCompareMatches.reduce<Record<string, MatchComparison[]>>((acc, c) => {
+            if (!acc[c.league]) acc[c.league] = [];
+            acc[c.league].push(c);
+            return acc;
+          }, {});
+          const hrDelta = (s.prodHR != null && s.sandHR != null) ? s.prodHR - s.sandHR : null;
+
+          return (
+            <>
+              {/* ===== DASHBOARD PROD vs SANDBOX ===== */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto 1fr',
+                gap: isMobile ? '12px' : '16px', marginBottom: '20px', alignItems: 'stretch'
+              }}>
+                {/* Card PRODUZIONE */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(0,240,255,0.08), rgba(0,240,255,0.02))',
+                  border: `1px solid ${theme.cyan}30`, borderRadius: '14px', padding: '16px 20px', textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: theme.cyan, textTransform: 'uppercase' as const, letterSpacing: '1.5px', marginBottom: '10px' }}>Produzione</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.text }}>{s.prodPredCount}</div>
+                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Pronostici</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.gold }}>{s.prodBombs}</div>
+                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Bombe</div>
+                    </div>
+                  </div>
+                  {s.prodHR != null && (
+                    <div>
+                      <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px' }}>HIT RATE</div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '4px' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, s.prodHR)}%`, background: s.prodHR >= 50 ? theme.success : theme.danger, borderRadius: '3px', transition: 'width 0.6s ease' }} />
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: s.prodHR >= 50 ? theme.success : theme.danger }}>{s.prodHR}%</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Cerchio VS + Delta */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '0' : '0 8px', minWidth: isMobile ? 'auto' : '80px' }}>
+                  <div style={{
+                    fontSize: '18px', fontWeight: '900', color: theme.purple,
+                    background: `${theme.purple}15`, borderRadius: '50%',
+                    width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: `2px solid ${theme.purple}40`, marginBottom: '8px'
+                  }}>VS</div>
+                  {hrDelta != null && (
+                    <div style={{ fontSize: '11px', fontWeight: '800', textAlign: 'center',
+                      color: hrDelta > 0 ? theme.cyan : hrDelta < 0 ? '#ff9800' : theme.textDim
+                    }}>
+                      {hrDelta > 0 ? `PROD +${hrDelta.toFixed(1)}%` : hrDelta < 0 ? `SAND +${Math.abs(hrDelta).toFixed(1)}%` : 'PARI'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Card SANDBOX */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(255,152,0,0.08), rgba(255,152,0,0.02))',
+                  border: '1px solid rgba(255,152,0,0.3)', borderRadius: '14px', padding: '16px 20px', textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#ff9800', textTransform: 'uppercase' as const, letterSpacing: '1.5px', marginBottom: '10px' }}>Sandbox</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.text }}>{s.sandPredCount}</div>
+                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Pronostici</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.gold }}>{s.sandBombs}</div>
+                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Bombe</div>
+                    </div>
+                  </div>
+                  {s.sandHR != null && (
+                    <div>
+                      <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px' }}>HIT RATE</div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '4px' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, s.sandHR)}%`, background: s.sandHR >= 50 ? theme.success : theme.danger, borderRadius: '3px', transition: 'width 0.6s ease' }} />
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: s.sandHR >= 50 ? theme.success : theme.danger }}>{s.sandHR}%</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ===== CONTATORI DIFFERENZE ===== */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+                {[
+                  { count: s.identiche, label: 'Identiche', color: theme.success },
+                  { count: s.diverse, label: 'Diverse', color: theme.warning },
+                  ...(s.soloProd > 0 ? [{ count: s.soloProd, label: 'Solo Prod', color: theme.cyan }] : []),
+                  ...(s.soloSandbox > 0 ? [{ count: s.soloSandbox, label: 'Solo Sandbox', color: '#ff9800' as string }] : []),
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    background: `${item.color}10`, border: `1px solid ${item.color}30`,
+                    borderRadius: '10px', padding: '8px 16px', textAlign: 'center', minWidth: '80px'
+                  }}>
+                    <div style={{ fontSize: '22px', fontWeight: '900', color: item.color }}>{item.count}</div>
+                    <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const, fontWeight: '700' }}>{item.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ===== FILTRI CONFRONTO (pillole) ===== */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+                {([
+                  { id: 'tutte' as ConfrontoFilter, label: 'Tutte', color: theme.purple },
+                  { id: 'identiche' as ConfrontoFilter, label: 'Identiche', color: theme.success },
+                  { id: 'diverse' as ConfrontoFilter, label: 'Diverse', color: theme.warning },
+                  { id: 'solo_prod' as ConfrontoFilter, label: 'Solo Prod', color: theme.cyan },
+                  { id: 'solo_sandbox' as ConfrontoFilter, label: 'Solo Sandbox', color: '#ff9800' },
+                ]).map(f => (
+                  <button key={f.id} onClick={() => setConfrontoFilter(f.id)} style={{
+                    background: confrontoFilter === f.id ? `${f.color}20` : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${confrontoFilter === f.id ? f.color : 'rgba(255,255,255,0.06)'}`,
+                    color: confrontoFilter === f.id ? f.color : theme.textDim,
+                    padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                    fontSize: '11px', fontWeight: confrontoFilter === f.id ? '700' : '500',
+                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                  }}>
+                    {f.label}
+                    {confrontoFilterCounts[f.id] > 0 && (
+                      <span style={{
+                        fontSize: '9px', fontWeight: '800',
+                        background: confrontoFilter === f.id ? `${f.color}30` : 'rgba(255,255,255,0.06)',
+                        padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
+                      }}>{confrontoFilterCounts[f.id]}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Contatore filtrato */}
+              {confrontoFilter !== 'tutte' && (
+                <div style={{ textAlign: 'center', fontSize: '11px', color: theme.textDim, marginBottom: '12px' }}>
+                  Mostrando <span style={{ fontWeight: '800', color: theme.text }}>{filteredCompareMatches.length}</span> di <span style={{ fontWeight: '800', color: theme.text }}>{compareMatches.length}</span> partite
+                </div>
+              )}
+
+              {/* Nessun risultato per filtro */}
+              {confrontoFilter !== 'tutte' && filteredCompareMatches.length === 0 && compareMatches.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: theme.textDim, fontSize: '13px' }}>
+                  Nessuna partita corrisponde al filtro selezionato.
+                  <br />
+                  <button onClick={() => setConfrontoFilter('tutte')} style={{
+                    marginTop: '10px', background: `${theme.purple}20`, border: `1px solid ${theme.purple}`,
+                    color: theme.purple, padding: '6px 16px', borderRadius: '8px',
+                    cursor: 'pointer', fontSize: '12px', fontWeight: '600'
+                  }}>Mostra tutte</button>
+                </div>
+              )}
+
+              {/* ===== TABELLA CONFRONTO PER LEGA ===== */}
+              {filteredCompareMatches.length === 0 && compareMatches.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: theme.textDim }}>Nessuna partita da confrontare per questa data.</div>
+              ) : Object.entries(byLeague).map(([league, matches]) => {
+                const isCollapsed = collapsedLeagues.has(league);
+                const leagueLogoUrl = getLeagueLogoUrl(league);
+                const countryCode = LEAGUE_TO_COUNTRY_CODE[league];
+                const lIdent = matches.filter(m => m.status === 'both' && !m.predsDifferent && !m.bombsDifferent).length;
+                const lDiv = matches.filter(m => m.status === 'both' && (m.predsDifferent || m.bombsDifferent)).length;
+                const lSP = matches.filter(m => m.status === 'prod_only').length;
+                const lSS = matches.filter(m => m.status === 'sandbox_only').length;
+
+                return (
+                  <div key={`comp-${league}`} style={{ marginBottom: '16px' }}>
+                    {/* Header Lega con mini-summary */}
+                    <div
+                      onClick={() => setCollapsedLeagues(prev => { const n = new Set(prev); n.has(league) ? n.delete(league) : n.add(league); return n; })}
+                      style={{
+                        background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
+                        padding: '10px 14px', marginBottom: '6px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s'
+                      }}
+                    >
+                      {leagueLogoUrl && <img src={leagueLogoUrl} alt="" style={{ width: '22px', height: '22px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                      {countryCode && <img src={`https://flagcdn.com/w40/${countryCode}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text, flex: 1 }}>{league}</span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '10px' }}>
+                        {lIdent > 0 && <span style={{ color: theme.success, fontWeight: '700' }}>{lIdent}=</span>}
+                        {lDiv > 0 && <span style={{ color: theme.warning, fontWeight: '700' }}>{lDiv}~</span>}
+                        {lSP > 0 && <span style={{ color: theme.cyan, fontWeight: '700' }}>+{lSP}P</span>}
+                        {lSS > 0 && <span style={{ color: '#ff9800', fontWeight: '700' }}>+{lSS}S</span>}
+                      </div>
+                      <span style={{ fontSize: '11px', color: theme.textDim }}>{matches.length}</span>
+                      <span style={{ fontSize: '11px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                    </div>
+
+                    {/* Card partite — layout a due colonne */}
+                    {!isCollapsed && matches.map((m) => {
+                      const barColor = m.status === 'prod_only' ? theme.cyan : m.status === 'sandbox_only' ? '#ff9800'
+                        : (m.predsDifferent || m.bombsDifferent) ? theme.warning : theme.success;
+                      const badgeLabel = m.status === 'prod_only' ? 'SOLO PROD' : m.status === 'sandbox_only' ? 'SOLO SANDBOX'
+                        : (m.predsDifferent || m.bombsDifferent) ? 'DIVERSI' : 'IDENTICI';
+                      const prodTips = m.prodPred?.pronostici || [];
+                      const sandTips = m.sandboxPred?.pronostici || [];
+                      const prodTipSet = new Set(prodTips.map(p => `${p.tipo}-${p.pronostico}`));
+                      const sandTipSet = new Set(sandTips.map(p => `${p.tipo}-${p.pronostico}`));
+
+                      const renderTip = (p: any, odds: any, accent: string, isDiff: boolean) => {
+                        const q = p.quota || (p.tipo === 'SEGNO' && odds ? (odds as any)[p.pronostico] : null)
+                          || (p.tipo === 'GOL' && odds ? getGolQuota(p.pronostico, odds) : null);
+                        const hc = p.hit === true ? '#00ff88' : p.hit === false ? '#ff4466' : accent;
+                        return (
+                          <span style={{
+                            background: isDiff ? 'rgba(255,159,67,0.15)' : `${hc}12`,
+                            border: `1px solid ${isDiff ? theme.warning : hc}30`,
+                            borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '700', color: hc,
+                            display: 'inline-flex', alignItems: 'center', gap: '2px'
+                          }}>
+                            {isDiff && <span style={{ color: theme.warning, fontSize: '8px' }}>*</span>}
+                            {p.pronostico}{q ? ` @${Number(q).toFixed(2)}` : ''}{p.hit != null && (p.hit ? ' ✓' : ' ✗')}
+                          </span>
+                        );
+                      };
+
+                      return (
+                        <div key={`comp-${m.home}-${m.away}`} style={{
+                          background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
+                          marginBottom: '4px', position: 'relative', overflow: 'hidden'
+                        }}>
+                          {/* Barra laterale */}
+                          <div style={{ position: 'absolute', top: 0, left: 0, width: '3px', height: '100%', background: barColor, borderRadius: '10px 0 0 10px' }} />
+
+                          {/* HEADER PARTITA */}
+                          <div style={{ padding: isMobile ? '8px 10px 6px 14px' : '10px 14px 8px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' as const }}>
+                              <span style={{ fontSize: '10px', color: theme.textDim }}>{m.match_time}</span>
+                              <span style={{
+                                fontSize: '9px', fontWeight: '800', color: barColor,
+                                background: `${barColor}15`, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${barColor}30`
+                              }}>{badgeLabel}</span>
+                              {(m.prodPred?.real_score || m.sandboxPred?.real_score) && (
+                                <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: '900', color: theme.text }}>
+                                  {(m.prodPred?.real_score || m.sandboxPred?.real_score || '').replace(':', ' - ')}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                              <img src={getStemmaUrl(m.home_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text }}>{m.home}</span>
+                              <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: '600' }}>vs</span>
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text }}>{m.away}</span>
+                              <img src={getStemmaUrl(m.away_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            </div>
+                          </div>
+
+                          {/* DUE COLONNE: PROD | SANDBOX */}
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1px 1fr' }}>
+                            {/* Colonna PROD */}
+                            <div style={{ padding: isMobile ? '8px 10px 4px 14px' : '10px 14px 10px 16px' }}>
+                              <div style={{ fontSize: '9px', fontWeight: '800', color: theme.cyan, textTransform: 'uppercase' as const, marginBottom: '6px', letterSpacing: '0.5px' }}>
+                                PROD {m.prodPred?.hit != null && (m.prodPred.hit ? '✅' : '❌')}
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '3px', marginBottom: '4px' }}>
+                                {prodTips.length > 0 ? prodTips.map((p, i) => (
+                                  <span key={i}>{renderTip(p, m.prodPred?.odds, theme.cyan, !sandTipSet.has(`${p.tipo}-${p.pronostico}`))}</span>
+                                )) : <span style={{ color: theme.textDim, fontStyle: 'italic', fontSize: '10px' }}>—</span>}
+                              </div>
+                              {m.prodBomb && (
+                                <div style={{ marginTop: '4px' }}>
+                                  <span style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '800', color: theme.gold }}>
+                                    💣 {m.prodBomb.segno_bomba}{m.prodBomb.hit != null && (m.prodBomb.hit ? ' ✓' : ' ✗')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Separatore */}
+                            {!isMobile && <div style={{ background: 'rgba(255,255,255,0.08)' }} />}
+                            {isMobile && <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 10px' }} />}
+
+                            {/* Colonna SANDBOX */}
+                            <div style={{ padding: isMobile ? '4px 10px 8px 14px' : '10px 14px 10px 16px' }}>
+                              <div style={{ fontSize: '9px', fontWeight: '800', color: '#ff9800', textTransform: 'uppercase' as const, marginBottom: '6px', letterSpacing: '0.5px' }}>
+                                SANDBOX {m.sandboxPred?.hit != null && (m.sandboxPred.hit ? '✅' : '❌')}
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '3px', marginBottom: '4px' }}>
+                                {sandTips.length > 0 ? sandTips.map((p, i) => (
+                                  <span key={i}>{renderTip(p, m.sandboxPred?.odds, '#ff9800', !prodTipSet.has(`${p.tipo}-${p.pronostico}`))}</span>
+                                )) : <span style={{ color: theme.textDim, fontStyle: 'italic', fontSize: '10px' }}>—</span>}
+                              </div>
+                              {m.sandboxBomb && (
+                                <div style={{ marginTop: '4px' }}>
+                                  <span style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '800', color: theme.gold }}>
+                                    💣 {m.sandboxBomb.segno_bomba}{m.sandboxBomb.hit != null && (m.sandboxBomb.hit ? ' ✓' : ' ✗')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </>
+          );
+        })()}
+
+        {/* ==================== VISTA NORMALE (PROD/SANDBOX) ==================== */}
+        {mode !== 'confronto' && (<>
         {/* CONTATORI RIEPILOGO */}
         <div style={{
           display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px',
@@ -1323,6 +1948,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </div>
           );
         })()}
+        </>)}
 
         {/* LOADING */}
         {loading && (
@@ -1347,7 +1973,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN DATO */}
-        {!loading && !error && predictions.length === 0 && bombs.length === 0 && (
+        {mode !== 'confronto' && !loading && !error && predictions.length === 0 && bombs.length === 0 && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -1360,7 +1986,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN RISULTATO PER FILTRO */}
-        {!loading && !error && statusFilter !== 'tutte' && filteredPredictions.length === 0 && filteredBombs.length === 0 && (predictions.length > 0 || bombs.length > 0) && (
+        {mode !== 'confronto' && !loading && !error && statusFilter !== 'tutte' && filteredPredictions.length === 0 && filteredBombs.length === 0 && (predictions.length > 0 || bombs.length > 0) && (
           <div style={{
             textAlign: 'center', padding: '40px 0', color: theme.textDim, fontSize: '13px'
           }}>
@@ -1381,7 +2007,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* CONTENUTO PRINCIPALE */}
-        {!loading && !error && (
+        {mode !== 'confronto' && !loading && !error && (
           <>
             {/* BARRA STATISTICHE RISULTATI */}
             {(predStats.finished > 0 || bombStats.finished > 0) && (

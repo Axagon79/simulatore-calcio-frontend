@@ -1031,7 +1031,8 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
             paddingTop: '12px'
           }}>
             {['1', 'X', '2'].map((label, idx) => {
-              const val = selectedMatch?.odds?.[label] ?? '-';
+              const rawVal = selectedMatch?.odds?.[label];
+              const val = rawVal != null ? Number(rawVal).toFixed(2) : '-';
               const colors = [
                 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,200,255,0.1))',
                 'linear-gradient(135deg, rgba(138,43,226,0.2), rgba(138,43,226,0.1))',

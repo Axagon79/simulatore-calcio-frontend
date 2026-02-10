@@ -29,11 +29,13 @@ import AnimazionePartita from './AppDev/AnimazionePartita';
 import type {
   Match,
   SimulationResult,
-  ChatMessage
+  ChatMessage,
+  TodayLeagueGroup
 } from './types';
 
 // --- COSTANTI (estratte) ---
 import {
+  API_BASE,
   AI_ENGINE_URL,
   LEAGUES_MAP,
   STEMMI_CAMPIONATI,
@@ -80,6 +82,13 @@ export default function AppDev() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
+
+  // STATO "PARTITE DI OGGI"
+  const [viewMode, setViewMode] = useState<'calendar' | 'today'>('calendar');
+  const [todayData, setTodayData] = useState<TodayLeagueGroup[] | null>(null);
+  const [todayLoading, setTodayLoading] = useState(false);
+  const [todayLeagueFilter, setTodayLeagueFilter] = useState('');
+  const [todayTimeFilter, setTodayTimeFilter] = useState('tutti');
 
   const [isVarActive, setIsVarActive] = useState(false);
 
@@ -197,11 +206,12 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     expandedMatch: null as string | null,
     viewState: 'list',
     activeLeague: null as string | null,
-    
+
     // // modificato per: tracciare la coppa selezionata nel sistema di navigazione
-    selectedCup: '', 
-    
-    rounds: [] as any
+    selectedCup: '',
+
+    rounds: [] as any,
+    viewMode: 'calendar' as 'calendar' | 'today'
   });
   
   
@@ -260,18 +270,19 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   // 2. SINCRONIZZAZIONE STATO
   useEffect(() => {
     stateRef.current = {
-      isPopupOpen: showMatchSummary || showFormationsPopup || showResimulatePopup || 
+      isPopupOpen: showMatchSummary || showFormationsPopup || showResimulatePopup ||
                    showSettingsPopup || chatOpen,
       mobileMenu: mobileMenuOpen,
       expandedMatch: expandedMatch,
-      viewState: viewState, 
+      viewState: viewState,
       activeLeague: activeLeague,
       // // modificato per: risolvere errore TS2741 e sincronizzare la coppa
       selectedCup: selectedCup,
-      rounds: rounds
+      rounds: rounds,
+      viewMode: viewMode
     };
-  }, [showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, 
-      chatOpen, mobileMenuOpen, expandedMatch, viewState, activeLeague, rounds, selectedCup]);
+  }, [showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup,
+      chatOpen, mobileMenuOpen, expandedMatch, viewState, activeLeague, rounds, selectedCup, viewMode]);
 
 
   // 3. MOTORE: SCRIVE L'URL (Rispetta il semaforo isBackNav)
@@ -300,7 +311,12 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     else if (expandedMatch) {
         if (window.location.hash !== '#detail') window.history.pushState(null, '', '#detail');
     }
-   
+
+    // --- Livello 1.5: Vista Oggi ---
+    else if (viewMode === 'today') {
+        if (window.location.hash !== '#today') window.history.pushState(null, '', '#today');
+    }
+
     // --- Livello 1: Lista Partite (AGGIORNATO) ---
     else if (activeLeague || selectedCup) {
       const targetHash = selectedCup ? '#cuplist' : '#list';
@@ -321,7 +337,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
             window.history.replaceState(null, '', '#home');
         }
     }
-  }, [viewState, expandedMatch, activeLeague, mobileMenuOpen, showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, chatOpen, selectedCup]);
+  }, [viewState, expandedMatch, activeLeague, mobileMenuOpen, showMatchSummary, showFormationsPopup, showResimulatePopup, showSettingsPopup, chatOpen, selectedCup, viewMode]);
 
 
   // 4. GESTIONE TASTO INDIETRO (Logica Aggressiva)
@@ -350,8 +366,18 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
           }
       }
 
+      // 2.5 Tornati a Vista Oggi (#today)
+      else if (currentHash === '#today') {
+          setViewMode('today');
+          setViewState('list');
+          setSimResult(null);
+          setSimulationEnded(false);
+          setExpandedMatch(null);
+      }
+
       // 3. Tornati alla LISTA (#list)
       else if (currentHash === '#list' || currentHash.startsWith('#round')) {
+          setViewMode('calendar');
           
           // ðŸ”¥ UX FIX: Se sono giÃ  sulla lista e premo indietro -> Vado alla Home (chiudo tutto)
           // Questo risolve il problema di dover premere indietro 10 volte se hai cambiato 10 nazioni
@@ -376,6 +402,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
       
       // 4. Tornati alla HOME (#home o vuoto)
       else if (currentHash === '#home' || currentHash === '' || currentHash === '#') {
+          setViewMode('calendar');
           setViewState('list');
           setExpandedMatch(null);
           setActiveLeague(null);
@@ -393,10 +420,66 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     return () => window.removeEventListener('popstate', handleHashChange);
   }, []);
 
+  // --- FETCH PARTITE DI OGGI ---
+  useEffect(() => {
+    if (viewMode !== 'today') return;
+    const fetchTodayMatches = async () => {
+      setTodayLoading(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(`${API_BASE}/matches-today?date=${today}`);
+        const data = await response.json();
+        if (data.success) {
+          setTodayData(data.leagues);
+        }
+      } catch (err) {
+        console.error('Errore caricamento partite di oggi:', err);
+      } finally {
+        setTodayLoading(false);
+      }
+    };
+    fetchTodayMatches();
+  }, [viewMode]);
 
+  // --- POLLING LIVE SCORES (ogni 60 secondi) ---
+  useEffect(() => {
+    if (viewMode !== 'today' || !todayData) return;
 
+    const pollLiveScores = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const res = await fetch(`${API_BASE}/live-scores?date=${today}`);
+        const data = await res.json();
+        if (data.success && data.scores && data.scores.length > 0) {
+          setTodayData(prev => {
+            if (!prev) return prev;
+            return prev.map(group => ({
+              ...group,
+              matches: group.matches.map(m => {
+                const live = data.scores.find((s: { home: string; away: string }) => s.home === m.home && s.away === m.away);
+                if (live) {
+                  return { ...m, live_score: live.live_score, live_status: live.live_status, live_minute: live.live_minute };
+                }
+                return m;
+              })
+            }));
+          });
+        }
+      } catch { /* silenzioso */ }
+    };
 
-  
+    // Prima chiamata immediata
+    pollLiveScores();
+    const interval = setInterval(pollLiveScores, 60000);
+    return () => clearInterval(interval);
+  }, [viewMode, todayData !== null]);
+
+  // Se l'utente seleziona un campionato dalla sidebar, torna a Calendario
+  useEffect(() => {
+    if (league && viewMode === 'today') {
+      setViewMode('calendar');
+    }
+  }, [league]);
 
 const prepareSimulation = (match: Match) => {
   setSelectedMatch(match);
@@ -990,6 +1073,209 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
   // --- COMPONENTI UI RENDER ---
 
+  const renderTodayMatches = () => {
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const allLeagues = todayData?.map(g => ({ id: g.league_id, name: g.league_name })) || [];
+
+    // Filtra per campionato
+    let filteredData = todayData || [];
+    if (todayLeagueFilter) {
+      filteredData = filteredData.filter(g => g.league_id === todayLeagueFilter);
+    }
+
+    // Filtra per orario
+    filteredData = filteredData.map(g => ({
+      ...g,
+      matches: g.matches.filter(m => {
+        if (todayTimeFilter === 'tutti') return true;
+        if (todayTimeFilter === 'live') {
+          // Dato reale dal daemon (priorità) oppure fallback calcolo orario
+          if (m.live_status === 'Live' || m.live_status === 'HT') return true;
+          const [hh, mm] = (m.match_time || '').split(':').map(Number);
+          const kickoff = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
+          return kickoff >= 0 && nowMinutes >= kickoff && nowMinutes <= kickoff + 120 && m.status !== 'Finished';
+        }
+        const hour = parseInt((m.match_time || '').split(':')[0]);
+        if (isNaN(hour)) return true;
+        switch (todayTimeFilter) {
+          case '12-14': return hour >= 12 && hour < 14;
+          case '14-16': return hour >= 14 && hour < 16;
+          case '16-18': return hour >= 16 && hour < 18;
+          case '18-20': return hour >= 18 && hour < 20;
+          case '20-22': return hour >= 20 && hour < 22;
+          case '22+': return hour >= 22;
+          default: return true;
+        }
+      })
+    })).filter(g => g.matches.length > 0);
+
+    const totalFiltered = filteredData.reduce((sum, g) => sum + g.matches.length, 0);
+
+    return (
+      <div style={{
+        ...styles.arenaContent,
+        padding: isMobile ? '3px 8px 0px' : styles.arenaContent.padding,
+        maxWidth: isMobile ? '100vw' : '1200px',
+        boxSizing: 'border-box' as const,
+        overflowX: 'hidden' as const
+      }}>
+        {/* BARRA FILTRI */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap' as const, gap: '10px',
+          alignItems: 'center', marginBottom: '16px', marginTop: '10px', padding: '0 4px'
+        }}>
+          <select
+            value={todayLeagueFilter}
+            onChange={e => setTodayLeagueFilter(e.target.value)}
+            style={{
+              background: '#1a1a24', color: '#fff',
+              border: '1px solid rgba(0,240,255,0.3)', borderRadius: '10px',
+              padding: '8px 12px', fontSize: '12px', fontWeight: 700,
+              cursor: 'pointer', minWidth: '160px'
+            }}
+          >
+            <option value="" style={{ background: '#1a1a24', color: '#fff' }}>Tutti i campionati</option>
+            {allLeagues.map(l => (
+              <option key={l.id} value={l.id} style={{ background: '#1a1a24', color: '#fff' }}>{l.name}</option>
+            ))}
+          </select>
+
+          {['tutti', '12-14', '14-16', '16-18', '18-20', '20-22', '22+'].map(t => {
+            const isActive = todayTimeFilter === t;
+            const label = t === 'tutti' ? 'Tutti' : t === '22+' ? '22h+' : `${t}h`;
+            return (
+              <button
+                key={t}
+                onClick={() => setTodayTimeFilter(t)}
+                style={{
+                  padding: '6px 12px', borderRadius: '16px',
+                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                  background: isActive ? 'rgba(0,240,255,0.15)' : 'transparent',
+                  color: isActive ? '#00f0ff' : 'rgba(255,255,255,0.5)',
+                  fontWeight: isActive ? 800 : 600, fontSize: '11px',
+                  cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+
+          <button
+            onClick={() => setTodayTimeFilter('live')}
+            style={{
+              padding: '6px 12px', borderRadius: '16px',
+              border: todayTimeFilter === 'live' ? 'none' : '1px solid rgba(239,68,68,0.3)',
+              background: todayTimeFilter === 'live' ? 'rgba(239,68,68,0.2)' : 'transparent',
+              color: todayTimeFilter === 'live' ? '#ef4444' : 'rgba(239,68,68,0.5)',
+              fontWeight: 800, fontSize: '11px',
+              cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: '4px'
+            }}
+          >
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%',
+              background: '#ef4444', boxShadow: '0 0 6px #ef4444',
+              animation: 'pulse 1.5s infinite'
+            }} />
+            LIVE
+          </button>
+
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: 'auto' }}>
+            {totalFiltered} partite
+          </span>
+        </div>
+
+        {/* LOADING / EMPTY / LISTA */}
+        {todayLoading ? (
+          <div style={{ textAlign: 'center' as const, padding: '40px', color: theme.textDim }}>
+            <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ marginTop: 8 }}>Caricamento partite di oggi...</div>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div style={{ textAlign: 'center' as const, padding: '40px', color: theme.textDim }}>
+            Nessuna partita trovata per oggi
+            {(todayLeagueFilter || todayTimeFilter !== 'tutti') && (
+              <div style={{ marginTop: '10px' }}>
+                <button
+                  onClick={() => { setTodayLeagueFilter(''); setTodayTimeFilter('tutti'); }}
+                  style={{
+                    background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
+                    color: '#00f0ff', padding: '6px 16px', borderRadius: '8px',
+                    cursor: 'pointer', fontSize: '12px'
+                  }}
+                >
+                  Mostra tutte
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          filteredData.map(group => (
+            <div key={group.league_id} style={{ marginBottom: '20px' }}>
+              {/* HEADER LEGA */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '8px 12px', marginBottom: '6px',
+                borderBottom: '1px solid rgba(0,240,255,0.15)'
+              }}>
+                <img
+                  src={STEMMI_CAMPIONATI[group.league_id] || ''}
+                  alt=""
+                  style={{ width: '22px', height: '22px', objectFit: 'contain' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
+                  {group.league_name}
+                </span>
+                <span style={{ fontSize: '10px', color: 'rgba(0,240,255,0.6)', fontWeight: 700 }}>
+                  {group.country}
+                </span>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>
+                  {group.matches.length} partite
+                </span>
+              </div>
+
+              {/* PARTITE DELLA LEGA */}
+              {group.matches.map(match => {
+                const [hh, mm] = (match.match_time || '').split(':').map(Number);
+                const kickoffMinutes = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
+                // Dato reale dal daemon (priorità) oppure fallback calcolo orario
+                const isLive = match.live_status === 'Live' || match.live_status === 'HT' || (
+                  kickoffMinutes >= 0
+                  && nowMinutes >= kickoffMinutes
+                  && nowMinutes <= kickoffMinutes + 120
+                  && match.status !== 'Finished'
+                );
+
+                return (
+                  <ElementoPartita
+                    key={match.id}
+                    match={match}
+                    isMobile={isMobile}
+                    isExpanded={expandedMatch === match.id}
+                    onToggleExpand={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
+                    onPrepareSimulation={() => {
+                      const leagueInfo = LEAGUES_MAP.find(l => l.id === group.league_id);
+                      if (leagueInfo) {
+                        initFromDashboard(leagueInfo.country, leagueInfo.id);
+                      }
+                      prepareSimulation(match);
+                    }}
+                    getStemmaLeagueUrl={(mongoId) => _getStemmaLeagueUrl(mongoId, group.league_id)}
+                    theme={theme}
+                    isLive={isLive}
+                  />
+                );
+              })}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  };
+
   const renderMatchList = () => (
     <div style={{
       ...styles.arenaContent,
@@ -1033,18 +1319,29 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Nessuna partita trovata</div>
       ) : (
-        matches.map(match => (
-          <ElementoPartita
-            key={match.id}
-            match={match}
-            isMobile={isMobile}
-            isExpanded={expandedMatch === match.id}
-            onToggleExpand={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
-            onPrepareSimulation={() => prepareSimulation(match)}
-            getStemmaLeagueUrl={getStemmaLeagueUrl}
-            theme={theme}
-          />
-        ))
+        matches.map(match => {
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          const todayStr = now.toISOString().split('T')[0];
+          const matchDate = match.date_obj ? match.date_obj.split('T')[0] : '';
+          const [hh, mm] = (match.match_time || '').split(':').map(Number);
+          const kickoff = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
+          const isLive = match.live_status === 'Live' || match.live_status === 'HT' || (matchDate === todayStr && kickoff >= 0 && nowMin >= kickoff && nowMin <= kickoff + 120 && match.status !== 'Finished');
+
+          return (
+            <ElementoPartita
+              key={match.id}
+              match={match}
+              isMobile={isMobile}
+              isExpanded={expandedMatch === match.id}
+              onToggleExpand={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
+              onPrepareSimulation={() => prepareSimulation(match)}
+              getStemmaLeagueUrl={getStemmaLeagueUrl}
+              theme={theme}
+              isLive={isLive}
+            />
+          );
+        })
       )}
     </div>
   )
@@ -1569,6 +1866,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           }
           setExpandedMatch(null);
           setViewState('list');
+          setViewMode('calendar');
+        }}
+        viewMode={viewMode}
+        onToggleViewMode={(mode) => {
+          setViewMode(mode);
+          if (mode === 'today') {
+            setTodayLeagueFilter('');
+            setTodayTimeFilter('tutti');
+          }
         }}
       />
     
@@ -1650,7 +1956,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
         {/* MAIN ARENA */}
         <div style={styles.arena}>
-          {viewState === 'list' && renderMatchList()}
+          {viewState === 'list' && viewMode === 'today' && renderTodayMatches()}
+          {viewState === 'list' && viewMode === 'calendar' && renderMatchList()}
           {viewState === 'pre-match' && (
             <VistaPrePartita
               theme={theme}

@@ -25,6 +25,8 @@ interface BarraSuperioreProps {
   styles: Record<string, CSSProperties>;
   onMobileMenuOpen: () => void;
   onDashboard: () => void;
+  viewMode: 'calendar' | 'today';
+  onToggleViewMode: (mode: 'calendar' | 'today') => void;
 }
 
 export default function BarraSuperiore({
@@ -39,35 +41,69 @@ export default function BarraSuperiore({
   stemmiCoppe,
   styles,
   onMobileMenuOpen,
-  onDashboard
+  onDashboard,
+  viewMode,
+  onToggleViewMode
 }: BarraSuperioreProps) {
 
   return (
     <div style={styles.topBar}>
-      {/* HAMBURGER MENU (Solo Mobile) */}
+      {/* HAMBURGER MENU + TOGGLE (Mobile) */}
       {isMobile && (
-        <button
-          onClick={onMobileMenuOpen}
-          style={{
-            background: 'rgba(0, 240, 255, 0.1)',
-            border: '1px solid rgba(0, 240, 255, 0.3)',
-            color: '#00f0ff',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            fontSize: '20px',
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 20 }}>
+          <button
+            onClick={onMobileMenuOpen}
+            style={{
+              background: 'rgba(0, 240, 255, 0.1)',
+              border: '1px solid rgba(0, 240, 255, 0.3)',
+              color: '#00f0ff',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontSize: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            &#x2630;
+          </button>
+          <div style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 20
-          }}
-        >
-          ☰
-        </button>
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '16px',
+            border: '1px solid rgba(0, 240, 255, 0.2)',
+            padding: '2px',
+            gap: '2px'
+          }}>
+            {(['calendar', 'today'] as const).map(mode => {
+              const isActive = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => onToggleViewMode(mode)}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: isActive ? '#00f0ff' : 'transparent',
+                    color: isActive ? '#000' : 'rgba(255,255,255,0.5)',
+                    fontWeight: isActive ? 800 : 600,
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                    letterSpacing: '0.3px'
+                  }}
+                >
+                  {mode === 'calendar' ? 'Cal.' : 'Oggi'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (Desktop) */}
       {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '120px', paddingLeft: '60px', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingLeft: '60px', zIndex: 10 }}>
           <button
             onClick={onDashboard}
             style={{
@@ -84,10 +120,44 @@ export default function BarraSuperiore({
               gap: '8px'
             }}
           >
-            <span>⟵</span> DASHBOARD
+            <span>&#x27F5;</span> DASHBOARD
           </button>
 
-          <div style={{ ...styles.logo, display: 'flex', alignItems: 'center' }}>
+          {/* TOGGLE CALENDARIO / OGGI */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '20px',
+            border: '1px solid rgba(0, 240, 255, 0.2)',
+            padding: '3px',
+            gap: '2px'
+          }}>
+            {(['calendar', 'today'] as const).map(mode => {
+              const isActive = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => onToggleViewMode(mode)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: isActive ? '#00f0ff' : 'transparent',
+                    color: isActive ? '#000' : 'rgba(255,255,255,0.5)',
+                    fontWeight: isActive ? 800 : 600,
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {mode === 'calendar' ? 'Calendario' : 'Oggi'}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ ...styles.logo, display: 'flex', alignItems: 'center', marginLeft: '60px' }}>
             <img
               src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
               alt="Logo"
@@ -104,7 +174,30 @@ export default function BarraSuperiore({
       )}
 
       {/* 2. IDENTITA COMPETIZIONE */}
-      {(league || selectedCup) && (
+      {viewMode === 'today' ? (
+        <div style={{
+          position: isMobile ? 'relative' : 'absolute',
+          left: isMobile ? '30px' : '280px',
+          right: '0',
+          display: 'flex',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          height: '100%',
+          alignItems: 'center',
+          zIndex: 5
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', pointerEvents: 'auto' }}>
+            <span style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Partite di Oggi
+            </span>
+            {!isMobile && (
+              <span style={{ fontSize: '11px', color: '#00f0ff', fontWeight: 'bold', opacity: 0.9, letterSpacing: '1px' }}>
+                {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (league || selectedCup) && (
         <div style={{
           position: isMobile ? 'relative' : 'absolute',
           left: isMobile ? '30px' : '280px',

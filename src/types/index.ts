@@ -67,6 +67,9 @@ export interface Match {
   date_obj: string;
   h2h_data?: BvsData;
   odds?: Odds;
+  live_score?: string;
+  live_status?: string;
+  live_minute?: number;
 }
 
 // --- EVENTI CRONACA ---
@@ -211,4 +214,13 @@ export interface SpeedPreset {
   id: number;
   label: string;
   cycles: number;
+}
+
+// --- PARTITE DI OGGI ---
+
+export interface TodayLeagueGroup {
+  league_name: string;
+  league_id: string;
+  country: string;
+  matches: Match[];
 }

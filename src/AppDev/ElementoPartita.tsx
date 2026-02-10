@@ -114,7 +114,7 @@ export default function ElementoPartita({
             {match.match_time || '--:--'}
           </span>
         </div>
-        {isLive && (
+        {isLive && (!isMobile || isExpanded) && (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '4px',
             background: 'rgba(239,68,68,0.15)',

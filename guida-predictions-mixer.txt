@@ -1,0 +1,310 @@
+================================================================================
+                        PREDICTIONS MIXER - GUIDA COMPLETA
+================================================================================
+
+
+COME FUNZIONA
+-------------
+
+1. Modifichi i pesi e le soglie nel Mixer
+2. Premi "SALVA CONFIG" --> i valori vengono salvati su MongoDB
+3. SOLO LA SANDBOX viene influenzata (i pronostici di test)
+4. LA PRODUZIONE NON VIENE MAI TOCCATA automaticamente
+5. Per vedere l'effetto: ri-lanciare lo script sandbox
+6. Per promuovere a produzione: bisogna modificare manualmente il codice
+
+--> Puoi sperimentare liberamente senza rischi!
+
+
+REGOLA IMPORTANTE: i pesi di ogni tab (SEGNO, GOL, BOMBA) devono sempre
+sommare a 100%. Se non tornano, il bottone "SALVA" si disabilita.
+Le soglie invece sono indipendenti e non devono sommare a niente.
+
+
+================================================================================
+TAB 1: SEGNO (decide chi vince: 1, X o 2)
+================================================================================
+
+Ogni parametro rappresenta un "segnale" che il sistema usa per capire
+se vincera la squadra di casa (1), ci sara pareggio (X) o vincera la trasferta (2).
+
+
+BVS (Quote) - Default: 25%
+  Cosa fa: Confronta le quote dei bookmaker con i dati reali per trovare valore
+  Se alzi:   Le quote bookmaker pesano di piu nella decisione
+  Se abbassi: Le quote contano meno, gli altri fattori comandano
+
+Quote Dirette - Default: 18%
+  Cosa fa: Analisi diretta delle quote: chi e il favorito e chi lo sfavorito
+  Se alzi:   Il favorito dei bookmaker viene confermato piu spesso
+  Se abbassi: Si danno piu chance a pareggi e outsider
+
+Lucifero - Default: 18%
+  Cosa fa: Algoritmo che valuta la forma recente (ultime partite giocate)
+  Se alzi:   La forma recente delle squadre conta di piu
+  Se abbassi: La forma recente conta meno
+
+Affidabilita - Default: 14%
+  Cosa fa: Misura quanto una squadra e costante nei risultati
+  Se alzi:   Squadre costanti vengono premiate, le sorprese penalizzate
+  Se abbassi: Si ammettono piu risultati a sorpresa
+
+DNA Squadra - Default: 8%
+  Cosa fa: Caratteristiche intrinseche della squadra (stile di gioco, tendenza storica)
+  Se alzi:   Il DNA storico della squadra pesa di piu
+  Se abbassi: Si guarda piu alla situazione attuale che alla storia
+
+Motivazioni - Default: 8%
+  Cosa fa: Motivazioni stagionali (lotta retrocessione, zona Champions, ecc.)
+  Se alzi:   Squadre con motivazioni forti vengono premiate
+  Se abbassi: Le motivazioni contano meno nelle previsioni
+
+Head to Head - Default: 5%
+  Cosa fa: Storico degli scontri diretti tra le due squadre
+  Se alzi:   I precedenti tra le due squadre contano di piu
+  Se abbassi: I precedenti contano meno
+
+Fattore Campo - Default: 4%
+  Cosa fa: Vantaggio di giocare in casa
+  Se alzi:   La squadra di casa viene avvantaggiata di piu
+  Se abbassi: Il fattore casa pesa meno
+
+
+================================================================================
+TAB 2: GOL (decide Over/Under e GG/NG)
+================================================================================
+
+Ogni parametro rappresenta un segnale che il sistema usa per capire
+se ci saranno tanti gol (Over) o pochi (Under), e se segneranno entrambe (GG)
+o solo una (NG).
+
+
+Media Gol - Default: 25%
+  Cosa fa: Media dei gol segnati e subiti dalle due squadre in stagione
+  Se alzi:   La media storica dei gol comanda la previsione
+  Se abbassi: Gli altri indicatori comandano di piu
+
+Attacco vs Difesa - Default: 22%
+  Cosa fa: Confronta l'attacco di una squadra con la difesa dell'avversaria
+  Se alzi:   Il matchup attacco-difesa pesa di piu
+  Se abbassi: Meno focus sul confronto diretto attacco vs difesa
+
+Expected Goals (xG) - Default: 20%
+  Cosa fa: Gol attesi in base alla qualita e quantita delle occasioni create
+  Se alzi:   Gli xG (dato statistico avanzato) pesano di piu
+  Se abbassi: Si usa meno questo dato avanzato
+
+H2H Gol - Default: 15%
+  Cosa fa: Quanti gol si segnano di solito quando queste due squadre si affrontano
+  Se alzi:   I gol nei precedenti scontri diretti contano di piu
+  Se abbassi: I precedenti gol tra le due squadre contano meno
+
+Media Lega - Default: 10%
+  Cosa fa: Media gol tipica del campionato (es. Eredivisie = tanti gol, Ligue 1 = pochi)
+  Se alzi:   Le caratteristiche del campionato pesano di piu
+  Se abbassi: Il tipo di campionato pesa meno
+
+DNA Off/Def - Default: 8%
+  Cosa fa: Tendenza storica della squadra all'attacco o alla difesa
+  Se alzi:   Il DNA offensivo/difensivo storico pesa di piu
+  Se abbassi: Il DNA storico pesa meno
+
+
+================================================================================
+TAB 3: BOMBA (rileva potenziali upset ad alto rischio)
+================================================================================
+
+Le "bombe" sono pronostici dove il sistema rileva che potrebbe succedere
+qualcosa di inaspettato. Ogni parametro misura un tipo di anomalia.
+
+
+Lucifero Sfi - Default: 30%
+  Cosa fa: Rileva discrepanze tra la forma recente e le quote (potenziale upset)
+  Se alzi:   Le discrepanze forma/quote generano piu bombe
+  Se abbassi: Servono piu segnali per segnalare un possibile upset
+
+BVS Anomalo - Default: 25%
+  Cosa fa: Rileva quote che sono fuori linea rispetto ai dati reali
+  Se alzi:   Le anomalie nelle quote generano piu bombe
+  Se abbassi: Il sistema diventa meno sensibile alle anomalie
+
+Motivazione Sfi - Default: 20%
+  Cosa fa: Rileva squilibrio motivazionale tra le due squadre
+  Se alzi:   Motivazioni molto sbilanciate generano piu bombe
+  Se abbassi: Le motivazioni contano meno per generare bombe
+
+Affidabilita - Default: 15%
+  Cosa fa: Rileva squadre con risultati inconsistenti (inaffidabili)
+  Se alzi:   Squadre con risultati ballerini generano piu bombe
+  Se abbassi: L'inaffidabilita pesa meno
+
+H2H Sfi - Default: 10%
+  Cosa fa: Rileva squilibri negli scontri diretti tra le due squadre
+  Se alzi:   Scontri diretti sbilanciati generano piu bombe
+  Se abbassi: Lo storico scontri pesa meno per le bombe
+
+
+================================================================================
+TAB 4: SOGLIE (decidono quando pubblicare un pronostico)
+================================================================================
+
+Le soglie decidono il livello minimo di "sicurezza" (confidence) che un
+pronostico deve avere per essere pubblicato.
+
+
+Soglia Inclusione - Default: 60%
+  Cosa fa: Confidence minima per pubblicare un pronostico
+  Se alzi:   MENO pronostici, ma PIU SICURI (approccio conservativo)
+  Se abbassi: PIU pronostici, ma MENO SICURI (approccio aggressivo)
+
+Soglia Alta Confidence - Default: 70%
+  Cosa fa: Sopra questa soglia il pronostico ottiene il badge "alta confidence"
+  Se alzi:   Meno pronostici avranno il badge "alta confidence"
+  Se abbassi: Piu pronostici avranno il badge "alta confidence"
+
+Soglia Bomba - Default: 65%
+  Cosa fa: Confidence minima per pubblicare una "bomba"
+  Se alzi:   MENO bombe, ma PIU SICURE
+  Se abbassi: PIU bombe, ma MENO SICURE
+
+
+================================================================================
+FUNZIONALITA EXTRA
+================================================================================
+
+PRESET
+  Puoi salvare combinazioni di pesi con un nome (es. "Aggressivo", "Conservativo")
+  per poterle caricare e confrontare in seguito.
+
+MARCATORE DEFAULT
+  Su ogni slider c'e una lineetta bianca che indica il valore originale.
+  Utile per capire quanto ti sei allontanato dal default.
+
+RESET DEFAULT
+  Il bottone "Reset Default" ripristina tutti i valori ai valori originali.
+
+BARRA SOMMA
+  Nei tab SEGNO, GOL e BOMBA c'e una barra in alto che mostra la somma
+  dei pesi. Deve essere sempre 100% (verde). Se non torna, diventa rossa
+  e non puoi salvare.
+
+
+================================================================================
+COME VIENE CALCOLATA LA CONFIDENCE
+================================================================================
+
+La "confidence" e il numero da 0 a 100 che vedi su ogni pronostico.
+Indica quanto il sistema e "sicuro" della previsione. Ecco come viene calcolata:
+
+
+STEP 1: Ogni segnale da un voto (0-100)
+----------------------------------------
+
+Per ogni partita, ogni segnale analizza un aspetto e restituisce un punteggio
+da 0 (pessimo) a 100 (perfetto). Alcuni esempi:
+
+  BVS:
+    - Classificazione PURO = parte da 65
+    - Classificazione SEMI = parte da 40
+    - NON_BVS = parte da 10
+    - Poi aggiunge/toglie bonus per l'indice BVS e la linearita
+
+  Quote Dirette:
+    - Quota favorito ~1.75 = punteggio 100 (range ideale)
+    - Quota 1.55-2.20 = punteggio alto (70-100)
+    - Quota sotto 1.35 = punteggio 15 (troppo scontata)
+    - Quota sopra 2.80 = punteggio basso (troppo rischiosa)
+
+  Lucifero:
+    - Divario di forma 0 (squadre pari) = punteggio 20
+    - Divario di forma 10 = punteggio ~60
+    - Divario di forma 15+ = punteggio 80+
+    - Bonus se la favorita e molto in forma (Lucifero >= 20)
+
+
+STEP 2: Media pesata = Confidence finale
+-----------------------------------------
+
+I voti di ogni segnale vengono combinati usando i pesi del Mixer.
+Esempio per il SEGNO con i pesi default:
+
+  confidence_segno = (voto_BVS x 25%) + (voto_Quote x 18%) + (voto_Lucifero x 18%)
+                   + (voto_Affidabilita x 14%) + (voto_DNA x 8%) + (voto_Motivazioni x 8%)
+                   + (voto_H2H x 5%) + (voto_Campo x 4%)
+
+Esempio numerico:
+  BVS=75, Quote=90, Lucifero=60, Affidabilita=70, DNA=50, Motivazioni=40, H2H=55, Campo=65
+
+  confidence = (75x0.25) + (90x0.18) + (60x0.18) + (70x0.14) + (50x0.08)
+             + (40x0.08) + (55x0.05) + (65x0.04)
+             = 18.75 + 16.2 + 10.8 + 9.8 + 4.0 + 3.2 + 2.75 + 2.6
+             = 68.1
+
+  --> Confidence SEGNO = 68.1 (pubblicato, perche supera la soglia 60)
+
+Stessa logica per GOL (6 segnali) e BOMBA (5 segnali).
+
+
+STEP 3: Confronto con le soglie
+--------------------------------
+
+Una volta calcolata la confidence, il sistema decide cosa fare:
+
+  confidence_segno >= 60  -->  Il pronostico SEGNO viene PUBBLICATO
+  confidence_segno < 60   -->  Il pronostico SEGNO viene SCARTATO
+
+  confidence_gol >= 60    -->  Il pronostico GOL viene PUBBLICATO
+  confidence_gol < 60     -->  Il pronostico GOL viene SCARTATO
+
+  ENTRAMBI sotto 60       -->  Partita completamente SCARTATA (nessun pronostico)
+
+  confidence >= 70        -->  Badge "ALTA CONFIDENCE" (pronostico forte)
+
+  confidence_bomba >= 65  -->  La bomba viene PUBBLICATA
+
+
+STEP 4: Stelle (da 2.5 a 5.0)
+-------------------------------
+
+Le stelle sono la traduzione visiva della confidence:
+
+  Confidence 60   -->  2.5 stelle (appena sufficiente)
+  Confidence 65   -->  2.8 stelle
+  Confidence 70   -->  3.1 stelle
+  Confidence 75   -->  3.4 stelle
+  Confidence 80   -->  3.8 stelle
+  Confidence 85   -->  4.1 stelle
+  Confidence 90   -->  4.4 stelle
+  Confidence 95   -->  4.7 stelle
+  Confidence 100  -->  5.0 stelle (massimo)
+  Sotto 60        -->  0 stelle (scartato)
+
+
+NOTA: GG/NG ha una confidence SEPARATA
+---------------------------------------
+
+La confidence per Goal/NoGoal NON usa la media pesata del tab GOL.
+Ha un calcolo tutto suo basato su 6 segnali specifici:
+
+  1. BTTS negli scontri diretti (25%)
+  2. Gol attesi minimi tra le due squadre (20%)
+  3. xG minimi tra le due squadre (20%)
+  4. Forza attacco minima (15%)
+  5. DNA offensivo minimo (10%)
+  6. Percentuale "entrambe segnano" (10%)
+
+Se il risultato e alto --> Goal (entrambe segneranno)
+Se il risultato e basso --> NoGoal (almeno una non segnera)
+
+
+================================================================================
+RIEPILOGO RAPIDO
+================================================================================
+
+  Mixer salva su --> MongoDB (prediction_tuning_settings)
+  Chi legge i pesi --> SOLO lo script Sandbox
+  La Produzione    --> Ha i pesi scritti nel codice, NON legge dal Mixer
+  Per testare      --> Salva nel Mixer, poi rilancia lo script Sandbox
+  Per produzione   --> Bisogna modificare manualmente il file di produzione
+
+================================================================================

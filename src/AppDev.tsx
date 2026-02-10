@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useLocation } from 'react-router-dom';
 import DashboardHome from './DashboardHome';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
@@ -53,6 +54,8 @@ import { useDatiCampionato } from './AppDev/hooks/useDatiCampionato';
 
 
 export default function AppDev() {
+  const location = useLocation();
+
   // --- DATI CAMPIONATO (hook estratto) ---
   const {
     country, setCountry,
@@ -63,12 +66,16 @@ export default function AppDev() {
     matches,
     availableCountries,
     isLoadingNations,
+    isLoadingMatches,
+    initFromDashboard,
     sidebarPredictions,
   } = useDatiCampionato();
 
   // --- STATO APPLICAZIONE ---
   const [selectedCup, setSelectedCup] = useState('');
-  const [activeLeague, setActiveLeague] = useState<string | null>(null);
+  const [activeLeague, setActiveLeague] = useState<string | null>(
+    (location.state as any)?.goTo === 'PREDICTIONS' ? 'PREDICTIONS' : null
+  );
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
@@ -1018,6 +1025,11 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           }}
         />
       </Suspense>
+      ) : isLoadingMatches ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>
+          <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: theme.accent || '#00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ marginTop: 8 }}>Caricamento partite...</div>
+        </div>
       ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Nessuna partita trovata</div>
       ) : (
@@ -1173,8 +1185,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           console.log(`Navigazione Dashboard: ID=${id} -> Nazione=${nazioneGiusta}`);
 
           // 3. Impostiamo gli stati per forzare il caricamento dei dati
-          setCountry(nazioneGiusta);
-          setLeague(id);
+          initFromDashboard(nazioneGiusta, id);
           
           // // modificato per: pulizia obbligatoria dello stato coppa per evitare conflitti
           setSelectedCup(''); 

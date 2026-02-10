@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { checkAdmin } from './permissions';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'solo_prod' | 'solo_sandbox';
@@ -241,6 +242,7 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
   const [predStats, setPredStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
+  const isAdmin = checkAdmin();
   const [mode, setMode] = useState<'prod' | 'sandbox' | 'confronto'>('prod');
   const [statusFilters, setStatusFilters] = useState<Record<'prod' | 'sandbox', StatusFilter>>({ prod: 'tutte', sandbox: 'tutte' });
   const statusFilter = mode !== 'confronto' ? statusFilters[mode] : 'tutte';
@@ -1417,8 +1419,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             Analisi automatica basata su AI multi-indicatore
           </p>
 
-          {/* Toggle PROD/SANDBOX — solo DEV */}
-          {import.meta.env.DEV && (
+          {/* Toggle PROD/SANDBOX/CONFRONTO + Mixer — solo Admin */}
+          {isAdmin && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
               <button
                 onClick={() => setMode('prod')}
@@ -1470,6 +1472,24 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 }}
               >
                 CONFRONTO
+              </button>
+              <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
+              <button
+                onClick={() => window.location.href = '/predictions-mixer'}
+                style={{
+                  background: 'rgba(249, 115, 22, 0.15)',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  color: '#f97316',
+                  padding: '6px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase' as const,
+                  transition: 'all 0.2s'
+                }}
+              >
+                🎛️ MIXER
               </button>
             </div>
           )}
@@ -1753,10 +1773,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           <div style={{ padding: isMobile ? '8px 10px 6px 14px' : '10px 14px 8px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' as const }}>
                               <span style={{ fontSize: '10px', color: theme.textDim }}>{m.match_time}</span>
-                              <span style={{
-                                fontSize: '9px', fontWeight: '800', color: barColor,
-                                background: `${barColor}15`, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${barColor}30`
-                              }}>{badgeLabel}</span>
                               {(m.prodPred?.real_score || m.sandboxPred?.real_score) && (
                                 <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: '900', color: theme.text }}>
                                   {(m.prodPred?.real_score || m.sandboxPred?.real_score || '').replace(':', ' - ')}
@@ -1772,6 +1788,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               <img src={getStemmaUrl(m.away_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             </div>
+                          </div>
+
+                          {/* BADGE STATO CENTRATO */}
+                          <div style={{
+                            display: 'flex', justifyContent: 'center', padding: '6px 0',
+                            background: `${barColor}10`, borderBottom: '1px solid rgba(255,255,255,0.06)'
+                          }}>
+                            <span style={{
+                              fontSize: '12px', fontWeight: '900', color: barColor, letterSpacing: '1px',
+                              background: `${barColor}20`, padding: '4px 16px', borderRadius: '6px',
+                              border: `1px solid ${barColor}40`, textTransform: 'uppercase' as const,
+                            }}>{badgeLabel}</span>
                           </div>
 
                           {/* DUE COLONNE: PROD | SANDBOX */}

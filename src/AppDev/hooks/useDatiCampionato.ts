@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../costanti';
 import type { League, RoundInfo, Match } from '../../types';
 
@@ -11,7 +11,15 @@ export function useDatiCampionato() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [availableCountries, setAvailableCountries] = useState<{code: string, name: string, flag: string}[]>([]);
   const [isLoadingNations, setIsLoadingNations] = useState(true);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [sidebarPredictions, setSidebarPredictions] = useState<any[]>([]);
+  const countrySetByUser = useRef(false);
+
+  const initFromDashboard = (dashCountry: string, dashLeague: string) => {
+    countrySetByUser.current = true;
+    setCountry(dashCountry);
+    setLeague(dashLeague);
+  };
 
   // --- CARICAMENTO NAZIONI DINAMICHE ---
   useEffect(() => {
@@ -30,7 +38,7 @@ export function useDatiCampionato() {
 
           setAvailableCountries(formatted);
 
-          if (formatted.length > 0) {
+          if (formatted.length > 0 && !countrySetByUser.current) {
             setCountry(formatted[0].code);
           }
         }
@@ -69,6 +77,8 @@ export function useDatiCampionato() {
   // --- FETCH GIORNATE ---
   useEffect(() => {
     if (!league) return;
+    setMatches([]);
+    setSelectedRound(null);
     fetch(`${API_BASE}/rounds?league=${league}`).then(r => r.json()).then(d => {
       setRounds(d.rounds || []);
       const curr = d.rounds?.find((r: any) => r.type === 'current');
@@ -79,12 +89,15 @@ export function useDatiCampionato() {
   // --- FETCH PARTITE ---
   useEffect(() => {
     if (!league || !selectedRound) return;
+    setIsLoadingMatches(true);
     fetch(`${API_BASE}/matches?league=${league}&round=${selectedRound.name}`)
       .then(r => r.json())
       .then(data => {
         const validMatches = Array.isArray(data) ? data.filter(m => m && m.date_obj) : [];
         setMatches(validMatches);
-      });
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingMatches(false));
   }, [league, selectedRound]);
 
   // --- CARICA PRONOSTICI PER SIDEBAR ---
@@ -114,6 +127,8 @@ export function useDatiCampionato() {
     matches, setMatches,
     availableCountries,
     isLoadingNations,
+    isLoadingMatches,
+    initFromDashboard,
     sidebarPredictions,
   };
 }

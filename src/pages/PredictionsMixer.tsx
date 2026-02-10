@@ -29,6 +29,34 @@ const LABELS: Record<string, string> = {
   THRESHOLD_INCLUDE: 'Soglia Inclusione', THRESHOLD_HIGH: 'Soglia Alta Confidence', THRESHOLD_BOMBA: 'Soglia Bomba',
 };
 
+const DESCRIPTIONS: Record<string, { desc: string; up: string; down: string }> = {
+  // SEGNO
+  bvs:           { desc: 'Confronta le quote con i dati reali per trovare valore', up: 'Le quote bookmaker pesano di piu', down: 'Gli altri fattori comandano' },
+  quote:         { desc: 'Analisi diretta delle quote: chi e favorito e chi sfavorito', up: 'Il favorito dei bookmaker viene confermato piu spesso', down: 'Piu chance a pareggi e outsider' },
+  lucifero:      { desc: 'Valuta la forma recente delle squadre (ultime partite)', up: 'La forma recente conta di piu', down: 'La forma recente conta meno' },
+  affidabilita:  { desc: 'Misura quanto una squadra e costante nei risultati', up: 'Squadre costanti premiate, sorprese penalizzate', down: 'Si ammettono piu sorprese' },
+  dna:           { desc: 'Caratteristiche intrinseche della squadra (stile, tendenza storica)', up: 'Il DNA storico pesa di piu', down: 'Si guarda piu alla situazione attuale' },
+  motivazioni:   { desc: 'Motivazioni stagionali (retrocessione, Champions, ecc.)', up: 'Squadre con motivazioni forti premiate', down: 'Le motivazioni contano meno' },
+  h2h:           { desc: 'Storico degli scontri diretti tra le due squadre', up: 'I precedenti contano di piu', down: 'I precedenti contano meno' },
+  campo:         { desc: 'Vantaggio di giocare in casa', up: 'La squadra di casa avvantaggiata', down: 'Il fattore casa pesa meno' },
+  // GOL
+  media_gol:     { desc: 'Media gol segnati e subiti dalle due squadre in stagione', up: 'La media storica gol comanda', down: 'Gli altri indicatori comandano' },
+  att_vs_def:    { desc: 'Confronta attacco di una squadra con difesa dell\'avversaria', up: 'Il matchup attacco-difesa pesa di piu', down: 'Meno focus sul confronto diretto' },
+  xg:            { desc: 'Gol attesi in base a qualita e quantita delle occasioni', up: 'Gli xG (dato avanzato) pesano di piu', down: 'Si usa meno il dato avanzato' },
+  h2h_gol:       { desc: 'Quanti gol si segnano quando queste due squadre si affrontano', up: 'I gol nei precedenti contano di piu', down: 'I precedenti gol contano meno' },
+  media_lega:    { desc: 'Media gol tipica del campionato (Eredivisie=tanti, Ligue 1=pochi)', up: 'Le caratteristiche del campionato pesano di piu', down: 'Il campionato pesa meno' },
+  dna_off_def:   { desc: 'Tendenza storica della squadra all\'attacco o alla difesa', up: 'Il DNA offensivo/difensivo pesa di piu', down: 'Il DNA storico pesa meno' },
+  // BOMBA
+  lucifero_sfi:     { desc: 'Discrepanza tra forma recente e quote (potenziale upset)', up: 'Le discrepanze generano piu bombe', down: 'Servono piu segnali per un upset' },
+  bvs_anomalo:      { desc: 'Quote fuori linea rispetto ai dati reali', up: 'Le anomalie nelle quote generano piu bombe', down: 'Meno sensibilita alle anomalie' },
+  motivazione_sfi:  { desc: 'Squilibrio motivazionale tra le due squadre', up: 'Motivazioni sbilanciate generano piu bombe', down: 'Le motivazioni contano meno per le bombe' },
+  h2h_sfi:          { desc: 'Squilibrio negli scontri diretti tra le due squadre', up: 'Scontri sbilanciati generano piu bombe', down: 'Lo storico scontri pesa meno' },
+  // SOGLIE
+  THRESHOLD_INCLUDE: { desc: 'Confidence minima per pubblicare un pronostico', up: 'Meno pronostici ma piu sicuri (conservativo)', down: 'Piu pronostici ma meno sicuri (aggressivo)' },
+  THRESHOLD_HIGH:    { desc: 'Sopra questa soglia il pronostico ottiene il badge "alta confidence"', up: 'Meno pronostici avranno il badge', down: 'Piu pronostici avranno il badge' },
+  THRESHOLD_BOMBA:   { desc: 'Confidence minima per pubblicare una bomba', up: 'Meno bombe ma piu sicure', down: 'Piu bombe ma meno sicure' },
+};
+
 interface PredConfig {
   PESI_SEGNO: Record<string, number>;
   PESI_GOL: Record<string, number>;
@@ -54,6 +82,7 @@ const PredictionsMixer: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('SEGNO');
   const [config, setConfig] = useState<PredConfig>(deepClone(DEFAULT_CONFIG));
+  const [previousConfig, setPreviousConfig] = useState<PredConfig>(deepClone(DEFAULT_CONFIG));
   const [hasChanges, setHasChanges] = useState(false);
 
   const [presetsList, setPresetsList] = useState<string[]>([]);
@@ -71,11 +100,14 @@ const PredictionsMixer: React.FC = () => {
       const data = await res.json();
       if (data.success && data.config) {
         setConfig(data.config);
+        setPreviousConfig(deepClone(data.config));
       } else {
         setConfig(deepClone(DEFAULT_CONFIG));
+        setPreviousConfig(deepClone(DEFAULT_CONFIG));
       }
     } catch {
       setConfig(deepClone(DEFAULT_CONFIG));
+      setPreviousConfig(deepClone(DEFAULT_CONFIG));
     } finally {
       setLoading(false);
     }
@@ -93,6 +125,7 @@ const PredictionsMixer: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
+        setPreviousConfig(deepClone(config));
         setHasChanges(false);
         setSuccess('Salvato!');
         setTimeout(() => setSuccess(null), 3000);
@@ -202,16 +235,15 @@ const PredictionsMixer: React.FC = () => {
   const canSave = sumOk;
 
   const handleChange = (key: string, value: number) => {
-    setConfig(prev => ({
-      ...prev,
-      [section]: { ...prev[section], [key]: value },
-    }));
-    setHasChanges(true);
+    const newConfig = { ...config, [section]: { ...config[section], [key]: value } };
+    setConfig(newConfig);
+    setHasChanges(JSON.stringify(newConfig) !== JSON.stringify(previousConfig));
   };
 
   const resetToDefault = () => {
-    setConfig(deepClone(DEFAULT_CONFIG));
-    setHasChanges(true);
+    const def = deepClone(DEFAULT_CONFIG);
+    setConfig(def);
+    setHasChanges(JSON.stringify(def) !== JSON.stringify(previousConfig));
   };
 
   const tabColor = TABS.find(t => t.id === activeTab)?.color || '#3b82f6';
@@ -231,6 +263,7 @@ const PredictionsMixer: React.FC = () => {
       <header style={st.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button style={st.backBtn} onClick={() => navigate('/')}>← Dashboard</button>
+          <button style={{ ...st.backBtn, color: '#a78bfa', borderColor: 'rgba(167,139,250,0.3)' }} onClick={() => navigate('/', { state: { goTo: 'PREDICTIONS' } })}>{'\uD83D\uDCCB'} Pronostici</button>
           <span style={{ fontSize: 24 }}>{'\uD83D\uDD2E'}</span>
           <div>
             <h1 style={st.title}>PREDICTIONS MIXER</h1>
@@ -305,7 +338,10 @@ const PredictionsMixer: React.FC = () => {
           {keys.map(key => {
             const value = currentValues[key] ?? (isSoglieTab ? 60 : 0);
             const defaultVal = DEFAULT_CONFIG[section][key];
+            const prevVal = previousConfig[section]?.[key] ?? defaultVal;
             const isSoglia = isSoglieTab;
+
+            const info = DESCRIPTIONS[key];
 
             return (
               <div key={key} style={st.sliderCard}>
@@ -324,6 +360,42 @@ const PredictionsMixer: React.FC = () => {
                     <span style={{ fontSize: 11, color: '#555' }}>{isSoglia ? '%' : ''}</span>
                   </div>
                 </div>
+
+                {/* Capsule Default e Precedente */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 12,
+                    background: value !== defaultVal ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
+                    color: value !== defaultVal ? '#ccc' : '#666',
+                    border: `1px solid ${value !== defaultVal ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                    letterSpacing: 0.3,
+                  }}>
+                    Def: {isSoglia ? defaultVal : `${(defaultVal * 100).toFixed(0)}%`}
+                  </span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 12,
+                    background: value !== prevVal ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.06)',
+                    color: value !== prevVal ? '#c4b5fd' : '#666',
+                    border: `1px solid ${value !== prevVal ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.12)'}`,
+                    letterSpacing: 0.3,
+                  }}>
+                    Prec: {isSoglia ? prevVal : `${((prevVal ?? 0) * 100).toFixed(0)}%`}
+                  </span>
+                </div>
+
+                {info && (
+                  <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8, lineHeight: 1.4 }}>{info.desc}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5 }}>
+                      <div style={{ fontSize: 12, color: '#4ade80', background: 'rgba(74,222,128,0.1)', padding: '5px 10px', borderRadius: 6, borderLeft: '3px solid #4ade80' }}>
+                        {'\u25B2'} Alzi: {info.up}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#f87171', background: 'rgba(248,113,113,0.1)', padding: '5px 10px', borderRadius: 6, borderLeft: '3px solid #f87171' }}>
+                        {'\u25BC'} Abbassi: {info.down}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Slider track */}
                 <div style={st.sliderTrack}>

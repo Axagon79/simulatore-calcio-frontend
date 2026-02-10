@@ -451,7 +451,7 @@ export default function BarraLaterale({
 
       {/* Widget Pronostici del Giorno */}
       {sidebarPredictions.length > 0 && (
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: '15px' }}>
           {sidebarPredictions.map((pred, idx) => {
             const mainPronostico = pred.pronostici?.[0];
             const stars = mainPronostico?.stars || 0;

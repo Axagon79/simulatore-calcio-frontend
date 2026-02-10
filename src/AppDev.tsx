@@ -1313,7 +1313,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       </Suspense>
       ) : isLoadingMatches ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>
-          <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: theme.accent || '#00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: theme.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <div style={{ marginTop: 8 }}>Caricamento partite...</div>
         </div>
       ) : matches.length === 0 ? (

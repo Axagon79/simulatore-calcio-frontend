@@ -1980,6 +1980,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               pointTooltip={pointTooltip}
               setPointTooltip={setPointTooltip}
               startSimulation={startSimulation}
+              league={league}
             />
           )}
           {viewState === 'simulating' && (simMode === 'animated' ? renderAnimation() : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>Calcolo Veloce in corso...</div>)}

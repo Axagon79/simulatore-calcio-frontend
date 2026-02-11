@@ -51,6 +51,7 @@ const DEFAULTS: Record<string, number> = {
   "PESO_BVS_QUOTE": 1.0,
   "PESO_AFFIDABILITA": 1.0,
   "PESO_VALORE_ROSA": 1.0,
+  "PESO_STREAK": 2.0,
   "DIVISORE_MEDIA_GOL": 2.0,
   "POTENZA_FAVORITA_WINSHIFT": 0.40,
   "IMPATTO_DIFESA_TATTICA": 15.0,
@@ -72,6 +73,7 @@ const PARAM_INFO: Record<string, { short: string; desc: string }> = {
   "PESO_BVS_QUOTE": { short: "Quote BVS", desc: "Se lo aumenti, ti avvicini di piu al mercato delle quote e riduci la varianza; se lo diminuisci, il motore diventa piu indipendente (ma anche piu rischioso)." },
   "PESO_AFFIDABILITA": { short: "Affidabilità", desc: "Se lo aumenti, premi squadre costanti e penalizzi upset; se lo diminuisci, accetti piu volatilita e sorprese nei risultati." },
   "PESO_VALORE_ROSA": { short: "Valore Rosa", desc: "Se lo aumenti insieme al rating, schiacci le piccole; se lo diminuisci, il valore di mercato pesa meno e contano di piu forma e match-up." },
+  "PESO_STREAK": { short: "Strisce", desc: "Peso delle strisce (vittorie, sconfitte, imbattibilita, ecc.) nel calcolo. Strisce moderate danno bonus, strisce estreme penalizzano (regressione alla media)." },
   "DIVISORE_MEDIA_GOL": { short: "Divisore Gol", desc: "Se lo aumenti, escono piu spesso Under e punteggi bassi; se lo diminuisci, aumentano Over e risultati larghi." },
   "POTENZA_FAVORITA_WINSHIFT": { short: "Win Shift", desc: "Se lo aumenti, la favorita segna mediamente di piu e la sfavorita di meno; se lo diminuisci, i punteggi diventano piu equilibrati." },
   "IMPATTO_DIFESA_TATTICA": { short: "Difesa Tattica", desc: "Se lo abbassi, le difese 'pesano di piu' e aumentano 0-0/1-0; se lo alzi, le difese incidono meno e le partite diventano piu aperte." },
@@ -427,6 +429,7 @@ const TuningMixer: React.FC = () => {
       PESO_MOTIVAZIONE: { min: 0, max: 10 },
       PESO_FATTORE_CAMPO: { min: 0, max: 10 },
       PESO_STORIA_H2H: { min: 0, max: 10 },
+      PESO_STREAK: { min: 0, max: 10 },
       // Parametri gol
       DIVISORE_MEDIA_GOL: { min: 0.1, max: 10 },
       POTENZA_FAVORITA_WINSHIFT: { min: -1, max: 1 },

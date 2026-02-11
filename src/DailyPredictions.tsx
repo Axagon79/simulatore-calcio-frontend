@@ -1074,66 +1074,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 borderTop: `1px solid ${theme.cyan}20`,
                 animation: 'fadeIn 0.3s ease'
               }}>
-                {pred.segno_dettaglio && (
-                <div style={{ marginBottom: '14px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    📊 Dettaglio Segno
-                  </div>
-                  {pred.segno_dettaglio_raw ? (
-                    Object.entries(pred.segno_dettaglio).map(([key, affidabilita]) => {
-                      const raw = pred.segno_dettaglio_raw?.[key as keyof typeof pred.segno_dettaglio_raw];
-                      if (!raw) return <div key={key}>{renderDetailBar(affidabilita, SEGNO_LABELS[key] || key)}</div>;
-                      const homeVal = key === 'affidabilita' ? (raw as any).home_num : raw.home;
-                      const awayVal = key === 'affidabilita' ? (raw as any).away_num : raw.away;
-                      return (
-                        <div key={key}>
-                          {renderDetailBarWithTeams(
-                            SEGNO_LABELS[key] || key,
-                            homeVal,
-                            awayVal,
-                            affidabilita,
-                            raw.scala,
-                            pred.home,
-                            pred.away
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    Object.entries(pred.segno_dettaglio).map(([key, val]) => (
-                      <div key={key}>{renderDetailBar(val, SEGNO_LABELS[key] || key)}</div>
-                    ))
-                  )}
-                </div>
-              )}
-                {pred.gol_dettaglio && pred.confidence_gol > 0 && (
-                <div style={{ marginBottom: '14px' }}>
-                  <div style={{
-                    height: '5px',
-                    background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
-                    marginBottom: '20px',
-                    marginTop: '-10px'
-                  }} />
-                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    ⚽ Dettaglio Gol
-                  </div>
-                  {Object.entries(pred.gol_dettaglio).map(([key, val]) => (
-                    <div key={key}>
-                      {renderGolDetailBar(val, GOL_LABELS[key] || key, pred.gol_directions?.[key])}
-                    </div>
-                  ))}
-                    {pred.expected_total_goals && (
-                      <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '10px' }}>
-                        <span style={{ color: theme.textDim }}>Gol attesi: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.expected_total_goals.toFixed(1)}</span></span>
-                        <span style={{ color: theme.textDim }}>Media lega: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.league_avg_goals?.toFixed(1)}</span></span>
-                      </div>
-                    )}
-                  </div>
-                )}
 
-                {/* TABELLA STRISCE STORICHE */}
+                {/* TABELLA STRISCE STORICHE — in cima per dare contesto */}
                 {pred.streak_home && pred.streak_away && (
-                  <div style={{ marginTop: '12px' }}>
+                  <div style={{ marginBottom: '14px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                       🔥 Strisce Attive
                     </div>
@@ -1161,9 +1105,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       const getCurveVal = (type: string, n: number): number => {
                         const curve = STREAK_CURVES[type];
                         if (!curve) return 0;
-                        // Cerca esatto o il più alto applicabile
                         if (curve[String(n)]) return curve[String(n)];
-                        // Per n > max chiave, usa l'ultima
                         const keys = Object.keys(curve).map(Number).sort((a, b) => a - b);
                         const maxKey = keys[keys.length - 1];
                         if (n >= maxKey) return curve[String(maxKey)];
@@ -1171,14 +1113,27 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       };
                       const getColor = (val: number) => val > 0 ? theme.success : val < 0 ? theme.danger : theme.textDim;
 
-                      // Filtra solo strisce >= 2
                       const allTypes = Object.keys(STREAK_LABELS);
                       const active = allTypes.filter(t =>
                         (pred.streak_home?.[t] ?? 0) >= 2 || (pred.streak_away?.[t] ?? 0) >= 2
                       );
                       if (active.length === 0) return <div style={{ fontSize: '10px', color: theme.textDim }}>Nessuna striscia significativa</div>;
 
+                      // Mappatura: striscia → quale pronostico supporta
+                      const SUPPORTS_SEGNO: Record<string, { home: string[], away: string[] }> = {
+                        vittorie:       { home: ['1', '1X'], away: ['2', 'X2'] },
+                        sconfitte:      { home: ['2', 'X2'], away: ['1', '1X'] },
+                        imbattibilita:  { home: ['1', 'X', '1X'], away: ['2', 'X', 'X2'] },
+                        pareggi:        { home: ['X'], away: ['X'] },
+                        senza_vittorie: { home: ['2', 'X', 'X2'], away: ['1', 'X', '1X'] },
+                      };
+                      const SUPPORTS_GOL: Record<string, string[]> = {
+                        over25: ['Over'], under25: ['Under'],
+                        gg: ['GG'], clean_sheet: ['NG'], senza_segnare: ['NG'], gol_subiti: ['GG'],
+                      };
+
                       return (
+                        <>
                         <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
                           <thead>
                             <tr style={{ borderBottom: `1px solid ${theme.cyan}20` }}>
@@ -1214,7 +1169,132 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               );
                             })}
                           </tbody>
+                          <tfoot>
+                            {(() => {
+                              const MARKET_GROUPS: [string, string[]][] = [
+                                ['1X2', ['vittorie', 'sconfitte', 'imbattibilita', 'pareggi', 'senza_vittorie']],
+                                ['O/U', ['over25', 'under25']],
+                                ['GG', ['gg', 'clean_sheet', 'senza_segnare', 'gol_subiti']],
+                              ];
+                              const calcMarket = (types: string[], team: 'home' | 'away') => {
+                                let tot = 0;
+                                const data = team === 'home' ? pred.streak_home : pred.streak_away;
+                                types.forEach(t => {
+                                  const n = data?.[t] ?? 0;
+                                  if (n >= 2) tot += getCurveVal(t, n);
+                                });
+                                return tot;
+                              };
+                              return MARKET_GROUPS.map(([label, types]) => {
+                                const hVal = calcMarket(types, 'home');
+                                const aVal = calcMarket(types, 'away');
+                                if (hVal === 0 && aVal === 0) return null;
+                                return (
+                                  <tr key={label} style={{ borderTop: `1px solid ${theme.cyan}20` }}>
+                                    <td style={{ padding: '3px 4px', color: theme.textDim, fontWeight: 'bold', fontSize: '9px' }}>{label}</td>
+                                    <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                      <span style={{ color: getColor(hVal), fontWeight: 'bold' }}>{hVal > 0 ? '+' : ''}{hVal}</span>
+                                    </td>
+                                    <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                      <span style={{ color: getColor(aVal), fontWeight: 'bold' }}>{aVal > 0 ? '+' : ''}{aVal}</span>
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            })()}
+                          </tfoot>
                         </table>
+
+                        {/* Frasi descrittive — contestualizzate al pronostico */}
+                        {(() => {
+                          const segnoTip = pred.pronostici?.find((p: any) => p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE');
+                          const golTip = pred.pronostici?.find((p: any) => p.tipo === 'GOL');
+                          if (!segnoTip && !golTip) return null;
+
+                          const PHRASES_GOOD = [
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq}: ${n} ${tipo} di fila, buon segnale per ${pr}`,
+                            (sq: string, n: number, tipo: string, pr: string) => `Il trend di ${tipo} (${n}) del ${sq} sostiene ${pr}`,
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq} con ${n} ${tipo}: in linea con ${pr}`,
+                          ];
+                          const PHRASES_GOOD_REG = [
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq}: ${n} ${tipo} sono troppi, la regressione favorisce ${pr}`,
+                            (sq: string, n: number, tipo: string, pr: string) => `La serie di ${n} ${tipo} del ${sq} potrebbe interrompersi: aiuta ${pr}`,
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq} con ${n} ${tipo}: trend al limite, la svolta favorirebbe ${pr}`,
+                          ];
+                          const PHRASES_BAD = [
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq}: ${n} ${tipo} di fila, va contro ${pr}`,
+                            (sq: string, n: number, tipo: string, pr: string) => `Il trend di ${tipo} (${n}) del ${sq} contraddice ${pr}`,
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq} con ${n} ${tipo}: direzione opposta a ${pr}`,
+                          ];
+                          const PHRASES_BAD_REG = [
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq}: i ${n} ${tipo} sostenevano ${pr}, ma la regressione incombe`,
+                            (sq: string, n: number, tipo: string, pr: string) => `La serie di ${n} ${tipo} del ${sq} è al limite, ${pr} a rischio`,
+                            (sq: string, n: number, tipo: string, pr: string) => `${sq} con ${n} ${tipo}: il trend per ${pr} rischia di interrompersi`,
+                          ];
+
+                          const pick = (arr: ((sq: string, n: number, tipo: string, pr: string) => string)[], seed: string) =>
+                            arr[Math.abs([...seed].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)) % arr.length];
+
+                          const insights: { text: string; isGood: boolean }[] = [];
+
+                          const analyzeTeam = (team: 'home' | 'away') => {
+                            const streaks = team === 'home' ? pred.streak_home : pred.streak_away;
+                            const squadra = team === 'home' ? pred.home : pred.away;
+                            if (!streaks) return;
+
+                            for (const [tipo, rawN] of Object.entries(streaks)) {
+                              const n = rawN as number;
+                              if (typeof n !== 'number' || n < 2) continue;
+                              const cv = getCurveVal(tipo, n);
+                              if (cv === 0) continue;
+                              const label = STREAK_LABELS[tipo] || tipo;
+
+                              // SEGNO
+                              if (segnoTip && SUPPORTS_SEGNO[tipo]) {
+                                const supported = SUPPORTS_SEGNO[tipo][team];
+                                const pr = segnoTip.pronostico;
+                                const supports = supported.some((s: string) => pr.includes(s));
+                                const isGood = (supports && cv > 0) || (!supports && cv < 0);
+                                let pool;
+                                if (supports && cv > 0) pool = PHRASES_GOOD;
+                                else if (!supports && cv < 0) pool = PHRASES_GOOD_REG;
+                                else if (!supports && cv > 0) pool = PHRASES_BAD;
+                                else pool = PHRASES_BAD_REG;
+                                insights.push({ text: pick(pool, squadra + tipo)(squadra, n, label, pr), isGood });
+                              }
+
+                              // GOL
+                              if (golTip && SUPPORTS_GOL[tipo]) {
+                                const supported = SUPPORTS_GOL[tipo];
+                                const pr = golTip.pronostico;
+                                const supports = supported.some((s: string) => pr.startsWith(s));
+                                const isGood = (supports && cv > 0) || (!supports && cv < 0);
+                                let pool;
+                                if (supports && cv > 0) pool = PHRASES_GOOD;
+                                else if (!supports && cv < 0) pool = PHRASES_GOOD_REG;
+                                else if (!supports && cv > 0) pool = PHRASES_BAD;
+                                else pool = PHRASES_BAD_REG;
+                                insights.push({ text: pick(pool, squadra + tipo)(squadra, n, label, pr), isGood });
+                              }
+                            }
+                          };
+
+                          analyzeTeam('home');
+                          analyzeTeam('away');
+                          if (insights.length === 0) return null;
+
+                          return (
+                            <div style={{ marginTop: '6px', fontSize: '9px', lineHeight: '1.6' }}>
+                              {insights.slice(0, 4).map((ins, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', marginBottom: '2px' }}>
+                                  <span style={{ flexShrink: 0, fontSize: '10px' }}>{ins.isGood ? '✅' : '⚠️'}</span>
+                                  <span style={{ color: ins.isGood ? theme.success : theme.warning }}>{ins.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                        </>
                       );
                     })()}
 
@@ -1238,14 +1318,119 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       );
                     })()}
 
-                    {/* Adjustment totale */}
+                    {/* Barre conferma strisce — con pronostico specifico */}
+                    {(pred.segno_dettaglio?.strisce != null || pred.gol_dettaglio?.strisce != null) && (() => {
+                      const segnoTip = pred.pronostici?.find(p => p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE');
+                      const golTip = pred.pronostici?.find(p => p.tipo === 'GOL');
+                      return (
+                        <div style={{ marginTop: '8px' }}>
+                          {pred.segno_dettaglio?.strisce != null && segnoTip && (() => {
+                            const val = pred.segno_dettaglio.strisce as number;
+                            const pct = Math.min(100, Math.max(0, val));
+                            const color = val >= 70 ? theme.success : val >= 50 ? theme.cyan : val >= 35 ? theme.warning : theme.danger;
+                            return (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
+                                  <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold' }}>{segnoTip.pronostico}</span>?</span>
+                                  <span style={{ color, fontWeight: 'bold' }}>{val.toFixed(1)}</span>
+                                </div>
+                                <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginTop: '2px', opacity: 0.5 }}>
+                                  <span style={{ color: theme.danger }}>No</span>
+                                  <span style={{ color: theme.success }}>Si</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          {pred.gol_dettaglio?.strisce != null && golTip && (() => {
+                            const val = pred.gol_dettaglio.strisce as number;
+                            const pct = Math.min(100, Math.max(0, val));
+                            const color = val >= 70 ? theme.success : val >= 50 ? theme.cyan : val >= 35 ? theme.warning : theme.danger;
+                            return (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
+                                  <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold' }}>{golTip.pronostico}</span>?</span>
+                                  <span style={{ color, fontWeight: 'bold' }}>{val.toFixed(1)}</span>
+                                </div>
+                                <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginTop: '2px', opacity: 0.5 }}>
+                                  <span style={{ color: theme.danger }}>No</span>
+                                  <span style={{ color: theme.success }}>Si</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })()}
                     {(pred.streak_adjustment_segno || pred.streak_adjustment_gol || pred.streak_adjustment_ggng) ? (
-                      <div style={{ marginTop: '4px', fontSize: '9px', color: theme.textDim, display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {pred.streak_adjustment_segno ? <span>Segno: <span style={{ color: pred.streak_adjustment_segno > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_segno > 0 ? '+' : ''}{pred.streak_adjustment_segno.toFixed(1)}%</span></span> : null}
-                        {pred.streak_adjustment_gol ? <span>O/U: <span style={{ color: pred.streak_adjustment_gol > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_gol > 0 ? '+' : ''}{pred.streak_adjustment_gol.toFixed(1)}%</span></span> : null}
-                        {pred.streak_adjustment_ggng ? <span>GG/NG: <span style={{ color: pred.streak_adjustment_ggng > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_ggng > 0 ? '+' : ''}{pred.streak_adjustment_ggng.toFixed(1)}%</span></span> : null}
+                      <div style={{ marginTop: '3px', fontSize: '9px', color: theme.textDim, display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {pred.streak_adjustment_segno ? <span>Adj Segno: <span style={{ color: pred.streak_adjustment_segno > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_segno > 0 ? '+' : ''}{pred.streak_adjustment_segno.toFixed(1)}%</span></span> : null}
+                        {pred.streak_adjustment_gol ? <span>Adj O/U: <span style={{ color: pred.streak_adjustment_gol > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_gol > 0 ? '+' : ''}{pred.streak_adjustment_gol.toFixed(1)}%</span></span> : null}
+                        {pred.streak_adjustment_ggng ? <span>Adj GG/NG: <span style={{ color: pred.streak_adjustment_ggng > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_ggng > 0 ? '+' : ''}{pred.streak_adjustment_ggng.toFixed(1)}%</span></span> : null}
                       </div>
                     ) : null}
+                  </div>
+                )}
+
+                {pred.segno_dettaglio && (
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    📊 Dettaglio Segno
+                  </div>
+                  {pred.segno_dettaglio_raw ? (
+                    Object.entries(pred.segno_dettaglio).filter(([key]) => key !== 'strisce').map(([key, affidabilita]) => {
+                      const raw = pred.segno_dettaglio_raw?.[key as keyof typeof pred.segno_dettaglio_raw];
+                      if (!raw) return <div key={key}>{renderDetailBar(affidabilita, SEGNO_LABELS[key] || key)}</div>;
+                      const homeVal = key === 'affidabilita' ? (raw as any).home_num : raw.home;
+                      const awayVal = key === 'affidabilita' ? (raw as any).away_num : raw.away;
+                      return (
+                        <div key={key}>
+                          {renderDetailBarWithTeams(
+                            SEGNO_LABELS[key] || key,
+                            homeVal,
+                            awayVal,
+                            affidabilita,
+                            raw.scala,
+                            pred.home,
+                            pred.away
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    Object.entries(pred.segno_dettaglio).filter(([key]) => key !== 'strisce').map(([key, val]) => (
+                      <div key={key}>{renderDetailBar(val, SEGNO_LABELS[key] || key)}</div>
+                    ))
+                  )}
+                </div>
+              )}
+                {pred.gol_dettaglio && pred.confidence_gol > 0 && (
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{
+                    height: '5px',
+                    background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
+                    marginBottom: '20px',
+                    marginTop: '-10px'
+                  }} />
+                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    ⚽ Dettaglio Gol
+                  </div>
+                  {Object.entries(pred.gol_dettaglio).filter(([key]) => key !== 'strisce').map(([key, val]) => (
+                    <div key={key}>
+                      {renderGolDetailBar(val, GOL_LABELS[key] || key, pred.gol_directions?.[key])}
+                    </div>
+                  ))}
+                    {pred.expected_total_goals && (
+                      <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '10px' }}>
+                        <span style={{ color: theme.textDim }}>Gol attesi: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.expected_total_goals.toFixed(1)}</span></span>
+                        <span style={{ color: theme.textDim }}>Media lega: <span style={{ color: theme.text, fontWeight: 'bold' }}>{pred.league_avg_goals?.toFixed(1)}</span></span>
+                      </div>
+                    )}
                   </div>
                 )}
 

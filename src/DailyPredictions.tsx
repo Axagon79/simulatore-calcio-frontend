@@ -832,7 +832,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* RIGA UNICA COMPATTA — click ovunque espande */}
         <div
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '8px', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
           onClick={() => setExpandedCards(prev => {
             const next = new Set(prev);
             if (next.has(cardKey)) next.delete(cardKey);
@@ -840,10 +840,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             return next;
           })}
         >
-          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>🕐 {pred.match_time}</span>
+          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
 
           {/* Squadre — larghezza naturale, si restringe se serve */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
             <img
               src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt=""
               style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
@@ -879,17 +879,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* Badge "Tip" — ABSOLUTE, sganciato dal flex */}
         <div
           style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: '100px',
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '65px' : '100px',
             zIndex: 5
           }}
           onClick={(e) => e.stopPropagation()}
         >
           <div
             style={{
-              display: 'inline-flex', alignItems: 'baseline', gap: '6px', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'baseline', gap: isMobile ? '3px' : '6px', cursor: 'pointer',
               background: isTipsOpen ? 'rgba(0,240,255,0.15)' : 'rgba(0,240,255,0.06)',
               border: `1px solid ${isTipsOpen ? 'rgba(0,240,255,0.4)' : 'rgba(0,240,255,0.18)'}`,
-              borderRadius: '4px', padding: '4px 12px',
+              borderRadius: '4px', padding: isMobile ? '3px 6px' : '4px 12px',
               transition: 'all 0.2s', userSelect: 'none' as const
             }}
             onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
@@ -1133,7 +1133,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* RIGA UNICA COMPATTA — click ovunque espande */}
         <div
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '8px', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
           onClick={() => setExpandedCards(prev => {
             const next = new Set(prev);
             if (next.has(cardKey)) next.delete(cardKey);
@@ -1141,10 +1141,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             return next;
           })}
         >
-          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>🕐 {bomb.match_time}</span>
+          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? bomb.match_time : `🕐 ${bomb.match_time}`}</span>
 
           {/* Squadre — larghezza naturale, si restringe se serve */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {bomb.home}
             </span>
@@ -1170,22 +1170,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* Badge Bomba — ABSOLUTE, sganciato dal flex */}
         <div
           style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: '100px',
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '65px' : '100px',
             zIndex: 5
           }}
           onClick={(e) => e.stopPropagation()}
         >
           <div
             style={{
-              display: 'inline-flex', alignItems: 'baseline', gap: '6px', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'baseline', gap: isMobile ? '3px' : '6px', cursor: 'pointer',
               background: isTipsOpen ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.06)',
               border: `1px solid ${isTipsOpen ? 'rgba(255,215,0,0.4)' : 'rgba(255,215,0,0.18)'}`,
-              borderRadius: '4px', padding: '4px 12px',
+              borderRadius: '4px', padding: isMobile ? '3px 6px' : '4px 12px',
               transition: 'all 0.2s', userSelect: 'none' as const
             }}
             onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
           >
-            <span style={{ fontSize: '9px' }}>💣</span>
+            {!isMobile && <span style={{ fontSize: '9px' }}>💣</span>}
             <span style={{ fontSize: '9px', fontWeight: '600', color: theme.gold, letterSpacing: '0.3px' }}>tip</span>
             <span style={{ fontSize: '9px', color: theme.gold, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </div>

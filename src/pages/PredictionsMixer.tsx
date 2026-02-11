@@ -14,14 +14,14 @@ const TABS: { id: TabId; label: string; icon: string; color: string }[] = [
   { id: 'SOGLIE', label: 'SOGLIE', icon: '\uD83C\uDF9A\uFE0F', color: '#eab308' },
 ];
 
-const PESI_SEGNO_KEYS = ['bvs', 'quote', 'lucifero', 'affidabilita', 'dna', 'motivazioni', 'h2h', 'campo'];
-const PESI_GOL_KEYS = ['media_gol', 'att_vs_def', 'xg', 'h2h_gol', 'media_lega', 'dna_off_def'];
+const PESI_SEGNO_KEYS = ['bvs', 'quote', 'lucifero', 'affidabilita', 'dna', 'motivazioni', 'h2h', 'campo', 'strisce'];
+const PESI_GOL_KEYS = ['media_gol', 'att_vs_def', 'xg', 'h2h_gol', 'media_lega', 'dna_off_def', 'strisce'];
 const PESI_BOMBA_KEYS = ['lucifero_sfi', 'bvs_anomalo', 'motivazione_sfi', 'affidabilita', 'h2h_sfi'];
 const SOGLIE_KEYS = ['THRESHOLD_INCLUDE', 'THRESHOLD_HIGH', 'THRESHOLD_BOMBA'];
 
 const LABELS: Record<string, string> = {
   bvs: 'BVS (Quote)', quote: 'Quote Dirette', lucifero: 'Lucifero', affidabilita: 'Affidabilita',
-  dna: 'DNA Squadra', motivazioni: 'Motivazioni', h2h: 'Head to Head', campo: 'Fattore Campo',
+  dna: 'DNA Squadra', motivazioni: 'Motivazioni', h2h: 'Head to Head', campo: 'Fattore Campo', strisce: 'Strisce (Curva a Campana)',
   media_gol: 'Media Gol', att_vs_def: 'Attacco vs Difesa', xg: 'Expected Goals',
   h2h_gol: 'H2H Gol', media_lega: 'Media Lega', dna_off_def: 'DNA Off/Def',
   lucifero_sfi: 'Lucifero Sfi', bvs_anomalo: 'BVS Anomalo', motivazione_sfi: 'Motivazione Sfi',
@@ -39,6 +39,7 @@ const DESCRIPTIONS: Record<string, { desc: string; up: string; down: string }> =
   motivazioni:   { desc: 'Motivazioni stagionali (retrocessione, Champions, ecc.)', up: 'Squadre con motivazioni forti premiate', down: 'Le motivazioni contano meno' },
   h2h:           { desc: 'Storico degli scontri diretti tra le due squadre', up: 'I precedenti contano di piu', down: 'I precedenti contano meno' },
   campo:         { desc: 'Vantaggio di giocare in casa', up: 'La squadra di casa avvantaggiata', down: 'Il fattore casa pesa meno' },
+  strisce:       { desc: 'Analizza le strisce consecutive (vittorie, sconfitte, over, clean sheet...). Strisce moderate = bonus, strisce estreme = penalita per regressione alla media', up: 'Il sistema reagisce di piu alle strisce: una squadra con 3-4 vittorie sale in confidence, una con 7+ vittorie viene penalizzata (prima o poi perdera)', down: 'Il sistema ignora le strisce: non importa se una squadra ha vinto 5 di fila o perso 5, contano solo quote e statistiche' },
   // GOL
   media_gol:     { desc: 'Media gol segnati e subiti dalle due squadre in stagione', up: 'La media storica gol comanda', down: 'Gli altri indicatori comandano' },
   att_vs_def:    { desc: 'Confronta attacco di una squadra con difesa dell\'avversaria', up: 'Il matchup attacco-difesa pesa di piu', down: 'Meno focus sul confronto diretto' },
@@ -65,8 +66,8 @@ interface PredConfig {
 }
 
 const DEFAULT_CONFIG: PredConfig = {
-  PESI_SEGNO: { bvs: 0.25, quote: 0.18, lucifero: 0.18, affidabilita: 0.14, dna: 0.08, motivazioni: 0.08, h2h: 0.05, campo: 0.04 },
-  PESI_GOL: { media_gol: 0.25, att_vs_def: 0.22, xg: 0.20, h2h_gol: 0.15, media_lega: 0.10, dna_off_def: 0.08 },
+  PESI_SEGNO: { bvs: 0.23, quote: 0.16, lucifero: 0.16, affidabilita: 0.13, dna: 0.07, motivazioni: 0.07, h2h: 0.04, campo: 0.04, strisce: 0.10 },
+  PESI_GOL: { media_gol: 0.23, att_vs_def: 0.20, xg: 0.18, h2h_gol: 0.13, media_lega: 0.09, dna_off_def: 0.07, strisce: 0.10 },
   PESI_BOMBA: { lucifero_sfi: 0.30, bvs_anomalo: 0.25, motivazione_sfi: 0.20, affidabilita: 0.15, h2h_sfi: 0.10 },
   SOGLIE: { THRESHOLD_INCLUDE: 60, THRESHOLD_HIGH: 70, THRESHOLD_BOMBA: 65 },
 };

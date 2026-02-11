@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { checkAdmin } from './permissions';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
-type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'solo_prod' | 'solo_sandbox';
+type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_prod' | 'solo_sandbox';
 
 // --- TEMA (identico ad AppDev) ---
 const theme = {
@@ -141,6 +141,14 @@ interface Prediction {
   };
   expected_total_goals?: number;
   league_avg_goals?: number;
+  // Strisce (curva a campana)
+  streak_home?: Record<string, number>;
+  streak_away?: Record<string, number>;
+  streak_home_context?: Record<string, number>;
+  streak_away_context?: Record<string, number>;
+  streak_adjustment_segno?: number;
+  streak_adjustment_gol?: number;
+  streak_adjustment_ggng?: number;
   // Risultati reali (dal backend)
   real_score?: string | null;
   real_sign?: string | null;
@@ -657,6 +665,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     prodBomb?: Bomb; sandboxBomb?: Bomb;
     status: 'both' | 'prod_only' | 'sandbox_only';
     predsDifferent: boolean; bombsDifferent: boolean;
+    predsChangedMarkets: { tipo: string; prod: string; sandbox: string }[];
+    predsExtraProd: string[];
+    predsExtraSandbox: string[];
   };
 
   const compareMatches = useMemo(() => {
@@ -669,14 +680,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       const k = key(p.home, p.away, p.league);
       map.set(k, { home: p.home, away: p.away, league: p.league, date: p.date, match_time: p.match_time,
         home_mongo_id: p.home_mongo_id, away_mongo_id: p.away_mongo_id,
-        prodPred: p, status: 'prod_only', predsDifferent: false, bombsDifferent: false });
+        prodPred: p, status: 'prod_only', predsDifferent: false, bombsDifferent: false,
+        predsChangedMarkets: [], predsExtraProd: [], predsExtraSandbox: [] });
     });
     pb.forEach(b => {
       const k = key(b.home, b.away, b.league);
       const e = map.get(k);
       if (e) { e.prodBomb = b; }
       else map.set(k, { home: b.home, away: b.away, league: b.league, date: b.date, match_time: b.match_time,
-        prodBomb: b, status: 'prod_only', predsDifferent: false, bombsDifferent: false });
+        prodBomb: b, status: 'prod_only', predsDifferent: false, bombsDifferent: false,
+        predsChangedMarkets: [], predsExtraProd: [], predsExtraSandbox: [] });
     });
     sp.forEach(p => {
       const k = key(p.home, p.away, p.league);
@@ -685,14 +698,34 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         e.sandboxPred = p; e.status = 'both';
         if (!e.home_mongo_id) e.home_mongo_id = p.home_mongo_id;
         if (!e.away_mongo_id) e.away_mongo_id = p.away_mongo_id;
-        // Confronta pronostici
-        const aSet = new Set((e.prodPred?.pronostici || []).map(x => `${x.tipo}-${x.pronostico}`));
-        const bSet = new Set((p.pronostici || []).map(x => `${x.tipo}-${x.pronostico}`));
-        e.predsDifferent = aSet.size !== bSet.size || [...aSet].some(x => !bSet.has(x));
+        // Confronto per-mercato: stesso tipo → pronostico diverso?
+        const prodTips = e.prodPred?.pronostici || [];
+        const sandTips = p.pronostici || [];
+        const prodByTipo = new Map(prodTips.map(t => [t.tipo, t.pronostico]));
+        const sandByTipo = new Map(sandTips.map(t => [t.tipo, t.pronostico]));
+        const allTipi = new Set([...prodByTipo.keys(), ...sandByTipo.keys()]);
+        e.predsChangedMarkets = [];
+        e.predsExtraProd = [];
+        e.predsExtraSandbox = [];
+        allTipi.forEach(tipo => {
+          const inProd = prodByTipo.has(tipo);
+          const inSand = sandByTipo.has(tipo);
+          if (inProd && inSand) {
+            if (prodByTipo.get(tipo) !== sandByTipo.get(tipo)) {
+              e.predsChangedMarkets.push({ tipo, prod: prodByTipo.get(tipo)!, sandbox: sandByTipo.get(tipo)! });
+            }
+          } else if (inProd) {
+            e.predsExtraProd.push(tipo);
+          } else {
+            e.predsExtraSandbox.push(tipo);
+          }
+        });
+        e.predsDifferent = e.predsChangedMarkets.length > 0 || e.predsExtraProd.length > 0 || e.predsExtraSandbox.length > 0;
       } else {
         map.set(k, { home: p.home, away: p.away, league: p.league, date: p.date, match_time: p.match_time,
           home_mongo_id: p.home_mongo_id, away_mongo_id: p.away_mongo_id,
-          sandboxPred: p, status: 'sandbox_only', predsDifferent: false, bombsDifferent: false });
+          sandboxPred: p, status: 'sandbox_only', predsDifferent: false, bombsDifferent: false,
+          predsChangedMarkets: [], predsExtraProd: [], predsExtraSandbox: [] });
       }
     });
     sb.forEach(b => {
@@ -704,7 +737,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         e.bombsDifferent = !e.prodBomb || e.prodBomb.segno_bomba !== b.segno_bomba;
       } else {
         map.set(k, { home: b.home, away: b.away, league: b.league, date: b.date, match_time: b.match_time,
-          sandboxBomb: b, status: 'sandbox_only', predsDifferent: false, bombsDifferent: false });
+          sandboxBomb: b, status: 'sandbox_only', predsDifferent: false, bombsDifferent: false,
+          predsChangedMarkets: [], predsExtraProd: [], predsExtraSandbox: [] });
       }
     });
 
@@ -724,21 +758,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     };
 
     const identiche = compareMatches.filter(c => c.status === 'both' && !c.predsDifferent && !c.bombsDifferent).length;
-    const diverse = compareMatches.filter(c => c.status === 'both' && (c.predsDifferent || c.bombsDifferent)).length;
+    const diverse = compareMatches.filter(c => c.status === 'both' && (c.predsChangedMarkets.length > 0 || c.bombsDifferent)).length;
+    const parziali = compareMatches.filter(c => c.status === 'both' && c.predsChangedMarkets.length === 0 && !c.bombsDifferent && (c.predsExtraProd.length > 0 || c.predsExtraSandbox.length > 0)).length;
     const soloProd = compareMatches.filter(c => c.status === 'prod_only').length;
     const soloSandbox = compareMatches.filter(c => c.status === 'sandbox_only').length;
 
     return { prodPredCount, sandPredCount, prodBombs: pb.length, sandBombs: sb.length,
-      prodHR: calcHR(pp), sandHR: calcHR(sp), identiche, diverse, soloProd, soloSandbox };
+      prodHR: calcHR(pp), sandHR: calcHR(sp), identiche, diverse, parziali, soloProd, soloSandbox };
   }, [mode, confrontoData, compareMatches]);
 
   // --- FILTRI CONFRONTO ---
   const confrontoFilterCounts = useMemo(() => {
-    const counts: Record<ConfrontoFilter, number> = { tutte: 0, identiche: 0, diverse: 0, solo_prod: 0, solo_sandbox: 0 };
+    const counts: Record<ConfrontoFilter, number> = { tutte: 0, identiche: 0, diverse: 0, parziali: 0, solo_prod: 0, solo_sandbox: 0 };
     compareMatches.forEach(c => {
       counts.tutte++;
       if (c.status === 'both' && !c.predsDifferent && !c.bombsDifferent) counts.identiche++;
-      else if (c.status === 'both' && (c.predsDifferent || c.bombsDifferent)) counts.diverse++;
+      else if (c.status === 'both' && (c.predsChangedMarkets.length > 0 || c.bombsDifferent)) counts.diverse++;
+      else if (c.status === 'both' && c.predsChangedMarkets.length === 0 && !c.bombsDifferent && (c.predsExtraProd.length > 0 || c.predsExtraSandbox.length > 0)) counts.parziali++;
       else if (c.status === 'prod_only') counts.solo_prod++;
       else if (c.status === 'sandbox_only') counts.solo_sandbox++;
     });
@@ -749,7 +785,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     if (confrontoFilter === 'tutte') return compareMatches;
     return compareMatches.filter(c => {
       if (confrontoFilter === 'identiche') return c.status === 'both' && !c.predsDifferent && !c.bombsDifferent;
-      if (confrontoFilter === 'diverse') return c.status === 'both' && (c.predsDifferent || c.bombsDifferent);
+      if (confrontoFilter === 'diverse') return c.status === 'both' && (c.predsChangedMarkets.length > 0 || c.bombsDifferent);
+      if (confrontoFilter === 'parziali') return c.status === 'both' && c.predsChangedMarkets.length === 0 && !c.bombsDifferent && (c.predsExtraProd.length > 0 || c.predsExtraSandbox.length > 0);
       if (confrontoFilter === 'solo_prod') return c.status === 'prod_only';
       if (confrontoFilter === 'solo_sandbox') return c.status === 'sandbox_only';
       return true;
@@ -1093,6 +1130,125 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     )}
                   </div>
                 )}
+
+                {/* TABELLA STRISCE STORICHE */}
+                {pred.streak_home && pred.streak_away && (
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      🔥 Strisce Attive
+                    </div>
+                    {(() => {
+                      const STREAK_LABELS: Record<string, string> = {
+                        vittorie: 'Vittorie', sconfitte: 'Sconfitte', imbattibilita: 'Imbattibilità',
+                        pareggi: 'Pareggi', senza_vittorie: 'Senza vittorie',
+                        over25: 'Over 2.5', under25: 'Under 2.5',
+                        gg: 'GG (entrambe segnano)', clean_sheet: 'Clean sheet',
+                        senza_segnare: 'Senza segnare', gol_subiti: 'Gol subiti',
+                      };
+                      const STREAK_CURVES: Record<string, Record<string, number>> = {
+                        vittorie: {'3': 2, '4': 3, '5': 0, '6': -1, '7': -3, '8': -6, '9': -10},
+                        sconfitte: {'4': -1, '5': -2, '6': -5},
+                        imbattibilita: {'5': 2, '6': 2, '7': 2, '8': 0, '9': 0, '10': 0, '11': -3},
+                        pareggi: {'3': -1, '4': 0, '5': 1, '6': -3},
+                        senza_vittorie: {'3': -1, '4': -2, '5': 0, '6': 1, '7': 2},
+                        over25: {'3': 3, '4': 3, '5': 0, '6': -1, '7': -4},
+                        under25: {'3': 3, '4': 3, '5': 0, '6': -1, '7': -4},
+                        gg: {'3': 2, '4': 2, '5': 0, '6': -3},
+                        clean_sheet: {'3': 2, '4': 3, '5': 0, '6': -1, '7': -4},
+                        senza_segnare: {'2': 1, '3': 2, '4': 0, '5': -1, '6': -3},
+                        gol_subiti: {'3': 2, '4': 3, '5': 2, '6': 1, '7': -2},
+                      };
+                      const getCurveVal = (type: string, n: number): number => {
+                        const curve = STREAK_CURVES[type];
+                        if (!curve) return 0;
+                        // Cerca esatto o il più alto applicabile
+                        if (curve[String(n)]) return curve[String(n)];
+                        // Per n > max chiave, usa l'ultima
+                        const keys = Object.keys(curve).map(Number).sort((a, b) => a - b);
+                        const maxKey = keys[keys.length - 1];
+                        if (n >= maxKey) return curve[String(maxKey)];
+                        return 0;
+                      };
+                      const getColor = (val: number) => val > 0 ? theme.success : val < 0 ? theme.danger : theme.textDim;
+
+                      // Filtra solo strisce >= 2
+                      const allTypes = Object.keys(STREAK_LABELS);
+                      const active = allTypes.filter(t =>
+                        (pred.streak_home?.[t] ?? 0) >= 2 || (pred.streak_away?.[t] ?? 0) >= 2
+                      );
+                      if (active.length === 0) return <div style={{ fontSize: '10px', color: theme.textDim }}>Nessuna striscia significativa</div>;
+
+                      return (
+                        <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: `1px solid ${theme.cyan}20` }}>
+                              <th style={{ textAlign: 'left', padding: '3px 4px', color: theme.textDim, fontWeight: 'normal' }}>Striscia</th>
+                              <th style={{ textAlign: 'center', padding: '3px 4px', color: theme.cyan, fontWeight: 'bold', fontSize: '9px' }}>{pred.home}</th>
+                              <th style={{ textAlign: 'center', padding: '3px 4px', color: theme.purple, fontWeight: 'bold', fontSize: '9px' }}>{pred.away}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {active.map(type => {
+                              const hN = pred.streak_home?.[type] ?? 0;
+                              const aN = pred.streak_away?.[type] ?? 0;
+                              const hCurve = getCurveVal(type, hN);
+                              const aCurve = getCurveVal(type, aN);
+                              return (
+                                <tr key={type} style={{ borderBottom: `1px solid ${theme.cyan}10` }}>
+                                  <td style={{ padding: '3px 4px', color: theme.text }}>{STREAK_LABELS[type]}</td>
+                                  <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                    {hN >= 2 ? (
+                                      <span style={{ color: getColor(hCurve), fontWeight: 'bold' }}>
+                                        {hN} <span style={{ fontSize: '8px', opacity: 0.7 }}>({hCurve > 0 ? '+' : ''}{hCurve})</span>
+                                      </span>
+                                    ) : <span style={{ color: theme.textDim }}>—</span>}
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                    {aN >= 2 ? (
+                                      <span style={{ color: getColor(aCurve), fontWeight: 'bold' }}>
+                                        {aN} <span style={{ fontSize: '8px', opacity: 0.7 }}>({aCurve > 0 ? '+' : ''}{aCurve})</span>
+                                      </span>
+                                    ) : <span style={{ color: theme.textDim }}>—</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
+
+                    {/* Alert strisce significative */}
+                    {(() => {
+                      const alerts: string[] = [];
+                      const sh = pred.streak_home ?? {};
+                      const sa = pred.streak_away ?? {};
+                      if ((sh.vittorie ?? 0) >= 7) alerts.push(`${pred.home}: ${sh.vittorie} vittorie consecutive → regressione probabile`);
+                      if ((sa.vittorie ?? 0) >= 7) alerts.push(`${pred.away}: ${sa.vittorie} vittorie consecutive → regressione probabile`);
+                      if ((sh.sconfitte ?? 0) >= 5) alerts.push(`${pred.home}: ${sh.sconfitte} sconfitte consecutive → possibile reazione`);
+                      if ((sa.sconfitte ?? 0) >= 5) alerts.push(`${pred.away}: ${sa.sconfitte} sconfitte consecutive → possibile reazione`);
+                      if ((sh.over25 ?? 0) >= 6) alerts.push(`${pred.home}: ${sh.over25} Over 2.5 consecutivi → Under probabile`);
+                      if ((sa.over25 ?? 0) >= 6) alerts.push(`${pred.away}: ${sa.over25} Over 2.5 consecutivi → Under probabile`);
+                      if ((sh.clean_sheet ?? 0) >= 5) alerts.push(`${pred.home}: ${sh.clean_sheet} clean sheet consecutivi → prima o poi subirà`);
+                      if (alerts.length === 0) return null;
+                      return (
+                        <div style={{ marginTop: '6px', padding: '4px 8px', background: `${theme.warning}15`, borderRadius: '4px', fontSize: '9px', color: theme.warning }}>
+                          {alerts.map((a, i) => <div key={i}>⚠️ {a}</div>)}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Adjustment totale */}
+                    {(pred.streak_adjustment_segno || pred.streak_adjustment_gol || pred.streak_adjustment_ggng) ? (
+                      <div style={{ marginTop: '4px', fontSize: '9px', color: theme.textDim, display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {pred.streak_adjustment_segno ? <span>Segno: <span style={{ color: pred.streak_adjustment_segno > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_segno > 0 ? '+' : ''}{pred.streak_adjustment_segno.toFixed(1)}%</span></span> : null}
+                        {pred.streak_adjustment_gol ? <span>O/U: <span style={{ color: pred.streak_adjustment_gol > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_gol > 0 ? '+' : ''}{pred.streak_adjustment_gol.toFixed(1)}%</span></span> : null}
+                        {pred.streak_adjustment_ggng ? <span>GG/NG: <span style={{ color: pred.streak_adjustment_ggng > 0 ? theme.success : theme.danger, fontWeight: 'bold' }}>{pred.streak_adjustment_ggng > 0 ? '+' : ''}{pred.streak_adjustment_ggng.toFixed(1)}%</span></span> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
               </div>
             )}
           </div>
@@ -1635,6 +1791,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 {[
                   { count: s.identiche, label: 'Identiche', color: theme.success },
                   { count: s.diverse, label: 'Diverse', color: theme.warning },
+                  ...(s.parziali > 0 ? [{ count: s.parziali, label: 'Parziali', color: '#ab47bc' as string }] : []),
                   ...(s.soloProd > 0 ? [{ count: s.soloProd, label: 'Solo Prod', color: theme.cyan }] : []),
                   ...(s.soloSandbox > 0 ? [{ count: s.soloSandbox, label: 'Solo Sandbox', color: '#ff9800' as string }] : []),
                 ].map((item) => (
@@ -1654,6 +1811,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   { id: 'tutte' as ConfrontoFilter, label: 'Tutte', color: theme.purple },
                   { id: 'identiche' as ConfrontoFilter, label: 'Identiche', color: theme.success },
                   { id: 'diverse' as ConfrontoFilter, label: 'Diverse', color: theme.warning },
+                  { id: 'parziali' as ConfrontoFilter, label: 'Parziali', color: '#ab47bc' },
                   { id: 'solo_prod' as ConfrontoFilter, label: 'Solo Prod', color: theme.cyan },
                   { id: 'solo_sandbox' as ConfrontoFilter, label: 'Solo Sandbox', color: '#ff9800' },
                 ]).map(f => (
@@ -1705,7 +1863,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const leagueLogoUrl = getLeagueLogoUrl(league);
                 const countryCode = LEAGUE_TO_COUNTRY_CODE[league];
                 const lIdent = matches.filter(m => m.status === 'both' && !m.predsDifferent && !m.bombsDifferent).length;
-                const lDiv = matches.filter(m => m.status === 'both' && (m.predsDifferent || m.bombsDifferent)).length;
+                const lDiv = matches.filter(m => m.status === 'both' && (m.predsChangedMarkets.length > 0 || m.bombsDifferent)).length;
+                const lParz = matches.filter(m => m.status === 'both' && m.predsChangedMarkets.length === 0 && !m.bombsDifferent && (m.predsExtraProd.length > 0 || m.predsExtraSandbox.length > 0)).length;
                 const lSP = matches.filter(m => m.status === 'prod_only').length;
                 const lSS = matches.filter(m => m.status === 'sandbox_only').length;
 
@@ -1726,6 +1885,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '10px' }}>
                         {lIdent > 0 && <span style={{ color: theme.success, fontWeight: '700' }}>{lIdent}=</span>}
                         {lDiv > 0 && <span style={{ color: theme.warning, fontWeight: '700' }}>{lDiv}~</span>}
+                        {lParz > 0 && <span style={{ color: '#ab47bc', fontWeight: '700' }}>{lParz}±</span>}
                         {lSP > 0 && <span style={{ color: theme.cyan, fontWeight: '700' }}>+{lSP}P</span>}
                         {lSS > 0 && <span style={{ color: '#ff9800', fontWeight: '700' }}>+{lSS}S</span>}
                       </div>
@@ -1735,10 +1895,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
                     {/* Card partite — layout a due colonne */}
                     {!isCollapsed && matches.map((m) => {
+                      const isDiverse = m.predsChangedMarkets.length > 0 || m.bombsDifferent;
+                      const isParziale = !isDiverse && (m.predsExtraProd.length > 0 || m.predsExtraSandbox.length > 0);
                       const barColor = m.status === 'prod_only' ? theme.cyan : m.status === 'sandbox_only' ? '#ff9800'
-                        : (m.predsDifferent || m.bombsDifferent) ? theme.warning : theme.success;
+                        : isDiverse ? theme.warning : isParziale ? '#ab47bc' : theme.success;
                       const badgeLabel = m.status === 'prod_only' ? 'SOLO PROD' : m.status === 'sandbox_only' ? 'SOLO SANDBOX'
-                        : (m.predsDifferent || m.bombsDifferent) ? 'DIVERSI' : 'IDENTICI';
+                        : isDiverse ? 'DIVERSI' : isParziale ? 'PARZIALE' : 'IDENTICI';
                       const prodTips = m.prodPred?.pronostici || [];
                       const sandTips = m.sandboxPred?.pronostici || [];
                       const prodTipSet = new Set(prodTips.map(p => `${p.tipo}-${p.pronostico}`));
@@ -1792,14 +1954,34 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
                           {/* BADGE STATO CENTRATO */}
                           <div style={{
-                            display: 'flex', justifyContent: 'center', padding: '6px 0',
-                            background: `${barColor}10`, borderBottom: '1px solid rgba(255,255,255,0.06)'
+                            display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '6px 0',
+                            background: `${barColor}10`, borderBottom: '1px solid rgba(255,255,255,0.06)', gap: '4px'
                           }}>
                             <span style={{
                               fontSize: '12px', fontWeight: '900', color: barColor, letterSpacing: '1px',
                               background: `${barColor}20`, padding: '4px 16px', borderRadius: '6px',
                               border: `1px solid ${barColor}40`, textTransform: 'uppercase' as const,
                             }}>{badgeLabel}</span>
+                            {/* Dettaglio differenze */}
+                            {(m.predsChangedMarkets.length > 0 || m.predsExtraProd.length > 0 || m.predsExtraSandbox.length > 0) && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', gap: '4px', fontSize: '10px' }}>
+                                {m.predsChangedMarkets.map(c => (
+                                  <span key={c.tipo} style={{ color: theme.warning, fontWeight: '700' }}>
+                                    {c.tipo}: {c.prod} → {c.sandbox}
+                                  </span>
+                                ))}
+                                {m.predsExtraProd.map(t => (
+                                  <span key={`ep-${t}`} style={{ color: '#ab47bc', fontWeight: '600' }}>
+                                    {t}: solo PROD
+                                  </span>
+                                ))}
+                                {m.predsExtraSandbox.map(t => (
+                                  <span key={`es-${t}`} style={{ color: '#ab47bc', fontWeight: '600' }}>
+                                    {t}: solo SANDBOX
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           {/* DUE COLONNE: PROD | SANDBOX */}

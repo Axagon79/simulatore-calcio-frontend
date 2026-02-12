@@ -343,7 +343,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   // 4. GESTIONE TASTO INDIETRO (Logica Aggressiva)
   useEffect(() => {
     const handleHashChange = () => {
-      // ðŸ›‘ ATTIVIAMO IL SEMAFORO
+      // 🛑 ATTIVIAMO IL SEMAFORO
       isBackNav.current = true;
 
       const currentHash = window.location.hash;
@@ -483,9 +483,9 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
 const prepareSimulation = (match: Match) => {
   setSelectedMatch(match);
-  // ðŸ‘‡ AGGIUNGI QUESTA RIGA ðŸ‘‡
+  // 👇 AGGIUNGI QUESTA RIGA 👇
   setExpandedMatch(null); 
-  // ðŸ‘† RISOLVE IL BUG DEL TASTO INDIETRO
+  // 👆 RISOLVE IL BUG DEL TASTO INDIETRO
   
   setViewState('pre-match');
   setSimResult(null);
@@ -543,7 +543,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   const finalAlgo = isFlashActive ? 1 : useAlgo;
   const finalCycles = isFlashActive ? 1 : useCycles;
 
-  console.log(`ðŸš€ AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
+  console.log(`🚀 AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
 
   // FIX LEAGUE: Calcoliamo il nome del campionato in modo robusto
   // (Prende quello del menu, o quello globale, o quello del match, o fallback)
@@ -728,7 +728,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // FINE PRIMO TEMPO
         if (baseMin === 45 && injuryTimeCounter >= recuperoPT) {
           isPaused = true;
-          setIsVarActive(false); // ðŸ‘ˆ Spegni il VAR all'intervallo
+          setIsVarActive(false); // 👈 Spegni il VAR all'intervallo
           isInjuryTime = false;
           injuryTimeCounter = 0;
           t = 46;
@@ -765,7 +765,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // FINE SECONDO TEMPO  
         if (baseMin === 90 && injuryTimeCounter >= recuperoST) {
           clearInterval(interval);
-          setIsVarActive(false); // ðŸ‘ˆ Spegni il VAR a fine partita
+          setIsVarActive(false); // 👈 Spegni il VAR a fine partita
           setPitchMsg({ testo: `FINALE: ${finalData.predicted_score}`, colore: '#05f9b6' });
           
           setSimResult(finalData);
@@ -862,7 +862,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               else if (varType === "gol_fantasma") checkMsg = "⚠️ VAR: CONTROLLO...";
               else checkMsg = "⚠️ VAR CHECK...";
               
-              // ðŸ’€ MODO CATTIVO: Ridisegna la scritta ogni 100ms per 6 secondi
+              // 👀 MODO CATTIVO: Ridisegna la scritta ogni 100ms per 6 secondi
               let varTicks = 0;
               const varInterval = setInterval(() => {
                 setPitchMsg({ testo: checkMsg, colore: "#ffcc00" });
@@ -976,7 +976,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         // Limiti: non va mai sotto 15 o sopra 85
         nuovoMomentum = Math.max(0, Math.min(100, nuovoMomentum));
         
-        // ðŸŽ¯ CAMBIO POSSESSO SOLO SE MOVIMENTO SIGNIFICATIVO
+        // 🎯 CAMBIO POSSESSO SOLO SE MOVIMENTO SIGNIFICATIVO
         const differenza = nuovoMomentum - lastSignificantMomentum;
         
         if (Math.abs(differenza) > 10) {
@@ -1376,8 +1376,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   );
   // renderResult segue sotto
   const renderResult = () => {
-    console.log("ðŸŽ¯ renderResult chiamata! viewState:", viewState);
-    console.log("ðŸŽ¯ simResult:", simResult);
+    console.log("🎯 renderResult chiamata! viewState:", viewState);
+    console.log("🎯 simResult:", simResult);
     
     if (!simResult || !simResult.success) {
       console.log("❌ simResult non valido!");
@@ -1560,7 +1560,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             WebkitTextFillColor: 'transparent',
             textAlign: 'center',
           }}>
-            ðŸ”„ Simula di Nuovo
+            🔄 Simula di Nuovo
           </h2>
           
           <p style={{
@@ -1635,7 +1635,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 transition: 'all 0.3s',
               }}
             >
-              âš™ï¸ MODIFICA
+              ⚙️ MODIFICA
             </button>
           </div>
 
@@ -1654,7 +1654,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               cursor: 'pointer',
             }}
           >
-            âœ• Annulla
+            ✕ Annulla
           </button>
         </div>
       </div>
@@ -1688,7 +1688,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             color: '#fff',
             textAlign: 'center',
           }}>
-            âš™ï¸ Modifica Settaggi
+            ⚙️ Modifica Settaggi
           </h2>
 
           {/* ALGORITMO */}
@@ -1822,7 +1822,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               marginBottom: '12px',
             }}
           >
-            ðŸš€ AVVIA SIMULAZIONE
+            🚀 AVVIA SIMULAZIONE
           </button>
           
           <button
@@ -1909,7 +1909,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     fontSize: '16px'
                   }}
                 >
-                  âœ•
+                  ✕
                 </button>
               </div>
             )}

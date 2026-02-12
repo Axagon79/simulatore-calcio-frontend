@@ -167,8 +167,8 @@ export default function PopupRiepilogo({
               ['Possesso', 'Tiri Totali', 'Tiri in Porta', 'Tiri Fuori', 'Calci d\'Angolo', 'Attacchi', 'Attacchi Pericolosi'].some(stat => key.includes(stat))
             )
             .map(([key, val]) => {
-              const homeVal = Number(val[0]);
-              const awayVal = Number(val[1]);
+              const homeVal = parseInt(String(val[0]));
+              const awayVal = parseInt(String(val[1]));
               const total = homeVal + awayVal;
 
               return (

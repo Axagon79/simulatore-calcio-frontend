@@ -875,6 +875,19 @@
   }
 
   /* ========================================
+     COLONNA SINISTRA - CARD GAUGE (Tachimetri SEGNO + GOL)
+     ======================================== */
+  .card-gauge {
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+    margin-top: -5px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ========================================
      COLONNA DESTRA - CARD CONFIGURAZIONE
      ======================================== */
   .card-configurazione {
@@ -1018,6 +1031,7 @@
   .card-campo-affidabilita,
   .card-configurazione-left,
   .card-strisce,
+  .card-gauge,
   .card-bias-core,
   .card-dna {
     padding: 15px !important;
@@ -1106,11 +1120,12 @@
     margin-top: 0;
   }
 
-  /* === CARD CAMPO, AFFIDABILITÀ, STRISCE === */
+  /* === CARD CAMPO, AFFIDABILITÀ, STRISCE, GAUGE === */
   .card-campo,
   .card-affidabilita,
   .card-campo-affidabilita,
-  .card-strisce {
+  .card-strisce,
+  .card-gauge {
     height: auto;
     padding: 15px;
     margin-top: 0;

@@ -102,7 +102,7 @@ export default function AppDev() {
       Spiega all'utente il motivo di questo pronostico basandoti sui dati.
     `;
   
-    // Inviamo il messaggio al sistema di chat che hai giÃ 
+    // Inviamo il messaggio al sistema di chat che hai già
     addBotMessage("Sto analizzando i dati del DeepAnalyzer per spiegarti il pronostico..."); //
     
     // In futuro, qui chiamerai la tua API di Gemini o GPT passando 'promptTecnico'
@@ -134,7 +134,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   const [error, setError] = useState<string | null>(null); // <--- AGGIUNGI QUESTO
 
-  // âœ… STATI PER FORMAZIONI E RISCALDAMENTO
+  // ✅ STATI PER FORMAZIONI E RISCALDAMENTO
   const [formations, setFormations] = useState<{
     home_team: string;
     away_team: string;
@@ -166,7 +166,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   const [pitchMsg, setPitchMsg] = useState<{testo: string, colore: string} | null>(null);
 
-  // Stato per gestire quale radar Ã¨ visibile: 'all' (tutti), 'home' (solo casa), 'away' (solo ospite)
+  // Stato per gestire quale radar è visibile: 'all' (tutti), 'home' (solo casa), 'away' (solo ospite)
   const [radarFocus, setRadarFocus] = useState<'all' | 'home' | 'away'>('all');
 
   // Stato per il tooltip del singolo punto (quando passi sulle punte)
@@ -230,10 +230,10 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   const [selectedPeriod, setSelectedPeriod] = useState<'previous' | 'current' | 'next'>('current');
 
-  // âœ… NUOVO: Stato per gestire la fine partita
+  // ✅ NUOVO: Stato per gestire la fine partita
   const [simulationEnded, setSimulationEnded] = useState(false);
 
-  // âœ… NUOVO: Punteggio live durante la simulazione
+  // ✅ NUOVO: Punteggio live durante la simulazione
   const [liveScore, setLiveScore] = useState<{home: number, away: number}>({home: 0, away: 0});
 
   const [showMatchSummary, setShowMatchSummary] = useState(false);
@@ -325,7 +325,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
       if (window.location.hash === '' || window.location.hash === '#home') {
           window.history.pushState(null, '', targetHash);
       }
-      // 2. Se l'URL Ã¨ sbagliato (es. siamo su #list ma serve #cuplist, o torniamo da un popup)
+      // 2. Se l'URL è sbagliato (es. siamo su #list ma serve #cuplist, o torniamo da un popup)
       // // modificato per: sincronizzazione immediata hash quando si cambia tipo di competizione
       else if (window.location.hash !== targetHash) {
           window.history.replaceState(null, '', targetHash);
@@ -379,7 +379,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
       else if (currentHash === '#list' || currentHash.startsWith('#round')) {
           setViewMode('calendar');
           
-          // ðŸ”¥ UX FIX: Se sono giÃ  sulla lista e premo indietro -> Vado alla Home (chiudo tutto)
+          // 🔥 UX FIX: Se sono già sulla lista e premo indietro -> Vado alla Home (chiudo tutto)
           // Questo risolve il problema di dover premere indietro 10 volte se hai cambiato 10 nazioni
           if (current.viewState === 'list' && !current.expandedMatch) {
               setActiveLeague(null); // Chiude la lega
@@ -497,7 +497,7 @@ const prepareSimulation = (match: Match) => {
   addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
 };
 
-// âœ… FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
+// ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
 const loadFormations = async (home: string, away: string, league: string) => {
   try {
     const response = await fetch('https://us-central1-puppals-456c7.cloudfunctions.net/get_formations', {
@@ -518,7 +518,7 @@ const loadFormations = async (home: string, away: string, league: string) => {
 };
 
 
-// âœ… VERSIONE AGGIORNATA, VELOCE E FIXATA PER IL BACKEND
+// ✅ VERSIONE AGGIORNATA, VELOCE E FIXATA PER IL BACKEND
 const startSimulation = async (algoOverride: number | null = null, cyclesOverride: number | null = null) => {
   if (!selectedMatch) return;
 
@@ -531,7 +531,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
       setSimMode('fast');
   }
 
-  // âœ… FASE 1: Reset Stati e Avvio Grafica
+  // ✅ FASE 1: Reset Stati e Avvio Grafica
   setViewState('simulating');
   setIsWarmingUp(true);
   setIsVarActive(false); 
@@ -562,15 +562,15 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   }, 200);
   
   try {
-    // âœ… CARICA FORMAZIONI
+    // ✅ CARICA FORMAZIONI
     loadFormations(selectedMatch.home, selectedMatch.away, currentLeague).then(success => {
       if (success) {
-        console.log("âœ… Formazioni caricate!");
+        console.log("✅ Formazioni caricate!");
         setTimeout(() => setPopupOpacity(1), 8000); // Mostra popup dopo un po'
       }
     });
     
-    // âœ… FASE 2: Chiamata al Backend (CON FIX BULK_CACHE)
+    // ✅ FASE 2: Chiamata al Backend (CON FIX BULK_CACHE)
     const res = await fetch(AI_ENGINE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -592,19 +592,19 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
         cycles: finalCycles,     
         save_db: configSaveDb,
 
-        // ðŸ”¥ FIX FONDAMENTALE PER ERRORE PYTHON ðŸ”¥
+        // 🔥 FIX FONDAMENTALE PER ERRORE PYTHON 🔥
         bulk_cache: {
-            league: currentLeague, // Qui Ã¨ dove il backend cerca la cartella!
+            league: currentLeague, // Qui è dove il backend cerca la cartella!
             LEAGUE_STATS: {}
         }
       })
     });
 
     const responseJson = await res.json();
-    console.log("ðŸ”¥ RISPOSTA PYTHON GREZZA:", responseJson);
+    console.log("🔥 RISPOSTA PYTHON GREZZA:", responseJson);
 
     if (!responseJson.success) {
-      // Se c'Ã¨ un errore, mostriamo quello del backend
+      // Se c'è un errore, mostriamo quello del backend
       throw new Error(responseJson.error || 'Errore generico dal backend');
     }
     
@@ -658,7 +658,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
     let injuryTimeCounter = 0; 
     let isInjuryTime = false;  
     let isPaused = false;
-    let isVarChecking = false;  // â† AGGIUNGI QUESTO FLAG
+    let isVarChecking = false;  // ← AGGIUNGI QUESTO FLAG
     
     const totalDurationMs = 30000; 
     const intervalMs = 100;
@@ -778,7 +778,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }
       }
   
-      // âœ… LOGICA EVENTI CON MOMENTUM FLUIDO (CORRETTA)
+      // ✅ LOGICA EVENTI CON MOMENTUM FLUIDO (CORRETTA)
       if (finalData.cronaca) {
         // CALCOLA IL MINUTO CORRETTO ANCHE PER I RECUPERI
         let minutoEvento = currentMinForEvents;
@@ -805,7 +805,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA GOL ---
               if (matchEvent.tipo === "gol") {
-                if (isVarChecking) return;  // â† BLOCCA se VAR attivo
+                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
                 setLiveScore(prev => ({
                   home: matchEvent.squadra === "casa" ? prev.home + 1 : prev.home,
                   away: matchEvent.squadra === "ospite" ? prev.away + 1 : prev.away
@@ -816,7 +816,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 
                 // Scritta sul campo
                 setPitchMsg({ 
-                  testo: "âš½ GOOOL!", 
+                  testo: "⚽ GOOOL!", 
                   colore: matchEvent.squadra === "casa" ? theme.cyan : theme.danger 
                 });
                 setTimeout(() => setPitchMsg(null), 2000);
@@ -824,23 +824,23 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               
               // --- LOGICA RIGORE FISCHIATO ---
               else if (matchEvent.tipo === "rigore_fischio") {
-                if (isVarChecking) return;  // â† BLOCCA se VAR attivo
+                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
                 setMomentum(prev => 
                   matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
                 );
                 
-                setPitchMsg({ testo: "ðŸš¨ RIGORE!", colore: "#ff9f43" });
+                setPitchMsg({ testo: "🚨 RIGORE!", colore: "#ff9f43" });
                 setTimeout(() => setPitchMsg(null), 2000);
               }
               
               // --- LOGICA ROSSO ---
               else if (matchEvent.tipo === "rosso") {
-                if (isVarChecking) return;  // â† BLOCCA se VAR attivo
+                if (isVarChecking) return;  // ← BLOCCA se VAR attivo
                 setMomentum(prev => 
                   matchEvent.squadra === "casa" ? Math.min(prev + 8, 85) : Math.max(prev - 8, 15)
                 );
                 
-                setPitchMsg({ testo: "ðŸŸ¥ ROSSO!", colore: theme.danger });
+                setPitchMsg({ testo: "🟥 ROSSO!", colore: theme.danger });
                 setTimeout(() => setPitchMsg(null), 2000);
               }
             }
@@ -855,12 +855,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               const varType = (matchEvent as any).var_type || "gol";
               let checkMsg = "";
               
-              if (varType === "gol") checkMsg = "âš ï¸ VAR: CHECK GOL...";
-              else if (varType === "rigore") checkMsg = "âš ï¸ VAR: VERIFICA RIGORE...";
-              else if (varType === "rigore_on_field_review") checkMsg = "âš ï¸ VAR: ON-FIELD REVIEW...";
-              else if (varType === "rosso") checkMsg = "âš ï¸ VAR: CHECK ROSSO...";
-              else if (varType === "gol_fantasma") checkMsg = "âš ï¸ VAR: CONTROLLO...";
-              else checkMsg = "âš ï¸ VAR CHECK...";
+              if (varType === "gol") checkMsg = "⚠️ VAR: CHECK GOL...";
+              else if (varType === "rigore") checkMsg = "⚠️ VAR: VERIFICA RIGORE...";
+              else if (varType === "rigore_on_field_review") checkMsg = "⚠️ VAR: ON-FIELD REVIEW...";
+              else if (varType === "rosso") checkMsg = "⚠️ VAR: CHECK ROSSO...";
+              else if (varType === "gol_fantasma") checkMsg = "⚠️ VAR: CONTROLLO...";
+              else checkMsg = "⚠️ VAR CHECK...";
               
               // ðŸ’€ MODO CATTIVO: Ridisegna la scritta ogni 100ms per 6 secondi
               let varTicks = 0;
@@ -891,15 +891,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     let annullaMsg = "";
                     
                     if (varType === "gol" || varType === "gol_fantasma") {
-                      annullaMsg = "âŒ GOL ANNULLATO";
+                      annullaMsg = "❌ GOL ANNULLATO";
                       setLiveScore(prev => ({
                         home: matchEvent.squadra === "casa" ? Math.max(0, prev.home - 1) : prev.home,
                         away: matchEvent.squadra === "ospite" ? Math.max(0, prev.away - 1) : prev.away
                       }));
                     } else if (varType === "rigore" || varType === "rigore_on_field_review") {
-                      annullaMsg = "âŒ RIGORE ANNULLATO";
+                      annullaMsg = "❌ RIGORE ANNULLATO";
                     } else if (varType === "rosso") {
-                      annullaMsg = "âš ï¸ ROSSO REVOCATO";
+                      annullaMsg = "⚠️ ROSSO REVOCATO";
                     }
                     
                     setPitchMsg({ testo: annullaMsg, colore: "#ff2a6d" });
@@ -907,10 +907,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   } else {
                     let confermaMsg = "";
                     
-                    if (varType === "gol") confermaMsg = "âœ… GOL VALIDO";
-                    else if (varType === "rigore" || varType === "rigore_on_field_review") confermaMsg = "âœ… RIGORE CONFERMATO";
-                    else if (varType === "rosso") confermaMsg = "âœ… ROSSO CONFERMATO";
-                    else confermaMsg = "âœ… DECISIONE CONFERMATA";
+                    if (varType === "gol") confermaMsg = "✅ GOL VALIDO";
+                    else if (varType === "rigore" || varType === "rigore_on_field_review") confermaMsg = "✅ RIGORE CONFERMATO";
+                    else if (varType === "rosso") confermaMsg = "✅ ROSSO CONFERMATO";
+                    else confermaMsg = "✅ DECISIONE CONFERMATA";
                     
                     setPitchMsg({ testo: confermaMsg, colore: "#05f9b6" });
                   }
@@ -923,7 +923,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   }, 3000);
                   
                 } else {
-                  setPitchMsg({ testo: "âœ… CONTROLLO COMPLETATO", colore: "#05f9b6" });
+                  setPitchMsg({ testo: "✅ CONTROLLO COMPLETATO", colore: "#05f9b6" });
                   setTimeout(() => {
                     setPitchMsg(null);
                     setIsVarActive(false);
@@ -934,9 +934,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             }
             
             
-            // ===== VAR_VERDICT - GiÃ  gestito nel setTimeout di VAR_PROCESS =====
+            // ===== VAR_VERDICT - Già gestito nel setTimeout di VAR_PROCESS =====
             else if (matchEvent.tipo === "VAR_VERDICT") {
-              // Non fare nulla, giÃ  mostrato
+              // Non fare nulla, già mostrato
               return;
             }
             
@@ -955,7 +955,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         }
       }
       
-      // âœ… OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
+      // ✅ OSCILLAZIONE COSTANTE (la barra non sta mai ferma)
       setMomentum(prev => {
         // Micro-oscillazione casuale sempre attiva (-2 a +2)
         const microMove = (Math.random() - 0.5) * 4;
@@ -1010,9 +1010,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       let response = "Non ho capito, puoi riformulare?";
       const lower = userText.toLowerCase();
 
-      if (lower.includes('perchÃ©') || lower.includes('spiegami')) {
+      if (lower.includes('perché') || lower.includes('spiegami')) {
         if (simResult) {
-          response = `Il mio algoritmo ${simResult.algo_name} ha analizzato ${simResult.top3.length} scenari. Il punteggio ${simResult.predicted_score} Ã¨ il piÃ¹ probabile basato sulla forma recente e gli scontri diretti.`;
+          response = `Il mio algoritmo ${simResult.algo_name} ha analizzato ${simResult.top3.length} scenari. Il punteggio ${simResult.predicted_score} è il più probabile basato sulla forma recente e gli scontri diretti.`;
         } else {
           response = "Devi prima simulare una partita per avere una spiegazione tecnica.";
         }
@@ -1300,7 +1300,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
       {/* 2. LISTA PARTITE (Stile Card "Pixel Perfect") */}
       
-      {/* Se Ã¨ selezionata una coppa, mostra CupMatches */}
+      {/* Se è selezionata una coppa, mostra CupMatches */}
       {selectedCup ? (
       <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Caricamento...</div>}>
         <CupMatches
@@ -1380,7 +1380,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     console.log("ðŸŽ¯ simResult:", simResult);
     
     if (!simResult || !simResult.success) {
-      console.log("âŒ simResult non valido!");
+      console.log("❌ simResult non valido!");
       return (
         <div style={{...styles.arenaContent, textAlign: 'center', padding: '40px'}}>
           <p style={{color: theme.textDim}}>Nessun risultato disponibile</p>
@@ -1388,15 +1388,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       );
     }
     
-    console.log("âœ… Rendering SimulationResultView...");
+    console.log("✅ Rendering SimulationResultView...");
 
   
-    // âœ… VERIFICA CHE I DATI ESSENZIALI ESISTANO
+    // ✅ VERIFICA CHE I DATI ESSENZIALI ESISTANO
     if (simResult.gh === undefined || simResult.gh === null) {
       console.error("Dati simulazione incompleti:", simResult);
       return (
         <div style={{...styles.arenaContent, textAlign: 'center', padding: '40px'}}>
-          <p style={{color: theme.danger}}>âŒ Errore: Dati simulazione non validi</p>
+          <p style={{color: theme.danger}}>❌ Errore: Dati simulazione non validi</p>
         </div>
       );
     }
@@ -1448,7 +1448,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     return (
       <DashboardHome
         onSelectLeague={(id) => {
-          // âœ… GESTIONE COPPE EUROPEE (UCL / UEL)
+          // ✅ GESTIONE COPPE EUROPEE (UCL / UEL)
           if (id === 'UCL' || id === 'UEL') {
             setActiveLeague(id);
             // // modificato per: attivazione specifica visualizzazione coppe
@@ -1456,7 +1456,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             return;
           }
 
-          // âœ… GESTIONE PRONOSTICI DEL GIORNO
+          // ✅ GESTIONE PRONOSTICI DEL GIORNO
           if (id === 'PREDICTIONS') {
             setActiveLeague('PREDICTIONS');
             setSelectedCup('');
@@ -1496,7 +1496,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     );
   }
 
-  // âœ… GESTIONE COPPE EUROPEE
+  // ✅ GESTIONE COPPE EUROPEE
  /* if (activeLeague === 'UCL' || activeLeague === 'UEL') {
     return (
       <CupMatches
@@ -1513,7 +1513,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
       @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
       
-      /* âœ… NUOVO: Animazione FadeIn per il bottone */
+      /* ✅ NUOVO: Animazione FadeIn per il bottone */
       @keyframes fadeIn { 
         from { 
           opacity: 0; 
@@ -1617,7 +1617,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 boxShadow: '0 4px 20px rgba(0, 240, 255, 0.3)',
               }}
             >
-              âœ… MANTIENI E SIMULA
+              ✅ MANTIENI E SIMULA
             </button>
             
             <button
@@ -1838,7 +1838,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               cursor: 'pointer',
             }}
           >
-            â† Indietro
+            ← Indietro
           </button>
         </div>
       </div>
@@ -1896,7 +1896,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 gap: '10px',
                 animation: 'fadeIn 0.3s ease'
               }}>
-                <span>âš ï¸</span>
+                <span>⚠️</span>
                 {error}
                 <button 
                   onClick={() => setError(null)} 

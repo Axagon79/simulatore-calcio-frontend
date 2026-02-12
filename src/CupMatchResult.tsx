@@ -39,7 +39,7 @@ export default function CupMatchResult({ cupId, result, onBack }: CupMatchResult
 
   // Eventi chiave (gol, cartellini, rosso, VAR)
 const eventi = (result.cronaca || []).filter((e: any) => 
-    e.tipo === 'gol' || e.tipo === 'cartellino' || e.tipo === 'rosso' || e.tipo === 'var'
+    e.tipo === 'gol' || e.tipo === 'cartellino' || e.tipo === 'rosso' || e.tipo === 'VAR_PROCESS' || e.tipo === 'VAR_VERDICT'
   );
 
 
@@ -289,7 +289,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
                 let borderColor = '#4ade80'; // Verde per gol
                 if (evento.tipo === 'cartellino') borderColor = '#fbbf24'; // Giallo
                 if (evento.tipo === 'rosso') borderColor = '#ef4444'; // Rosso
-                if (evento.tipo === 'var') borderColor = '#8b5cf6'; // Viola per VAR
+                if (evento.tipo === 'VAR_PROCESS' || evento.tipo === 'VAR_VERDICT') borderColor = '#ffcc00'; // Giallo VAR
 
               return (
                 <div key={idx} style={{

@@ -1342,6 +1342,7 @@ export default function CupAnimatedField({
                   const isGol = e.includes('⚽') || e.includes('GOOOL');
                   const isRigore = e.includes('🎯') || e.includes('RIGORE');
                   const isCartellino = e.includes('🟨') || e.includes('🟥');
+                  const isVAR = e.includes('VAR:') || e.includes('🖥️');
 
                   return (
                     <div
@@ -1353,24 +1354,26 @@ export default function CupAnimatedField({
                         fontSize: '13px',
                         lineHeight: '1.4',
                         textAlign: isCasa ? 'left' : isOspite ? 'right' : 'center',
-                        color: isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
-                        fontWeight: isSistema ? 'bold' : isGol ? '900' : 'normal',
-                        
-                        // SFONDO SPECIALE PER GOL
+                        color: isVAR ? '#ffcc00' : isCasa ? theme.cyan : isOspite ? theme.danger : '#fff',
+                        fontWeight: isSistema ? 'bold' : isGol ? '900' : isVAR ? '700' : 'normal',
+
+                        // SFONDO SPECIALE PER GOL / VAR
                         background: isGol
                           ? (isCasa
                               ? `linear-gradient(90deg, ${theme.cyan}30, transparent)`
                               : isOspite
                               ? `linear-gradient(270deg, ${theme.danger}30, transparent)`
                               : 'rgba(255, 255, 255, 0.05)')
+                          : isVAR
+                          ? 'rgba(255, 204, 0, 0.12)'
                           : isRigore
                           ? 'rgba(255, 159, 67, 0.15)'
                           : isCartellino
                           ? 'rgba(255, 193, 7, 0.1)'
                           : 'rgba(255, 255, 255, 0.02)',
-                        
+
                         // BORDO COLORATO
-                        borderLeft: isCasa && isGol ? `4px solid ${theme.cyan}` : 'none',
+                        borderLeft: isVAR ? '4px solid #ffcc00' : isCasa && isGol ? `4px solid ${theme.cyan}` : 'none',
                         borderRight: isOspite && isGol ? `4px solid ${theme.danger}` : 'none',
                         
                         // GLOW PER GOL

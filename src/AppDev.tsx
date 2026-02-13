@@ -192,6 +192,18 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   const [chatLoading, setChatLoading] = useState(false);
   const [bubblePosition, setBubblePosition] = useState({ left: window.innerWidth - 80, top: window.innerHeight - 80 });
 
+  // Wrapper setChatOpen: chiusura = reset totale (bolla riapre chat pulita)
+  const handleSetChatOpen = (open: boolean) => {
+    setChatOpen(open);
+    if (!open) {
+      setChatMatchContext(null);
+      setMessages([
+        { id: '1', sender: 'bot', text: 'AI Simulator Coach attivo. Partite, pronostici, analisi \u2014 chiedimi tutto.', timestamp: new Date() }
+      ]);
+      setChatHistory([]);
+    }
+  };
+
   const [hoveredRound, setHoveredRound] = React.useState<string | null>(null);
 
 
@@ -1243,14 +1255,54 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   };
 
   // Apri Coach AI da lista partite (ElementoPartita / CupMatches)
-  const handleOpenCoachAI = (home: string, away: string, date: string, league: string) => {
+  // Inline API call: usa i parametri direttamente (non dipende da state async)
+  const handleOpenCoachAI = async (home: string, away: string, date: string, league: string) => {
     setChatMatchContext({ home, away, date, league });
     setChatHistory([]);
-    // Pulisci messaggi vecchi e mostra benvenuto con partita (senza auto-analisi)
+    const loadingId = Date.now().toString();
     setMessages([
-      { id: Date.now().toString(), sender: 'bot', text: `${home} vs ${away} (${league}). Cosa vuoi sapere?`, timestamp: new Date() }
+      { id: (Date.now() - 1).toString(), sender: 'bot', text: `${home} vs ${away} (${league})`, timestamp: new Date() },
+      { id: loadingId, sender: 'bot', text: 'Analizzo la partita...', timestamp: new Date(), isLoading: true }
     ]);
     setChatOpen(true);
+    setChatLoading(true);
+
+    try {
+      const url = `${API_BASE}/chat/context?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        if (data.success) {
+          return [...filtered, {
+            id: Date.now().toString(), sender: 'bot' as const,
+            text: data.analysis, timestamp: new Date()
+          }];
+        } else {
+          return [...filtered, {
+            id: Date.now().toString(), sender: 'bot' as const,
+            text: `Non ho trovato dati per ${home} vs ${away}. Prova con un'altra partita.`,
+            timestamp: new Date(), isError: true
+          }];
+        }
+      });
+
+      if (data.success) {
+        setChatHistory([{ role: 'assistant' as const, content: data.analysis }]);
+      }
+    } catch {
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        return [...filtered, {
+          id: Date.now().toString(), sender: 'bot' as const,
+          text: 'Errore di connessione. Riprova tra poco.',
+          timestamp: new Date(), isError: true
+        }];
+      });
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   // --- FUNZIONI RESIMULATE ---
@@ -1569,7 +1621,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               theme={theme}
               isLive={isLive}
               onOpenCoachAI={handleOpenCoachAI}
-              leagueName={LEAGUES_MAP.find(l => l.id === activeLeague)?.name || activeLeague || ''}
+              leagueName={LEAGUES_MAP.find(l => l.id === (league || activeLeague))?.name || league || activeLeague || ''}
             />
           );
         })
@@ -2262,7 +2314,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       {/* CHATBOT WIDGET */}
       <ChatBot
         chatOpen={chatOpen}
-        setChatOpen={setChatOpen}
+        setChatOpen={handleSetChatOpen}
         chatInput={chatInput}
         setChatInput={setChatInput}
         messages={messages}

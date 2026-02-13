@@ -179,7 +179,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '1', sender: 'bot', text: 'Ciao! Sono il tuo Football AI Coach. Seleziona una partita per iniziare.', timestamp: new Date() }
+    { id: '1', sender: 'bot', text: 'AI Simulator Coach attivo. Partite, pronostici, analisi \u2014 chiedimi tutto.', timestamp: new Date() }
   ]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);

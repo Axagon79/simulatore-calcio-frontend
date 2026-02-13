@@ -91,7 +91,7 @@ export default function ChatBot({
                   width: '8px', height: '8px', borderRadius: '50%',
                   background: chatMatchContext ? theme.success : theme.textDim
                 }} />
-                <span style={{ fontWeight: 700, fontSize: '14px' }}>Coach AI</span>
+                <span style={{ fontWeight: 700, fontSize: '14px' }}>AI Simulator Coach</span>
               </div>
               {chatMatchContext && (
                 <span style={{

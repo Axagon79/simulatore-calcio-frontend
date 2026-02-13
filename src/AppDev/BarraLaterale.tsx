@@ -57,6 +57,7 @@ interface BarraLateraleProps {
   stemmiCoppe: Record<string, string>;
   stemmiCampionati: Record<string, string>;
   getWidgetGlow: (color: string) => CSSProperties;
+  setViewMode?: (mode: 'calendar' | 'today') => void;
 }
 
 export default function BarraLaterale({
@@ -85,7 +86,8 @@ export default function BarraLaterale({
   sidebarPredictions,
   stemmiCoppe,
   stemmiCampionati,
-  getWidgetGlow
+  getWidgetGlow,
+  setViewMode
 }: BarraLateraleProps) {
 
   return (
@@ -244,7 +246,14 @@ export default function BarraLaterale({
 
       {/* --- BOX RIEPILOGO SELEZIONE --- */}
       {(league || selectedCup) && (
-        <div style={{
+        <div
+          onClick={() => {
+            setViewState('list');
+            setExpandedMatch(null);
+            setMobileMenuOpen(false);
+            if (setViewMode) setViewMode('calendar');
+          }}
+          style={{
           marginTop:isMobile ? '10px': '5px',
           padding: '10px',
           background: 'rgba(0, 240, 255, 0.05)',
@@ -252,7 +261,9 @@ export default function BarraLaterale({
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px'
+          gap: '12px',
+          cursor: 'pointer',
+          transition: 'background 0.2s'
         }}>
           {/* STEMMA */}
           <img

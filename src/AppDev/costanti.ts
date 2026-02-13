@@ -106,6 +106,14 @@ export const theme = {
   font: '"Inter", "Segoe UI", sans-serif'
 };
 
+// --- TEMA MOBILE (più chiaro, solo < 768px) ---
+export const themeMobile = {
+  bg: '#1a1d2e',
+  panel: 'rgba(37, 40, 54, 0.92)',
+  panelBorder: '1px solid rgba(0, 240, 255, 0.15)',
+  sidebarBg: 'rgba(26, 29, 46, 0.98)',
+};
+
 
 // --- PRESET VELOCITA' ---
 export const SPEED_PRESETS = [

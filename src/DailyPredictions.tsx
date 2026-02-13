@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { checkAdmin } from './permissions';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
@@ -235,10 +235,13 @@ const GOL_LABELS: Record<string, string> = {
 // --- COMPONENTE PRINCIPALE ---
 interface DailyPredictionsProps {
   onBack: () => void;
+  onNavigateToLeague?: (leagueName: string) => void;
 }
 
-export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
+export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPredictionsProps) {
   const [date, setDate] = useState(getToday());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [bombs, setBombs] = useState<Bomb[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,6 +283,18 @@ export default function DailyPredictions({ onBack }: DailyPredictionsProps) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Chiudi date picker al click fuori
+  useEffect(() => {
+    if (!datePickerOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+        setDatePickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [datePickerOpen]);
 
   // --- FETCH DATA ---
   useEffect(() => {
@@ -1671,8 +1686,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: theme.bg,
-      backgroundImage: 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
+      backgroundColor: isMobile ? '#1a1d2e' : theme.bg,
+      backgroundImage: isMobile
+        ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
+        : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
       zIndex: 9999,
       overflowY: 'auto',
       overflowX: 'hidden',
@@ -1688,81 +1705,138 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
       <div style={{ width: '100%', maxWidth: '800px', paddingBottom: '40px' }}>
 
-        {/* BOTTONE TORNA */}
-        <button
-          onClick={onBack}
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: theme.textDim,
-            padding: '8px 16px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            marginBottom: '20px',
-            display: 'flex', alignItems: 'center', gap: '6px',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-        >
-          ← Dashboard
-        </button>
+        {/* HEADER STICKY (solo mobile) */}
+        <div style={{
+          ...(isMobile ? {
+            position: 'sticky' as const,
+            top: -16,
+            zIndex: 100,
+            backgroundColor: '#1a1d2e',
+            margin: '-15px -20px 0',
+            padding: '14px 20px 10px',
+          } : {})
+        }}>
 
-        {/* BANNER SANDBOX */}
-        {mode === 'sandbox' && (
-          <div style={{
-            background: 'rgba(255, 152, 0, 0.15)',
-            border: '1px solid rgba(255, 152, 0, 0.4)',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            textAlign: 'center',
-            marginBottom: '15px',
-            color: '#ff9800',
-            fontWeight: '700',
-            fontSize: '13px',
-            letterSpacing: '1px'
-          }}>
-            🧪 MODALITA SANDBOX — Dati da daily_predictions_sandbox
+        {/* MOBILE: riga unica bottone + titolo */}
+        {isMobile ? (
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+            <button
+              onClick={onBack}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: theme.textDim,
+                padding: '5px 10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                display: 'flex', alignItems: 'center',
+                flexShrink: 0,
+                position: 'absolute' as const, left: '15px'
+              }}
+            >
+              ← Dashboard
+            </button>
+            <h1 style={{
+              fontSize: '16px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px', flex: 1, textAlign: 'center'
+            }}>
+              <span>🔮</span>
+              <span style={{
+                background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+              }}> Pronostici del Giorno</span>
+            </h1>
+            {/* Badge modalità inline */}
+            {mode === 'sandbox' && (
+              <span style={{ fontSize: '10px', color: '#ff9800', fontWeight: 700, padding: '2px 8px', background: 'rgba(255,152,0,0.15)', border: '1px solid rgba(255,152,0,0.3)', borderRadius: '6px' }}>🧪 SANDBOX</span>
+            )}
+            {mode === 'confronto' && (
+              <span style={{ fontSize: '10px', color: theme.purple, fontWeight: 700, padding: '2px 8px', background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)', borderRadius: '6px' }}>⚖️ CONFRONTO</span>
+            )}
           </div>
-        )}
-        {/* BANNER CONFRONTO */}
-        {mode === 'confronto' && (
-          <div style={{
-            background: 'rgba(188, 19, 254, 0.15)',
-            border: '1px solid rgba(188, 19, 254, 0.4)',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            textAlign: 'center',
-            marginBottom: '15px',
-            color: theme.purple,
-            fontWeight: '700',
-            fontSize: '13px',
-            letterSpacing: '1px'
-          }}>
-            ⚖️ MODALITA CONFRONTO — Produzione vs Sandbox
-          </div>
+        ) : (
+          <>
+            {/* DESKTOP: layout originale */}
+            <button
+              onClick={onBack}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: theme.textDim,
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                marginBottom: '20px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+            >
+              ← Dashboard
+            </button>
+
+            {/* BANNER SANDBOX */}
+            {mode === 'sandbox' && (
+              <div style={{
+                background: 'rgba(255, 152, 0, 0.15)',
+                border: '1px solid rgba(255, 152, 0, 0.4)',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                textAlign: 'center',
+                marginBottom: '15px',
+                color: '#ff9800',
+                fontWeight: '700',
+                fontSize: '13px',
+                letterSpacing: '1px'
+              }}>
+                🧪 MODALITA SANDBOX — Dati da daily_predictions_sandbox
+              </div>
+            )}
+            {/* BANNER CONFRONTO */}
+            {mode === 'confronto' && (
+              <div style={{
+                background: 'rgba(188, 19, 254, 0.15)',
+                border: '1px solid rgba(188, 19, 254, 0.4)',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                textAlign: 'center',
+                marginBottom: '15px',
+                color: theme.purple,
+                fontWeight: '700',
+                fontSize: '13px',
+                letterSpacing: '1px'
+              }}>
+                ⚖️ MODALITA CONFRONTO — Produzione vs Sandbox
+              </div>
+            )}
+          </>
         )}
 
         {/* HEADER */}
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{
-            fontSize: isMobile ? '28px' : '40px', fontWeight: '900', margin: '0 0 8px 0',
-            letterSpacing: '-1px'
-          }}>
-            <span>🔮</span>
-            <span style={{
-              background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-            }}> Pronostici del Giorno</span>
-          </h1>
-          <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
-            Analisi automatica basata su AI multi-indicatore
-          </p>
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? '6px' : '30px' }}>
+          {!isMobile && (
+            <h1 style={{
+              fontSize: '40px', fontWeight: '900', margin: '0 0 8px 0',
+              letterSpacing: '-1px'
+            }}>
+              <span>🔮</span>
+              <span style={{
+                background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+              }}> Pronostici del Giorno</span>
+            </h1>
+          )}
+          {!isMobile && (
+            <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
+              Analisi automatica basata su AI multi-indicatore
+            </p>
+          )}
 
           {/* Toggle PROD/SANDBOX/CONFRONTO + Mixer — solo Admin */}
           {isAdmin && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: isMobile ? '5px' : '8px', marginTop: isMobile ? '6px' : '12px', flexWrap: 'wrap' as const }}>
               <button
                 onClick={() => setMode('prod')}
                 style={{
@@ -1838,8 +1912,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* NAVIGAZIONE DATA */}
         <div style={{
-          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px',
-          marginBottom: '25px'
+          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '10px' : '15px',
+          marginTop: isMobile ? '15px' : undefined,
+          marginBottom: isMobile ? '10px' : '25px'
         }}>
           <button
             onClick={() => setDate(shiftDate(date, -1))}
@@ -1854,18 +1929,77 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             ◀
           </button>
 
-          <div style={{
-            background: theme.panel, border: theme.panelBorder,
-            borderRadius: '10px', padding: '10px 20px', textAlign: 'center', minWidth: isMobile ? '180px' : '220px'
-          }}>
-            <div style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: '800', color: theme.text }}>
-              {formatDateLabel(date)}
-            </div>
-            {date === getToday() && (
-              <div style={{ fontSize: '10px', color: theme.success, fontWeight: 'bold', marginTop: '2px' }}>
-                ● OGGI
+          <div ref={datePickerRef} style={{ position: 'relative' }}>
+            <div
+              onClick={() => setDatePickerOpen(!datePickerOpen)}
+              style={{
+                background: theme.panel, border: datePickerOpen ? `1px solid ${theme.cyan}` : theme.panelBorder,
+                borderRadius: isMobile ? '8px' : '10px', padding: isMobile ? '6px 16px' : '10px 20px', textAlign: 'center', minWidth: isMobile ? '160px' : '220px',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: '800', color: theme.text }}>
+                {formatDateLabel(date)}
               </div>
-            )}
+              {date === getToday() && (
+                <div style={{ fontSize: '10px', color: theme.success, fontWeight: 'bold', marginTop: '2px' }}>
+                  ● OGGI
+                </div>
+              )}
+            </div>
+
+            {/* Mini-calendario lista verticale */}
+            {datePickerOpen && (() => {
+              const today = getToday();
+              const days: string[] = [];
+              for (let i = -7; i <= 7; i++) days.push(shiftDate(today, i));
+              const weekDaysShort = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
+              return (
+                <div style={{
+                  position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                  marginTop: '6px', zIndex: 200,
+                  background: '#1a1d2e', border: `1px solid ${theme.cyan}33`,
+                  borderRadius: '10px', padding: '6px 0',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+                  width: '180px', maxHeight: '340px', overflowY: 'auto',
+                  scrollbarWidth: 'thin' as const,
+                  scrollbarColor: `${theme.cyan}40 transparent`
+                }}>
+                  {days.map(d => {
+                    const dd = new Date(d + 'T12:00:00');
+                    const dayNum = String(dd.getDate()).padStart(2, '0');
+                    const month = String(dd.getMonth() + 1).padStart(2, '0');
+                    const dayName = weekDaysShort[dd.getDay()];
+                    const isToday = d === today;
+                    const isSelected = d === date;
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => { setDate(d); setDatePickerOpen(false); }}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'center',
+                          background: isSelected
+                            ? `linear-gradient(90deg, ${theme.cyan}22, ${theme.cyan}44)`
+                            : isToday
+                              ? 'rgba(0, 200, 83, 0.12)'
+                              : 'transparent',
+                          border: 'none', borderLeft: isSelected ? `3px solid ${theme.cyan}` : '3px solid transparent',
+                          padding: '9px 16px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: isToday || isSelected ? 700 : 500,
+                          color: isSelected ? theme.cyan : isToday ? theme.success : theme.text,
+                          transition: 'all 0.15s',
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {isToday ? 'OGGI' : `${dayNum}/${month} ${dayName}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           <button
@@ -1881,6 +2015,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             ▶
           </button>
         </div>
+
+        </div>{/* FINE HEADER STICKY */}
+        {isMobile && <div style={{ height: '15px' }} />}
 
         {/* ==================== VISTA CONFRONTO v2 ==================== */}
         {mode === 'confronto' && !loading && !error && confrontoStats && (() => {
@@ -2540,7 +2677,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                                 <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                 <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1 }}>{leagueName}</span>
+                                <span
+                                  onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
+                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                                >{leagueName}</span>
                               </div>
                               {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                             </div>
@@ -2629,7 +2769,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                             <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1 }}>{leagueName}</span>
+                            <span
+                              onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
+                              style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                            >{leagueName}</span>
                           </div>
                           {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>

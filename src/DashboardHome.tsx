@@ -20,6 +20,9 @@ const STEMMI_CAMPIONATI: Record<string, string> = {
   'SERIE_A': `${STEMMI_BASE}campionati%2Fserie_a.png?alt=media`,
   'SERIE_B': `${STEMMI_BASE}campionati%2Fserie_b.png?alt=media`,
   'SERIE_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_A': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_B': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
   'PREMIER_LEAGUE': `${STEMMI_BASE}campionati%2Fpremier_league.png?alt=media`,
   'LA_LIGA': `${STEMMI_BASE}campionati%2Fla_liga.png?alt=media`,
   'BUNDESLIGA': `${STEMMI_BASE}campionati%2Fbundesliga.png?alt=media`,
@@ -88,6 +91,11 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
 
   // LISTA COMPLETA ALTRI CAMPIONATI
   const otherLeagues = [
+    // ITALIA
+    { id: 'SERIE_C_A', name: 'Serie C - Girone A', country: '🇮🇹 Italia', color: '#00f0ff' },
+    { id: 'SERIE_C_B', name: 'Serie C - Girone B', country: '🇮🇹 Italia', color: '#00f0ff' },
+    { id: 'SERIE_C_C', name: 'Serie C - Girone C', country: '🇮🇹 Italia', color: '#00f0ff' },
+
     // EUROPA SERIE B
     { id: 'CHAMPIONSHIP', name: 'Championship', country: '🇬🇧 Inghilterra B', color: '#cc0055' },
     { id: 'LA_LIGA_2', name: 'LaLiga 2', country: '🇪🇸 Spagna B', color: '#dd8833' },
@@ -130,8 +138,10 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
   return (
     <div style={{ 
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-        backgroundColor: theme.bg,
-        backgroundImage: 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
+        backgroundColor: isMobile ? '#1a1d2e' : theme.bg,
+        backgroundImage: isMobile
+          ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
+          : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
@@ -195,8 +205,8 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                  style={{
                      background: 'rgba(20, 22, 35, 0.6)',
                      backdropFilter: 'blur(10px)',
-                     border: '1px solid rgba(255,255,255,0.05)', 
-                     borderRadius: isMobile ? '16px' : '20px', 
+                     border: `1px solid ${league.color}40`,
+                     borderRadius: isMobile ? '16px' : '20px',
                      padding: isMobile ? '18px' : '25px',
                      cursor: 'pointer', 
                      transition: 'all 0.3s ease', 
@@ -215,7 +225,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                 }}
                 onMouseLeave={(e) => {
                     if (!e.currentTarget) return;
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.borderColor = `${league.color}40`;
                     e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
                     e.currentTarget.style.transform = 'translateY(0)';
                 }}
@@ -230,7 +240,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                     if (!target) return;
                     setTimeout(() => {
                         if (!target) return;
-                        target.style.borderColor = 'rgba(255,255,255,0.05)';
+                        target.style.borderColor = `${league.color}40`;
                         target.style.background = 'rgba(20, 22, 35, 0.6)';
                         target.style.transform = 'scale(1)';
                     }, 200);
@@ -310,7 +320,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               style={{
                 background: 'linear-gradient(135deg, rgba(188,19,254,0.2), rgba(0,240,255,0.1))',
                 backdropFilter: 'blur(10px)',
-                border: `2px solid ${theme.purple}`,
+                border: `1px solid ${theme.purple}`,
                 borderRadius: isMobile ? '16px' : '20px',
                 padding: isMobile ? '18px' : '25px',
                 cursor: 'pointer',
@@ -358,7 +368,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               style={{
                 background: 'linear-gradient(135deg, rgba(138,43,226,0.15), rgba(0,240,255,0.08))',
                 backdropFilter: 'blur(10px)',
-                border: '2px solid rgba(188,19,254,0.4)',
+                border: '1px solid rgba(188,19,254,0.4)',
                 borderRadius: isMobile ? '16px' : '20px',
                 padding: isMobile ? '18px' : '25px',
                 cursor: 'pointer',
@@ -406,7 +416,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               style={{
                 background: 'linear-gradient(135deg, rgba(0,102,204,0.2), rgba(255,102,0,0.1))',
                 backdropFilter: 'blur(10px)',
-                border: `2px solid ${theme.cyan}`,
+                border: `1px solid ${theme.cyan}`,
                 borderRadius: isMobile ? '16px' : '20px',
                 padding: isMobile ? '18px' : '25px',
                 cursor: 'pointer',
@@ -489,26 +499,29 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
           }}
           onClick={() => setShowOtherLeagues(false)}
         >
-          <div 
+          <div
             style={{
-              background: theme.bg,
+              background: isMobile ? '#1a1d2e' : theme.bg,
               border: `2px solid ${theme.purple}`,
               borderRadius: '20px',
               padding: isMobile ? '20px' : '30px',
               maxWidth: '900px',
               width: '100%',
               maxHeight: '80vh',
-              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
               position: 'relative'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* HEADER */}
+            {/* HEADER (fisso) */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '30px'
+              marginBottom: '20px',
+              flexShrink: 0
             }}>
               <h2 style={{
                 fontSize: isMobile ? '22px' : '28px',
@@ -534,11 +547,13 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               </button>
             </div>
 
-            {/* GRIGLIA CAMPIONATI CON STEMMI */}
+            {/* GRIGLIA CAMPIONATI CON STEMMI (scrollabile) */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: isMobile ? '15px' : '10px'
+              gap: isMobile ? '15px' : '10px',
+              overflowY: 'auto',
+              flex: 1
             }}>
               {otherLeagues.map(league => (
                 <div
@@ -618,9 +633,9 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
           }}
           onClick={() => setShowCups(false)}
         >
-          <div 
+          <div
             style={{
-              background: theme.bg,
+              background: isMobile ? '#1a1d2e' : theme.bg,
               border: `2px solid ${theme.cyan}`,
               borderRadius: '20px',
               padding: isMobile ? '20px' : '30px',

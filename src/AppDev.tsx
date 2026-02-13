@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import DashboardHome from './DashboardHome';
 import './BadgeClassifica_pt_pos.css'
@@ -47,7 +47,7 @@ import {
 } from './AppDev/costanti';
 
 // --- STILI (estratti) ---
-import { styles, getWidgetGlow } from './AppDev/stili';
+import { getStyles, getWidgetGlow } from './AppDev/stili';
 
 // --- UTILITY (estratte) ---
 import { getStemmaLeagueUrl as _getStemmaLeagueUrl } from './AppDev/utilita';
@@ -178,6 +178,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const styles = useMemo(() => getStyles(isMobile), [isMobile]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: '1', sender: 'bot', text: 'AI Simulator Coach attivo. Partite, pronostici, analisi \u2014 chiedimi tutto.', timestamp: new Date() }
   ]);
@@ -1722,6 +1723,35 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px' }}>Caricamento pronostici...</div>}>
           <DailyPredictions
             onBack={() => setActiveLeague(null)}
+            onNavigateToLeague={(leagueName) => {
+              const LEAGUE_NAME_TO_ID: Record<string, string> = {
+                'Serie A': 'SERIE_A', 'Serie B': 'SERIE_B',
+                'Serie C - Girone A': 'SERIE_C_GIRONE_A', 'Serie C - Girone B': 'SERIE_C_GIRONE_B', 'Serie C - Girone C': 'SERIE_C_GIRONE_C',
+                'Premier League': 'PREMIER_LEAGUE', 'Championship': 'CHAMPIONSHIP',
+                'La Liga': 'LA_LIGA', 'LaLiga 2': 'LA_LIGA_2',
+                'Bundesliga': 'BUNDESLIGA', '2. Bundesliga': 'BUNDESLIGA_2',
+                'Ligue 1': 'LIGUE_1', 'Ligue 2': 'LIGUE_2',
+                'Liga Portugal': 'LIGA_PORTUGAL', 'Primeira Liga': 'LIGA_PORTUGAL',
+                'Eredivisie': 'EREDIVISIE',
+                'Scottish Prem.': 'SCOTTISH_PREMIERSHIP', 'Scottish Premiership': 'SCOTTISH_PREMIERSHIP',
+                'Allsvenskan': 'ALLSVENSKAN', 'Eliteserien': 'ELITESERIEN', 'Superligaen': 'SUPERLIGAEN',
+                'Jupiler Pro': 'JUPILER_PRO_LEAGUE', 'Jupiler Pro League': 'JUPILER_PRO_LEAGUE',
+                'Süper Lig': 'SUPER_LIG', 'Super Lig': 'SUPER_LIG',
+                'League of Ireland': 'LEAGUE_OF_IRELAND', 'League of Ireland Premier Division': 'LEAGUE_OF_IRELAND',
+                'Brasileirão': 'BRASILEIRAO', 'Brasileirao': 'BRASILEIRAO', 'Brasileirão Serie A': 'BRASILEIRAO', 'Brasileirao Serie A': 'BRASILEIRAO',
+                'Primera División': 'PRIMERA_DIVISION_ARG',
+                'MLS': 'MLS', 'J1 League': 'J1_LEAGUE',
+              };
+              const id = LEAGUE_NAME_TO_ID[leagueName];
+              const found = id ? LEAGUES_MAP.find(l => l.id === id) : null;
+              if (found) {
+                initFromDashboard(found.country, found.id);
+                setSelectedCup('');
+                setViewState('list');
+                setSelectedMatch(null);
+                setActiveLeague(found.id);
+              }
+            }}
           />
         </Suspense>
         <ChatBot
@@ -2254,6 +2284,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           stemmiCoppe={STEMMI_COPPE}
           stemmiCampionati={STEMMI_CAMPIONATI}
           getWidgetGlow={getWidgetGlow}
+          setViewMode={setViewMode}
         />
 
         {/* MAIN ARENA */}

@@ -17,6 +17,14 @@
     --theme-warning: #ff9f43;
     --theme-font: "Inter", "Segoe UI", sans-serif;
   }
+
+  /* Tema mobile più chiaro */
+  @media (max-width: 768px) {
+    :root {
+      --theme-bg: #1a1d2e;
+      --theme-panel: rgba(37, 40, 54, 0.92);
+    }
+  }
   
   /* ========================================
      LAYOUT PRINCIPALE - OTTIMIZZATO PER VIEWPORT

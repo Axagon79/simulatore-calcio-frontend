@@ -152,15 +152,18 @@ export const styles: Record<string, React.CSSProperties> = {
     flex: 1, padding: '15px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px'
   },
   msgBubble: {
-    padding: '10px 14px', borderRadius: '12px', fontSize: '13px', lineHeight: '1.4',
-    maxWidth: '85%'
+    padding: '12px 16px', borderRadius: '14px', fontSize: '14px', lineHeight: '1.65',
+    maxWidth: '88%', wordBreak: 'break-word' as const
   },
   userMsg: {
     alignSelf: 'flex-end', background: theme.cyan, color: '#000',
-    borderRadius: '12px 12px 0 12px'
+    borderRadius: '14px 14px 2px 14px', fontWeight: 500
   },
   botMsg: {
-    alignSelf: 'flex-start', background: 'rgba(255,255,255,0.1)', color: theme.text,
-    borderRadius: '12px 12px 12px 0'
+    alignSelf: 'flex-start',
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: theme.text,
+    borderRadius: '14px 14px 14px 2px'
   }
 };

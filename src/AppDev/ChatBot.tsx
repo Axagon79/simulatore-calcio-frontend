@@ -133,26 +133,22 @@ export default function ChatBot({
             maxWidth: '100%'
           } : {})
         }}>
-          {/* Header con indicatore partita */}
+          {/* Header con robottino */}
           <div style={styles.chatHeader}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  background: chatMatchContext ? theme.success : theme.textDim
-                }} />
-                <span style={{ fontWeight: 700, fontSize: '14px' }}>AI Simulator Coach</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src="/coach-ai-robot.png" alt="" style={{ height: '32px', width: 'auto' }} />
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: '15px', letterSpacing: '0.3px' }}>Coach AI</span>
+                  {chatMatchContext && (
+                    <div style={{ fontSize: '11px', color: theme.cyan, opacity: 0.85, marginTop: '1px' }}>
+                      {chatMatchContext.home} vs {chatMatchContext.away}
+                    </div>
+                  )}
+                </div>
               </div>
-              {chatMatchContext && (
-                <span style={{
-                  fontSize: '11px', color: theme.cyan, paddingLeft: '16px',
-                  opacity: 0.8
-                }}>
-                  {chatMatchContext.home} vs {chatMatchContext.away}
-                </span>
-              )}
             </div>
-            <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+            <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px', padding: '4px' }}>✕</button>
           </div>
 
           {/* Messaggi */}
@@ -161,24 +157,33 @@ export default function ChatBot({
               <div key={msg.id}>
                 {/* Messaggio normale */}
                 {!msg.searchResults && (
-                  <div style={{
-                    ...styles.msgBubble,
-                    ...(msg.sender === 'user' ? styles.userMsg : styles.botMsg),
-                    ...(msg.isError ? {
-                      background: 'rgba(255, 50, 50, 0.15)',
-                      border: '1px solid rgba(255, 50, 50, 0.3)',
-                      color: '#ff6b6b'
-                    } : {})
-                  }}>
-                    {msg.isLoading ? (
-                      <div style={{ display: 'flex', gap: '4px', padding: '4px 0' }}>
-                        <span style={dotStyle(0)} />
-                        <span style={dotStyle(1)} />
-                        <span style={dotStyle(2)} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+                    {/* Etichetta mittente per bot */}
+                    {msg.sender === 'bot' && !msg.isLoading && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px', paddingLeft: '4px' }}>
+                        <img src="/coach-ai-robot.png" alt="" style={{ height: '18px', width: 'auto' }} />
+                        <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Coach AI</span>
                       </div>
-                    ) : (
-                      <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>
                     )}
+                    <div style={{
+                      ...styles.msgBubble,
+                      ...(msg.sender === 'user' ? styles.userMsg : styles.botMsg),
+                      ...(msg.isError ? {
+                        background: 'rgba(255, 50, 50, 0.15)',
+                        border: '1px solid rgba(255, 50, 50, 0.3)',
+                        color: '#ff6b6b'
+                      } : {})
+                    }}>
+                      {msg.isLoading ? (
+                        <div style={{ display: 'flex', gap: '4px', padding: '4px 0' }}>
+                          <span style={dotStyle(0)} />
+                          <span style={dotStyle(1)} />
+                          <span style={dotStyle(2)} />
+                        </div>
+                      ) : (
+                        <span style={{ whiteSpace: 'pre-wrap', letterSpacing: '0.15px' }}>{msg.text}</span>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -355,7 +360,7 @@ export default function ChatBot({
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.3s ease'
         }}>
-          {chatOpen ? '🤖' : '💬'}
+          <img src="/coach-ai-robot.png" alt="Coach AI" style={{ height: '42px', width: 'auto', pointerEvents: 'none' }} />
         </div>
       </div>
     </>

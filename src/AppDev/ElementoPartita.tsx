@@ -69,7 +69,8 @@ export default function ElementoPartita({
         margin: isMobile ? '0 auto 5px auto' : '0 0 5px 0',
         marginBottom: '5px',
         cursor: 'pointer',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        border: (isMobile && isExpanded) ? `1px solid ${theme.cyan}70` : '1px solid rgba(255, 255, 255, 0.05)',
+        boxShadow: (isMobile && isExpanded) ? `0 0 8px ${theme.cyan}40, 0 0 20px ${theme.cyan}20, inset 0 0 8px ${theme.cyan}08` : 'none',
         display: 'flex',
         flexDirection: isMobile && isExpanded ? 'column' : 'row',
         alignItems: isMobile && isExpanded ? 'stretch' : 'center',
@@ -83,13 +84,14 @@ export default function ElementoPartita({
         if (e.currentTarget) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
       }}
     >
-      {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
+      {/* A. DATA E ORA (+ nuvoletta Coach AI centrata quando espanso) */}
       <div style={{
-        width: isMobile ? '30px' : '130px',
+        width: (isMobile && isExpanded) ? '100%' : (isMobile ? '30px' : '130px'),
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-start',
+        position: (isMobile && isExpanded) ? 'relative' : undefined,
       }}>
         <div style={{
           display: 'flex',
@@ -135,6 +137,62 @@ export default function ElementoPartita({
               LIVE
             </span>
           </span>
+        )}
+        {/* Robottino Coach AI — immagine cliccabile */}
+        {isMobile && isExpanded && onOpenCoachAI && (
+          <>
+            <style>{`
+              @keyframes coachPulse {
+                0%, 100% { filter: drop-shadow(0 5px 8px ${theme.cyan}55); }
+                50% { filter: drop-shadow(0 5px 16px ${theme.cyan}bb) drop-shadow(0 5px 28px ${theme.cyan}55); }
+              }
+            `}</style>
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                const dateStr = match.date_obj ? match.date_obj.split('T')[0] : '';
+                onOpenCoachAI(match.home, match.away, dateStr, leagueName || '');
+              }}
+              onTouchStart={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '-7px',
+                transform: 'translateX(-50%)',
+                zIndex: 10,
+                cursor: 'pointer',
+                padding: '2px 6px 0px 6px',
+                borderRadius: '20px',
+                border: 'none',
+                background: 'transparent',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <img
+                src="/coach-ai-robot.png"
+                alt="Coach AI"
+                style={{
+                  height: '55px',
+                  width: 'auto',
+                  pointerEvents: 'none',
+                  animation: 'coachPulse 2.5s ease-in-out infinite',
+                }}
+              />
+              <span style={{
+                color: theme.cyan,
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.5px',
+                marginTop: '-4px',
+                marginBottom: '3px',
+                pointerEvents: 'none',
+              }}>Coach AI</span>
+            </div>
+          </>
         )}
       </div>
 
@@ -705,35 +763,6 @@ export default function ElementoPartita({
               );
             })}
           </div>
-
-          {/* BOTTONE COACH AI — Mobile espanso */}
-          {onOpenCoachAI && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const dateStr = match.date_obj ? match.date_obj.split('T')[0] : '';
-                onOpenCoachAI(match.home, match.away, dateStr, leagueName || '');
-              }}
-              style={{
-                width: '100%',
-                marginTop: '12px',
-                padding: '10px',
-                background: 'rgba(0, 240, 255, 0.08)',
-                border: `1px dashed ${theme.cyan}66`,
-                borderRadius: '10px',
-                color: theme.cyan,
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              🤖 Approfondisci con Coach AI
-            </button>
-          )}
 
           {/* BOTTONE ANALIZZA */}
           <button

@@ -30,6 +30,8 @@ import type {
   Match,
   SimulationResult,
   ChatMessage,
+  ChatHistoryEntry,
+  SearchResult,
   TodayLeagueGroup
 } from './types';
 
@@ -181,6 +183,13 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   ]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // STATO COACH AI
+  const [chatMatchContext, setChatMatchContext] = useState<{
+    home: string; away: string; date: string; league: string;
+  } | null>(null);
+  const [chatHistory, setChatHistory] = useState<ChatHistoryEntry[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const [hoveredRound, setHoveredRound] = React.useState<string | null>(null);
 
@@ -494,7 +503,21 @@ const prepareSimulation = (match: Match) => {
   setSimulationEnded(false);
   setLiveScore({home: 0, away: 0});
 
-  addBotMessage(`Hai selezionato ${match.home} vs ${match.away}. Configura la simulazione e partiamo!`);
+  // Reset chat Coach AI per nuova partita
+  const matchDate = match.date_obj ? match.date_obj.split('T')[0] : '';
+  setChatMatchContext({
+    home: match.home,
+    away: match.away,
+    date: matchDate,
+    league: league || ''
+  });
+  setChatHistory([]);
+  setMessages([{
+    id: Date.now().toString(),
+    sender: 'bot',
+    text: `Partita selezionata: ${match.home} vs ${match.away}. Clicca "Analizza" o scrivimi una domanda!`,
+    timestamp: new Date()
+  }]);
 };
 
 // ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
@@ -995,37 +1018,228 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     }, intervalMs);
   };
 
-  // --- CHAT LOGIC ---
+  // --- CHAT LOGIC (Coach AI con Mistral) ---
   const addBotMessage = (text: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text, timestamp: new Date() }]);
   };
 
-  const handleUserMessage = () => {
-    if (!chatInput.trim()) return;
-    const userText = chatInput;
-    setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user', text: userText, timestamp: new Date() }]);
-    setChatInput('');
+  const handleAnalyzeMatch = async () => {
+    if (!chatMatchContext || chatLoading) return;
+    const { home, away, date } = chatMatchContext;
 
-    setTimeout(() => {
-      let response = "Non ho capito, puoi riformulare?";
-      const lower = userText.toLowerCase();
+    setChatLoading(true);
+    const loadingId = Date.now().toString();
+    setMessages(prev => [...prev, {
+      id: loadingId, sender: 'bot', text: 'Analizzo la partita...',
+      timestamp: new Date(), isLoading: true
+    }]);
 
-      if (lower.includes('perché') || lower.includes('spiegami')) {
-        if (simResult) {
-          response = `Il mio algoritmo ${simResult.algo_name} ha analizzato ${simResult.top3.length} scenari. Il punteggio ${simResult.predicted_score} è il più probabile basato sulla forma recente e gli scontri diretti.`;
+    try {
+      const url = `${API_BASE}/chat/context?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        if (data.success) {
+          return [...filtered, {
+            id: Date.now().toString(), sender: 'bot',
+            text: data.analysis, timestamp: new Date()
+          }];
         } else {
-          response = "Devi prima simulare una partita per avere una spiegazione tecnica.";
+          return [...filtered, {
+            id: Date.now().toString(), sender: 'bot',
+            text: `Non ho trovato dati per ${home} vs ${away}. Prova con un'altra partita.`,
+            timestamp: new Date(), isError: true
+          }];
         }
-      } else if (lower.includes('rischio') || lower.includes('sicura')) {
-        response = simResult ? "Questa partita ha un indice di volatilitÃ  medio. Ti consiglio di coprire con una doppia chance." : "Seleziona un match per calcolare il rischio.";
-      } else if (lower.includes('consiglio') || lower.includes('scommessa')) {
-        response = simResult ? `Consiglio principale: ${simResult.sign}. Alternativa interessante: Over 2.5.` : "Posso darti un consiglio appena avviamo l'analisi.";
-      }
+      });
 
-      addBotMessage(response);
-    }, 800);
+      if (data.success) {
+        setChatHistory([{ role: 'assistant', content: data.analysis }]);
+      }
+    } catch {
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        return [...filtered, {
+          id: Date.now().toString(), sender: 'bot',
+          text: 'Errore di connessione. Riprova tra poco.',
+          timestamp: new Date(), isError: true
+        }];
+      });
+    } finally {
+      setChatLoading(false);
+    }
   };
 
+  const handleUserMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const userText = chatInput.trim();
+    setChatInput('');
+
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(), sender: 'user', text: userText, timestamp: new Date()
+    }]);
+
+    // Se non c'è partita selezionata → ricerca intelligente
+    if (!chatMatchContext) {
+      setChatLoading(true);
+      const searchLoadingId = Date.now().toString();
+      setMessages(prev => [...prev, {
+        id: searchLoadingId, sender: 'bot', text: '',
+        timestamp: new Date(), isLoading: true
+      }]);
+
+      try {
+        const searchResp = await fetch(`${API_BASE}/chat/search-match?q=${encodeURIComponent(userText)}`);
+        const searchData = await searchResp.json();
+
+        setMessages(prev => prev.filter(m => m.id !== searchLoadingId));
+
+        if (searchData.success && searchData.matches?.length > 0) {
+          if (searchData.matches.length === 1) {
+            // 1 risultato → auto-seleziona e analizza
+            const m = searchData.matches[0];
+            setChatMatchContext({ home: m.home, away: m.away, date: m.date || '', league: m.league || '' });
+            setChatHistory([]);
+            addBotMessage(`Ho trovato ${m.home} vs ${m.away}. Analizzo...`);
+            // Lancia analisi automatica dopo aver settato il contesto
+            setTimeout(() => handleAnalyzeMatch(), 200);
+          } else {
+            // Più risultati → mostra lista con quadratini
+            setMessages(prev => [...prev, {
+              id: Date.now().toString(), sender: 'bot',
+              text: `Ho trovato ${searchData.matches.length} partite. Seleziona quella che vuoi analizzare:`,
+              timestamp: new Date(),
+              searchResults: searchData.matches.map((m: SearchResult) => ({ ...m, selected: false }))
+            }]);
+          }
+        } else {
+          // Nessuna partita trovata → manda a Mistral come domanda generica
+          const fallbackLoadingId = (Date.now() + 1).toString();
+          setMessages(prev => [...prev, {
+            id: fallbackLoadingId, sender: 'bot', text: '',
+            timestamp: new Date(), isLoading: true
+          }]);
+          try {
+            const chatResp = await fetch(`${API_BASE}/chat/message`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: userText, history: [] })
+            });
+            const chatData = await chatResp.json();
+            setMessages(prev => {
+              const filtered = prev.filter(m => m.id !== fallbackLoadingId);
+              return [...filtered, {
+                id: Date.now().toString(), sender: 'bot',
+                text: chatData.success ? chatData.reply : 'Non sono riuscito a rispondere. Prova a cercare una partita specifica.',
+                timestamp: new Date(),
+                ...(chatData.success ? {} : { isError: true })
+              }];
+            });
+          } catch {
+            setMessages(prev => {
+              const filtered = prev.filter(m => m.id !== fallbackLoadingId);
+              return [...filtered, {
+                id: Date.now().toString(), sender: 'bot',
+                text: 'Errore di connessione. Riprova tra poco.',
+                timestamp: new Date(), isError: true
+              }];
+            });
+          }
+        }
+      } catch {
+        setMessages(prev => prev.filter(m => m.id !== searchLoadingId));
+        addBotMessage('Errore nella ricerca. Riprova tra poco.');
+      } finally {
+        setChatLoading(false);
+      }
+      return;
+    }
+
+    setChatLoading(true);
+    const loadingId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, {
+      id: loadingId, sender: 'bot', text: '',
+      timestamp: new Date(), isLoading: true
+    }]);
+
+    const newHistory: ChatHistoryEntry[] = [...chatHistory, { role: 'user', content: userText }].slice(-10);
+
+    try {
+      const resp = await fetch(`${API_BASE}/chat/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          home: chatMatchContext.home,
+          away: chatMatchContext.away,
+          date: chatMatchContext.date,
+          message: userText,
+          history: newHistory
+        })
+      });
+      const data = await resp.json();
+
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        if (data.success) {
+          return [...filtered, {
+            id: Date.now().toString(), sender: 'bot',
+            text: data.reply, timestamp: new Date()
+          }];
+        } else {
+          return [...filtered, {
+            id: Date.now().toString(), sender: 'bot',
+            text: 'Non sono riuscito a elaborare la risposta. Riprova.',
+            timestamp: new Date(), isError: true
+          }];
+        }
+      });
+
+      if (data.success) {
+        setChatHistory([...newHistory, { role: 'assistant', content: data.reply }]);
+      }
+    } catch {
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        return [...filtered, {
+          id: Date.now().toString(), sender: 'bot',
+          text: 'Errore di connessione. Riprova tra poco.',
+          timestamp: new Date(), isError: true
+        }];
+      });
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Selezione partita dalla lista risultati nella chat
+  const handleSelectSearchResult = (match: SearchResult) => {
+    setChatMatchContext({
+      home: match.home,
+      away: match.away,
+      date: match.date || '',
+      league: match.league || ''
+    });
+    setChatHistory([]);
+    // Marca come selezionata nella lista
+    setMessages(prev => prev.map(m => {
+      if (m.searchResults) {
+        return {
+          ...m,
+          searchResults: m.searchResults.map(r =>
+            r.home === match.home && r.away === match.away && r.date === match.date
+              ? { ...r, selected: true }
+              : { ...r, selected: false }
+          )
+        };
+      }
+      return m;
+    }));
+    addBotMessage(`Partita selezionata: ${match.home} vs ${match.away}. Analizzo...`);
+    // Lancia analisi dopo il settaggio del contesto
+    setTimeout(() => handleAnalyzeMatch(), 200);
+  };
 
   // --- FUNZIONI RESIMULATE ---
   const handleResimulate = () => {
@@ -2036,8 +2250,13 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         setChatInput={setChatInput}
         messages={messages}
         onSendMessage={handleUserMessage}
+        onAnalyzeMatch={handleAnalyzeMatch}
+        onSelectSearchResult={handleSelectSearchResult}
+        chatMatchContext={chatMatchContext}
+        chatLoading={chatLoading}
         theme={theme}
         styles={styles}
+        isMobile={isMobile}
       />
 
       {/* POPUP FORMAZIONI */}

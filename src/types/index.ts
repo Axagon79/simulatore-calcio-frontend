@@ -168,11 +168,28 @@ export interface SimulationResult {
 
 // --- CHAT ---
 
+export interface SearchResult {
+  home: string;
+  away: string;
+  league: string;
+  date: string;
+  source: string;
+  selected?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'bot';
   text: string;
   timestamp: Date;
+  isLoading?: boolean;
+  isError?: boolean;
+  searchResults?: SearchResult[];
+}
+
+export interface ChatHistoryEntry {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 // --- FORMAZIONI ---

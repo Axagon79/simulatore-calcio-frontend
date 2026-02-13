@@ -190,6 +190,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   } | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistoryEntry[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [bubblePosition, setBubblePosition] = useState({ left: window.innerWidth - 80, top: window.innerHeight - 80 });
 
   const [hoveredRound, setHoveredRound] = React.useState<string | null>(null);
 
@@ -1241,6 +1242,17 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     setTimeout(() => handleAnalyzeMatch(), 200);
   };
 
+  // Apri Coach AI da lista partite (ElementoPartita / CupMatches)
+  const handleOpenCoachAI = (home: string, away: string, date: string, league: string) => {
+    setChatMatchContext({ home, away, date, league });
+    setChatHistory([]);
+    // Pulisci messaggi vecchi e mostra benvenuto con partita (senza auto-analisi)
+    setMessages([
+      { id: Date.now().toString(), sender: 'bot', text: `${home} vs ${away} (${league}). Cosa vuoi sapere?`, timestamp: new Date() }
+    ]);
+    setChatOpen(true);
+  };
+
   // --- FUNZIONI RESIMULATE ---
   const handleResimulate = () => {
     setShowResimulatePopup(true);
@@ -1480,6 +1492,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     getStemmaLeagueUrl={(mongoId) => _getStemmaLeagueUrl(mongoId, group.league_id)}
                     theme={theme}
                     isLive={isLive}
+                    onOpenCoachAI={handleOpenCoachAI}
+                    leagueName={group.league_name || ''}
                   />
                 );
               })}
@@ -1523,6 +1537,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             setSelectedCup('');
             setActiveLeague(null);
           }}
+          onOpenCoachAI={handleOpenCoachAI}
         />
       </Suspense>
       ) : isLoadingMatches ? (
@@ -1553,6 +1568,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               getStemmaLeagueUrl={getStemmaLeagueUrl}
               theme={theme}
               isLive={isLive}
+              onOpenCoachAI={handleOpenCoachAI}
+              leagueName={LEAGUES_MAP.find(l => l.id === activeLeague)?.name || activeLeague || ''}
             />
           );
         })
@@ -2257,6 +2274,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         theme={theme}
         styles={styles}
         isMobile={isMobile}
+        bubblePosition={bubblePosition}
+        setBubblePosition={setBubblePosition}
       />
 
       {/* POPUP FORMAZIONI */}

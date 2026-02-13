@@ -34,6 +34,7 @@ const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
 interface CupMatchesProps {
   cupId: 'UCL' | 'UEL';
   onBack: () => void;
+  onOpenCoachAI?: (home: string, away: string, date: string, league: string) => void;
 }
 
 interface Match {
@@ -55,7 +56,7 @@ interface Match {
   };
 }
 
-export default function CupMatches({ cupId }: CupMatchesProps) {
+export default function CupMatches({ cupId, onOpenCoachAI }: CupMatchesProps) {
   const [playedMatches, setPlayedMatches] = useState<Match[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -652,6 +653,32 @@ if (viewState === 'analysis' && selectedMatch) {
                     </>
                   ) : null}
 
+                  {/* Icona Coach AI — Desktop (played) */}
+                  {!isMobile && onOpenCoachAI && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const dateStr = match.match_date ? match.match_date.split('T')[0] : '';
+                        onOpenCoachAI(match.home_team, match.away_team, dateStr, cupId === 'UCL' ? 'Champions League' : 'Europa League');
+                      }}
+                      title="Approfondisci con Coach AI"
+                      style={{
+                        width: '32px', height: '32px', borderRadius: '50%',
+                        background: `${theme.primary}15`,
+                        border: `1px solid ${theme.primary}44`,
+                        color: theme.primary,
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                        marginLeft: '8px',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      🤖
+                    </button>
+                  )}
+
                   {/* SEZIONE ESPANDIBILE (Solo Mobile) */}
                   {isMobile && isExpanded && (
                         <div style={{
@@ -660,7 +687,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                             animation: 'fadeIn 0.3s ease'
                         }}>
-                            
+
                             {/* --- INIZIO NUOVO BLOCCO SQUADRE CON STEMMI --- */}
                             <div style={{
                                 display: 'flex',
@@ -790,6 +817,35 @@ if (viewState === 'analysis' && selectedMatch) {
                         ))}
                       </div>
 
+                      {/* BOTTONE COACH AI — Mobile espanso (played) */}
+                      {onOpenCoachAI && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const dateStr = match.match_date ? match.match_date.split('T')[0] : '';
+                            onOpenCoachAI(match.home_team, match.away_team, dateStr, cupId === 'UCL' ? 'Champions League' : 'Europa League');
+                          }}
+                          style={{
+                            width: '100%',
+                            marginTop: '12px',
+                            padding: '10px',
+                            background: `${theme.primary}15`,
+                            border: `1px dashed ${theme.primary}66`,
+                            borderRadius: '10px',
+                            color: theme.primary,
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          🤖 Approfondisci con Coach AI
+                        </button>
+                      )}
+
                       {/* BOTTONE SIMULA */}
                       <button
                         onClick={(e) => {
@@ -800,7 +856,7 @@ if (viewState === 'analysis' && selectedMatch) {
                         disabled={false}
                         style={{
                             width: '100%',
-                            marginTop: '15px',
+                            marginTop: '8px',
                             padding: '14px',
                             background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`,
                             border: 'none',
@@ -1130,6 +1186,32 @@ if (viewState === 'analysis' && selectedMatch) {
                         </>
                     ) : null}
 
+                    {/* Icona Coach AI — Desktop (upcoming) */}
+                    {!isMobile && onOpenCoachAI && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const dateStr = match.match_date ? match.match_date.split('T')[0] : '';
+                          onOpenCoachAI(match.home_team, match.away_team, dateStr, cupId === 'UCL' ? 'Champions League' : 'Europa League');
+                        }}
+                        title="Approfondisci con Coach AI"
+                        style={{
+                          width: '32px', height: '32px', borderRadius: '50%',
+                          background: `${theme.primary}15`,
+                          border: `1px solid ${theme.primary}44`,
+                          color: theme.primary,
+                          cursor: 'pointer',
+                          fontSize: '16px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                          marginLeft: '8px',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        🤖
+                      </button>
+                    )}
+
                     {/* SEZIONE ESPANDIBILE (Solo Mobile) */}
                     {isMobile && isExpanded && (
                         <div style={{
@@ -1268,6 +1350,35 @@ if (viewState === 'analysis' && selectedMatch) {
                             ))}
                         </div>
 
+                        {/* BOTTONE COACH AI — Mobile espanso (upcoming) */}
+                        {onOpenCoachAI && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const dateStr = match.match_date ? match.match_date.split('T')[0] : '';
+                              onOpenCoachAI(match.home_team, match.away_team, dateStr, cupId === 'UCL' ? 'Champions League' : 'Europa League');
+                            }}
+                            style={{
+                              width: '100%',
+                              marginTop: '12px',
+                              padding: '10px',
+                              background: `${theme.primary}15`,
+                              border: `1px dashed ${theme.primary}66`,
+                              borderRadius: '10px',
+                              color: theme.primary,
+                              fontWeight: 600,
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            🤖 Approfondisci con Coach AI
+                          </button>
+                        )}
+
                         {/* BOTTONE SIMULA */}
                         <button
                             onClick={(e) => {
@@ -1278,7 +1389,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             disabled={false}
                             style={{
                                 width: '100%',
-                                marginTop: '15px',
+                                marginTop: '8px',
                                 padding: '14px',
                                 background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`,
                                 border: 'none',

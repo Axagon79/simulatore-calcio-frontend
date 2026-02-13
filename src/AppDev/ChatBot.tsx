@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import type { ChatMessage, SearchResult } from '../types';
 
@@ -24,6 +24,8 @@ interface ChatBotProps {
   };
   styles: Record<string, CSSProperties>;
   isMobile: boolean;
+  bubblePosition: { left: number; top: number };
+  setBubblePosition: (pos: { left: number; top: number }) => void;
 }
 
 export default function ChatBot({
@@ -39,9 +41,56 @@ export default function ChatBot({
   chatLoading,
   theme,
   styles,
-  isMobile
+  isMobile,
+  bubblePosition,
+  setBubblePosition
 }: ChatBotProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ── Drag logic per la bolla ──
+  const isDragging = useRef(false);
+  const hasMoved = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const bubbleStart = useRef({ left: 0, top: 0 });
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  const handleDragMove = useCallback((e: TouchEvent | MouseEvent) => {
+    const point = 'touches' in e ? e.touches[0] : e;
+    const dx = point.clientX - dragStart.current.x;
+    const dy = point.clientY - dragStart.current.y;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      hasMoved.current = true;
+      isDragging.current = true;
+      if ('touches' in e) e.preventDefault(); // blocca scroll durante drag
+      const newLeft = Math.max(0, Math.min(window.innerWidth - 60, bubbleStart.current.left + dx));
+      const newTop = Math.max(0, Math.min(window.innerHeight - 60, bubbleStart.current.top + dy));
+      setBubblePosition({ left: newLeft, top: newTop });
+    }
+  }, [setBubblePosition]);
+
+  const handleDragEnd = useCallback(() => {
+    if (!hasMoved.current) {
+      // Era un tap → toggle chat
+      setChatOpen(!chatOpen);
+    }
+    isDragging.current = false;
+    hasMoved.current = false;
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+  }, [chatOpen, setChatOpen, handleDragMove]);
+
+  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    const point = 'touches' in e ? e.touches[0] : e.nativeEvent;
+    dragStart.current = { x: point.clientX, y: point.clientY };
+    bubbleStart.current = { ...bubblePosition };
+    isDragging.current = false;
+    hasMoved.current = false;
+    // Solo per mouse: listener su document (il dito si muove fuori dall'elemento)
+    if (!('touches' in e)) {
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('mouseup', handleDragEnd);
+    }
+  }, [bubblePosition, handleDragMove, handleDragEnd]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,10 +119,11 @@ export default function ChatBot({
   const hasAnalysis = messages.some(m => m.sender === 'bot' && !m.isLoading && !m.isError && !m.searchResults && m.text.length > 100);
 
   return (
-    <div style={{ position: 'fixed', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', zIndex: 100 }}>
-
-      {/* Chat Window */}
+    <>
+      {/* ── Pannello Chat (fisso bottom-right) ── */}
       {chatOpen && (
+        <div style={{ position: 'fixed', bottom: isMobile ? '10px' : '90px', right: '20px', zIndex: 100,
+          ...(isMobile ? { left: '10px', right: '10px' } : {}) }}>
         <div style={{
           ...styles.chatWidget,
           ...(isMobile ? {
@@ -200,53 +250,51 @@ export default function ChatBot({
           {/* Quick Actions contestuali */}
           <div style={{ padding: '8px 10px', display: 'flex', gap: '5px', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             {chatMatchContext ? (
+              // Con partita: azioni contestuali
               <>
-                <button
-                  onClick={onAnalyzeMatch}
-                  disabled={chatLoading}
-                  style={{
+                {[
+                  { label: 'Analisi completa', action: onAnalyzeMatch, primary: true },
+                  ...(hasAnalysis ? [
+                    { label: 'Pronostico', action: () => { setChatInput('Qual \u00e8 il pronostico migliore?'); setTimeout(onSendMessage, 100); } },
+                    { label: 'Punti deboli', action: () => { setChatInput('Punti deboli?'); setTimeout(onSendMessage, 100); } },
+                    { label: 'Value bet?', action: () => { setChatInput('Value bet?'); setTimeout(onSendMessage, 100); } }
+                  ] : [])
+                ].map((qa) => (
+                  <button key={qa.label} onClick={qa.action} disabled={chatLoading} style={{
                     whiteSpace: 'nowrap',
-                    background: `linear-gradient(135deg, ${theme.cyan}22, ${theme.cyan}44)`,
-                    border: `1px solid ${theme.cyan}66`,
+                    background: qa.primary
+                      ? `linear-gradient(135deg, ${theme.cyan}22, ${theme.cyan}44)`
+                      : 'rgba(255,255,255,0.08)',
+                    border: qa.primary ? `1px solid ${theme.cyan}66` : 'none',
+                    color: qa.primary ? theme.cyan : theme.textDim,
+                    padding: qa.primary ? '6px 12px' : '5px 10px',
+                    borderRadius: '15px', fontSize: '11px',
+                    cursor: chatLoading ? 'not-allowed' : 'pointer',
+                    fontWeight: qa.primary ? 600 : 400,
+                    opacity: chatLoading ? 0.5 : 1
+                  }}>{qa.label}</button>
+                ))}
+              </>
+            ) : (
+              // Senza partita: azioni utili universali
+              <>
+                {[
+                  { label: 'Pronostici di oggi', msg: 'Che pronostici ci sono oggi?' },
+                  { label: 'Cosa gioco oggi?', msg: 'Cosa mi consigli di giocare oggi?' }
+                ].map(s => (
+                  <button key={s.label} onClick={() => {
+                    setChatInput(s.msg);
+                    setTimeout(onSendMessage, 100);
+                  }} disabled={chatLoading} style={{
+                    whiteSpace: 'nowrap',
+                    background: `linear-gradient(135deg, ${theme.cyan}15, ${theme.cyan}30)`,
+                    border: `1px solid ${theme.cyan}44`,
                     color: theme.cyan,
                     padding: '6px 12px', borderRadius: '15px', fontSize: '11px',
                     cursor: chatLoading ? 'not-allowed' : 'pointer',
                     fontWeight: 600,
                     opacity: chatLoading ? 0.5 : 1
-                  }}
-                >
-                  Analizza partita
-                </button>
-                {hasAnalysis && ['Punti deboli?', 'Value bet?', 'Rischio combo?'].map(qa => (
-                  <button key={qa} onClick={() => {
-                    setChatInput(qa);
-                    setTimeout(onSendMessage, 100);
-                  }} disabled={chatLoading} style={{
-                    whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.08)',
-                    border: 'none', color: theme.textDim,
-                    padding: '5px 10px', borderRadius: '15px', fontSize: '11px',
-                    cursor: chatLoading ? 'not-allowed' : 'pointer',
-                    opacity: chatLoading ? 0.5 : 1
-                  }}>{qa}</button>
-                ))}
-              </>
-            ) : (
-              // Senza partita: suggerimenti ricerca
-              <>
-                <span style={{ fontSize: '11px', color: theme.textDim, padding: '4px 0', width: '100%' }}>
-                  Cerca una partita:
-                </span>
-                {['Milan', 'Juventus', 'Inter', 'Real Madrid'].map(s => (
-                  <button key={s} onClick={() => {
-                    setChatInput(s);
-                    setTimeout(onSendMessage, 100);
-                  }} disabled={chatLoading} style={{
-                    whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.08)',
-                    border: 'none', color: theme.textDim,
-                    padding: '5px 10px', borderRadius: '15px', fontSize: '11px',
-                    cursor: chatLoading ? 'not-allowed' : 'pointer',
-                    opacity: chatLoading ? 0.5 : 1
-                  }}>{s}</button>
+                  }}>{s.label}</button>
                 ))}
               </>
             )}
@@ -278,20 +326,38 @@ export default function ChatBot({
             </button>
           </div>
         </div>
+        </div>
       )}
 
-      {/* Toggle Button (Galleggiante) */}
-      {!chatOpen && (
-        <button
-          onClick={() => setChatOpen(true)}
-          style={{
-            width: '60px', height: '60px', borderRadius: '50%', background: theme.cyan, border: 'none',
-            boxShadow: `0 0 20px ${theme.cyan}`, cursor: 'pointer', fontSize: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '10px'
-          }}
-        >
-          💬
-        </button>
-      )}
-    </div>
+      {/* ── Bolla Draggable (SEMPRE visibile) ── */}
+      <div
+        ref={bubbleRef}
+        onTouchStart={handleDragStart}
+        onTouchMove={(e) => handleDragMove(e.nativeEvent)}
+        onTouchEnd={() => handleDragEnd()}
+        onMouseDown={handleDragStart}
+        style={{
+          position: 'fixed',
+          left: `${bubblePosition.left}px`,
+          top: `${bubblePosition.top}px`,
+          zIndex: 101,
+          touchAction: 'none',
+          userSelect: 'none'
+        }}
+      >
+        <div style={{
+          width: '60px', height: '60px', borderRadius: '50%',
+          background: chatOpen ? `linear-gradient(135deg, ${theme.cyan}, ${theme.success})` : theme.cyan,
+          border: 'none',
+          boxShadow: `0 0 20px ${theme.cyan}`,
+          cursor: isDragging.current ? 'grabbing' : 'pointer',
+          fontSize: '28px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.3s ease'
+        }}>
+          {chatOpen ? '🤖' : '💬'}
+        </div>
+      </div>
+    </>
   );
 }

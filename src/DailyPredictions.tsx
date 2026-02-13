@@ -44,7 +44,7 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Jupiler Pro': 'Belgium', 'Jupiler Pro League': 'Belgium',
   'Süper Lig': 'Turkey', 'Super Lig': 'Turkey',
   'League of Ireland': 'Ireland', 'League of Ireland Premier Division': 'Ireland',
-  'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil',
+  'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil', 'Brasileirão Serie A': 'Brazil', 'Brasileirao Serie A': 'Brazil',
   'Primera División': 'Argentina',
   'MLS': 'USA',
   'J1 League': 'Japan',

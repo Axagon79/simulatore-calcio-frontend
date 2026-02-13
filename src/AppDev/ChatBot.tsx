@@ -122,7 +122,7 @@ export default function ChatBot({
     <>
       {/* ── Pannello Chat (fisso bottom-right) ── */}
       {chatOpen && (
-        <div style={{ position: 'fixed', bottom: isMobile ? '10px' : '90px', right: '20px', zIndex: 100,
+        <div style={{ position: 'fixed', bottom: isMobile ? '10px' : '90px', right: '20px', zIndex: 10000,
           ...(isMobile ? { left: '10px', right: '10px' } : {}) }}>
         <div style={{
           ...styles.chatWidget,
@@ -345,7 +345,7 @@ export default function ChatBot({
           position: 'fixed',
           left: `${bubblePosition.left}px`,
           top: `${bubblePosition.top}px`,
-          zIndex: 101,
+          zIndex: 10001,
           touchAction: 'none',
           userSelect: 'none'
         }}

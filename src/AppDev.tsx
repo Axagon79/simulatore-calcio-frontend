@@ -1718,11 +1718,30 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   // --- BLOCCO 0: PAGINA PRONOSTICI ---
   if (activeLeague === 'PREDICTIONS') {
     return (
-      <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px' }}>Caricamento pronostici...</div>}>
-        <DailyPredictions
-          onBack={() => setActiveLeague(null)}
+      <>
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px' }}>Caricamento pronostici...</div>}>
+          <DailyPredictions
+            onBack={() => setActiveLeague(null)}
+          />
+        </Suspense>
+        <ChatBot
+          chatOpen={chatOpen}
+          setChatOpen={handleSetChatOpen}
+          chatInput={chatInput}
+          setChatInput={setChatInput}
+          messages={messages}
+          onSendMessage={handleUserMessage}
+          onAnalyzeMatch={handleAnalyzeMatch}
+          onSelectSearchResult={handleSelectSearchResult}
+          chatMatchContext={chatMatchContext}
+          chatLoading={chatLoading}
+          theme={theme}
+          styles={styles}
+          isMobile={isMobile}
+          bubblePosition={bubblePosition}
+          setBubblePosition={setBubblePosition}
         />
-      </Suspense>
+      </>
     );
   }
 

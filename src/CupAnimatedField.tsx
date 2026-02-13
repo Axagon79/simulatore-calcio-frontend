@@ -684,45 +684,100 @@ export default function CupAnimatedField({
         overflowX: 'hidden'  // 👈 AGGIUNGI SOLO QUESTA RIGA
       }}>
   
-        {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
-        <div 
-          className="sim-badges-top"
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(10px)',
-            padding: '8px 14px',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+        {/* WRAPPER SCROLLABILE: Badge (sx) + Bottoni (dx) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          padding: '0',
+          marginBottom: isMobile ? '-15px' : '0',
+        }}>
+          {/* Badge Algo/Cicli a SINISTRA */}
+          <div
+            className="sim-badges-top"
+            style={{
+              position: 'relative',
+              top: 'auto',
+              left: 'auto',
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(10px)',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontSize: '11px',
+              color: '#888',
+            }}
+          >
+            <span style={{ color: '#00f0ff', fontWeight: '700' }}>
+              Algo {configAlgo}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+            <span style={{ color: '#bc13fe', fontWeight: '700' }}>
+              {customCycles} cicli
+            </span>
+          </div>
+
+          {/* Bottoni Formazioni + Riepilogo a DESTRA */}
+          <div className="sim-top-right-buttons" style={{
+            position: 'relative',
+            top: 'auto',
+            right: 'auto',
             display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            fontSize: '11px',
-            color: '#888',
-            zIndex: 50,
-          }}
-        >
-          <span style={{ color: '#00f0ff', fontWeight: '700' }}>
-            Algo {configAlgo}
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-          <span style={{ color: '#bc13fe', fontWeight: '700' }}>
-            {customCycles} cicli
-          </span>
+            gap: '10px',
+          }}>
+            {formations && (
+              <button
+                className="btn-formazioni"
+                onClick={() => {
+                  setShowFormationsPopup(true);
+                  setPopupOpacity(1);
+                }}
+                style={{
+                  background: 'rgba(0,0,0,0.7)',
+                  border: `1px solid ${theme.cyan}`,
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: theme.cyan,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                📋 Formazioni
+              </button>
+            )}
+            {simulationEnded && (
+              <button
+                className="btn-riepilogo"
+                onClick={() => setShowMatchSummary(true)}
+                style={{
+                  background: 'rgba(0,0,0,0.7)',
+                  border: `1px solid ${theme.purple}`,
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: theme.purple,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                📊 Riepilogo
+              </button>
+            )}
+          </div>
         </div>
-  
+
         {/* ✅ HEADER LIVE SCORE CON CRONOMETRO */}
         <div 
           className="sim-header"
           style={{
-            marginBottom: '25px',
             background: 'rgba(0, 0, 0, 0.95)',
-            marginTop: '-20px',
             backdropFilter: 'blur(20px)',
-            marginLeft: '300px',
             margin: '0 auto',
+            marginTop: isMobile ? '0px' : '-20px',
+            marginBottom: '25px',
             padding: '15px 20px',
             borderRadius: '16px',
             border: '2px solid rgba(0, 240, 255, 0.3)',
@@ -734,172 +789,184 @@ export default function CupAnimatedField({
             justifyContent: 'space-between'
           }}
         >
-          {/* A. DATA E ORA (Orizzontale in un contenitore/capsula) */}
-          <div style={{
-                width: isMobile ? '30px' : '130px',
-                flexShrink: 0, // Leggermente più largo per ospitare il testo in linea
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-              }}>
-                {/* Il Contenitore "Capsula" */}
+          {isMobile ? (
+            <>
+              {/* ========== MOBILE: 3 colonne ========== */}
+              {/* COLONNA 1: Data/Ora + Risultato (impilati) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, position: 'relative', left: '-5px' }}>
+                {/* Capsula Data/Ora */}
                 <div style={{
-                  display: 'flex',
-                  height: '30px',
-                  alignItems: 'center',
-                  gap: '2px',
-                  background: 'rgba(111, 149, 170, 0.13)', // Sfondo scuro semitrasparente
-                  padding: isMobile ? '4px 8px' : '5px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(0, 240, 255, 0.1)', // Bordino ciano sottile
+                  display: 'flex', height: '25px', alignItems: 'center', gap: '0px',
+                  background: 'rgba(111, 149, 170, 0.13)', padding: '2px 5px',
+                  borderRadius: '8px', border: '1px solid rgba(0, 240, 255, 0.1)'
                 }}>
-                  {/* DATA */}
-                  <span style={{
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontWeight: 'bold'
-                  }}>
-                    {selectedMatch?.match_date 
-                    ? selectedMatch.match_date.split(' ')[0].substring(0, 5).replace('-', '/') 
-                    : '00/00'}
+                  <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
+                    {selectedMatch?.match_date ? selectedMatch.match_date.split(' ')[0].substring(0, 5).replace('-', '/') : '00/00'}
                   </span>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '10px' }}>|</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
+                    {selectedMatch?.match_date ? selectedMatch.match_date.split(' ')[1] || '--:--' : '--:--'}
+                  </span>
+                </div>
+                {/* Risultato */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  padding: '4px 5px',
+                  background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
+                  borderRadius: '8px', border: '1px solid rgba(0, 240, 255, 0.3)'
+                }}>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: theme.cyan, fontFamily: 'monospace', textShadow: `0 0 10px ${theme.cyan}` }}>{liveScore.home}</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</span>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: theme.danger, fontFamily: 'monospace', textShadow: `0 0 10px ${theme.danger}` }}>{liveScore.away}</span>
+                </div>
+              </div>
 
-                  {/* Separatore verticale sottile */}
-                  <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+              {/* COLONNA 2: Cronometro (centrato verticalmente) */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', left: '0px' }}>
+                <div
+                  className={isVarActive ? 'sim-timer-pulsing' : ''}
+                  style={{
+                    background: isVarActive ? 'rgba(255, 46, 46, 0.2)' : 'rgba(0, 240, 255, 0.08)',
+                    border: `2px solid ${isVarActive ? 'rgba(255, 46, 46, 0.6)' : 'rgba(0, 240, 255, 0.35)'}`,
+                    borderRadius: '10px',
+                    padding: '16px 3px',
+                    fontSize: '23px', fontWeight: '900',
+                    color: isVarActive ? '#ff2e2e' : '#00f0ff',
+                    fontFamily: 'monospace', whiteSpace: 'nowrap',
+                    textShadow: isVarActive ? '0 0 15px #ff2e2e' : '0 0 12px rgba(0, 240, 255, 0.7)',
+                    boxShadow: isVarActive ? '0 0 15px rgba(255, 46, 46, 0.3)' : '0 0 15px rgba(0, 240, 255, 0.2)',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {timer}'
+                </div>
+              </div>
 
-                  {/* ORA */}
+              {/* COLONNA 3: Squadre (stemma + nome, impilate) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', minWidth: 0, position: 'absolute', right: '107px', left: '90px', top: '50%', transform: 'translateY(-50%)' }}>
+                {/* Casa */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                  {selectedMatch?.home_mongo_id && (
+                    <img src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)} alt=""
+                      style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  )}
                   <span style={{
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontWeight: 'bold'
-                  }}>
-                    {selectedMatch?.match_date 
-                    ? selectedMatch.match_date.split(' ')[1] || '--:--'
-                    : '--:--'}
+                    fontSize: '19px', fontWeight: '900', color: 'white', textTransform: 'uppercase',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                  }}>{homeTeam}</span>
+                </div>
+                {/* Ospite */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                  {selectedMatch?.away_mongo_id && (
+                    <img src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)} alt=""
+                      style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  )}
+                  <span style={{
+                    fontSize: '19px', fontWeight: '900', color: 'white', textTransform: 'uppercase',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                  }}>{awayTeam}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* ========== DESKTOP: Layout originale ========== */}
+              {/* A. DATA E ORA */}
+              <div style={{
+                width: '130px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-start'
+              }}>
+                <div style={{
+                  display: 'flex', height: '30px', alignItems: 'center', gap: '2px',
+                  background: 'rgba(111, 149, 170, 0.13)', padding: '5px 10px',
+                  borderRadius: '8px', border: '1px solid rgba(0, 240, 255, 0.1)'
+                }}>
+                  <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
+                    {selectedMatch?.match_date ? selectedMatch.match_date.split(' ')[0].substring(0, 5).replace('-', '/') : '00/00'}
+                  </span>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+                  <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 'bold' }}>
+                    {selectedMatch?.match_date ? selectedMatch.match_date.split(' ')[1] || '--:--' : '--:--'}
                   </span>
                 </div>
               </div>
-          {/* CRONOMETRO */}
-          <div style={{ width: '55px', textAlign: 'center' }}>
-            <div 
-              className={isVarActive ? 'sim-timer-pulsing' : ''} // <--- AGGIUNTO QUI
-              style={{
-                fontSize: isMobile ? '24px' : '24px',
-                fontWeight: '900',
-                color: isVarActive ? '#ff2e2e' : theme.purple, // Diventa rosso se VAR è attivo
-                fontFamily: 'monospace',
-                textShadow: isVarActive 
-                  ? `0 0 15px #ff2e2e` 
-                  : `0 0 10px ${theme.purple}`,
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {timer}'
-            </div>
-          </div>
-  
-          {/* SQUADRA CASA */}
-            <div style={{ width: '120px', textAlign: 'right' }}>
-              <div style={{
-                fontSize: '14px',
-                color: theme.cyan,
-                fontWeight: 'bold',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                opacity: 0.7,
-                marginBottom: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '8px'
-              }}>
-                {homeTeam}
-                {selectedMatch?.home_mongo_id && (
-                  <img 
-                    src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)}
-                    alt=""
-                    style={{ width: '24px', height: '24px', objectFit: 'contain' }}
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                )}
+
+              {/* CRONOMETRO */}
+              <div style={{ width: '55px', textAlign: 'center' }}>
+                <div
+                  className={isVarActive ? 'sim-timer-pulsing' : ''}
+                  style={{
+                    fontSize: '24px', fontWeight: '900',
+                    color: isVarActive ? '#ff2e2e' : theme.purple,
+                    fontFamily: 'monospace',
+                    textShadow: isVarActive ? '0 0 15px #ff2e2e' : `0 0 10px ${theme.purple}`,
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {timer}'
+                </div>
               </div>
-              <div style={{
-                fontSize: isMobile ? '14px' : '16px',
-                fontWeight: '900',
-                color: 'white',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>{selectedMatch?.home}</div>
-            </div>
-  
-          {/* PUNTEGGIO CENTRALE */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '0px 5px',
-            background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
-            borderRadius: '10px',
-            border: '1px solid rgba(0, 240, 255, 0.3)'
-          }}>
-            <div style={{
-              fontSize: isMobile ? '24px' : '30px',
-              fontWeight: '900',
-              color: theme.cyan,
-              fontFamily: 'monospace',
-              textShadow: `0 0 10px ${theme.cyan}`,
-              width: '30px',
-              textAlign: 'center'
-            }}>{liveScore.home}</div>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
-            <div style={{
-              fontSize: isMobile ? '24px' : '30px',
-              fontWeight: '900',
-              color: theme.danger,
-              fontFamily: 'monospace',
-              textShadow: `0 0 10px ${theme.danger}`,
-              width: '30px',
-              textAlign: 'center'
-            }}>{liveScore.away}</div>
-          </div>
-  
-          {/* SQUADRA OSPITE */}
-            <div style={{ width: '120px', textAlign: 'left' }}>
-              <div style={{
-                fontSize: '14px',
-                color: theme.danger,
-                fontWeight: 'bold',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                opacity: 0.7,
-                marginBottom: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                gap: '8px'
-              }}>
-                {selectedMatch?.away_mongo_id && (
-                  <img 
-                    src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)}
-                    alt=""
-                    style={{ width: '24px', height: '24px', objectFit: 'contain' }}
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                )}
-                {awayTeam}
+
+              {/* SQUADRA CASA */}
+              <div style={{ width: '120px', textAlign: 'right' }}>
+                <div style={{
+                  fontSize: '14px', color: theme.cyan, fontWeight: 'bold',
+                  textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '2px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px'
+                }}>
+                  {homeTeam}
+                  {selectedMatch?.home_mongo_id && (
+                    <img src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)} alt=""
+                      style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  )}
+                </div>
+                <div style={{
+                  fontSize: '16px', fontWeight: '900', color: 'white', textTransform: 'uppercase',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                }}>{selectedMatch?.home}</div>
               </div>
+
+              {/* PUNTEGGIO CENTRALE */}
               <div style={{
-                fontSize: isMobile ? '14px' : '16px',
-                fontWeight: '900',
-                color: 'white',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>{selectedMatch?.away}</div>
-            </div>
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '0px 5px',
+                background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(188, 19, 254, 0.1))',
+                borderRadius: '10px', border: '1px solid rgba(0, 240, 255, 0.3)'
+              }}>
+                <div style={{
+                  fontSize: '30px', fontWeight: '900', color: theme.cyan, fontFamily: 'monospace',
+                  textShadow: `0 0 10px ${theme.cyan}`, width: '30px', textAlign: 'center'
+                }}>{liveScore.home}</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.3)' }}>-</div>
+                <div style={{
+                  fontSize: '30px', fontWeight: '900', color: theme.danger, fontFamily: 'monospace',
+                  textShadow: `0 0 10px ${theme.danger}`, width: '30px', textAlign: 'center'
+                }}>{liveScore.away}</div>
+              </div>
+
+              {/* SQUADRA OSPITE */}
+              <div style={{ width: '120px', textAlign: 'left' }}>
+                <div style={{
+                  fontSize: '14px', color: theme.danger, fontWeight: 'bold',
+                  textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '2px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px'
+                }}>
+                  {selectedMatch?.away_mongo_id && (
+                    <img src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)} alt=""
+                      style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  )}
+                  {awayTeam}
+                </div>
+                <div style={{
+                  fontSize: '16px', fontWeight: '900', color: 'white', textTransform: 'uppercase',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                }}>{selectedMatch?.away}</div>
+              </div>
+            </>
+          )}
         </div>
 
   
@@ -1505,53 +1572,7 @@ export default function CupAnimatedField({
           </div>
         )}
   
-        {/* ✅ BOTTONI TOP RIGHT (FORMAZIONI + RIEPILOGO) */}
-        <div className="sim-top-right-buttons">
-          {/* BOTTONE FORMAZIONI */}
-          {formations && (
-            <button
-              className="btn-formazioni"  // 👈 AGGIUNGI QUESTA CLASSE
-              onClick={() => {
-                setShowFormationsPopup(true);
-                setPopupOpacity(1);
-              }}
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                border: `1px solid ${theme.cyan}`,
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: theme.cyan,
-                position: 'relative',
-                cursor: 'pointer',
-                fontSize: '12px',
-                zIndex: 50
-                // Togli position/marginTop qui, li gestiamo in CSS
-              }}
-            >
-              📋 Formazioni
-            </button>
-          )}
-
-          {/* BOTTONE RIEPILOGO PARTITA */}
-          {simulationEnded && (
-            <button
-              className="btn-riepilogo"  // 👈 AGGIUNGI QUESTA CLASSE
-              onClick={() => setShowMatchSummary(true)}
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                border: `1px solid ${theme.purple}`,
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: theme.purple,
-                cursor: 'pointer',
-                fontSize: '12px',
-                zIndex: 50
-              }}
-            >
-              📊 Riepilogo
-            </button>
-          )}
-        </div>
+        {/* Bottoni spostati nel wrapper scrollabile in cima */}
 
   
         <div style={{ 

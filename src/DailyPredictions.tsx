@@ -940,7 +940,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* POPOVER FLOTTANTE */}
           {isTipsOpen && (
             <div style={{
-              position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 1000,
+              position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
               background: '#1a1a24', border: '1px solid rgba(0,240,255,0.45)',
               borderRadius: '8px', padding: '8px 10px',
               boxShadow: '0 0 12px rgba(0,240,255,0.15), 0 6px 24px rgba(0,0,0,0.9)',
@@ -1534,7 +1534,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* POPOVER FLOTTANTE */}
           {isTipsOpen && (
             <div style={{
-              position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 1000,
+              position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
               background: '#1a1a24', border: '1px solid rgba(255,215,0,0.45)',
               borderRadius: '8px', padding: '8px 10px',
               boxShadow: '0 0 12px rgba(255,215,0,0.15), 0 6px 24px rgba(0,0,0,0.9)',

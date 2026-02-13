@@ -47,7 +47,10 @@ export default function BarraSuperiore({
 }: BarraSuperioreProps) {
 
   return (
-    <div style={styles.topBar}>
+    <div style={{
+      ...styles.topBar,
+      ...(isMobile ? { position: 'sticky' as const, top: 0, zIndex: 100 } : {}),
+    }}>
       {/* HAMBURGER MENU + TOGGLE (Mobile) */}
       {isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 20 }}>

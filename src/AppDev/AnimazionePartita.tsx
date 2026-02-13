@@ -92,33 +92,89 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
         overflowX: 'hidden'  // 👈 AGGIUNGI SOLO QUESTA RIGA
       }}>
 
-        {/* BADGE ALGO/CICLI - Discreto in alto a sinistra */}
-        <div
-          className="sim-badges-top"
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(10px)',
-            padding: '8px 14px',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+        {/* WRAPPER SCROLLABILE: Badge (sx) + Bottoni (dx) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          padding: '0',
+          marginBottom: isMobile ? '-15px' : '0',
+        }}>
+          {/* Badge Algo/Cicli a SINISTRA */}
+          <div
+            className="sim-badges-top"
+            style={{
+              position: 'relative',
+              top: 'auto',
+              left: 'auto',
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(10px)',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontSize: '11px',
+              color: '#888',
+            }}
+          >
+            <span style={{ color: '#00f0ff', fontWeight: '700' }}>
+              Algo {configAlgo}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+            <span style={{ color: '#bc13fe', fontWeight: '700' }}>
+              {customCycles} cicli
+            </span>
+          </div>
+
+          {/* Bottoni Formazioni + Riepilogo a DESTRA */}
+          <div className="sim-top-right-buttons" style={{
+            position: 'relative',
+            top: 'auto',
+            right: 'auto',
             display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            fontSize: '11px',
-            color: '#888',
-            zIndex: 50,
-          }}
-        >
-          <span style={{ color: '#00f0ff', fontWeight: '700' }}>
-            Algo {configAlgo}
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-          <span style={{ color: '#bc13fe', fontWeight: '700' }}>
-            {customCycles} cicli
-          </span>
+            gap: '10px',
+          }}>
+            {formations && (
+              <button
+                className="btn-formazioni"
+                onClick={() => {
+                  setShowFormationsPopup(true);
+                  setPopupOpacity(1);
+                }}
+                style={{
+                  background: 'rgba(0,0,0,0.7)',
+                  border: `1px solid ${theme.cyan}`,
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: theme.cyan,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                📋 Formazioni
+              </button>
+            )}
+            {simulationEnded && (
+              <button
+                className="btn-riepilogo"
+                onClick={() => setShowMatchSummary(true)}
+                style={{
+                  background: 'rgba(0,0,0,0.7)',
+                  border: `1px solid ${theme.purple}`,
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: theme.purple,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                📊 Riepilogo
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ✅ HEADER LIVE SCORE: MOBILE (Custom) vs DESKTOP (Originale Blindato) */}
@@ -152,10 +208,10 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
           {isMobile ? (
             <>
               {/* COLONNA SINISTRA: SQUADRE */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flex: 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flex: 1, minWidth: 0, maxWidth: 'calc(100% - 130px)' }}>
 
                 {/* RIGA 1: SQUADRA CASA */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
 
                    {/* 1. COLONNA STEMMA RIGIDA (40px fissi) */}
                    <div style={{
@@ -174,20 +230,20 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
                    </div>
 
                    {/* 2. COLONNA TESTO (Parte sempre dopo i 40px) */}
-                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
                       {/* Etichetta CASA */}
                       <span style={{ fontSize: '9px', marginBottom: '5px', color: theme.cyan, textTransform: 'uppercase', lineHeight: 1, fontWeight: 'bold', marginLeft: '2px' }}>
                         CASA
                       </span>
                       {/* Nome Squadra */}
-                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'block' }}>
                         {selectedMatch?.home}
                       </span>
                    </div>
                 </div>
 
                 {/* RIGA 2: SQUADRA OSPITE */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
 
                    {/* 1. COLONNA STEMMA RIGIDA (Identica a sopra) */}
                    <div style={{
@@ -206,13 +262,13 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
                    </div>
 
                    {/* 2. COLONNA TESTO */}
-                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
                       {/* Etichetta OSPITE */}
                       <span style={{ fontSize: '9px',marginBottom: '5px', color: theme.danger, textTransform: 'uppercase', lineHeight: 1, fontWeight: 'bold', marginLeft: '2px' }}>
                         OSPITE
                       </span>
                       {/* Nome Squadra */}
-                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                      <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', textTransform: 'uppercase', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'block' }}>
                         {selectedMatch?.away}
                       </span>
                    </div>
@@ -237,7 +293,7 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
                   style={{
                     fontSize: '25px', fontWeight: '900', color: isVarActive ? '#ff2e2e' : theme.purple,
                     fontFamily: 'monospace', textShadow: isVarActive ? `0 0 10px #ff2e2e` : 'none',
-                    minWidth: '35px', textAlign: 'center'
+                    minWidth: '55px', textAlign: 'center', whiteSpace: 'nowrap'
                   }}
                 >
                   {timer}'
@@ -938,53 +994,7 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
           </div>
         )}
 
-        {/* ✅ BOTTONI TOP RIGHT (FORMAZIONI + RIEPILOGO) */}
-        <div className="sim-top-right-buttons">
-          {/* BOTTONE FORMAZIONI */}
-          {formations && (
-            <button
-              className="btn-formazioni"  // 👈 AGGIUNGI QUESTA CLASSE
-              onClick={() => {
-                setShowFormationsPopup(true);
-                setPopupOpacity(1);
-              }}
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                border: `1px solid ${theme.cyan}`,
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: theme.cyan,
-                position: 'relative',
-                cursor: 'pointer',
-                fontSize: '12px',
-                zIndex: 50
-                // Togli position/marginTop qui, li gestiamo in CSS
-              }}
-            >
-              📋 Formazioni
-            </button>
-          )}
-
-          {/* BOTTONE RIEPILOGO PARTITA */}
-          {simulationEnded && (
-            <button
-              className="btn-riepilogo"  // 👈 AGGIUNGI QUESTA CLASSE
-              onClick={() => setShowMatchSummary(true)}
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                border: `1px solid ${theme.purple}`,
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: theme.purple,
-                cursor: 'pointer',
-                fontSize: '12px',
-                zIndex: 50
-              }}
-            >
-              📊 Riepilogo
-            </button>
-          )}
-        </div>
+        {/* Bottoni spostati nel wrapper scrollabile in cima */}
 
 
         <div style={{

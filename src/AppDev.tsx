@@ -1164,7 +1164,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       timestamp: new Date(), isLoading: true
     }]);
 
-    const newHistory: ChatHistoryEntry[] = [...chatHistory, { role: 'user', content: userText }].slice(-10);
+    const newHistory: ChatHistoryEntry[] = [...chatHistory, { role: 'user' as const, content: userText }].slice(-10);
 
     try {
       const resp = await fetch(`${API_BASE}/chat/message`, {

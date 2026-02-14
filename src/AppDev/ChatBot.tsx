@@ -53,6 +53,7 @@ export default function ChatBot({
   const dragStart = useRef({ x: 0, y: 0 });
   const bubbleStart = useRef({ left: 0, top: 0 });
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const lastTouchEnd = useRef(0); // Anti ghost-click mobile
 
   const handleDragMove = useCallback((e: TouchEvent | MouseEvent) => {
     const point = 'touches' in e ? e.touches[0] : e;
@@ -80,6 +81,8 @@ export default function ChatBot({
   }, [chatOpen, setChatOpen, handleDragMove]);
 
   const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    // Anti ghost-click: ignora mousedown emulato dopo touchend (bug mobile)
+    if (!('touches' in e) && Date.now() - lastTouchEnd.current < 500) return;
     const point = 'touches' in e ? e.touches[0] : e.nativeEvent;
     dragStart.current = { x: point.clientX, y: point.clientY };
     bubbleStart.current = { ...bubblePosition };
@@ -339,7 +342,7 @@ export default function ChatBot({
         ref={bubbleRef}
         onTouchStart={handleDragStart}
         onTouchMove={(e) => handleDragMove(e.nativeEvent)}
-        onTouchEnd={() => handleDragEnd()}
+        onTouchEnd={() => { lastTouchEnd.current = Date.now(); handleDragEnd(); }}
         onMouseDown={handleDragStart}
         style={{
           position: 'fixed',

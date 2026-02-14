@@ -326,8 +326,8 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
         return;
     }
 
-    // --- Livello 3: Analisi Partita ---
-    if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result') {
+    // --- Livello 3: Analisi Partita + Impostazioni ---
+    if (viewState === 'pre-match' || viewState === 'simulating' || viewState === 'result' || viewState === 'settings') {
         if (window.location.hash !== '#match') window.history.pushState(null, '', '#match');
     }
     // --- Livello 2: Card Espansa ---
@@ -338,6 +338,11 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     // --- Livello 1.5: Vista Oggi ---
     else if (viewMode === 'today') {
         if (window.location.hash !== '#today') window.history.pushState(null, '', '#today');
+    }
+
+    // --- Livello 1.5b: Pronostici del Giorno ---
+    else if (activeLeague === 'PREDICTIONS') {
+        if (window.location.hash !== '#predictions') window.history.pushState(null, '', '#predictions');
     }
 
     // --- Livello 1: Lista Partite (AGGIORNATO) ---
@@ -396,6 +401,17 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
           setSimResult(null);
           setSimulationEnded(false);
           setExpandedMatch(null);
+      }
+
+      // 2.6 Tornati ai Pronostici (#predictions)
+      else if (currentHash === '#predictions') {
+          // Se sono già sui pronostici, torno alla home
+          if (current.activeLeague === 'PREDICTIONS') {
+              setActiveLeague(null);
+              setMobileMenuOpen(false);
+              return;
+          }
+          setActiveLeague('PREDICTIONS');
       }
 
       // 3. Tornati alla LISTA (#list)
@@ -1032,6 +1048,34 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     }, intervalMs);
   };
 
+  // --- CONTESTO PAGINA PER COACH AI ---
+  const getCurrentPageContext = (): string => {
+    if (activeLeague === 'PREDICTIONS') return 'Pronostici del Giorno';
+    if (activeLeague === 'TRACK_RECORD') return 'Track Record';
+    if (activeLeague === 'PREDICTIONS_MIXER') return 'Predictions Mixer (Sandbox)';
+
+    const leagueName = selectedCup
+      ? (selectedCup === 'UCL' ? 'Champions League' : 'Europa League')
+      : (leagues.find(l => l.id === league)?.name || league || 'nessun campionato');
+
+    if (viewState === 'pre-match' && selectedMatch) {
+      return `Pre-partita ${selectedMatch.home} vs ${selectedMatch.away} (${leagueName})`;
+    }
+    if (viewState === 'simulating') {
+      return `Simulazione in corso (${leagueName})`;
+    }
+    if (viewState === 'result') {
+      return `Risultato simulazione (${leagueName})`;
+    }
+    if (viewMode === 'today') {
+      return 'Partite di Oggi (vista cross-league)';
+    }
+    if (league || selectedCup) {
+      return `Lista partite ${leagueName}`;
+    }
+    return 'Dashboard principale';
+  };
+
   // --- CHAT LOGIC (Coach AI con Mistral) ---
   const addBotMessage = (text: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text, timestamp: new Date() }]);
@@ -1049,7 +1093,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     }]);
 
     try {
-      const url = `${API_BASE}/chat/context?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`;
+      const pageCtx = encodeURIComponent(getCurrentPageContext());
+      const url = `${API_BASE}/chat/context?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}&pageContext=${pageCtx}&isAdmin=${isAdmin}`;
       const resp = await fetch(url);
       const data = await resp.json();
 
@@ -1139,7 +1184,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             const chatResp = await fetch(`${API_BASE}/chat/message`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: userText, history: [] })
+              body: JSON.stringify({ message: userText, history: [], pageContext: getCurrentPageContext(), isAdmin })
             });
             const chatData = await chatResp.json();
             setMessages(prev => {
@@ -1189,7 +1234,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           away: chatMatchContext.away,
           date: chatMatchContext.date,
           message: userText,
-          history: newHistory
+          history: newHistory,
+          pageContext: getCurrentPageContext(),
+          isAdmin
         })
       });
       const data = await resp.json();
@@ -1269,7 +1316,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     setChatLoading(true);
 
     try {
-      const url = `${API_BASE}/chat/context?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`;
+      const pageCtx2 = encodeURIComponent(getCurrentPageContext());
+      const url = `${API_BASE}/chat/context?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}&pageContext=${pageCtx2}&isAdmin=${isAdmin}`;
       const resp = await fetch(url);
       const data = await resp.json();
 

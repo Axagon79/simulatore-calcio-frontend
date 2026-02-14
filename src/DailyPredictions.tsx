@@ -904,28 +904,41 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   // --- CONTEGGI FILTRI ---
   const filterCounts = useMemo(() => {
     const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-    const countItem = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null; pronostici?: Array<{ hit?: boolean | null }>; hit?: boolean | null }, isBomb: boolean) => {
+    const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 'xf' | 're' | 'bomb') => {
       counts.tutte++;
       const s = getMatchStatus(item);
       if (s === 'live') counts.live++;
       else if (s === 'to_play') counts.da_giocare++;
-      else counts.finite++;
-      if (isBomb) {
-        if (item.hit === true) counts.centrate++;
-        if (item.hit === false) counts.mancate++;
-      } else {
-        item.pronostici?.forEach(p => {
-          if (p.hit === true) counts.centrate++;
-          if (p.hit === false) counts.mancate++;
-        });
+      else {
+        counts.finite++;
+        if (mode === 'bomb') {
+          if (item.hit === true) counts.centrate++;
+          else if (item.hit === false) counts.mancate++;
+        } else if (mode === 'xf') {
+          if (item.real_score) {
+            if (item.real_sign === 'X') counts.centrate++;
+            else counts.mancate++;
+          }
+        } else if (mode === 're') {
+          if (item.real_score) {
+            const hit = (item.exact_score_top3 || []).some(t => t.score === item.real_score);
+            if (hit) counts.centrate++;
+            else counts.mancate++;
+          }
+        } else {
+          item.pronostici?.forEach(p => {
+            if (p.hit === true) counts.centrate++;
+            if (p.hit === false) counts.mancate++;
+          });
+        }
       }
     };
     if (activeTab === 'pronostici') {
-      normalPredictions.forEach(p => countItem(p, false));
+      normalPredictions.forEach(p => countItem(p, 'normal'));
     } else {
-      xFactorPredictions.forEach(p => countItem(p, false));
-      exactScorePredictions.forEach(p => countItem(p, false));
-      bombs.forEach(b => countItem(b as any, true));
+      xFactorPredictions.forEach(p => countItem(p, 'xf'));
+      exactScorePredictions.forEach(p => countItem(p, 're'));
+      bombs.forEach(b => countItem(b as any, 'bomb'));
     }
     return counts;
   }, [predictions, bombs, activeTab]);
@@ -2815,18 +2828,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           ))}
           {/* Badge HR% — non cliccabile */}
           {(() => {
-            let hr: number | null = null;
-            if (activeTab === 'pronostici') {
-              hr = predStats.hit_rate;
-            } else {
-              const esAll = exactScorePredictions.filter(p => !!p.real_score);
-              const esHits = esAll.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
-              const xfAll = xFactorPredictions.filter(p => !!p.real_score);
-              const xfHits = xfAll.filter(p => p.real_sign === 'X').length;
-              const totalFinished = esAll.length + xfAll.length + bombStats.finished;
-              const totalHits = esHits + xfHits + bombStats.hits;
-              hr = totalFinished > 0 ? Math.round((totalHits / totalFinished) * 1000) / 10 : null;
-            }
+            const verified = filterCounts.centrate + filterCounts.mancate;
+            const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
             if (hr === null) return null;
             const hrThreshold = activeTab === 'high_risk' ? 25 : 50;
             const hrColor = getHRColor(hr, hrThreshold);

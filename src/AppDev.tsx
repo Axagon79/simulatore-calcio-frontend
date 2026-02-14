@@ -509,7 +509,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
     // Prima chiamata immediata
     pollLiveScores();
-    const interval = setInterval(pollLiveScores, 60000);
+    const interval = setInterval(pollLiveScores, 15000);
     return () => clearInterval(interval);
   }, [viewMode, todayData !== null]);
 

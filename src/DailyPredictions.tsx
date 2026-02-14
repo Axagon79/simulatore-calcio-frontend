@@ -401,7 +401,7 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
     };
 
     pollLive();
-    const interval = setInterval(pollLive, 60000);
+    const interval = setInterval(pollLive, 15000);
     return () => clearInterval(interval);
   }, [date]);
 

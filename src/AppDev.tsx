@@ -1656,7 +1656,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           const matchDate = match.date_obj ? match.date_obj.split('T')[0] : '';
           const [hh, mm] = (match.match_time || '').split(':').map(Number);
           const kickoff = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
-          const isLive = match.live_status === 'Live' || match.live_status === 'HT' || (matchDate === todayStr && kickoff >= 0 && nowMin >= kickoff && nowMin <= kickoff + 120 && match.status !== 'Finished');
+          const isLive = ((match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished') || (matchDate === todayStr && kickoff >= 0 && nowMin >= kickoff && nowMin <= kickoff + 120 && match.status !== 'Finished');
 
           return (
             <ElementoPartita

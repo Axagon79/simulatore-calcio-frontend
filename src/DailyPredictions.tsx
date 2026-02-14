@@ -1013,14 +1013,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466' }}>
                 {pred.real_score.replace(':', ' - ')}
               </span>
-            ) : pred.live_status === 'Live' || pred.live_status === 'HT' ? (
+            ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
                   {pred.live_score || '– : –'}
                 </span>
-                <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
-                  {pred.live_status === 'Live' ? `${pred.live_minute || ''}'` : 'INT'}
-                </span>
+                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
+                </span>}
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -1617,14 +1617,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.hit ? '#00ff88' : '#ff4466' }}>
                 {bomb.real_score.replace(':', ' - ')}
               </span>
-            ) : bomb.live_status === 'Live' || bomb.live_status === 'HT' ? (
+            ) : getMatchStatus(bomb) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: bomb.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: bomb.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
                   {bomb.live_score || '– : –'}
                 </span>
-                <span style={{ fontSize: '8px', fontWeight: 900, color: bomb.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
-                  {bomb.live_status === 'Live' ? `${bomb.live_minute || ''}'` : 'INT'}
-                </span>
+                {(!isMobile || bomb.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: bomb.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                  {bomb.live_status === 'HT' ? 'INT' : `${bomb.live_minute || ''}'`}
+                </span>}
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -1855,14 +1855,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? '#00ff88' : '#ff4466' }}>
                 {pred.real_score.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
               </span>
-            ) : pred.live_status === 'Live' || pred.live_status === 'HT' ? (
+            ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
                   {pred.live_score || '– : –'}
                 </span>
-                <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
-                  {pred.live_status === 'Live' ? `${pred.live_minute || ''}'` : 'INT'}
-                </span>
+                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
+                </span>}
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -1990,14 +1990,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <span style={{ fontSize: '13px', fontWeight: '900', color: isHitXF ? '#00ff88' : '#ff4466' }}>
                 {pred.real_score.replace(':', ' - ')} {isHitXF ? '✅' : '❌'}
               </span>
-            ) : pred.live_status === 'Live' || pred.live_status === 'HT' ? (
+            ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
                   {pred.live_score || '– : –'}
                 </span>
-                <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
-                  {pred.live_status === 'Live' ? `${pred.live_minute || ''}'` : 'INT'}
-                </span>
+                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
+                </span>}
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -3052,9 +3052,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     {filteredExactScore.length}
                   </span>
+                  {esLive > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {esLive} LIVE</span>}
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
                     {esFinished > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {esFinished} {esFinished === 1 ? 'finita' : 'finite'}</span>{sep}</>}
-                    {esLive > 0 && <><span style={{ color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {esLive} LIVE</span>{sep}</>}
                     {esToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {esToPlay} da giocare</span>{sep}</>}
                     {esWithScore.length > 0 && <>
                       <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {esHits}</span>{sep}
@@ -3091,8 +3091,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: 'rgba(255,152,0,0.1)', padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
                         {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                        {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
-                        {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                                                {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                         {sep}
                         <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
                         {sep}
@@ -3122,7 +3121,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                 >{leagueName}</span>
                                 {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
-                              {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
+                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                           </div>
@@ -3171,9 +3171,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     {filteredXFactor.length}
                   </span>
+                  {xfLive > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {xfLive} LIVE</span>}
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
                     {xfFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {xfFinishedN} {xfFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
-                    {xfLive > 0 && <><span style={{ color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {xfLive} LIVE</span>{sep}</>}
                     {xfToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {xfToPlay} da giocare</span>{sep}</>}
                     {xfWithScore.length > 0 && <>
                       <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {xfHits}</span>{sep}
@@ -3210,8 +3210,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: `${theme.purple}15`, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
                         {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                        {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
-                        {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                                                {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                         {sep}
                         <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
                         {sep}
@@ -3241,7 +3240,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                 >{leagueName}</span>
                                 {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
-                              {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
+                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                           </div>
@@ -3290,9 +3290,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     {filteredBombs.length}
                   </span>
+                  {bmLive > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {bmLive} LIVE</span>}
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
                     {bmFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {bmFinishedN} {bmFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
-                    {bmLive > 0 && <><span style={{ color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {bmLive} LIVE</span>{sep}</>}
                     {bmToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {bmToPlay} da giocare</span>{sep}</>}
                     {bmWithScore.length > 0 && <>
                       <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {bmHits}</span>{sep}
@@ -3334,8 +3334,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                         <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {lBombs.length}</span>
                         {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                        {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
-                        {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                                                {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                         {sep}
                         <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits}{!isMobile && ` ${hits === 1 ? 'centrato' : 'centrati'}`}</span>
                         {sep}
@@ -3365,7 +3364,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                 >{leagueName}</span>
                                 {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
-                              {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
+                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                           </div>
@@ -3426,8 +3426,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                       <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
                       {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                      {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
-                      {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                                            {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                       {sep}
                       <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits}{!isMobile && ` ${hits === 1 ? 'centrato' : 'centrati'}`}</span>
                       {sep}
@@ -3458,6 +3457,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             >{leagueName}</span>
                             {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                           </div>
+                          {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
                           {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>

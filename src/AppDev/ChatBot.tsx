@@ -24,7 +24,7 @@ interface ChatBotProps {
   };
   styles: Record<string, CSSProperties>;
   isMobile: boolean;
-  bubblePosition: { left: number; top: number };
+  bubblePosition: { left: number; bottom: number };
   setBubblePosition: (pos: { left: number; top: number }) => void;
 }
 
@@ -51,7 +51,7 @@ export default function ChatBot({
   const isDragging = useRef(false);
   const hasMoved = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
-  const bubbleStart = useRef({ left: 0, top: 0 });
+  const bubbleStart = useRef({ left: 0, bottom: 0 });
   const bubbleRef = useRef<HTMLDivElement>(null);
   const lastTouchEnd = useRef(0); // Anti ghost-click mobile
 
@@ -64,8 +64,8 @@ export default function ChatBot({
       isDragging.current = true;
       if ('touches' in e) e.preventDefault(); // blocca scroll durante drag
       const newLeft = Math.max(0, Math.min(window.innerWidth - 60, bubbleStart.current.left + dx));
-      const newTop = Math.max(0, Math.min(window.innerHeight - 60, bubbleStart.current.top + dy));
-      setBubblePosition({ left: newLeft, top: newTop });
+      const newBottom = Math.max(0, Math.min(window.innerHeight - 60, bubbleStart.current.bottom - dy));
+      setBubblePosition({ left: newLeft, bottom: newBottom });
     }
   }, [setBubblePosition]);
 
@@ -347,7 +347,7 @@ export default function ChatBot({
         style={{
           position: 'fixed',
           left: `${bubblePosition.left}px`,
-          top: `${bubblePosition.top}px`,
+          bottom: `${bubblePosition.bottom}px`,
           zIndex: 10001,
           touchAction: 'none',
           userSelect: 'none'

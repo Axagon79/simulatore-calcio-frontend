@@ -191,7 +191,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   } | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistoryEntry[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
-  const [bubblePosition, setBubblePosition] = useState({ left: window.innerWidth - 80, top: window.innerHeight - 80 });
+  const [bubblePosition, setBubblePosition] = useState({ left: window.innerWidth - 80, bottom: 20 });
 
   // Wrapper setChatOpen: chiusura = reset totale (bolla riapre chat pulita)
   const handleSetChatOpen = (open: boolean) => {

@@ -1418,7 +1418,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         if (todayTimeFilter === 'tutti') return true;
         if (todayTimeFilter === 'live') {
           // Dato reale dal daemon (priorità) oppure fallback calcolo orario
-          if (m.live_status === 'Live' || m.live_status === 'HT') return true;
+          if ((m.live_status === 'Live' || m.live_status === 'HT') && m.status !== 'Finished') return true;
           const [hh, mm] = (m.match_time || '').split(':').map(Number);
           const kickoff = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
           return kickoff >= 0 && nowMinutes >= kickoff && nowMinutes <= kickoff + 120 && m.status !== 'Finished';
@@ -1569,7 +1569,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 const [hh, mm] = (match.match_time || '').split(':').map(Number);
                 const kickoffMinutes = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
                 // Dato reale dal daemon (priorità) oppure fallback calcolo orario
-                const isLive = match.live_status === 'Live' || match.live_status === 'HT' || (
+                const isLive = ((match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished') || (
                   kickoffMinutes >= 0
                   && nowMinutes >= kickoffMinutes
                   && nowMinutes <= kickoffMinutes + 120

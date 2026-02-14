@@ -278,21 +278,21 @@ export default function ElementoPartita({
           }}>
             <span style={{
               fontSize: '11px',
-              color: match.live_status === 'Live' ? '#ef4444' : match.live_status === 'HT' ? '#f59e0b' : '#fff',
+              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : '#fff',
               fontWeight: 'bold',
               fontFamily: 'monospace',
-              animation: match.live_status === 'Live' ? 'pulse 1.5s infinite' : undefined
+              animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
             }}>
-              {match.live_status === 'Live' || match.live_status === 'HT'
+              {(match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
                 ? (match.live_score || '-:-')
                 : (match.status === 'Finished' && match.real_score ? match.real_score : '-:-')}
             </span>
-            {match.live_status === 'Live' && match.live_minute && (
+            {match.live_status === 'Live' && match.status !== 'Finished' && match.live_minute && (
               <span style={{ fontSize: '8px', color: '#ef4444', fontWeight: 900, marginLeft: '3px' }}>
                 {match.live_minute}'
               </span>
             )}
-            {match.live_status === 'HT' && (
+            {match.live_status === 'HT' && match.status !== 'Finished' && (
               <span style={{ fontSize: '7px', color: '#f59e0b', fontWeight: 900, marginLeft: '3px' }}>
                 INT
               </span>
@@ -361,24 +361,24 @@ export default function ElementoPartita({
 
             {/* VS / SCORE */}
             <div style={{
-              background: match.live_status === 'Live' ? 'rgba(239, 68, 68, 0.15)' : match.live_status === 'HT' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0, 240, 255, 0.1)',
-              border: match.live_status === 'Live' ? '1px solid rgba(239, 68, 68, 0.5)' : match.live_status === 'HT' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(0, 240, 255, 0.3)',
+              background: match.live_status === 'Live' && match.status !== 'Finished' ? 'rgba(239, 68, 68, 0.15)' : match.live_status === 'HT' && match.status !== 'Finished' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0, 240, 255, 0.1)',
+              border: match.live_status === 'Live' && match.status !== 'Finished' ? '1px solid rgba(239, 68, 68, 0.5)' : match.live_status === 'HT' && match.status !== 'Finished' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(0, 240, 255, 0.3)',
               fontSize: '15px', fontWeight: 'bold',
-              color: match.live_status === 'Live' ? '#ef4444' : match.live_status === 'HT' ? '#f59e0b' : '#fff',
+              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : '#fff',
               borderRadius: '8px',
               minWidth: '50px', textAlign: 'center', margin: '0 15px', fontFamily: 'monospace',
               display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2px 8px',
-              animation: match.live_status === 'Live' ? 'pulse 1.5s infinite' : undefined
+              animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
             }}>
-              <span>{match.live_status === 'Live' || match.live_status === 'HT'
+              <span>{(match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
                 ? (match.live_score || 'VS')
                 : (match.status === 'Finished' && match.real_score ? match.real_score : 'VS')}</span>
-              {match.live_status === 'Live' && match.live_minute && (
+              {match.live_status === 'Live' && match.status !== 'Finished' && match.live_minute && (
                 <span style={{ fontSize: '9px', color: '#ef4444', fontWeight: 900, lineHeight: 1 }}>
                   {match.live_minute}'
                 </span>
               )}
-              {match.live_status === 'HT' && (
+              {match.live_status === 'HT' && match.status !== 'Finished' && (
                 <span style={{ fontSize: '8px', color: '#f59e0b', fontWeight: 900, lineHeight: 1 }}>
                   INT
                 </span>
@@ -651,26 +651,26 @@ export default function ElementoPartita({
           {/* VS */}
           <div style={{
             textAlign: 'center',
-            background: match.live_status === 'Live' ? 'rgba(239, 68, 68, 0.15)' : match.live_status === 'HT' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0, 240, 255, 0.1)',
-            border: match.live_status === 'Live' ? '1px solid rgba(239, 68, 68, 0.5)' : match.live_status === 'HT' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(0, 240, 255, 0.3)',
+            background: match.live_status === 'Live' && match.status !== 'Finished' ? 'rgba(239, 68, 68, 0.15)' : match.live_status === 'HT' && match.status !== 'Finished' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0, 240, 255, 0.1)',
+            border: match.live_status === 'Live' && match.status !== 'Finished' ? '1px solid rgba(239, 68, 68, 0.5)' : match.live_status === 'HT' && match.status !== 'Finished' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(0, 240, 255, 0.3)',
             padding: '6px',
             borderRadius: '8px',
             fontSize: '14px',
             fontWeight: 'bold',
-            color: match.live_status === 'Live' ? '#ef4444' : match.live_status === 'HT' ? '#f59e0b' : '#fff',
+            color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : '#fff',
             margin: '10px 0',
             fontFamily: 'monospace',
-            animation: match.live_status === 'Live' ? 'pulse 1.5s infinite' : undefined
+            animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
           }}>
-            {match.live_status === 'Live' || match.live_status === 'HT'
+            {(match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
               ? (match.live_score || 'VS')
               : (match.status === 'Finished' && match.real_score ? match.real_score : 'VS')}
-            {match.live_status === 'Live' && match.live_minute && (
+            {match.live_status === 'Live' && match.status !== 'Finished' && match.live_minute && (
               <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 900, marginLeft: '8px' }}>
                 {match.live_minute}'
               </span>
             )}
-            {match.live_status === 'HT' && (
+            {match.live_status === 'HT' && match.status !== 'Finished' && (
               <span style={{ fontSize: '9px', color: '#f59e0b', fontWeight: 900, marginLeft: '8px' }}>
                 INT
               </span>

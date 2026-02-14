@@ -3091,7 +3091,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: 'rgba(255,152,0,0.1)', padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
                         {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                        {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                        {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
                         {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                         {sep}
                         <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
@@ -3120,6 +3120,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? '#ff9800' : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                                 >{leagueName}</span>
+                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
                               {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
                             </div>
@@ -3209,7 +3210,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: `${theme.purple}15`, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
                         {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                        {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                        {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
                         {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                         {sep}
                         <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
@@ -3238,6 +3239,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.purple : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                                 >{leagueName}</span>
+                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
                               {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
                             </div>
@@ -3332,12 +3334,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                         <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {lBombs.length}</span>
                         {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                        {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                        {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
                         {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                         {sep}
-                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits} {hits === 1 ? 'centrato' : 'centrati'}</span>
+                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits}{!isMobile && ` ${hits === 1 ? 'centrato' : 'centrati'}`}</span>
                         {sep}
-                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses} {misses === 1 ? 'mancato' : 'mancati'}</span>
+                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                         {verifiedB > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColorB, fontWeight: '800', background: hrBgB, padding: '1px 8px', borderRadius: '10px' }}>{hitRateB}%</span></>}
                       </>
                     );
@@ -3361,6 +3363,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                                 >{leagueName}</span>
+                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
                               {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                             </div>
@@ -3423,12 +3426,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
                       <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
                       {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                      {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                      {!isMobile && live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
                       {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
                       {sep}
-                      <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits} {hits === 1 ? 'centrato' : 'centrati'}</span>
+                      <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits}{!isMobile && ` ${hits === 1 ? 'centrato' : 'centrati'}`}</span>
                       {sep}
-                      <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses} {misses === 1 ? 'mancato' : 'mancati'}</span>
+                      <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
                     </>
                   );
@@ -3453,6 +3456,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                               style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                             >{leagueName}</span>
+                            {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                           </div>
                           {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>

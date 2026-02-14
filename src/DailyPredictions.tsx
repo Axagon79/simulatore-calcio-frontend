@@ -267,7 +267,6 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'pronostici' | 'high_risk'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [predStats, setPredStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -351,7 +350,6 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
 
           if (predData.success) {
             setPredictions(predData.predictions || []);
-            if (predData.stats) setPredStats(predData.stats);
           } else {
             setPredictions([]);
           }

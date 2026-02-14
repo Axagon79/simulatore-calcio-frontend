@@ -87,6 +87,8 @@ const MARKET_LABELS: Record<string, string> = {
   'DOPPIA_CHANCE': 'Doppia Chance',
   'OVER_UNDER': 'Over/Under',
   'GG_NG': 'Goal/NoGoal',
+  'X_FACTOR': 'X Factor',
+  'RISULTATO_ESATTO': 'Risultato Esatto',
 };
 
 export default function TrackRecord({ onBack }: TrackRecordProps) {

@@ -25,7 +25,7 @@ interface ChatBotProps {
   styles: Record<string, CSSProperties>;
   isMobile: boolean;
   bubblePosition: { left: number; bottom: number };
-  setBubblePosition: (pos: { left: number; top: number }) => void;
+  setBubblePosition: (pos: { left: number; bottom: number }) => void;
 }
 
 export default function ChatBot({

@@ -2186,16 +2186,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}> Pronostici del Giorno</span>
             </h1>
           )}
-          {!isMobile && (
-            activeTab === 'high_risk' ? (
-              <p style={{
-                color: '#ffb74d', fontSize: '13px', fontWeight: '600', margin: 0,
+          {activeTab === 'high_risk' ? (
+            <p style={{
+              color: '#ffb74d', fontSize: isMobile ? '12px' : '14px', fontWeight: '600', margin: 0, marginTop: '8px',
+              ...(isMobile ? {} : {
                 background: 'rgba(255,152,0,0.06)', border: '1px solid rgba(255,152,0,0.15)',
-                borderRadius: '20px', padding: '5px 16px', display: 'inline-block'
-              }}>
-                <span style={{ fontSize: '16px', filter: 'saturate(3) brightness(1.3)' }}>⚠️</span> Mercati a volatilità alta — analisi AI su segmenti ad alto rendimento
-              </p>
-            ) : (
+                borderRadius: '20px', padding: '5px 16px'
+              }),
+              display: 'inline-block'
+            }}>
+              <span style={{ fontSize: isMobile ? '13px' : '16px', filter: 'saturate(3) brightness(1.3)' }}>⚠️</span> <span style={{ textDecoration: 'underline', textDecorationColor: 'rgba(230,81,0,0.6)', textUnderlineOffset: '3px' }}>{isMobile ? 'Volatilità alta' : 'Mercati a volatilità alta'}</span> — <span style={{ textDecoration: 'underline', textDecorationColor: 'rgba(230,81,0,0.6)', textUnderlineOffset: '3px' }}>{isMobile ? 'analisi AI su segmenti ad alto rischio' : 'analisi AI su segmenti ad alto rendimento'}</span>
+            </p>
+          ) : (
+            !isMobile && (
               <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
                 Analisi automatica basata su AI multi-indicatore
               </p>
@@ -2281,7 +2284,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* NAVIGAZIONE DATA */}
         <div style={{
           display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '10px' : '15px',
-          marginTop: isMobile ? '15px' : undefined,
+          marginTop: isMobile ? (activeTab === 'high_risk' ? '5px' : '15px') : undefined,
           marginBottom: isMobile ? '10px' : '25px'
         }}>
           <button

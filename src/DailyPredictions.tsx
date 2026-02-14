@@ -158,6 +158,15 @@ interface Prediction {
   live_score?: string | null;
   live_status?: string | null;
   live_minute?: number | null;
+  // X Factor
+  is_x_factor?: boolean;
+  x_factor_signals?: string[];
+  x_factor_n_signals?: number;
+  x_factor_raw_score?: number;
+  // Risultato Esatto
+  is_exact_score?: boolean;
+  exact_score_top3?: Array<{ score: string; prob: number }>;
+  exact_score_gap?: number;
 }
 
 interface Bomb {
@@ -256,11 +265,13 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'all' | 'predictions' | 'bombs'>('all');
+  const [activeTab, setActiveTab] = useState<'pronostici' | 'high_risk'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [predStats, setPredStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const toggleSection2 = (id: string) => setCollapsedSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const isAdmin = checkAdmin();
   const [mode, setMode] = useState<'prod' | 'sandbox' | 'confronto'>('prod');
   const [statusFilters, setStatusFilters] = useState<Record<'prod' | 'sandbox', StatusFilter>>({ prod: 'tutte', sandbox: 'tutte' });
@@ -276,7 +287,7 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
   useEffect(() => {
     setExpandedSections(new Set());
     setCollapsedLeagues(new Set());
-    setActiveTab('all');
+    setActiveTab('pronostici');
     setConfrontoFilter('tutte');
   }, [mode]);
 
@@ -682,6 +693,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     });
   };
 
+  // --- HR% COLOR SCALE (5 livelli) ---
+  const getHRColor = (hr: number, threshold: number): string => {
+    if (hr < threshold * 0.5) return '#ff4466';      // rosso
+    if (hr < threshold * 0.8) return '#ff9800';      // arancione
+    if (hr < threshold) return '#cddc39';             // giallo-verdino
+    if (hr < threshold * 1.4) return '#69f0ae';      // verde chiaro
+    return '#00c853';                                  // verde scuro
+  };
+
   // --- HELPERS STATUS FILTRO ---
   const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null }): 'finished' | 'live' | 'to_play' => {
     if (item.real_score != null) return 'finished';
@@ -856,8 +876,24 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     });
   }, [compareMatches, confrontoFilter]);
 
+  // --- PARTIZIONAMENTO: Normali vs High Risk ---
+  const normalPredictions = useMemo(() => predictions.filter(p => !p.is_x_factor && !p.is_exact_score), [predictions]);
+  const xFactorPredictions = useMemo(() => predictions.filter(p => p.is_x_factor), [predictions]);
+  const exactScorePredictions = useMemo(() => predictions.filter(p => p.is_exact_score), [predictions]);
+
+  // Auto-collapse sezioni High Risk se >=5 elementi
+  useEffect(() => {
+    const collapsed = new Set<string>();
+    if (exactScorePredictions.length >= 5) collapsed.add('sec_exact_score');
+    if (xFactorPredictions.length >= 5) collapsed.add('sec_x_factor');
+    if (bombs.length >= 5) collapsed.add('sec_bombs');
+    setCollapsedSections(collapsed);
+  }, [exactScorePredictions.length, xFactorPredictions.length, bombs.length]);
+
   // --- DATI FILTRATI ---
-  const filteredPredictions = statusFilter === 'tutte' ? predictions : predictions.filter(p => predMatchesFilter(p, statusFilter));
+  const filteredPredictions = statusFilter === 'tutte' ? normalPredictions : normalPredictions.filter(p => predMatchesFilter(p, statusFilter));
+  const filteredXFactor = statusFilter === 'tutte' ? xFactorPredictions : xFactorPredictions.filter(p => predMatchesFilter(p, statusFilter));
+  const filteredExactScore = statusFilter === 'tutte' ? exactScorePredictions : exactScorePredictions.filter(p => predMatchesFilter(p, statusFilter));
   const filteredBombs = statusFilter === 'tutte' ? bombs : bombs.filter(b => bombMatchesFilter(b, statusFilter));
   const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
@@ -868,31 +904,28 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   // --- CONTEGGI FILTRI ---
   const filterCounts = useMemo(() => {
     const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-    const includePreds = activeTab === 'all' || activeTab === 'predictions';
-    const includeBombs = activeTab === 'all' || activeTab === 'bombs';
-    if (includePreds) {
-      predictions.forEach(pred => {
-        counts.tutte++;
-        const s = getMatchStatus(pred);
-        if (s === 'live') counts.live++;
-        else if (s === 'to_play') counts.da_giocare++;
-        else counts.finite++;
-        pred.pronostici?.forEach(p => {
+    const countItem = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null; pronostici?: Array<{ hit?: boolean | null }>; hit?: boolean | null }, isBomb: boolean) => {
+      counts.tutte++;
+      const s = getMatchStatus(item);
+      if (s === 'live') counts.live++;
+      else if (s === 'to_play') counts.da_giocare++;
+      else counts.finite++;
+      if (isBomb) {
+        if (item.hit === true) counts.centrate++;
+        if (item.hit === false) counts.mancate++;
+      } else {
+        item.pronostici?.forEach(p => {
           if (p.hit === true) counts.centrate++;
           if (p.hit === false) counts.mancate++;
         });
-      });
-    }
-    if (includeBombs) {
-      bombs.forEach(bomb => {
-        counts.tutte++;
-        const s = getMatchStatus(bomb);
-        if (s === 'live') counts.live++;
-        else if (s === 'to_play') counts.da_giocare++;
-        else counts.finite++;
-        if (bomb.hit === true) counts.centrate++;
-        if (bomb.hit === false) counts.mancate++;
-      });
+      }
+    };
+    if (activeTab === 'pronostici') {
+      normalPredictions.forEach(p => countItem(p, false));
+    } else {
+      xFactorPredictions.forEach(p => countItem(p, false));
+      exactScorePredictions.forEach(p => countItem(p, false));
+      bombs.forEach(b => countItem(b as any, true));
     }
     return counts;
   }, [predictions, bombs, activeTab]);
@@ -1748,6 +1781,265 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     );
   };
 
+  // --- RENDER CARD RISULTATO ESATTO ---
+  const renderExactScoreCard = (pred: Prediction) => {
+    const cardKey = `es-${pred.home}-${pred.away}`;
+    const isCardExpanded = expandedCards.has(cardKey);
+    const top3 = pred.exact_score_top3 || [];
+    const maxProb = top3.length > 0 ? top3[0].prob : 1;
+    const conf = pred.confidence_segno || 0;
+
+    // Hit/Miss: controlla se il risultato reale è uno dei top-3
+    const realScore = pred.real_score;
+    const isHitExact = realScore ? top3.some(t => t.score === realScore) : null;
+    const barColor = realScore ? (isHitExact ? '#00ff88' : '#ff4466') : '#ff9800';
+
+    return (
+      <div
+        key={cardKey}
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,152,0,0.06), rgba(255,87,34,0.04))',
+          border: '1px solid rgba(255,152,0,0.25)',
+          borderRadius: '10px',
+          padding: isMobile ? '6px 10px' : '8px 14px',
+          marginBottom: '4px',
+          position: 'relative'
+        }}
+      >
+        {/* BARRA LATERALE arancione */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
+          background: barColor, borderRadius: '3px 0 0 3px'
+        }} />
+
+        {/* RIGA COMPATTA */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
+          onClick={() => setExpandedCards(prev => {
+            const next = new Set(prev);
+            next.has(cardKey) ? next.delete(cardKey) : next.add(cardKey);
+            return next;
+          })}
+        >
+          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
+
+          {/* Squadre */}
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+            <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
+            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
+            <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          </div>
+
+          {/* Badge RE */}
+          <span style={{
+            background: 'rgba(255,152,0,0.15)', border: '1px solid rgba(255,152,0,0.4)',
+            borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: '800', color: '#ff9800', flexShrink: 0
+          }}>RE</span>
+
+          {/* Risultato + Freccia */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            {pred.real_score ? (
+              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? '#00ff88' : '#ff4466' }}>
+                {pred.real_score.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
+              </span>
+            ) : pred.live_status === 'Live' || pred.live_status === 'HT' ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score || '– : –'}
+                </span>
+                <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
+                  {pred.live_status === 'Live' ? `${pred.live_minute || ''}'` : 'INT'}
+                </span>
+              </span>
+            ) : (
+              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
+            )}
+            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          </div>
+        </div>
+
+        {/* DETTAGLIO ESPANSO */}
+        {isCardExpanded && (
+          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,152,0,0.15)', paddingTop: '10px', paddingLeft: '8px', animation: 'fadeIn 0.3s ease' }}>
+            {/* Top 3 con barre */}
+            <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top 3 Risultati</div>
+            {top3.map((t, i) => {
+              const medals = ['🥇', '🥈', '🥉'];
+              const isThisHit = realScore === t.score;
+              const barWidth = maxProb > 0 ? (t.prob / maxProb) * 100 : 0;
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '14px', width: '22px', textAlign: 'center' }}>{medals[i] || ''}</span>
+                  <span style={{
+                    fontSize: '13px', fontWeight: '900', color: isThisHit ? '#00ff88' : '#fff',
+                    width: '36px', textAlign: 'center',
+                    background: isThisHit ? 'rgba(0,255,136,0.15)' : 'transparent',
+                    borderRadius: '4px', padding: '1px 0'
+                  }}>{t.score}</span>
+                  {/* Barra */}
+                  <div style={{ flex: 1, height: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                    <div style={{
+                      width: `${barWidth}%`, height: '100%',
+                      background: isThisHit
+                        ? 'linear-gradient(90deg, rgba(0,255,136,0.4), rgba(0,255,136,0.6))'
+                        : `linear-gradient(90deg, rgba(255,152,0,0.3), rgba(255,87,34,0.5))`,
+                      borderRadius: '4px', transition: 'width 0.5s ease'
+                    }} />
+                    <span style={{
+                      position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+                      fontSize: '10px', fontWeight: '800', color: isThisHit ? '#00ff88' : '#ff9800'
+                    }}>{t.prob.toFixed(1)}%</span>
+                  </div>
+                  {isThisHit && <span style={{ fontSize: '12px' }}>✅</span>}
+                </div>
+              );
+            })}
+            {/* Confidence + gap */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px', paddingTop: '6px', borderTop: '1px solid rgba(255,152,0,0.1)' }}>
+              <span style={{ fontSize: '10px', color: theme.textDim }}>
+                Confidence: <span style={{ fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
+              </span>
+              {pred.exact_score_gap != null && (
+                <span style={{ fontSize: '10px', color: theme.textDim }}>
+                  Gap: <span style={{ fontWeight: '700', color: '#ff9800' }}>{pred.exact_score_gap.toFixed(1)}%</span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- RENDER CARD X FACTOR ---
+  const renderXFactorCard = (pred: Prediction) => {
+    const cardKey = `xf-${pred.home}-${pred.away}`;
+    const isCardExpanded = expandedCards.has(cardKey);
+    const conf = pred.confidence_segno || 0;
+    const quotaX = pred.odds?.['X'];
+
+    // Hit/Miss: real_sign === 'X'
+    const isHitXF = pred.real_score ? pred.real_sign === 'X' : null;
+    const barColor = pred.real_score ? (isHitXF ? '#00ff88' : '#ff4466') : theme.purple;
+
+    return (
+      <div
+        key={cardKey}
+        style={{
+          background: 'linear-gradient(135deg, rgba(188,19,254,0.06), rgba(123,31,162,0.04))',
+          border: '1px solid rgba(188,19,254,0.25)',
+          borderRadius: '10px',
+          padding: isMobile ? '6px 10px' : '8px 14px',
+          marginBottom: '4px',
+          position: 'relative'
+        }}
+      >
+        {/* BARRA LATERALE viola */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
+          background: barColor, borderRadius: '3px 0 0 3px'
+        }} />
+
+        {/* RIGA COMPATTA */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
+          onClick={() => setExpandedCards(prev => {
+            const next = new Set(prev);
+            next.has(cardKey) ? next.delete(cardKey) : next.add(cardKey);
+            return next;
+          })}
+        >
+          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
+
+          {/* Squadre */}
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+            <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
+            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
+            <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          </div>
+
+          {/* Badge X */}
+          <span style={{
+            background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.4)',
+            borderRadius: '4px', padding: '2px 8px', fontSize: '10px', fontWeight: '900', color: theme.purple, flexShrink: 0
+          }}>X</span>
+
+          {/* Quota X (se disponibile) */}
+          {quotaX != null && (
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1', flexShrink: 0 }}>@{Number(quotaX).toFixed(2)}</span>
+          )}
+
+          {/* Risultato + Freccia */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            {pred.real_score ? (
+              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitXF ? '#00ff88' : '#ff4466' }}>
+                {pred.real_score.replace(':', ' - ')} {isHitXF ? '✅' : '❌'}
+              </span>
+            ) : pred.live_status === 'Live' || pred.live_status === 'HT' ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score || '– : –'}
+                </span>
+                <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
+                  {pred.live_status === 'Live' ? `${pred.live_minute || ''}'` : 'INT'}
+                </span>
+              </span>
+            ) : (
+              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
+            )}
+            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          </div>
+        </div>
+
+        {/* DETTAGLIO ESPANSO */}
+        {isCardExpanded && (
+          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(188,19,254,0.15)', paddingTop: '10px', paddingLeft: '8px', animation: 'fadeIn 0.3s ease' }}>
+            {/* Confidence + segnali */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '10px', color: theme.textDim }}>
+                Confidence: <span style={{ fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
+              </span>
+              {quotaX != null && (
+                <span style={{ fontSize: '10px', color: theme.textDim }}>
+                  Quota X: <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quotaX).toFixed(2)}</span>
+                </span>
+              )}
+              {pred.x_factor_n_signals != null && (
+                <span style={{ fontSize: '10px', color: theme.textDim }}>
+                  Segnali: <span style={{ fontWeight: '700', color: theme.purple }}>{pred.x_factor_n_signals}</span>
+                </span>
+              )}
+            </div>
+            {/* Lista segnali attivi */}
+            {pred.x_factor_signals && pred.x_factor_signals.length > 0 && (
+              <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {pred.x_factor_signals.map((sig, i) => (
+                  <span key={i} style={{
+                    background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.2)',
+                    borderRadius: '4px', padding: '2px 8px', fontSize: '9px', color: '#ce93d8', fontWeight: '600'
+                  }}>{sig}</span>
+                ))}
+              </div>
+            )}
+            {/* Quote 1X2 */}
+            <div style={{
+              display: 'flex', gap: '10px', marginTop: '8px', paddingTop: '6px',
+              borderTop: '1px solid rgba(188,19,254,0.1)', fontSize: '11px', color: theme.textDim
+            }}>
+              <span>1: <span style={{ color: theme.text }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
+              <span>X: <span style={{ color: theme.purple, fontWeight: '700' }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
+              <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // --- RENDER PRINCIPALE ---
   return (
     <div style={{
@@ -1895,9 +2187,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </h1>
           )}
           {!isMobile && (
-            <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
-              Analisi automatica basata su AI multi-indicatore
-            </p>
+            activeTab === 'high_risk' ? (
+              <p style={{
+                color: '#ffb74d', fontSize: '13px', fontWeight: '600', margin: 0,
+                background: 'rgba(255,152,0,0.06)', border: '1px solid rgba(255,152,0,0.15)',
+                borderRadius: '20px', padding: '5px 16px', display: 'inline-block'
+              }}>
+                <span style={{ fontSize: '16px', filter: 'saturate(3) brightness(1.3)' }}>⚠️</span> Mercati a volatilità alta — analisi AI su segmenti ad alto rendimento
+              </p>
+            ) : (
+              <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
+                Analisi automatica basata su AI multi-indicatore
+              </p>
+            )
           )}
 
           {/* Toggle PROD/SANDBOX/CONFRONTO + Mixer — solo Admin */}
@@ -2443,50 +2745,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* ==================== VISTA NORMALE (PROD/SANDBOX) ==================== */}
         {mode !== 'confronto' && (<>
-        {/* CONTATORI RIEPILOGO */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{
-            background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
-            padding: '12px 20px', textAlign: 'center', minWidth: '120px'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.cyan }}>{filteredPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}</div>
-            <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Pronostici</div>
-          </div>
-          <div style={{
-            background: 'rgba(255,215,0,0.05)', border: `1px solid ${theme.gold}30`, borderRadius: '10px',
-            padding: '12px 20px', textAlign: 'center', minWidth: '120px'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.gold }}>{filteredBombs.length}</div>
-            <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Bombe 💣</div>
-          </div>
-          <div style={{
-            background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
-            padding: '12px 20px', textAlign: 'center', minWidth: '120px'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: theme.purple }}>{Object.keys(filteredGroupedByLeague).length}</div>
-            <div style={{ fontSize: '10px', color: theme.textDim, textTransform: 'uppercase', fontWeight: 'bold' }}>Leghe</div>
-          </div>
-        </div>
-
-        {/* TAB SWITCHER */}
+        {/* TAB SWITCHER: Pronostici | High Risk */}
         <div style={{
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
         }}>
           {[
-            { id: 'all' as const, label: 'Tutto', icon: '📋' },
-            { id: 'predictions' as const, label: 'Pronostici', icon: '🔮' },
-            { id: 'bombs' as const, label: 'Bombe', icon: '💣' }
+            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🔮', color: theme.cyan },
+            { id: 'high_risk' as const, label: `High Risk (${xFactorPredictions.length + exactScorePredictions.length + bombs.length})`, icon: '⚡', color: '#ff9800' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                background: activeTab === tab.id ? `${theme.cyan}20` : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${activeTab === tab.id ? theme.cyan : 'rgba(255,255,255,0.08)'}`,
-                color: activeTab === tab.id ? theme.cyan : theme.textDim,
+                background: activeTab === tab.id ? `${tab.color}20` : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${activeTab === tab.id ? tab.color : 'rgba(255,255,255,0.08)'}`,
+                color: activeTab === tab.id ? tab.color : theme.textDim,
                 padding: '8px 18px',
                 borderRadius: '8px',
                 cursor: 'pointer',
@@ -2500,9 +2773,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           ))}
         </div>
 
-        {/* STATUS FILTERS — Due sezioni: Partite + Pronostici */}
-        {(() => {
-          const renderFilterBtn = (f: { id: StatusFilter; label: string; icon: string; color: string }) => (
+        {/* STATUS FILTERS — riga unica */}
+        <div style={{
+          display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '20px',
+          flexWrap: 'wrap' as const
+        }}>
+          {([
+            { id: 'tutte' as StatusFilter, label: 'Tutte', icon: '📋', color: theme.purple },
+            { id: 'live' as StatusFilter, label: 'LIVE', icon: '🔴', color: theme.danger },
+            { id: 'da_giocare' as StatusFilter, label: 'Da giocare', icon: '⏳', color: theme.textDim },
+            { id: 'finite' as StatusFilter, label: 'Finite', icon: '✅', color: theme.success },
+            { id: 'centrate' as StatusFilter, label: 'Centrate', icon: '✓', color: '#00ff88' },
+            { id: 'mancate' as StatusFilter, label: 'Mancate', icon: '✗', color: '#ff4466' },
+          ]).map(f => (
             <button
               key={f.id}
               onClick={() => setStatusFilter(f.id)}
@@ -2526,38 +2809,145 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </span>
               )}
             </button>
-          );
-          const capsuleStyle: React.CSSProperties = {
-            fontSize: '8px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px',
-            color: theme.textDim, background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
-            padding: '3px 10px', marginBottom: '8px', textAlign: 'center'
-          };
-          const boxStyle: React.CSSProperties = {
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '12px', padding: '10px 14px'
+          ))}
+          {/* Badge HR% — non cliccabile */}
+          {(() => {
+            let hr: number | null = null;
+            if (activeTab === 'pronostici') {
+              hr = predStats.hit_rate;
+            } else {
+              const esAll = exactScorePredictions.filter(p => !!p.real_score);
+              const esHits = esAll.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
+              const xfAll = xFactorPredictions.filter(p => !!p.real_score);
+              const xfHits = xfAll.filter(p => p.real_sign === 'X').length;
+              const totalFinished = esAll.length + xfAll.length + bombStats.finished;
+              const totalHits = esHits + xfHits + bombStats.hits;
+              hr = totalFinished > 0 ? Math.round((totalHits / totalFinished) * 1000) / 10 : null;
+            }
+            if (hr === null) return null;
+            const hrThreshold = activeTab === 'high_risk' ? 25 : 50;
+            const hrColor = getHRColor(hr, hrThreshold);
+            return (
+              <div style={{
+                background: `${hrColor}15`,
+                border: `1px solid ${hrColor}40`,
+                padding: '5px 14px', borderRadius: '16px',
+                display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: '12px', fontWeight: '900', color: hrColor,
+                marginLeft: '4px'
+              }}>
+                HR% <span style={{ fontSize: '13px' }}>{hr}%</span>
+              </div>
+            );
+          })()}
+        </div>
+        {/* 3 capsule HR% per sezione — solo High Risk */}
+        {activeTab === 'high_risk' && (() => {
+          const esAll = exactScorePredictions.filter(p => !!p.real_score);
+          const esHits = esAll.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
+          const esHR = esAll.length > 0 ? Math.round((esHits / esAll.length) * 1000) / 10 : null;
+          const xfAll = xFactorPredictions.filter(p => !!p.real_score);
+          const xfHits = xfAll.filter(p => p.real_sign === 'X').length;
+          const xfHR = xfAll.length > 0 ? Math.round((xfHits / xfAll.length) * 1000) / 10 : null;
+          const bHR = bombStats.hit_rate;
+          if (esAll.length === 0 && xfAll.length === 0 && bombStats.finished === 0) return null;
+          const pill = (label: string, hr: number | null, color: string, finished: number, threshold: number) => {
+            if (finished === 0) return null;
+            const c = hr !== null ? getHRColor(hr, threshold) : '#ff4466';
+            return (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: `${color}10`, border: `1px solid ${color}30`,
+                borderRadius: '12px', padding: '4px 12px'
+              }}>
+                <span style={{ fontSize: '10px', color, fontWeight: '700' }}>{label}</span>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: c }}>{hr ?? '—'}%</span>
+              </div>
+            );
           };
           return (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' as const, alignItems: 'stretch' }}>
-              {/* Box Partite */}
-              <div style={boxStyle}>
-                <span style={capsuleStyle}>Partite</span>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
-                  {renderFilterBtn({ id: 'tutte', label: 'Tutte', icon: '📋', color: theme.purple })}
-                  {renderFilterBtn({ id: 'live', label: 'LIVE', icon: '🔴', color: theme.danger })}
-                  {renderFilterBtn({ id: 'da_giocare', label: 'Da giocare', icon: '⏳', color: theme.textDim })}
-                  {renderFilterBtn({ id: 'finite', label: 'Finite', icon: '✅', color: theme.success })}
-                </div>
-              </div>
-              {/* Box Pronostici */}
-              <div style={boxStyle}>
-                <span style={capsuleStyle}>Pronostici</span>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
-                  {renderFilterBtn({ id: 'centrate', label: 'Centrati', icon: '✓', color: '#00ff88' })}
-                  {renderFilterBtn({ id: 'mancate', label: 'Mancati', icon: '✗', color: '#ff4466' })}
-                </div>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+              {pill('RE', esHR, '#ff9800', esAll.length, 18)}
+              {pill('XF', xfHR, '#bc13fe', xfAll.length, 32)}
+              {pill('Bombe', bHR, '#ffd700', bombStats.finished, 30)}
+            </div>
+          );
+        })()}
+        {/* Capsule HR% per tipo — solo Pronostici (soglie dinamiche da quote + mercato) */}
+        {activeTab === 'pronostici' && (() => {
+          // Margini per sotto-mercato (dal documento soglie_minime_mercati_betting.md)
+          const MARGINS: Record<string, number> = {
+            '1': 7, 'X': 3, '2': 6,
+            'over_1.5': 4, 'under_1.5': 4, 'over_2.5': 3, 'under_2.5': 3,
+            'over_3.5': 5, 'under_3.5': 3, 'goal': 5, 'nogoal': 4, 'dc': 4
+          };
+          // Fallback senza quota (midpoint Hit Rate Minimo dal documento)
+          const FALLBACKS: Record<string, number> = {
+            '1': 67.5, 'X': 32.5, '2': 40,
+            'over_1.5': 77.5, 'under_1.5': 35, 'over_2.5': 55, 'under_2.5': 56,
+            'over_3.5': 40, 'under_3.5': 74, 'goal': 58.5, 'nogoal': 54, 'dc': 75
+          };
+          const getSubMarket = (t: any): string => {
+            if (t.tipo === 'SEGNO') return t.pronostico;
+            if (t.tipo === 'DOPPIA_CHANCE') return 'dc';
+            const p = (t.pronostico || '').toLowerCase();
+            const m = p.match(/^(over|under)\s+(\d+\.5)$/);
+            if (m) return `${m[1]}_${m[2]}`;
+            if (p === 'goal') return 'goal';
+            if (p === 'nogoal') return 'nogoal';
+            return '';
+          };
+          const getTipThreshold = (t: any): number => {
+            const sm = getSubMarket(t);
+            const q = t._quota;
+            if (q && q > 1) return (100 / q) + (MARGINS[sm] || 4);
+            return FALLBACKS[sm] || 55;
+          };
+          // FlatMap con quota inclusa
+          const allTips = normalPredictions.flatMap(p =>
+            (p.pronostici || []).map(t => ({
+              ...t,
+              _quota: t.quota
+                || (t.tipo === 'SEGNO' && p.odds ? (p.odds as any)[t.pronostico] : null)
+                || (t.tipo === 'GOL' && p.odds ? getGolQuota(t.pronostico, p.odds) : null)
+                || null
+            }))
+          );
+          // Calcolo per gruppo capsula
+          const capsuleData = (label: string, filter: (t: any) => boolean, color: string) => {
+            const tips = allTips.filter(filter);
+            const verified = tips.filter(t => t.hit === true || t.hit === false);
+            const hits = tips.filter(t => t.hit === true).length;
+            const hr = verified.length > 0 ? Math.round((hits / verified.length) * 1000) / 10 : null;
+            const thresholds = verified.map(t => getTipThreshold(t));
+            const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
+            return { label, color, finished: verified.length, hr, threshold: avgTh };
+          };
+          const capsules = [
+            capsuleData('Segno', t => t.tipo === 'SEGNO', theme.cyan),
+            capsuleData('O/U 1.5', t => t.tipo === 'GOL' && /^(over|under)\s+1\.5$/i.test(t.pronostico), '#4fc3f7'),
+            capsuleData('O/U 2.5', t => t.tipo === 'GOL' && /^(over|under)\s+2\.5$/i.test(t.pronostico), '#29b6f6'),
+            capsuleData('O/U 3.5', t => t.tipo === 'GOL' && /^(over|under)\s+3\.5$/i.test(t.pronostico), '#0288d1'),
+            capsuleData('GG/NG', t => t.tipo === 'GOL' && /^(goal|nogoal)$/i.test(t.pronostico), theme.success),
+            capsuleData('DC', t => t.tipo === 'DOPPIA_CHANCE', '#ab47bc'),
+          ];
+          if (!capsules.some(c => c.finished > 0)) return null;
+          return (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+              {capsules.map(c => {
+                if (c.finished === 0) return null;
+                const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : '#ff4466';
+                return (
+                  <div key={c.label} style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: `${c.color}10`, border: `1px solid ${c.color}30`,
+                    borderRadius: '12px', padding: '4px 12px'
+                  }}>
+                    <span style={{ fontSize: '10px', color: c.color, fontWeight: '700' }}>{c.label}</span>
+                    <span style={{ fontSize: '12px', fontWeight: '900', color: clr }}>{c.hr ?? '—'}%</span>
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
@@ -2599,7 +2989,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN RISULTATO PER FILTRO */}
-        {mode !== 'confronto' && !loading && !error && statusFilter !== 'tutte' && filteredPredictions.length === 0 && filteredBombs.length === 0 && (predictions.length > 0 || bombs.length > 0) && (
+        {mode !== 'confronto' && !loading && !error && statusFilter !== 'tutte' && (
+          activeTab === 'pronostici'
+            ? filteredPredictions.length === 0 && normalPredictions.length > 0
+            : filteredExactScore.length === 0 && filteredXFactor.length === 0 && filteredBombs.length === 0 && (exactScorePredictions.length > 0 || xFactorPredictions.length > 0 || bombs.length > 0)
+        ) && (
           <div style={{
             textAlign: 'center', padding: '40px 0', color: theme.textDim, fontSize: '13px'
           }}>
@@ -2622,80 +3016,267 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* CONTENUTO PRINCIPALE */}
         {mode !== 'confronto' && !loading && !error && (
           <>
-            {/* BARRA STATISTICHE RISULTATI */}
-            {(predStats.finished > 0 || bombStats.finished > 0) && (
-              <div style={{
-                display: 'flex', gap: '10px', marginBottom: '20px',
-                flexWrap: 'wrap', animation: 'fadeIn 0.4s ease'
-              }}>
-                {/* Stats Pronostici */}
-                {predStats.finished > 0 && (activeTab === 'all' || activeTab === 'predictions') && (
-                  <div style={{
-                    flex: 1, minWidth: '200px',
-                    background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,255,136,0.02))',
-                    border: '1px solid rgba(0,255,136,0.2)', borderRadius: '12px',
-                    padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                  }}>
-                    <div style={{ fontSize: '12px', color: theme.textDim }}>
-                      🔮 Pronostici
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '13px', color: '#00ff88', fontWeight: '700' }}>
-                        ✅ {predStats.hits}
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#ff4466', fontWeight: '700' }}>
-                        ❌ {predStats.misses}
-                      </span>
-                      <span style={{
-                        fontSize: '14px', fontWeight: '900',
-                        color: (predStats.hit_rate || 0) >= 50 ? '#00ff88' : '#ff4466',
-                        background: (predStats.hit_rate || 0) >= 50 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
-                        padding: '2px 8px', borderRadius: '6px'
-                      }}>
-                        {predStats.hit_rate ?? '—'}%
-                      </span>
-                    </div>
-                  </div>
-                )}
+            {/* ==================== HIGH RISK: RE + XF + Bombe ==================== */}
 
-                {/* Stats Bombe */}
-                {bombStats.finished > 0 && (activeTab === 'all' || activeTab === 'bombs') && (
-                  <div style={{
-                    flex: 1, minWidth: '200px',
-                    background: 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))',
-                    border: '1px solid rgba(255,215,0,0.2)', borderRadius: '12px',
-                    padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                  }}>
-                    <div style={{ fontSize: '12px', color: theme.textDim }}>
-                      💣 Bombe
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '13px', color: '#00ff88', fontWeight: '700' }}>
-                        ✅ {bombStats.hits}
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#ff4466', fontWeight: '700' }}>
-                        ❌ {bombStats.misses}
-                      </span>
-                      <span style={{
-                        fontSize: '14px', fontWeight: '900',
-                        color: (bombStats.hit_rate || 0) >= 30 ? '#00ff88' : '#ff4466',
-                        background: (bombStats.hit_rate || 0) >= 30 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
-                        padding: '2px 8px', borderRadius: '6px'
-                      }}>
-                        {bombStats.hit_rate ?? '—'}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {/* SEZIONE BOMBE (in alto se presenti) */}
-            {(activeTab === 'all' || activeTab === 'bombs') && filteredBombs.length > 0 && (
+            {/* SEZIONE RISULTATO ESATTO */}
+            {activeTab === 'high_risk' && filteredExactScore.length > 0 && (() => {
+              const esFinished = filteredExactScore.filter(p => getMatchStatus(p) === 'finished').length;
+              const esLive = filteredExactScore.filter(p => getMatchStatus(p) === 'live').length;
+              const esToPlay = filteredExactScore.length - esFinished - esLive;
+              const esWithScore = filteredExactScore.filter(p => !!p.real_score);
+              const esHits = esWithScore.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
+              const esMisses = esWithScore.length - esHits;
+              const esHR = esWithScore.length > 0 ? Math.round((esHits / esWithScore.length) * 1000) / 10 : null;
+              const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+              return (
               <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
-                <h2 style={{
-                  fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: theme.gold,
-                  margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
+                <h2
+                  onClick={() => toggleSection2('sec_exact_score')}
+                  style={{
+                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: '#ff9800',
+                    margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
+                    cursor: 'pointer', userSelect: 'none' as const,
+                    background: 'rgba(255,152,0,0.06)', border: '1px solid rgba(255,152,0,0.18)',
+                    borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap' as const
+                  }}
+                >
+                  <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_exact_score') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                  🎯 Risultato Esatto
+                  <span style={{
+                    fontSize: '11px', background: 'rgba(255,152,0,0.15)', color: '#ff9800',
+                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
+                  }}>
+                    {filteredExactScore.length}
+                  </span>
+                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
+                    {esFinished > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {esFinished} {esFinished === 1 ? 'finita' : 'finite'}</span>{sep}</>}
+                    {esLive > 0 && <><span style={{ color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {esLive} LIVE</span>{sep}</>}
+                    {esToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {esToPlay} da giocare</span>{sep}</>}
+                    {esWithScore.length > 0 && <>
+                      <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {esHits}</span>{sep}
+                      <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {esMisses}</span>{sep}
+                      <span style={{
+                        fontWeight: '800',
+                        color: esHR !== null && esHR >= 20 ? '#00ff88' : '#ff4466',
+                        background: esHR !== null && esHR >= 20 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        padding: '1px 8px', borderRadius: '10px'
+                      }}>{esHR}%</span>
+                    </>}
+                  </span>
+                </h2>
+                {!collapsedSections.has('sec_exact_score') && (() => {
+                  const grouped: Record<string, Prediction[]> = {};
+                  filteredExactScore.forEach(p => { (grouped[p.league] = grouped[p.league] || []).push(p); });
+                  return Object.entries(grouped).map(([leagueName, preds]) => {
+                    const key = `es-${leagueName}`;
+                    const isCollapsed = !collapsedLeagues.has(key);
+                    const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
+                    const live = preds.filter(p => getMatchStatus(p) === 'live').length;
+                    const toPlay = preds.length - finished - live;
+                    const withScore = preds.filter(p => !!p.real_score);
+                    const hits = withScore.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
+                    const misses = withScore.length - hits;
+                    const verified = hits + misses;
+                    const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
+                    const hrHue = hitRate !== null ? Math.min(130, hitRate * 6.5) : 0;
+                    const hrColor = hitRate !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                    const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                    const statsEls = (
+                      <>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: 'rgba(255,152,0,0.1)', padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
+                        {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
+                        {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                        {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: misses > 0 ? '#ff4466' : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
+                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRate}%</span></>}
+                      </>
+                    );
+                    return (
+                      <div key={key} style={{ marginBottom: '16px' }}>
+                        <div
+                          style={{
+                            padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
+                            background: 'rgba(255,152,0,0.04)', borderRadius: '8px',
+                            cursor: 'pointer', userSelect: 'none' as const,
+                            border: '1px solid rgba(255,152,0,0.12)'
+                          }}
+                          onClick={() => toggleLeague(key)}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                                <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span
+                                  onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
+                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? '#ff9800' : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                                >{leagueName}</span>
+                              </div>
+                              {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
+                            </div>
+                            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                          </div>
+                          {isMobile && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                              {statsEls}
+                            </div>
+                          )}
+                        </div>
+                        {!isCollapsed && preds.map(p => renderExactScoreCard(p))}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+              );
+            })()}
+
+            {/* SEZIONE X FACTOR */}
+            {activeTab === 'high_risk' && filteredXFactor.length > 0 && (() => {
+              const xfFinishedN = filteredXFactor.filter(p => getMatchStatus(p) === 'finished').length;
+              const xfLive = filteredXFactor.filter(p => getMatchStatus(p) === 'live').length;
+              const xfToPlay = filteredXFactor.length - xfFinishedN - xfLive;
+              const xfWithScore = filteredXFactor.filter(p => !!p.real_score);
+              const xfHits = xfWithScore.filter(p => p.real_sign === 'X').length;
+              const xfMisses = xfWithScore.length - xfHits;
+              const xfHR = xfWithScore.length > 0 ? Math.round((xfHits / xfWithScore.length) * 1000) / 10 : null;
+              const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+              return (
+              <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
+                <h2
+                  onClick={() => toggleSection2('sec_x_factor')}
+                  style={{
+                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: theme.purple,
+                    margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
+                    cursor: 'pointer', userSelect: 'none' as const,
+                    background: `${theme.purple}08`, border: `1px solid ${theme.purple}25`,
+                    borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap' as const
+                  }}
+                >
+                  <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_x_factor') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                  🔮 X Factor
+                  <span style={{
+                    fontSize: '11px', background: `${theme.purple}20`, color: theme.purple,
+                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
+                  }}>
+                    {filteredXFactor.length}
+                  </span>
+                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
+                    {xfFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {xfFinishedN} {xfFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
+                    {xfLive > 0 && <><span style={{ color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {xfLive} LIVE</span>{sep}</>}
+                    {xfToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {xfToPlay} da giocare</span>{sep}</>}
+                    {xfWithScore.length > 0 && <>
+                      <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {xfHits}</span>{sep}
+                      <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {xfMisses}</span>{sep}
+                      <span style={{
+                        fontWeight: '800',
+                        color: xfHR !== null && xfHR >= 25 ? '#00ff88' : '#ff4466',
+                        background: xfHR !== null && xfHR >= 25 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        padding: '1px 8px', borderRadius: '10px'
+                      }}>{xfHR}%</span>
+                    </>}
+                  </span>
+                </h2>
+                {!collapsedSections.has('sec_x_factor') && (() => {
+                  const grouped: Record<string, Prediction[]> = {};
+                  filteredXFactor.forEach(p => { (grouped[p.league] = grouped[p.league] || []).push(p); });
+                  return Object.entries(grouped).map(([leagueName, preds]) => {
+                    const key = `xf-${leagueName}`;
+                    const isCollapsed = !collapsedLeagues.has(key);
+                    const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
+                    const live = preds.filter(p => getMatchStatus(p) === 'live').length;
+                    const toPlay = preds.length - finished - live;
+                    const withScore = preds.filter(p => !!p.real_score);
+                    const hits = withScore.filter(p => p.real_sign === 'X').length;
+                    const misses = withScore.length - hits;
+                    const verified = hits + misses;
+                    const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
+                    const hrHue = hitRate !== null ? Math.min(130, hitRate * 4) : 0;
+                    const hrColor = hitRate !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                    const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                    const statsEls = (
+                      <>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: `${theme.purple}15`, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
+                        {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
+                        {live > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {live} LIVE</span></>}
+                        {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: misses > 0 ? '#ff4466' : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
+                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRate}%</span></>}
+                      </>
+                    );
+                    return (
+                      <div key={key} style={{ marginBottom: '16px' }}>
+                        <div
+                          style={{
+                            padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
+                            background: 'rgba(188,19,254,0.04)', borderRadius: '8px',
+                            cursor: 'pointer', userSelect: 'none' as const,
+                            border: '1px solid rgba(188,19,254,0.12)'
+                          }}
+                          onClick={() => toggleLeague(key)}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                                <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span
+                                  onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
+                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.purple : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                                >{leagueName}</span>
+                              </div>
+                              {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
+                            </div>
+                            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                          </div>
+                          {isMobile && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                              {statsEls}
+                            </div>
+                          )}
+                        </div>
+                        {!isCollapsed && preds.map(p => renderXFactorCard(p))}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+              );
+            })()}
+
+            {/* SEZIONE BOMBE */}
+            {activeTab === 'high_risk' && filteredBombs.length > 0 && (() => {
+              const bmFinishedN = filteredBombs.filter(b => getMatchStatus(b) === 'finished').length;
+              const bmLive = filteredBombs.filter(b => getMatchStatus(b) === 'live').length;
+              const bmToPlay = filteredBombs.length - bmFinishedN - bmLive;
+              const bmWithScore = filteredBombs.filter(b => !!b.real_score);
+              const bmHits = bmWithScore.filter(b => b.hit === true).length;
+              const bmMisses = bmWithScore.length - bmHits;
+              const bmHR = bmWithScore.length > 0 ? Math.round((bmHits / bmWithScore.length) * 1000) / 10 : null;
+              const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+              return (
+              <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
+                <h2
+                  onClick={() => toggleSection2('sec_bombs')}
+                  style={{
+                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: theme.gold,
+                    margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
+                    cursor: 'pointer', userSelect: 'none' as const,
+                    background: 'rgba(255,215,0,0.04)', border: `1px solid ${theme.gold}25`,
+                    borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap' as const
+                  }}
+                >
+                  <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_bombs') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
                   💣 Bombe del Giorno
                   <span style={{
                     fontSize: '11px', background: `${theme.gold}20`, color: theme.gold,
@@ -2703,8 +3284,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     {filteredBombs.length}
                   </span>
+                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
+                    {bmFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {bmFinishedN} {bmFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
+                    {bmLive > 0 && <><span style={{ color: theme.danger, fontWeight: '700', animation: 'pulse 1.5s ease-in-out infinite' }}>🔴 {bmLive} LIVE</span>{sep}</>}
+                    {bmToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {bmToPlay} da giocare</span>{sep}</>}
+                    {bmWithScore.length > 0 && <>
+                      <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {bmHits}</span>{sep}
+                      <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {bmMisses}</span>{sep}
+                      <span style={{
+                        fontWeight: '800',
+                        color: bmHR !== null && bmHR >= 30 ? '#00ff88' : '#ff4466',
+                        background: bmHR !== null && bmHR >= 30 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        padding: '1px 8px', borderRadius: '10px'
+                      }}>{bmHR}%</span>
+                    </>}
+                  </span>
                 </h2>
-                {(() => {
+                {!collapsedSections.has('sec_bombs') && (() => {
                   const groupedBombs: Record<string, Bomb[]> = {};
                   filteredBombs.forEach(b => { (groupedBombs[b.league] = groupedBombs[b.league] || []).push(b); });
                   return Object.entries(groupedBombs).map(([leagueName, lBombs]) => {
@@ -2778,10 +3374,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   });
                 })()}
               </div>
-            )}
+              );
+            })()}
 
             {/* SEZIONE PRONOSTICI (raggruppati per lega) */}
-            {(activeTab === 'all' || activeTab === 'predictions') && filteredPredictions.length > 0 && (
+            {activeTab === 'pronostici' && filteredPredictions.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
                 <h2 style={{
                   fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: theme.cyan,

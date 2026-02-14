@@ -154,6 +154,10 @@ interface Prediction {
   real_sign?: string | null;
   match_finished?: boolean;
   hit?: boolean | null;
+  // Live scores (polling)
+  live_score?: string | null;
+  live_status?: string | null;
+  live_minute?: number | null;
 }
 
 interface Bomb {
@@ -177,6 +181,10 @@ interface Bomb {
   real_sign?: string | null;
   match_finished?: boolean;
   hit?: boolean | null;
+  // Live scores (polling)
+  live_score?: string | null;
+  live_status?: string | null;
+  live_minute?: number | null;
 }
 
 // --- HELPERS ---
@@ -353,6 +361,40 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
     };
     fetchData();
   }, [date, mode]);
+
+  // --- POLLING LIVE SCORES (solo data di oggi) ---
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (date !== today) return;
+
+    const mergeLive = <T extends { home: string; away: string }>(items: T[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number }>): T[] =>
+      items.map(item => {
+        const live = scores.find(s => s.home === item.home && s.away === item.away);
+        return live ? { ...item, live_score: live.live_score, live_status: live.live_status, live_minute: live.live_minute } : item;
+      });
+
+    const pollLive = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/live-scores?date=${today}`);
+        const data = await res.json();
+        if (data.success && data.scores?.length > 0) {
+          const scores = data.scores;
+          setPredictions(prev => mergeLive(prev, scores));
+          setBombs(prev => mergeLive(prev, scores));
+          setConfrontoData(prev => ({
+            prodPredictions: mergeLive(prev.prodPredictions, scores),
+            prodBombs: mergeLive(prev.prodBombs, scores),
+            sandboxPredictions: mergeLive(prev.sandboxPredictions, scores),
+            sandboxBombs: mergeLive(prev.sandboxBombs, scores),
+          }));
+        }
+      } catch { /* silenzioso */ }
+    };
+
+    pollLive();
+    const interval = setInterval(pollLive, 60000);
+    return () => clearInterval(interval);
+  }, [date]);
 
   const toggleSection = (key: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -641,11 +683,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
   // --- HELPERS STATUS FILTRO ---
-  const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null }): 'finished' | 'live' | 'to_play' => {
+  const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null }): 'finished' | 'live' | 'to_play' => {
     if (item.real_score != null) return 'finished';
+    if (item.live_status === 'Live' || item.live_status === 'HT') return 'live';
+    if (item.live_status === 'Finished') return 'finished';
     if (item.date && item.match_time) {
       const kickoff = new Date(`${item.date}T${item.match_time}:00`);
-      if (kickoff <= new Date()) return 'live';
+      const now = new Date();
+      if (kickoff <= now) {
+        const hoursElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60 * 60);
+        return hoursElapsed > 3 ? 'finished' : 'live';
+      }
     }
     return 'to_play';
   };
@@ -920,6 +968,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {pred.real_score ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466' }}>
                 {pred.real_score.replace(':', ' - ')}
+              </span>
+            ) : pred.live_status === 'Live' || pred.live_status === 'HT' ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score || '– : –'}
+                </span>
+                <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
+                  {pred.live_status === 'Live' ? `${pred.live_minute || ''}'` : 'INT'}
+                </span>
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -1515,6 +1572,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {bomb.real_score ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.hit ? '#00ff88' : '#ff4466' }}>
                 {bomb.real_score.replace(':', ' - ')}
+              </span>
+            ) : bomb.live_status === 'Live' || bomb.live_status === 'HT' ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: bomb.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {bomb.live_score || '– : –'}
+                </span>
+                <span style={{ fontSize: '8px', fontWeight: 900, color: bomb.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
+                  {bomb.live_status === 'Live' ? `${bomb.live_minute || ''}'` : 'INT'}
+                </span>
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -2257,11 +2323,26 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           <div style={{ padding: isMobile ? '8px 10px 6px 14px' : '10px 14px 8px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' as const }}>
                               <span style={{ fontSize: '10px', color: theme.textDim }}>{m.match_time}</span>
-                              {(m.prodPred?.real_score || m.sandboxPred?.real_score) && (
-                                <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: '900', color: theme.text }}>
-                                  {(m.prodPred?.real_score || m.sandboxPred?.real_score || '').replace(':', ' - ')}
-                                </span>
-                              )}
+                              {(() => {
+                                const ref = m.prodPred || m.sandboxPred;
+                                if (!ref) return null;
+                                if (ref.real_score) return (
+                                  <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: '900', color: theme.text }}>
+                                    {ref.real_score.replace(':', ' - ')}
+                                  </span>
+                                );
+                                if (ref.live_status === 'Live' || ref.live_status === 'HT') return (
+                                  <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: '900', color: ref.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: ref.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                                      {ref.live_score || '– : –'}
+                                    </span>
+                                    <span style={{ fontSize: '8px', fontWeight: 900, color: ref.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
+                                      {ref.live_status === 'Live' ? `${ref.live_minute || ''}'` : 'INT'}
+                                    </span>
+                                  </span>
+                                );
+                                return null;
+                              })()}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                               <img src={getStemmaUrl(m.home_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
@@ -2629,9 +2710,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   return Object.entries(groupedBombs).map(([leagueName, lBombs]) => {
                     const key = `bomb-${leagueName}`;
                     const isCollapsed = !collapsedLeagues.has(key);
-                    const now = new Date();
-                    const finished = lBombs.filter(b => b.real_score != null).length;
-                    const live = lBombs.filter(b => b.real_score == null && b.date && b.match_time && new Date(`${b.date}T${b.match_time}:00`) <= now).length;
+                    const finished = lBombs.filter(b => getMatchStatus(b) === 'finished').length;
+                    const live = lBombs.filter(b => getMatchStatus(b) === 'live').length;
                     const toPlay = lBombs.length - finished - live;
                     const hits = lBombs.filter(b => b.hit === true).length;
                     const misses = lBombs.filter(b => b.hit === false).length;
@@ -2718,9 +2798,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
                 {Object.entries(filteredGroupedByLeague).map(([leagueName, preds]) => {
                   const isCollapsed = !collapsedLeagues.has(leagueName);
-                  const now = new Date();
-                  const finished = preds.filter(p => p.real_score != null).length;
-                  const live = preds.filter(p => p.real_score == null && p.date && p.match_time && new Date(`${p.date}T${p.match_time}:00`) <= now).length;
+                  const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
+                  const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
                   // Conteggio per singolo pronostico
                   const allP = preds.flatMap(p => p.pronostici || []);

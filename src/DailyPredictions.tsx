@@ -48,6 +48,8 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Primera División': 'Argentina',
   'MLS': 'USA',
   'J1 League': 'Japan',
+  'Champions League': 'Champions_League',
+  'Europa League': 'Europa_League',
 };
 
 const LEAGUE_TO_LOGO: Record<string, string> = {

@@ -1685,7 +1685,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
-                      {bomb.odds?.[bomb.segno_bomba] != null && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba]).toFixed(2)}</span>}
+                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                     </span>
                   );
@@ -1721,7 +1721,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
-                      {bomb.odds?.[bomb.segno_bomba] != null && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba]).toFixed(2)}</span>}
+                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
                       {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                     </div>
                   );

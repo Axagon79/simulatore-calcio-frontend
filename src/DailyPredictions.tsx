@@ -71,8 +71,14 @@ const LEAGUE_TO_LOGO: Record<string, string> = {
     'MLS': 'mls',
     'J1 League': 'j1_league',
   };
-  
+
+  const CUP_LOGOS: Record<string, string> = {
+    'Champions League': 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fcoppe%2Fucl.png?alt=media&token=bfd5e2d6-ae85-4e9e-88e9-834fce430465',
+    'Europa League': 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fcoppe%2Fuel.png?alt=media&token=82b3a3ab-e37e-4afe-9130-d0db3ab1f680',
+  };
+
   const getLeagueLogoUrl = (league: string): string => {
+    if (CUP_LOGOS[league]) return CUP_LOGOS[league];
     const file = LEAGUE_TO_LOGO[league];
     if (!file) return '';
     return `https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2Fcampionati%2F${file}.png?alt=media`;
@@ -1679,6 +1685,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
+                      {bomb.odds?.[bomb.segno_bomba] != null && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba]).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                     </span>
                   );
@@ -1714,6 +1721,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
+                      {bomb.odds?.[bomb.segno_bomba] != null && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba]).toFixed(2)}</span>}
                       {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                     </div>
                   );
@@ -1727,10 +1735,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               display: 'flex', alignItems: 'center', paddingLeft: '8px', paddingTop: '6px',
               borderTop: '1px solid rgba(255,215,0,0.06)', fontSize: '11px'
             }}>
-              <div style={{ display: 'flex', gap: '10px', color: theme.textDim }}>
+              <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap' }}>
                 <span>1: <span style={{ color: theme.text }}>{bomb.odds?.['1'] != null ? Number(bomb.odds['1']).toFixed(2) : '-'}</span></span>
                 <span>X: <span style={{ color: theme.text }}>{bomb.odds?.['X'] != null ? Number(bomb.odds['X']).toFixed(2) : '-'}</span></span>
                 <span>2: <span style={{ color: theme.text }}>{bomb.odds?.['2'] != null ? Number(bomb.odds['2']).toFixed(2) : '-'}</span></span>
+                {bomb.odds?.over_25 != null && <>
+                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                  <span>O2.5: <span style={{ color: theme.text }}>{Number(bomb.odds.over_25).toFixed(2)}</span></span>
+                  <span>U2.5: <span style={{ color: theme.text }}>{Number(bomb.odds.under_25).toFixed(2)}</span></span>
+                </>}
+                {bomb.odds?.gg != null && <>
+                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                  <span>GG: <span style={{ color: theme.text }}>{Number(bomb.odds.gg).toFixed(2)}</span></span>
+                  <span>NG: <span style={{ color: theme.text }}>{Number(bomb.odds.ng).toFixed(2)}</span></span>
+                </>}
               </div>
             </div>
 
@@ -1928,6 +1946,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const renderXFactorCard = (pred: Prediction) => {
     const cardKey = `xf-${pred.home}-${pred.away}`;
     const isCardExpanded = expandedCards.has(cardKey);
+    const tipsKey = `${cardKey}-tips`;
+    const isTipsOpen = expandedSections.has(tipsKey);
     const conf = pred.confidence_segno || 0;
     const quotaX = pred.odds?.['X'];
 
@@ -1944,7 +1964,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           borderRadius: '10px',
           padding: isMobile ? '6px 10px' : '8px 14px',
           marginBottom: '4px',
-          position: 'relative'
+          position: 'relative',
+          zIndex: isTipsOpen ? 50 : 'auto' as any
         }}
       >
         {/* BARRA LATERALE viola */}
@@ -1965,24 +1986,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
 
           {/* Squadre */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
             <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
             <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
             <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
-
-          {/* Badge X */}
-          <span style={{
-            background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.4)',
-            borderRadius: '4px', padding: '2px 8px', fontSize: '10px', fontWeight: '900', color: theme.purple, flexShrink: 0
-          }}>X</span>
-
-          {/* Quota X (se disponibile) */}
-          {quotaX != null && (
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1', flexShrink: 0 }}>@{Number(quotaX).toFixed(2)}</span>
-          )}
 
           {/* Risultato + Freccia */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -2006,44 +2016,114 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         </div>
 
+        {/* Badge Tip — ABSOLUTE, come bomb/normal */}
+        <div
+          style={{
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '65px' : '100px',
+            zIndex: 5
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'baseline', gap: isMobile ? '3px' : '6px', cursor: 'pointer',
+              background: isTipsOpen ? 'rgba(188,19,254,0.15)' : 'rgba(188,19,254,0.06)',
+              border: `1px solid ${isTipsOpen ? 'rgba(188,19,254,0.4)' : 'rgba(188,19,254,0.18)'}`,
+              borderRadius: '4px', padding: isMobile ? '3px 6px' : '4px 12px',
+              transition: 'all 0.2s', userSelect: 'none' as const
+            }}
+            onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
+          >
+            {!isMobile && <span style={{ fontSize: '9px' }}>🔮</span>}
+            <span style={{ fontSize: '9px', fontWeight: '600', color: theme.purple, letterSpacing: '0.3px' }}>tip</span>
+            <span style={{ fontSize: '9px', color: theme.purple, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          </div>
+
+          {/* POPOVER FLOTTANTE */}
+          {isTipsOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
+              background: '#1a1a24', border: '1px solid rgba(188,19,254,0.45)',
+              borderRadius: '8px', padding: '8px 10px',
+              boxShadow: '0 0 12px rgba(188,19,254,0.15), 0 6px 24px rgba(0,0,0,0.9)',
+              minWidth: '160px', whiteSpace: 'nowrap' as const
+            }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {(() => {
+                  const pillBg = isHitXF === true ? 'rgba(0,255,136,0.15)' : isHitXF === false ? 'rgba(255,68,102,0.15)' : 'rgba(188,19,254,0.1)';
+                  const pillBorder = isHitXF === true ? 'rgba(0,255,136,0.3)' : isHitXF === false ? 'rgba(255,68,102,0.3)' : 'rgba(188,19,254,0.3)';
+                  const nameColor = isHitXF === true ? '#00ff88' : isHitXF === false ? '#ff4466' : theme.purple;
+                  return (
+                    <span style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: '4px', padding: '2px 8px',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      fontSize: '11px'
+                    }}>
+                      <span style={{ fontWeight: '800', color: nameColor }}>X</span>
+                      {quotaX != null && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quotaX).toFixed(2)}</span>}
+                      {isHitXF !== null && <span>{isHitXF ? '✅' : '❌'}</span>}
+                    </span>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* DETTAGLIO ESPANSO */}
         {isCardExpanded && (
           <div style={{ marginTop: '10px', borderTop: '1px solid rgba(188,19,254,0.15)', paddingTop: '10px', paddingLeft: '8px', animation: 'fadeIn 0.3s ease' }}>
-            {/* Confidence + segnali */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '10px', color: theme.textDim }}>
-                Confidence: <span style={{ fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
-              </span>
-              {quotaX != null && (
-                <span style={{ fontSize: '10px', color: theme.textDim }}>
-                  Quota X: <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quotaX).toFixed(2)}</span>
-                </span>
-              )}
-              {pred.x_factor_n_signals != null && (
-                <span style={{ fontSize: '10px', color: theme.textDim }}>
-                  Segnali: <span style={{ fontWeight: '700', color: theme.purple }}>{pred.x_factor_n_signals}</span>
-                </span>
-              )}
-            </div>
-            {/* Lista segnali attivi */}
-            {pred.x_factor_signals && pred.x_factor_signals.length > 0 && (
-              <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                {pred.x_factor_signals.map((sig, i) => (
-                  <span key={i} style={{
-                    background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.2)',
-                    borderRadius: '4px', padding: '2px 8px', fontSize: '9px', color: '#ce93d8', fontWeight: '600'
-                  }}>{sig}</span>
-                ))}
+            {/* Pronostico X con stelle + confidence + quota */}
+            <div style={{ paddingBottom: '8px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostico</div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {(() => {
+                  const pillBg = isHitXF === true ? 'rgba(0,255,136,0.1)' : isHitXF === false ? 'rgba(255,68,102,0.1)' : 'rgba(188,19,254,0.08)';
+                  const pillBorder = isHitXF === true ? 'rgba(0,255,136,0.3)' : isHitXF === false ? 'rgba(255,68,102,0.3)' : 'rgba(188,19,254,0.3)';
+                  const nameColor = isHitXF === true ? '#00ff88' : isHitXF === false ? '#ff4466' : theme.purple;
+                  return (
+                    <div style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: '6px', padding: '4px 10px',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>X</span>
+                      <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
+                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                        <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${conf}%`, color: theme.purple }}>★</span>
+                      </span>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
+                      {quotaX != null && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quotaX).toFixed(2)}</span>}
+                      {isHitXF !== null && <span style={{ fontSize: '12px' }}>{isHitXF ? '✅' : '❌'}</span>}
+                    </div>
+                  );
+                })()}
+                {pred.x_factor_n_signals != null && (
+                  <span style={{ fontSize: '10px', color: theme.textDim }}>
+                    Segnali: <span style={{ fontWeight: '700', color: theme.purple }}>{pred.x_factor_n_signals}</span>
+                  </span>
+                )}
               </div>
-            )}
-            {/* Quote 1X2 */}
+            </div>
+            {/* Quote */}
             <div style={{
-              display: 'flex', gap: '10px', marginTop: '8px', paddingTop: '6px',
+              display: 'flex', gap: '10px', paddingTop: '6px', flexWrap: 'wrap',
               borderTop: '1px solid rgba(188,19,254,0.1)', fontSize: '11px', color: theme.textDim
             }}>
               <span>1: <span style={{ color: theme.text }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
               <span>X: <span style={{ color: theme.purple, fontWeight: '700' }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
               <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
+              {pred.odds?.over_25 != null && <>
+                <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                <span>O2.5: <span style={{ color: theme.text }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
+                <span>U2.5: <span style={{ color: theme.text }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
+              </>}
+              {pred.odds?.gg != null && <>
+                <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                <span>GG: <span style={{ color: theme.text }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
+                <span>NG: <span style={{ color: theme.text }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
+              </>}
             </div>
           </div>
         )}

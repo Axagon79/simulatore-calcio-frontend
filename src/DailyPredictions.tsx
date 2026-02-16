@@ -250,11 +250,20 @@ const SEGNO_LABELS: Record<string, string> = {
   dna: 'DNA Tecnico',
   motivazioni: 'Motivazioni',
   h2h: 'Scontri Diretti',
-  campo: 'Fattore Campo'
+  campo: 'Fattore Campo',
+  // Coppe UCL/UEL
+  forma: 'Forma Coppa',
+  potenza: 'Potenza',
+  rendimento: 'Rendimento Coppa',
+  solidita: 'Solidità',
 };
 const GOL_LABELS: Record<string, string> = {
   media_gol: 'Media Gol', att_vs_def: 'Att vs Def', xg: 'xG',
-  h2h_gol: 'H2H Gol', media_lega: 'Media Lega', dna_off_def: 'DNA Off/Def'
+  h2h_gol: 'H2H Gol', media_lega: 'Media Lega', dna_off_def: 'DNA Off/Def',
+  // Coppe UCL/UEL
+  quote_ou: 'Quote O/U', over_pct: 'Over% Storico', fragilita: 'Fragilità Difensiva',
+  gg_prob_segna_home: 'Prob. Gol Casa', gg_prob_segna_away: 'Prob. Gol Trasferta',
+  gg_quote_ggng: 'Quote GG/NG', gg_h2h_media: 'H2H + Media Gol',
 };
 
 // --- COMPONENTE PRINCIPALE ---

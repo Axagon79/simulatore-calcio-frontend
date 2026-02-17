@@ -6,6 +6,8 @@ import AppDev from './AppDev';
 import TuningMixer from './pages/TuningMixer';
 import TrackRecord from './pages/TrackRecord';
 import PredictionsMixer from './pages/PredictionsMixer';
+import Bankroll from './pages/Bankroll';
+import MoneyManagement from './pages/MoneyManagement';
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
@@ -19,6 +21,8 @@ createRoot(document.getElementById('root')!).render(
       {import.meta.env.DEV && (
         <Route path="/predictions-mixer" element={<PredictionsMixer />} />
       )}
+      <Route path="/bankroll" element={<Bankroll onBack={() => window.history.back()} />} />
+      <Route path="/money-management" element={<MoneyManagement onBack={() => window.history.back()} />} />
       <Route path="/*" element={<AppDev />} />
     </Routes>
   </BrowserRouter>

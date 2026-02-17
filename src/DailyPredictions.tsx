@@ -124,7 +124,11 @@ interface Prediction {
   home_mongo_id?: string;
   away_mongo_id?: string;
   decision: string;
-  pronostici: Array<{ tipo: string; pronostico: string; confidence: number; stars: number; quota?: number; hit?: boolean | null }>;
+  pronostici: Array<{
+    tipo: string; pronostico: string; confidence: number; stars: number; quota?: number; hit?: boolean | null;
+    probabilita_stimata?: number | null; stake?: number; edge?: number; profit_loss?: number | null;
+    prob_mercato?: number | null; prob_modello?: number | null; has_odds?: boolean;
+  }>;
   confidence_segno: number;
   confidence_gol: number;
   stars_segno: number;
@@ -221,6 +225,23 @@ const getConfidenceColor = (conf: number): string => {
   if (conf >= 55) return theme.cyan;
   if (conf >= 40) return theme.warning;
   return theme.danger;
+};
+
+const getStakeLabel = (stake: number): string => {
+  if (stake === 0) return 'No Value';
+  if (stake === 1) return 'Prudenziale';
+  if (stake === 2) return 'Standard';
+  if (stake === 3) return 'Buona';
+  if (stake >= 4 && stake <= 5) return 'Alta';
+  return 'Top Bet';
+};
+
+const getStakeColor = (stake: number): string => {
+  if (stake === 0) return '#666';
+  if (stake <= 2) return '#4dd0e1';
+  if (stake <= 3) return '#66bb6a';
+  if (stake <= 5) return '#ffa726';
+  return '#ff5252';
 };
 
 const formatDateLabel = (dateStr: string): string => {
@@ -1133,6 +1154,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                       {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
+                      {p.stake != null && p.stake > 0 && (
+                        <span style={{
+                          fontSize: '10px', fontWeight: '800', color: getStakeColor(p.stake),
+                          background: 'rgba(255,255,255,0.05)', borderRadius: '3px', padding: '1px 4px',
+                        }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
+                          S:{p.stake}
+                        </span>
+                      )}
+                      {p.stake === 0 && p.edge != null && p.edge <= 0 && (
+                        <span style={{ fontSize: '9px', color: '#666' }} title="Edge negativo - No Value">NV</span>
+                      )}
+                      {isAdmin && p.edge != null && p.edge > 0 && (
+                        <span style={{ fontSize: '9px', color: '#888' }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
+                          E:{p.edge > 0 ? '+' : ''}{p.edge?.toFixed(1)}%
+                        </span>
+                      )}
                       {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                     </div>
                   );
@@ -2922,17 +2959,37 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             if (hr === null) return null;
             const hrThreshold = activeTab === 'high_risk' ? 25 : 50;
             const hrColor = getHRColor(hr, hrThreshold);
+            // HR Partite (almeno 1 pronostico corretto)
+            const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...xFactorPredictions, ...exactScorePredictions, ...bombPredictions]).filter(p => !!p.real_score);
+            const matchHits = matchesFinished.filter(p => p.hit === true).length;
+            const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
+            const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : hrColor;
+
             return (
-              <div style={{
-                background: `${hrColor}15`,
-                border: `1px solid ${hrColor}40`,
-                padding: '5px 14px', borderRadius: '16px',
-                display: 'flex', alignItems: 'center', gap: '5px',
-                fontSize: '12px', fontWeight: '900', color: hrColor,
-                marginLeft: '4px'
-              }}>
-                HR% <span style={{ fontSize: '13px' }}>{hr}%</span>
-              </div>
+              <>
+                <div style={{
+                  background: `${hrColor}15`,
+                  border: `1px solid ${hrColor}40`,
+                  padding: '5px 14px', borderRadius: '16px',
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  fontSize: '12px', fontWeight: '900', color: hrColor,
+                  marginLeft: '4px'
+                }}>
+                  HR% <span style={{ fontSize: '13px' }}>{hr}%</span>
+                </div>
+                {matchHR !== null && (
+                  <div style={{
+                    background: `${matchHRColor}15`,
+                    border: `1px solid ${matchHRColor}40`,
+                    padding: '5px 10px', borderRadius: '16px',
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    fontSize: '11px', fontWeight: '800', color: matchHRColor,
+                  }} title="HR Partite: almeno 1 pronostico corretto per partita">
+                    Partite <span style={{ fontSize: '12px' }}>{matchHR}%</span>
+                    <span style={{ fontSize: '9px', opacity: 0.7 }}>({matchHits}/{matchesFinished.length})</span>
+                  </div>
+                )}
+              </>
             );
           })()}
         </div>

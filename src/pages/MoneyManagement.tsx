@@ -21,7 +21,8 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 export default function MoneyManagement({ onBack }: { onBack?: () => void }) {
   return (
-    <div style={{ background: theme.bg, minHeight: '100vh', padding: '20px', fontFamily: theme.font, maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0 }}>Money Management</h1>
         {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: 'none', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Indietro</button>}
@@ -116,6 +117,7 @@ export default function MoneyManagement({ onBack }: { onBack?: () => void }) {
         <div style={{ marginTop: '8px' }}>
           <strong>Hai bisogno di aiuto?</strong> Numero Verde Dipendenze: <span style={{ color: theme.cyan }}>800 55 88 22</span>
         </div>
+      </div>
       </div>
     </div>
   );

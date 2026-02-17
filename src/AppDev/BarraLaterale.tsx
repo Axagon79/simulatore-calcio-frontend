@@ -212,13 +212,13 @@ export default function BarraLaterale({
           onClick={() => { setMobileMenuOpen(false); window.location.href = '/bankroll'; }}
           style={{
             flex: 1,
-            padding: '8px 4px',
+            padding: '15px 4px',
             background: 'rgba(5,249,182,0.08)',
             border: '1px solid rgba(5,249,182,0.25)',
             borderRadius: '8px',
             color: '#05f9b6',
             cursor: 'pointer',
-            fontSize: '10px',
+            fontSize: '13px',
             fontWeight: '700',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             transition: 'all 0.2s'
@@ -230,13 +230,13 @@ export default function BarraLaterale({
           onClick={() => { setMobileMenuOpen(false); window.location.href = '/money-management'; }}
           style={{
             flex: 1,
-            padding: '8px 4px',
+            padding: '15px 4px',
             background: 'rgba(255,215,0,0.08)',
             border: '1px solid rgba(255,215,0,0.25)',
             borderRadius: '8px',
             color: '#ffd700',
             cursor: 'pointer',
-            fontSize: '10px',
+            fontSize: '13px',
             fontWeight: '700',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             transition: 'all 0.2s'
@@ -514,23 +514,28 @@ export default function BarraLaterale({
                 onClick={() => setActiveLeague('PREDICTIONS')}
                 style={{
                   ...styles.card,
-                  padding: isMobile ? '10px 12px' : '8px 10px',
+                  padding: '13px 12px',
                   position: 'relative',
-                  marginBottom : isMobile ?  '8px': '6px',
+                  marginBottom: '6px',
                   overflow: 'hidden',
                   cursor: 'pointer',
-                  top: isMobile ? '-5px': '-5px',
-                  marginTop: idx > 0 ? '4px' : '0'
+                  top: '-5px',
+                  marginTop: idx > 0 ? '4px' : '0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}
               >
                 <div style={getWidgetGlow(glowColor)} />
-                <div style={{ fontSize: '10px', color: theme.textDim, marginBottom: '4px' }}>
-                  {pred.league} • {'⭐'.repeat(Math.floor(stars))}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', color: theme.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {pred.league} • {'⭐'.repeat(Math.floor(stars))}
+                  </div>
+                  <div style={{ fontWeight: 'bold', fontSize: '12px', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {pred.home} vs {pred.away}
+                  </div>
                 </div>
-                <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
-                  {pred.home} vs {pred.away}
-                </div>
-                <div style={{ color: glowColor, fontSize: '12px', marginTop: '4px' }}>
+                <div style={{ color: glowColor, fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
                   {mainPronostico?.pronostico || '-'}
                 </div>
               </div>

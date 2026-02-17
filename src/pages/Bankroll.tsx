@@ -57,8 +57,13 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/predictions/bankroll-stats`)
-      .then(r => r.json())
+    fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-17`)
+      .then(r => {
+        if (!r.ok) throw new Error(`Errore server: ${r.status}`);
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) throw new Error('Endpoint non disponibile (risposta non JSON)');
+        return r.json();
+      })
       .then(json => {
         if (json.success && json.data) setData(json.data);
         else setError(json.message || 'Nessun dato');
@@ -116,7 +121,8 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   );
 
   return (
-    <div style={{ background: theme.bg, minHeight: '100vh', padding: '20px', fontFamily: theme.font, maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0 }}>
@@ -159,9 +165,9 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
       {/* Performance temporale */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
         {[
-          { label: 'Ultimi 7 giorni', s: data.temporal.last7 },
-          { label: 'Ultimi 30 giorni', s: data.temporal.last30 },
           { label: 'Ultimi 90 giorni', s: data.temporal.last90 },
+          { label: 'Ultimi 30 giorni', s: data.temporal.last30 },
+          { label: 'Ultimi 7 giorni', s: data.temporal.last7 },
         ].map((item, i) => (
           <div key={i} style={{ background: theme.panel, border: theme.panelBorder, borderRadius: '10px', padding: '12px' }}>
             <div style={{ fontSize: '10px', color: theme.textDim, marginBottom: '6px' }}>{item.label}</div>
@@ -232,7 +238,7 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         <button
           onClick={() => {
             // Fetch all data and export
-            fetch(`${API_BASE}/predictions/bankroll-stats`)
+            fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-17`)
               .then(r => r.json())
               .then(json => {
                 if (!json.data) return;
@@ -280,6 +286,7 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         <div style={{ marginTop: '8px' }}>
           <strong>Hai bisogno di aiuto?</strong> Numero Verde: <span style={{ color: theme.cyan }}>800 55 88 22</span>
         </div>
+      </div>
       </div>
     </div>
   );

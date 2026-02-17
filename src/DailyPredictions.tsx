@@ -2250,29 +2250,65 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {mode === 'confronto' && (
               <span style={{ fontSize: '10px', color: theme.purple, fontWeight: 700, padding: '2px 8px', background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)', borderRadius: '6px' }}>⚖️ CONFRONTO</span>
             )}
-          </div>
-        ) : (
-          <>
-            {/* DESKTOP: layout originale */}
             <button
-              onClick={onBack}
+              onClick={() => window.location.href = '/bankroll'}
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 color: theme.textDim,
-                padding: '8px 16px',
+                padding: '5px 10px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '13px',
-                marginBottom: '20px',
-                display: 'flex', alignItems: 'center', gap: '6px',
-                transition: 'all 0.2s'
+                fontSize: '12px',
+                display: 'flex', alignItems: 'center',
+                flexShrink: 0,
+                position: 'absolute' as const, right: '15px'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
             >
-              ← Dashboard
+              Bankroll →
             </button>
+          </div>
+        ) : (
+          <>
+            {/* DESKTOP: layout originale */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <button
+                onClick={onBack}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: theme.textDim,
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+              >
+                ← Dashboard
+              </button>
+              <button
+                onClick={() => window.location.href = '/bankroll'}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: theme.textDim,
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+              >
+                Bankroll →
+              </button>
+            </div>
 
             {/* BANNER SANDBOX */}
             {mode === 'sandbox' && (

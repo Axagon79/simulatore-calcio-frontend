@@ -57,7 +57,7 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-17`)
+    fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-10`)
       .then(r => {
         if (!r.ok) throw new Error(`Errore server: ${r.status}`);
         const ct = r.headers.get('content-type') || '';
@@ -238,7 +238,7 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         <button
           onClick={() => {
             // Fetch all data and export
-            fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-17`)
+            fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-10`)
               .then(r => r.json())
               .then(json => {
                 if (!json.data) return;

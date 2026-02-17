@@ -2960,7 +2960,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const hrThreshold = activeTab === 'high_risk' ? 25 : 50;
             const hrColor = getHRColor(hr, hrThreshold);
             // HR Partite (almeno 1 pronostico corretto)
-            const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...xFactorPredictions, ...exactScorePredictions, ...bombPredictions]).filter(p => !!p.real_score);
+            const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...xFactorPredictions, ...exactScorePredictions, ...bombs]).filter(p => !!p.real_score);
             const matchHits = matchesFinished.filter(p => p.hit === true).length;
             const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
             const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : hrColor;

@@ -122,7 +122,21 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0 }}>
           Bankroll & ROI
         </h1>
-        {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: 'none', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Indietro</button>}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => window.location.href = '/money-management'}
+            style={{
+              background: 'rgba(255,215,0,0.1)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              color: '#ffd700',
+              padding: '6px 14px', borderRadius: '8px',
+              cursor: 'pointer', fontSize: '12px', fontWeight: '700'
+            }}
+          >
+            📖 Come funziona?
+          </button>
+          {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: 'none', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Indietro</button>}
+        </div>
       </div>
 
       {/* Riepilogo globale */}

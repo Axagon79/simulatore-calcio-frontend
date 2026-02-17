@@ -206,8 +206,47 @@ export default function BarraLaterale({
         <option value="UEL">🏆 Europa League</option>
       </select>
 
-      {/* --- FINE BLOCCO SELEZIONE --- */}
+      {/* --- MINI-BOTTONI BANKROLL / MONEY MANAGEMENT --- */}
+      <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+        <button
+          onClick={() => { setMobileMenuOpen(false); window.location.href = '/bankroll'; }}
+          style={{
+            flex: 1,
+            padding: '8px 4px',
+            background: 'rgba(5,249,182,0.08)',
+            border: '1px solid rgba(5,249,182,0.25)',
+            borderRadius: '8px',
+            color: '#05f9b6',
+            cursor: 'pointer',
+            fontSize: '10px',
+            fontWeight: '700',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+            transition: 'all 0.2s'
+          }}
+        >
+          📊 Bankroll
+        </button>
+        <button
+          onClick={() => { setMobileMenuOpen(false); window.location.href = '/money-management'; }}
+          style={{
+            flex: 1,
+            padding: '8px 4px',
+            background: 'rgba(255,215,0,0.08)',
+            border: '1px solid rgba(255,215,0,0.25)',
+            borderRadius: '8px',
+            color: '#ffd700',
+            cursor: 'pointer',
+            fontSize: '10px',
+            fontWeight: '700',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+            transition: 'all 0.2s'
+          }}
+        >
+          📖 Guida
+        </button>
+      </div>
 
+      {/* --- FINE BLOCCO SELEZIONE --- */}
 
       <button
         onClick={() => {
@@ -475,13 +514,13 @@ export default function BarraLaterale({
                 onClick={() => setActiveLeague('PREDICTIONS')}
                 style={{
                   ...styles.card,
-                  padding: isMobile ? '15px' : '10px',
+                  padding: isMobile ? '10px 12px' : '8px 10px',
                   position: 'relative',
-                  marginBottom : isMobile ?  '20px': '10px',
+                  marginBottom : isMobile ?  '8px': '6px',
                   overflow: 'hidden',
                   cursor: 'pointer',
                   top: isMobile ? '-5px': '-5px',
-                  marginTop: idx > 0 ? '8px' : '0'
+                  marginTop: idx > 0 ? '4px' : '0'
                 }}
               >
                 <div style={getWidgetGlow(glowColor)} />

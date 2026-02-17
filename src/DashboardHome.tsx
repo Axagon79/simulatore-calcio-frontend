@@ -59,6 +59,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
 
   const [showOtherLeagues, setShowOtherLeagues] = useState(false);
   const [showCups, setShowCups] = useState(false);
+  const [showBankroll, setShowBankroll] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Detect mobile resize
@@ -479,8 +480,56 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               </div>
             </div>
 
+            {/* CARD BANKROLL & GESTIONE */}
+            <div
+              key="BANKROLL_CARD"
+              onClick={() => setShowBankroll(true)}
+              style={{
+                background: 'linear-gradient(135deg, rgba(5,249,182,0.15), rgba(255,215,0,0.08))',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(5,249,182,0.4)',
+                borderRadius: isMobile ? '16px' : '20px',
+                padding: isMobile ? '18px' : '25px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                height: isMobile ? '120px' : '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 10px 40px rgba(5,249,182,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>💰</div>
+              <div style={{
+                fontSize: isMobile ? '18px' : '22px',
+                fontWeight: '800',
+                color: 'white',
+                marginBottom: '8px'
+              }}>
+                Bankroll & Gestione
+              </div>
+              <div style={{
+                fontSize: isMobile ? '12px' : '14px',
+                color: theme.success,
+                fontWeight: 'bold'
+              }}>
+                ROI & Money Management
+              </div>
+            </div>
+
             <div style={{height: '50px'}}></div>
-        </div> 
+        </div>
       </div>
 
       {/* MODALE ALTRI CAMPIONATI */}
@@ -741,6 +790,207 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE BANKROLL & GESTIONE */}
+      {showBankroll && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setShowBankroll(false)}
+        >
+          <div
+            style={{
+              background: isMobile ? '#1a1d2e' : theme.bg,
+              border: `2px solid ${theme.success}`,
+              borderRadius: '20px',
+              padding: isMobile ? '20px' : '30px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* HEADER */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '30px'
+            }}>
+              <h2 style={{
+                fontSize: isMobile ? '22px' : '28px',
+                fontWeight: '800',
+                color: 'white',
+                margin: 0
+              }}>
+                💰 Bankroll & Gestione
+              </h2>
+              <button
+                onClick={() => setShowBankroll(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.textDim,
+                  fontSize: '32px',
+                  cursor: 'pointer',
+                  padding: '0',
+                  lineHeight: '1'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* OPZIONI */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr',
+              gap: '15px'
+            }}>
+              {/* Bankroll & ROI */}
+              <div
+                onClick={() => {
+                  setShowBankroll(false);
+                  window.location.href = '/bankroll';
+                }}
+                style={{
+                  background: 'rgba(20, 22, 35, 0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  padding: isMobile ? '20px' : '25px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '15px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = theme.success;
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{
+                  width: isMobile ? '45px' : '55px',
+                  height: isMobile ? '45px' : '55px',
+                  borderRadius: '12px',
+                  background: 'rgba(5,249,182,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: isMobile ? '24px' : '28px',
+                  flexShrink: 0
+                }}>
+                  📊
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: '11px',
+                    color: theme.success,
+                    marginBottom: '4px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Statistiche & ROI
+                  </div>
+                  <div style={{
+                    fontSize: isMobile ? '16px' : '20px',
+                    fontWeight: '700',
+                    color: 'white'
+                  }}>
+                    Bankroll & ROI
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: theme.textDim,
+                    marginTop: '4px'
+                  }}>
+                    Profitti, perdite, yield e performance
+                  </div>
+                </div>
+              </div>
+
+              {/* Money Management */}
+              <div
+                onClick={() => {
+                  setShowBankroll(false);
+                  window.location.href = '/money-management';
+                }}
+                style={{
+                  background: 'rgba(20, 22, 35, 0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  padding: isMobile ? '20px' : '25px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '15px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#ffd700';
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{
+                  width: isMobile ? '45px' : '55px',
+                  height: isMobile ? '45px' : '55px',
+                  borderRadius: '12px',
+                  background: 'rgba(255,215,0,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: isMobile ? '24px' : '28px',
+                  flexShrink: 0
+                }}>
+                  📖
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#ffd700',
+                    marginBottom: '4px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Guida & Strategia
+                  </div>
+                  <div style={{
+                    fontSize: isMobile ? '16px' : '20px',
+                    fontWeight: '700',
+                    color: 'white'
+                  }}>
+                    Money Management
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: theme.textDim,
+                    marginTop: '4px'
+                  }}>
+                    Quarter Kelly, scala stake e regole d'oro
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

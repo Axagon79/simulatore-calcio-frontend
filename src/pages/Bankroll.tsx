@@ -51,13 +51,24 @@ const getStakeLabel = (s: string) => {
   return m[s] || s;
 };
 
+const BASE_FROM = '2026-02-10';
+
+const getDaysAgoDate = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split('T')[0];
+};
+
 export default function Bankroll({ onBack }: { onBack?: () => void }) {
   const [data, setData] = useState<BankrollData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-10`)
+  const fetchData = (fromDate: string) => {
+    setLoading(true);
+    setError(null);
+    fetch(`${API_BASE}/simulation/bankroll-stats?from=${fromDate}`)
       .then(r => {
         if (!r.ok) throw new Error(`Errore server: ${r.status}`);
         const ct = r.headers.get('content-type') || '';
@@ -70,7 +81,9 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchData(BASE_FROM); }, []);
 
   if (loading) return (
     <div style={{ background: theme.bg, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: theme.font }}>
@@ -162,19 +175,43 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         ))}
       </div>
 
-      {/* Performance temporale */}
+      {/* Filtri temporali (cliccabili) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
         {[
-          { label: 'Ultimi 90 giorni', s: data.temporal.last90 },
-          { label: 'Ultimi 30 giorni', s: data.temporal.last30 },
-          { label: 'Ultimi 7 giorni', s: data.temporal.last7 },
-        ].map((item, i) => (
-          <div key={i} style={{ background: theme.panel, border: theme.panelBorder, borderRadius: '10px', padding: '12px' }}>
-            <div style={{ fontSize: '10px', color: theme.textDim, marginBottom: '6px' }}>{item.label}</div>
-            <div style={{ fontSize: '16px', fontWeight: '900', color: plColor(item.s.profit_loss) }}>{plSign(item.s.profit_loss)}u</div>
-            <div style={{ fontSize: '11px', color: theme.textDim }}>{item.s.count} pronos. | HR {item.s.hr}% | Y {item.s.yield > 0 ? '+' : ''}{item.s.yield}%</div>
-          </div>
-        ))}
+          { label: 'Ultimi 90 giorni', days: 90, s: data.temporal.last90 },
+          { label: 'Ultimi 30 giorni', days: 30, s: data.temporal.last30 },
+          { label: 'Ultimi 7 giorni', days: 7, s: data.temporal.last7 },
+        ].map((item) => {
+          const isActive = activeFilter === item.days;
+          return (
+            <div
+              key={item.days}
+              onClick={() => {
+                if (isActive) {
+                  setActiveFilter(null);
+                  fetchData(BASE_FROM);
+                } else {
+                  setActiveFilter(item.days);
+                  const fromDate = getDaysAgoDate(item.days);
+                  fetchData(fromDate > BASE_FROM ? fromDate : BASE_FROM);
+                }
+              }}
+              style={{
+                background: isActive ? 'rgba(0,240,255,0.1)' : theme.panel,
+                border: isActive ? `1px solid ${theme.cyan}` : theme.panelBorder,
+                borderRadius: '10px', padding: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ fontSize: '10px', color: isActive ? theme.cyan : theme.textDim, marginBottom: '6px', fontWeight: isActive ? '800' : '400' }}>
+                {isActive ? `▸ ${item.label}` : item.label}
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: '900', color: plColor(item.s.profit_loss) }}>{plSign(item.s.profit_loss)}u</div>
+              <div style={{ fontSize: '11px', color: theme.textDim }}>{item.s.count} pronos. | HR {item.s.hr}% | Y {item.s.yield > 0 ? '+' : ''}{item.s.yield}%</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Breakdown per mercato */}

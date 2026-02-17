@@ -2333,6 +2333,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           stemmiCampionati={STEMMI_CAMPIONATI}
           getWidgetGlow={getWidgetGlow}
           setViewMode={setViewMode}
+          isAdmin={isAdmin}
         />
 
         {/* MAIN ARENA */}

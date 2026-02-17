@@ -58,6 +58,7 @@ interface BarraLateraleProps {
   stemmiCampionati: Record<string, string>;
   getWidgetGlow: (color: string) => CSSProperties;
   setViewMode?: (mode: 'calendar' | 'today') => void;
+  isAdmin?: boolean;
 }
 
 export default function BarraLaterale({
@@ -87,7 +88,8 @@ export default function BarraLaterale({
   stemmiCoppe,
   stemmiCampionati,
   getWidgetGlow,
-  setViewMode
+  setViewMode,
+  isAdmin
 }: BarraLateraleProps) {
 
   return (
@@ -245,6 +247,29 @@ export default function BarraLaterale({
           📖 Guida
         </button>
       </div>
+
+      {/* --- BOTTONE SISTEMA C (solo admin) --- */}
+      {isAdmin && (
+        <button
+          onClick={() => { setMobileMenuOpen(false); window.location.href = '/sistema-c'; }}
+          style={{
+            width: '100%',
+            padding: '12px 4px',
+            marginTop: '6px',
+            background: 'rgba(255, 107, 53, 0.08)',
+            border: '1px solid rgba(255, 107, 53, 0.25)',
+            borderRadius: '8px',
+            color: '#ff6b35',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '700',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+            transition: 'all 0.2s'
+          }}
+        >
+          🎲 Sistema C (MC)
+        </button>
+      )}
 
       {/* --- FINE BLOCCO SELEZIONE --- */}
 

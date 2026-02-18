@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { checkAdmin } from '../permissions';
 
 // --- TEMA ---
 const theme = {
@@ -190,7 +189,6 @@ interface Stats {
 // ==================== COMPONENTE ====================
 
 export default function SistemaC() {
-  const isAdmin = checkAdmin();
   const [date, setDate] = useState(getToday());
   const [predictions, setPredictions] = useState<EngineCPrediction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,19 +204,6 @@ export default function SistemaC() {
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
   }, []);
-
-  // Admin gate
-  if (!isAdmin) {
-    return (
-      <div style={{ position: 'fixed', inset: 0, background: theme.bg, color: theme.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: theme.font }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
-          <div style={{ fontSize: '20px', fontWeight: 700 }}>Accesso Negato</div>
-          <div style={{ color: theme.textDim, marginTop: '8px' }}>Questa pagina è riservata agli amministratori.</div>
-        </div>
-      </div>
-    );
-  }
 
   // Fetch
   useEffect(() => {

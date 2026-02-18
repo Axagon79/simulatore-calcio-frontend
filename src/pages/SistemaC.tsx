@@ -513,6 +513,12 @@ export default function SistemaC() {
           }}>
             ← Indietro
           </button>
+          <button onClick={() => window.location.href = '/'} style={{
+            background: 'rgba(0, 240, 255, 0.08)', border: '1px solid rgba(0, 240, 255, 0.3)',
+            color: '#00f0ff', cursor: 'pointer', fontSize: '11px', padding: '5px 12px', borderRadius: '6px', fontWeight: 600,
+          }}>
+            🔮 Pronostici
+          </button>
           <div style={{ textAlign: 'center' }}>
             <div style={{
               fontSize: isMobile ? '18px' : '22px', fontWeight: 800,

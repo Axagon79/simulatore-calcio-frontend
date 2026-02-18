@@ -2949,6 +2949,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {tab.icon} {tab.label}
             </button>
           ))}
+          <button
+            onClick={() => window.location.href = '/sistema-c'}
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255, 107, 53, 0.3)',
+              color: '#ff6b35',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '500',
+              transition: 'all 0.2s'
+            }}
+          >
+            🎲 Monte Carlo
+          </button>
         </div>
 
         {/* STATUS FILTERS — riga unica */}

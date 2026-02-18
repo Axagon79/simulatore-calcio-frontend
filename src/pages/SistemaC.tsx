@@ -421,7 +421,7 @@ export default function SistemaC() {
               padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600,
               background: 'rgba(255, 107, 53, 0.1)', color: theme.orange,
             }}>
-              {pred.pronostici?.length || 0} tip
+              {pred.pronostici?.filter((p: any) => p.tipo !== 'RISULTATO_ESATTO').length || 0} tip
             </span>
           </div>
         </div>
@@ -429,9 +429,9 @@ export default function SistemaC() {
         {/* Contenuto espanso */}
         {isExpanded && (
           <div style={{ padding: '0 12px 12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            {/* Pronostici */}
+            {/* Pronostici (esclusi RE) */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-              {(pred.pronostici || []).map((p, i) => {
+              {(pred.pronostici || []).filter((p: any) => p.tipo !== 'RISULTATO_ESATTO').map((p: any, i: number) => {
                 const hitColor = p.hit === true ? theme.success : p.hit === false ? theme.danger : theme.textDim;
                 return (
                   <div key={i} style={{
@@ -455,6 +455,18 @@ export default function SistemaC() {
                 );
               })}
             </div>
+
+            {/* Risultato Esatto — sezione separata */}
+            {(pred.pronostici || []).some((p: any) => p.tipo === 'RISULTATO_ESATTO') && (
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '10px', color: theme.textDim, fontWeight: 600 }}>Risultato MC:</span>
+                {(pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any, i: number) => (
+                  <span key={i} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
+                    {p.pronostico} ({p.confidence}%){i < (pred.pronostici || []).filter((q: any) => q.tipo === 'RISULTATO_ESATTO').length - 1 ? '  ·' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Quote */}
             {pred.odds && (
@@ -545,7 +557,7 @@ export default function SistemaC() {
               <div style={{ fontSize: '10px', color: theme.textDim }}>Partite</div>
             </div>
             <div style={{ background: theme.panel, border: theme.panelBorder, borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: theme.text }}>{stats.total}</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: theme.text }}>{typeCounts.SEGNO + typeCounts.DOPPIA_CHANCE + typeCounts.GOL}</div>
               <div style={{ fontSize: '10px', color: theme.textDim }}>Tips</div>
             </div>
             {typeCounts.SEGNO > 0 && (

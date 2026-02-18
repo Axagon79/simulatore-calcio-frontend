@@ -329,7 +329,7 @@ export default function SistemaC() {
   );
 
   // --- RENDER: Sezione MC ---
-  const renderMCSection = (sim: SimulationData, reOrder?: string[]) => (
+  const renderMCSection = (sim: SimulationData, reOrder?: string[], realScore?: string | null) => (
     <div style={{
       margin: '12px 0 0', padding: '12px',
       background: 'rgba(255, 107, 53, 0.06)',
@@ -378,15 +378,19 @@ export default function SistemaC() {
               if (idxA !== -1) return -1;
               if (idxB !== -1) return 1;
               return 0;
-            }).slice(0, 4).map(([score, count], i) => (
-              <span key={i} style={{
-                padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                background: i === 0 ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255,255,255,0.06)',
-                color: i === 0 ? theme.orange : theme.textDim,
-                border: i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : '1px solid rgba(255,255,255,0.08)',
-              }}>
-                {score} ({count})
-              </span>
+            }).slice(0, 4).map(([score, count], i) => {
+              const isHit = realScore && score === realScore.replace(':', '-');
+              return (
+                <span key={i} style={{
+                  padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
+                  background: isHit ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255,255,255,0.06)',
+                  color: isHit ? theme.success : i === 0 ? theme.orange : theme.textDim,
+                  border: isHit ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  {score} ({count}) {isHit ? '✅' : ''}
+                </span>
+              );
+            }
             ))}
           </div>
         </div>
@@ -499,11 +503,14 @@ export default function SistemaC() {
             {(pred.pronostici || []).some((p: any) => p.tipo === 'RISULTATO_ESATTO') && (
               <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Risultato MC:</span>
-                {(pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any, i: number) => (
-                  <span key={i} style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                    {p.pronostico} ({p.confidence}%){i < (pred.pronostici || []).filter((q: any) => q.tipo === 'RISULTATO_ESATTO').length - 1 ? '  ·' : ''}
-                  </span>
-                ))}
+                {(pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any, i: number) => {
+                  const reHit = pred.real_score && p.pronostico === pred.real_score.replace(':', '-');
+                  return (
+                    <span key={i} style={{ fontSize: '13px', color: reHit ? theme.success : 'rgba(255,255,255,0.6)', fontWeight: reHit ? 800 : 600 }}>
+                      {p.pronostico} ({p.confidence}%){reHit ? ' ✅' : ''}{i < (pred.pronostici || []).filter((q: any) => q.tipo === 'RISULTATO_ESATTO').length - 1 ? '  ·' : ''}
+                    </span>
+                  );
+                })}
               </div>
             )}
 
@@ -519,7 +526,8 @@ export default function SistemaC() {
             {/* Monte Carlo */}
             {pred.simulation_data && renderMCSection(
               pred.simulation_data,
-              (pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any) => p.pronostico)
+              (pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any) => p.pronostico),
+              pred.real_score
             )}
 
             {/* Commento */}

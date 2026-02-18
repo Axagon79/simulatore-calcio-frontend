@@ -13,15 +13,17 @@ const ALGO_MAP: Record<string, string> = {
   "3": "ALGO_3",
   "4": "ALGO_4",
   "5": "ALGO_5",
+  "c": "ALGO_C",
 };
 
 const ALGO_LABELS: Record<string, string> = {
   "global": "🎛️ MASTER",
   "1": "📊 ALGO 1",
-  "2": "📈 ALGO 2", 
+  "2": "📈 ALGO 2",
   "3": "🎯 ALGO 3",
   "4": "🎲 ALGO 4",
   "5": "🤖 ALGO 5",
+  "c": "🎲 PRONOSTICI",
 };
 
 const ALGO_FULL_NAMES: Record<string, string> = {
@@ -31,6 +33,7 @@ const ALGO_FULL_NAMES: Record<string, string> = {
   "3": "Tattico (Complesso)",
   "4": "Caos Estremo",
   "5": "Master Ensemble",
+  "c": "Pronostici MC (Dedicato)",
 };
 
 const ALGO_COLORS: Record<string, string> = {
@@ -40,6 +43,7 @@ const ALGO_COLORS: Record<string, string> = {
   "3": "#f97316",
   "4": "#ef4444",
   "5": "#eab308",
+  "c": "#ff6b35",
 };
 
 const DEFAULTS: Record<string, number> = {
@@ -120,15 +124,32 @@ const TuningMixer: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // 1. Carica config principale (GLOBAL + ALGO_1-5)
       const response = await fetch(`${AI_ENGINE_BASE}/get_tuning`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await response.json();
-      
+
       if (data.success && data.config) {
-        setFullConfig(data.config);
-        processAlgoData(data.config, activeAlgo);
+        const mergedConfig = { ...data.config };
+
+        // 2. Carica ALGO_C da documento dedicato
+        try {
+          const algoCResponse = await fetch(`${AI_ENGINE_BASE}/get_tuning_algo_c`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          const algoCData = await algoCResponse.json();
+          if (algoCData.success && algoCData.config?.ALGO_C) {
+            mergedConfig.ALGO_C = algoCData.config.ALGO_C;
+          }
+        } catch {
+          // Fallback: usa ALGO_C da main_config se presente
+        }
+
+        setFullConfig(mergedConfig);
+        processAlgoData(mergedConfig, activeAlgo);
       } else {
         setError(data.error || 'Errore caricamento tuning');
       }
@@ -174,26 +195,26 @@ const TuningMixer: React.FC = () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const targetKey = ALGO_MAP[activeAlgo];
       const updatedConfig = { ...fullConfig };
-      
+
       if (!updatedConfig[targetKey]) {
         updatedConfig[targetKey] = {};
       }
-      
+
       Object.keys(currentData).forEach(k => {
         updatedConfig[targetKey][k] = { valore: currentData[k].valore };
       });
-      
+
       if (activeAlgo === "global") {
         ["1", "2", "3", "4", "5"].forEach(algoId => {
           const algoKey = ALGO_MAP[algoId];
           if (!updatedConfig[algoKey]) {
             updatedConfig[algoKey] = {};
           }
-          
+
           Object.keys(currentData).forEach(k => {
             const isParamLocked = paramLocks[k] || false;
             if (!isParamLocked && !masterLocked) {
@@ -202,22 +223,42 @@ const TuningMixer: React.FC = () => {
           });
         });
       }
-      
-      const response = await fetch(`${AI_ENGINE_BASE}/save_tuning`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config: updatedConfig }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setFullConfig(updatedConfig);
-        setModifiedParams(new Set());
-        setSuccess(`Salvato!`);
-        setTimeout(() => setSuccess(null), 3000);
+
+      // ALGO_C: salva su endpoint dedicato (documento separato in MongoDB)
+      if (activeAlgo === "c") {
+        const algoCConfig = { ALGO_C: updatedConfig[targetKey] };
+        const response = await fetch(`${AI_ENGINE_BASE}/save_tuning_algo_c`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: algoCConfig }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setFullConfig(updatedConfig);
+          setModifiedParams(new Set());
+          setSuccess('Salvato su Sistema C!');
+          setTimeout(() => setSuccess(null), 3000);
+        } else {
+          setError(data.error || 'Errore salvataggio ALGO_C');
+        }
       } else {
-        setError(data.error || 'Errore salvataggio');
+        // Tutti gli altri algo: salva su main_config (senza ALGO_C)
+        const mainConfig = { ...updatedConfig };
+        delete mainConfig.ALGO_C;
+        const response = await fetch(`${AI_ENGINE_BASE}/save_tuning`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: mainConfig }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setFullConfig(updatedConfig);
+          setModifiedParams(new Set());
+          setSuccess('Salvato!');
+          setTimeout(() => setSuccess(null), 3000);
+        } else {
+          setError(data.error || 'Errore salvataggio');
+        }
       }
     } catch (err) {
       setError('Errore connessione');

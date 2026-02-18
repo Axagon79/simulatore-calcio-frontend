@@ -78,7 +78,8 @@ export default function AppDev() {
   // --- STATO APPLICAZIONE ---
   const [selectedCup, setSelectedCup] = useState('');
   const [activeLeague, setActiveLeague] = useState<string | null>(
-    (location.state as any)?.goTo === 'PREDICTIONS' ? 'PREDICTIONS' : null
+    (location.state as any)?.goTo === 'PREDICTIONS' || window.location.hash === '#predictions'
+      ? 'PREDICTIONS' : null
   );
   // STATO SIMULAZIONE & UI
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);

@@ -517,7 +517,7 @@ export default function SistemaC() {
                     <span key={i} style={{
                       fontSize: '13px',
                       color: reHit ? theme.success : liveHit ? theme.success : 'rgba(255,255,255,0.6)',
-                      fontWeight: reHit || liveHit ? 800 : 600,
+                      fontWeight: 600,
                       animation: liveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
                     }}>
                       {p.pronostico} ({p.confidence}%){reHit ? ' ✅' : ''}{i < (pred.pronostici || []).filter((q: any) => q.tipo === 'RISULTATO_ESATTO').length - 1 ? '  ·' : ''}

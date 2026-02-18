@@ -393,8 +393,7 @@ export default function SistemaC() {
                   {score} ({count}) {isHit ? '✅' : ''}
                 </span>
               );
-            }
-            ))}
+            })}
           </div>
         </div>
       </div>

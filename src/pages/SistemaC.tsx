@@ -171,6 +171,9 @@ interface EngineCPrediction {
   real_score?: string | null;
   real_sign?: string | null;
   hit?: boolean | null;
+  live_score?: string | null;
+  live_status?: string | null;
+  live_minute?: number | null;
 }
 
 interface Stats {
@@ -205,6 +208,14 @@ export default function SistemaC() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  // Helper stato partita
+  const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null }): 'finished' | 'live' | 'to_play' => {
+    if (item.real_score) return 'finished';
+    if (item.live_status === 'Live' || item.live_status === 'HT') return 'live';
+    if (item.live_status === 'Finished') return 'finished';
+    return 'to_play';
+  };
+
   // Fetch
   useEffect(() => {
     const fetchData = async () => {
@@ -230,6 +241,32 @@ export default function SistemaC() {
       }
     };
     fetchData();
+  }, [date]);
+
+  // --- POLLING LIVE SCORES (solo data di oggi) ---
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (date !== today) return;
+
+    const mergeLive = (items: EngineCPrediction[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number }>): EngineCPrediction[] =>
+      items.map(item => {
+        const live = scores.find(s => s.home === item.home && s.away === item.away);
+        return live ? { ...item, live_score: live.live_score, live_status: live.live_status, live_minute: live.live_minute } : item;
+      });
+
+    const pollLive = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/live-scores?date=${today}`);
+        const data = await res.json();
+        if (data.success && data.scores?.length > 0) {
+          setPredictions(prev => mergeLive(prev, data.scores));
+        }
+      } catch { /* silenzioso */ }
+    };
+
+    pollLive();
+    const interval = setInterval(pollLive, 15000);
+    return () => clearInterval(interval);
   }, [date]);
 
   // Raggruppamento per lega
@@ -390,16 +427,25 @@ export default function SistemaC() {
               </span>
             </div>
 
-            {/* Risultato reale */}
-            {pred.real_score && (
+            {/* Risultato: finale / live / da giocare */}
+            {pred.real_score ? (
               <span style={{
-                padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 700,
+                padding: '2px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 900,
                 background: pred.hit ? 'rgba(5,249,182,0.15)' : 'rgba(255,42,109,0.15)',
                 color: pred.hit ? theme.success : theme.danger,
               }}>
-                {pred.real_score}
+                {pred.real_score.replace(':', ' - ')}
               </span>
-            )}
+            ) : getMatchStatus(pred) === 'live' ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score || '– : –'}
+                </span>
+                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
+                </span>}
+              </span>
+            ) : null}
 
             {/* Conteggio pronostici */}
             <span style={{
@@ -498,7 +544,7 @@ export default function SistemaC() {
           }}>
             ← Indietro
           </button>
-          <button onClick={() => window.location.href = '/'} style={{
+          <button onClick={() => window.location.href = '/#predictions'} style={{
             background: 'rgba(0, 240, 255, 0.08)', border: '1px solid rgba(0, 240, 255, 0.3)',
             color: '#00f0ff', cursor: 'pointer', fontSize: '11px', padding: '5px 12px', borderRadius: '6px', fontWeight: 600,
           }}>
@@ -642,6 +688,7 @@ export default function SistemaC() {
           Sistema C — Monte Carlo Engine (100 cicli, Master mode 5)
         </div>
       </div>
+      <style>{`@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }`}</style>
     </div>
   );
 }

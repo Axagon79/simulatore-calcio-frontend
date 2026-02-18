@@ -329,7 +329,7 @@ export default function SistemaC() {
   );
 
   // --- RENDER: Sezione MC ---
-  const renderMCSection = (sim: SimulationData) => (
+  const renderMCSection = (sim: SimulationData, reOrder?: string[]) => (
     <div style={{
       margin: '12px 0 0', padding: '12px',
       background: 'rgba(255, 107, 53, 0.06)',
@@ -370,7 +370,15 @@ export default function SistemaC() {
         <div>
           <div style={{ fontSize: '10px', color: theme.textDim, marginBottom: '2px' }}>Top Scores</div>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {(sim.top_scores || []).slice(0, 4).map(([score, count], i) => (
+            {[...(sim.top_scores || [])].sort((a, b) => {
+              if (!reOrder?.length) return 0;
+              const idxA = reOrder.indexOf(a[0]);
+              const idxB = reOrder.indexOf(b[0]);
+              if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+              if (idxA !== -1) return -1;
+              if (idxB !== -1) return 1;
+              return 0;
+            }).slice(0, 4).map(([score, count], i) => (
               <span key={i} style={{
                 padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
                 background: i === 0 ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255,255,255,0.06)',
@@ -476,7 +484,7 @@ export default function SistemaC() {
                     {p.quota && <span style={{ fontSize: '11px', color: theme.gold }}>@{Number(p.quota).toFixed(2)}</span>}
                     <span style={{ fontSize: '10px', color: theme.textDim }}>{p.confidence}%</span>
                     {p.stake != null && p.stake > 0 && (
-                      <span style={{ fontSize: '9px', fontWeight: 700, color: getStakeColor(p.stake), padding: '1px 4px', borderRadius: '3px', background: 'rgba(0,0,0,0.3)' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: getStakeColor(p.stake), padding: '2px 6px', borderRadius: '4px', background: 'rgba(0,0,0,0.3)' }}>
                         S:{p.stake}
                       </span>
                     )}
@@ -489,10 +497,10 @@ export default function SistemaC() {
 
             {/* Risultato Esatto — sezione separata */}
             {(pred.pronostici || []).some((p: any) => p.tipo === 'RISULTATO_ESATTO') && (
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '10px', color: theme.textDim, fontWeight: 600 }}>Risultato MC:</span>
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Risultato MC:</span>
                 {(pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any, i: number) => (
-                  <span key={i} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
+                  <span key={i} style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
                     {p.pronostico} ({p.confidence}%){i < (pred.pronostici || []).filter((q: any) => q.tipo === 'RISULTATO_ESATTO').length - 1 ? '  ·' : ''}
                   </span>
                 ))}
@@ -502,14 +510,17 @@ export default function SistemaC() {
             {/* Quote */}
             {pred.odds && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                {pred.odds['1'] && <span style={{ fontSize: '10px', color: theme.textDim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '3px' }}>1: {pred.odds['1']}</span>}
-                {pred.odds['X'] && <span style={{ fontSize: '10px', color: theme.textDim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '3px' }}>X: {pred.odds['X']}</span>}
-                {pred.odds['2'] && <span style={{ fontSize: '10px', color: theme.textDim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '3px' }}>2: {pred.odds['2']}</span>}
+                {pred.odds['1'] && <span style={{ fontSize: '10px', color: theme.textDim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '3px' }}>1: {Number(pred.odds['1']).toFixed(2)}</span>}
+                {pred.odds['X'] && <span style={{ fontSize: '10px', color: theme.textDim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '3px' }}>X: {Number(pred.odds['X']).toFixed(2)}</span>}
+                {pred.odds['2'] && <span style={{ fontSize: '10px', color: theme.textDim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '3px' }}>2: {Number(pred.odds['2']).toFixed(2)}</span>}
               </div>
             )}
 
             {/* Monte Carlo */}
-            {pred.simulation_data && renderMCSection(pred.simulation_data)}
+            {pred.simulation_data && renderMCSection(
+              pred.simulation_data,
+              (pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any) => p.pronostico)
+            )}
 
             {/* Commento */}
             {pred.comment && (

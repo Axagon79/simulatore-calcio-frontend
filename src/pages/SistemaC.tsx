@@ -329,7 +329,7 @@ export default function SistemaC() {
   );
 
   // --- RENDER: Sezione MC ---
-  const renderMCSection = (sim: SimulationData, reOrder?: string[], realScore?: string | null) => (
+  const renderMCSection = (sim: SimulationData, reOrder?: string[], realScore?: string | null, liveScore?: string | null, isLive?: boolean) => (
     <div style={{
       margin: '12px 0 0', padding: '12px',
       background: 'rgba(255, 107, 53, 0.06)',
@@ -380,12 +380,15 @@ export default function SistemaC() {
               return 0;
             }).slice(0, 4).map(([score, count], i) => {
               const isHit = realScore && score === realScore.replace(':', '-');
+              const isLiveHit = !realScore && isLive && liveScore && score === liveScore.replace(':', '-');
+              const highlighted = isHit || isLiveHit;
               return (
                 <span key={i} style={{
                   padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                  background: isHit ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255,255,255,0.06)',
-                  color: isHit ? theme.success : i === 0 ? theme.orange : theme.textDim,
-                  border: isHit ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : '1px solid rgba(255,255,255,0.08)',
+                  background: highlighted ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255,255,255,0.06)',
+                  color: highlighted ? theme.success : i === 0 ? theme.orange : theme.textDim,
+                  border: highlighted ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : '1px solid rgba(255,255,255,0.08)',
+                  animation: isLiveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
                 }}>
                   {score} ({count}) {isHit ? '✅' : ''}
                 </span>
@@ -505,8 +508,15 @@ export default function SistemaC() {
                 <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Risultato MC:</span>
                 {(pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any, i: number) => {
                   const reHit = pred.real_score && p.pronostico === pred.real_score.replace(':', '-');
+                  const isLive = !pred.real_score && getMatchStatus(pred) === 'live';
+                  const liveHit = isLive && pred.live_score && p.pronostico === pred.live_score.replace(':', '-');
                   return (
-                    <span key={i} style={{ fontSize: '13px', color: reHit ? theme.success : 'rgba(255,255,255,0.6)', fontWeight: reHit ? 800 : 600 }}>
+                    <span key={i} style={{
+                      fontSize: '13px',
+                      color: reHit ? theme.success : liveHit ? theme.success : 'rgba(255,255,255,0.6)',
+                      fontWeight: reHit || liveHit ? 800 : 600,
+                      animation: liveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
+                    }}>
                       {p.pronostico} ({p.confidence}%){reHit ? ' ✅' : ''}{i < (pred.pronostici || []).filter((q: any) => q.tipo === 'RISULTATO_ESATTO').length - 1 ? '  ·' : ''}
                     </span>
                   );
@@ -527,7 +537,9 @@ export default function SistemaC() {
             {pred.simulation_data && renderMCSection(
               pred.simulation_data,
               (pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any) => p.pronostico),
-              pred.real_score
+              pred.real_score,
+              pred.live_score,
+              getMatchStatus(pred) === 'live'
             )}
 
             {/* Commento */}

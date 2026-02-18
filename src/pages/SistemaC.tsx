@@ -87,6 +87,8 @@ const getStemmaUrl = (mongoId: string | undefined, league: string): string => {
 };
 
 // --- HELPERS ---
+const normalizeScore = (s: string): string => s.replace(/\s/g, '').replace(':', '-');
+
 const getConfidenceColor = (conf: number): string => {
   if (conf >= 70) return theme.success;
   if (conf >= 55) return theme.cyan;
@@ -379,8 +381,9 @@ export default function SistemaC() {
               if (idxB !== -1) return 1;
               return 0;
             }).slice(0, 4).map(([score, count], i) => {
-              const isHit = realScore && score === realScore.replace(':', '-');
-              const isLiveHit = !realScore && isLive && liveScore && score === liveScore.replace(':', '-');
+              const normS = normalizeScore(score);
+              const isHit = realScore && normS === normalizeScore(realScore);
+              const isLiveHit = !realScore && isLive && liveScore && normS === normalizeScore(liveScore);
               const highlighted = isHit || isLiveHit;
               return (
                 <span key={i} style={{
@@ -506,9 +509,10 @@ export default function SistemaC() {
               <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Risultato MC:</span>
                 {(pred.pronostici || []).filter((p: any) => p.tipo === 'RISULTATO_ESATTO').map((p: any, i: number) => {
-                  const reHit = pred.real_score && p.pronostico === pred.real_score.replace(':', '-');
+                  const normP = normalizeScore(p.pronostico);
+                  const reHit = pred.real_score && normP === normalizeScore(pred.real_score);
                   const isLive = !pred.real_score && getMatchStatus(pred) === 'live';
-                  const liveHit = isLive && pred.live_score && p.pronostico === pred.live_score.replace(':', '-');
+                  const liveHit = isLive && pred.live_score && normP === normalizeScore(pred.live_score);
                   return (
                     <span key={i} style={{
                       fontSize: '13px',

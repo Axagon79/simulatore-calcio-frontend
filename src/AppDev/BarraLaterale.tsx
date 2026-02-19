@@ -275,17 +275,12 @@ export default function BarraLaterale({
 
       <button
         onClick={() => {
-          setActiveLeague('PREDICTIONS');
-          setSelectedCup('');
-          setLeague('');
-          setMobileMenuOpen(false);
+          window.location.href = '/best-picks';
         }}
         style={{
           width: '100%',
           padding: '14px 12px',
-          background: activeLeague === 'PREDICTIONS'
-            ? `linear-gradient(135deg, ${theme.purple}, ${theme.cyan})`
-            : `linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))`,
+          background: `linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))`,
           border: 'revert',
           borderRadius: '10px',
           color: 'white',
@@ -302,7 +297,7 @@ export default function BarraLaterale({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          🔮 <span style={{ marginLeft: '4px' }}>Pronostici del Giorno</span>
+          🏆 <span style={{ marginLeft: '4px' }}>Best Picks</span>
         </span>
         <span style={{ fontSize: '18px',marginLeft: '20px', fontWeight: 'bold' }}>›</span>
       </button>

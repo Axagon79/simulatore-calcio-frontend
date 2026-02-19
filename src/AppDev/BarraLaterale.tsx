@@ -79,7 +79,7 @@ export default function BarraLaterale({
   setExpandedMatch,
   setViewState,
   setMobileMenuOpen,
-  activeLeague,
+  activeLeague: _activeLeague,
   configMode,
   matches,
   selectedMatchForConfig,

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { checkAdmin } from './permissions';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
-type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_prod' | 'solo_sandbox';
 
 // --- TEMA (identico ad AppDev) ---
 const theme = {
@@ -309,12 +308,11 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [bombStats, setBombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
+  const [bombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const toggleSection2 = (id: string) => setCollapsedSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const isAdmin = checkAdmin();
-  const mode = 'prod' as const; // Unified non ha modalità — sempre 'prod'
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   // Reset filtro al cambio data
   useEffect(() => {
@@ -724,19 +722,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     if (filter === 'centrate') return bomb.hit === true;
     if (filter === 'mancate') return bomb.hit === false;
     return true;
-  };
-
-  // --- HELPERS CONFRONTO ---
-  type MatchComparison = {
-    home: string; away: string; league: string; date: string; match_time: string;
-    home_mongo_id?: string; away_mongo_id?: string;
-    prodPred?: Prediction; sandboxPred?: Prediction;
-    prodBomb?: Bomb; sandboxBomb?: Bomb;
-    status: 'both' | 'prod_only' | 'sandbox_only';
-    predsDifferent: boolean; bombsDifferent: boolean;
-    predsChangedMarkets: { tipo: string; prod: string; sandbox: string }[];
-    predsExtraProd: string[];
-    predsExtraSandbox: string[];
   };
 
   // --- PARTIZIONAMENTO: Normali vs High Risk ---
@@ -2380,7 +2365,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* NAVIGAZIONE DATA */}
         <div style={{
           display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '10px' : '15px',
-          marginTop: isMobile ? (activeTab === 'high_risk' ? '5px' : '15px') : undefined,
+          marginTop: isMobile ? (activeTab === 'alto_rendimento' ? '5px' : '15px') : undefined,
           marginBottom: isMobile ? '10px' : '25px'
         }}>
           <button
@@ -2486,364 +2471,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         </div>{/* FINE HEADER STICKY */}
         {isMobile && <div style={{ height: '15px' }} />}
 
-        {/* Vista Confronto rimossa — Unified non ha confronto */}
-        {false && (() => {
-          const s = confrontoStats;
-          const byLeague = filteredCompareMatches.reduce<Record<string, MatchComparison[]>>((acc, c) => {
-            if (!acc[c.league]) acc[c.league] = [];
-            acc[c.league].push(c);
-            return acc;
-          }, {});
-          const hrDelta = (s.prodHR != null && s.sandHR != null) ? s.prodHR - s.sandHR : null;
-
-          return (
-            <>
-              {/* ===== DASHBOARD PROD vs SANDBOX ===== */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto 1fr',
-                gap: isMobile ? '12px' : '16px', marginBottom: '20px', alignItems: 'stretch'
-              }}>
-                {/* Card PRODUZIONE */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(0,240,255,0.08), rgba(0,240,255,0.02))',
-                  border: `1px solid ${theme.cyan}30`, borderRadius: '14px', padding: '16px 20px', textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '10px', fontWeight: '800', color: theme.cyan, textTransform: 'uppercase' as const, letterSpacing: '1.5px', marginBottom: '10px' }}>Produzione</div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.text }}>{s.prodPredCount}</div>
-                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Pronostici</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.gold }}>{s.prodBombs}</div>
-                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Bombe</div>
-                    </div>
-                  </div>
-                  {s.prodHR != null && (
-                    <div>
-                      <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px' }}>HIT RATE</div>
-                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '4px' }}>
-                        <div style={{ height: '100%', width: `${Math.min(100, s.prodHR)}%`, background: s.prodHR >= 50 ? theme.success : theme.danger, borderRadius: '3px', transition: 'width 0.6s ease' }} />
-                      </div>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: s.prodHR >= 50 ? theme.success : theme.danger }}>{s.prodHR}%</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Cerchio VS + Delta */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '0' : '0 8px', minWidth: isMobile ? 'auto' : '80px' }}>
-                  <div style={{
-                    fontSize: '18px', fontWeight: '900', color: theme.purple,
-                    background: `${theme.purple}15`, borderRadius: '50%',
-                    width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `2px solid ${theme.purple}40`, marginBottom: '8px'
-                  }}>VS</div>
-                  {hrDelta != null && (
-                    <div style={{ fontSize: '11px', fontWeight: '800', textAlign: 'center',
-                      color: hrDelta > 0 ? theme.cyan : hrDelta < 0 ? '#ff9800' : theme.textDim
-                    }}>
-                      {hrDelta > 0 ? `PROD +${hrDelta.toFixed(1)}%` : hrDelta < 0 ? `SAND +${Math.abs(hrDelta).toFixed(1)}%` : 'PARI'}
-                    </div>
-                  )}
-                </div>
-
-                {/* Card SANDBOX */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(255,152,0,0.08), rgba(255,152,0,0.02))',
-                  border: '1px solid rgba(255,152,0,0.3)', borderRadius: '14px', padding: '16px 20px', textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#ff9800', textTransform: 'uppercase' as const, letterSpacing: '1.5px', marginBottom: '10px' }}>Sandbox</div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.text }}>{s.sandPredCount}</div>
-                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Pronostici</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '28px', fontWeight: '900', color: theme.gold }}>{s.sandBombs}</div>
-                      <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const }}>Bombe</div>
-                    </div>
-                  </div>
-                  {s.sandHR != null && (
-                    <div>
-                      <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px' }}>HIT RATE</div>
-                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '4px' }}>
-                        <div style={{ height: '100%', width: `${Math.min(100, s.sandHR)}%`, background: s.sandHR >= 50 ? theme.success : theme.danger, borderRadius: '3px', transition: 'width 0.6s ease' }} />
-                      </div>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: s.sandHR >= 50 ? theme.success : theme.danger }}>{s.sandHR}%</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ===== CONTATORI DIFFERENZE ===== */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
-                {[
-                  { count: s.identiche, label: 'Identiche', color: theme.success },
-                  { count: s.diverse, label: 'Diverse', color: theme.warning },
-                  ...(s.parziali > 0 ? [{ count: s.parziali, label: 'Parziali', color: '#ab47bc' as string }] : []),
-                  ...(s.soloProd > 0 ? [{ count: s.soloProd, label: 'Solo Prod', color: theme.cyan }] : []),
-                  ...(s.soloSandbox > 0 ? [{ count: s.soloSandbox, label: 'Solo Sandbox', color: '#ff9800' as string }] : []),
-                ].map((item) => (
-                  <div key={item.label} style={{
-                    background: `${item.color}10`, border: `1px solid ${item.color}30`,
-                    borderRadius: '10px', padding: '8px 16px', textAlign: 'center', minWidth: '80px'
-                  }}>
-                    <div style={{ fontSize: '22px', fontWeight: '900', color: item.color }}>{item.count}</div>
-                    <div style={{ fontSize: '9px', color: theme.textDim, textTransform: 'uppercase' as const, fontWeight: '700' }}>{item.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* ===== FILTRI CONFRONTO (pillole) ===== */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
-                {([
-                  { id: 'tutte' as ConfrontoFilter, label: 'Tutte', color: theme.purple },
-                  { id: 'identiche' as ConfrontoFilter, label: 'Identiche', color: theme.success },
-                  { id: 'diverse' as ConfrontoFilter, label: 'Diverse', color: theme.warning },
-                  { id: 'parziali' as ConfrontoFilter, label: 'Parziali', color: '#ab47bc' },
-                  { id: 'solo_prod' as ConfrontoFilter, label: 'Solo Prod', color: theme.cyan },
-                  { id: 'solo_sandbox' as ConfrontoFilter, label: 'Solo Sandbox', color: '#ff9800' },
-                ]).map(f => (
-                  <button key={f.id} onClick={() => setConfrontoFilter(f.id)} style={{
-                    background: confrontoFilter === f.id ? `${f.color}20` : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${confrontoFilter === f.id ? f.color : 'rgba(255,255,255,0.06)'}`,
-                    color: confrontoFilter === f.id ? f.color : theme.textDim,
-                    padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
-                    fontSize: '11px', fontWeight: confrontoFilter === f.id ? '700' : '500',
-                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px'
-                  }}>
-                    {f.label}
-                    {confrontoFilterCounts[f.id] > 0 && (
-                      <span style={{
-                        fontSize: '9px', fontWeight: '800',
-                        background: confrontoFilter === f.id ? `${f.color}30` : 'rgba(255,255,255,0.06)',
-                        padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
-                      }}>{confrontoFilterCounts[f.id]}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Contatore filtrato */}
-              {confrontoFilter !== 'tutte' && (
-                <div style={{ textAlign: 'center', fontSize: '11px', color: theme.textDim, marginBottom: '12px' }}>
-                  Mostrando <span style={{ fontWeight: '800', color: theme.text }}>{filteredCompareMatches.length}</span> di <span style={{ fontWeight: '800', color: theme.text }}>{compareMatches.length}</span> partite
-                </div>
-              )}
-
-              {/* Nessun risultato per filtro */}
-              {confrontoFilter !== 'tutte' && filteredCompareMatches.length === 0 && compareMatches.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: theme.textDim, fontSize: '13px' }}>
-                  Nessuna partita corrisponde al filtro selezionato.
-                  <br />
-                  <button onClick={() => setConfrontoFilter('tutte')} style={{
-                    marginTop: '10px', background: `${theme.purple}20`, border: `1px solid ${theme.purple}`,
-                    color: theme.purple, padding: '6px 16px', borderRadius: '8px',
-                    cursor: 'pointer', fontSize: '12px', fontWeight: '600'
-                  }}>Mostra tutte</button>
-                </div>
-              )}
-
-              {/* ===== TABELLA CONFRONTO PER LEGA ===== */}
-              {filteredCompareMatches.length === 0 && compareMatches.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: theme.textDim }}>Nessuna partita da confrontare per questa data.</div>
-              ) : Object.entries(byLeague).map(([league, matches]) => {
-                const isCollapsed = collapsedLeagues.has(league);
-                const leagueLogoUrl = getLeagueLogoUrl(league);
-                const countryCode = LEAGUE_TO_COUNTRY_CODE[league];
-                const lIdent = matches.filter(m => m.status === 'both' && !m.predsDifferent && !m.bombsDifferent).length;
-                const lDiv = matches.filter(m => m.status === 'both' && (m.predsChangedMarkets.length > 0 || m.bombsDifferent)).length;
-                const lParz = matches.filter(m => m.status === 'both' && m.predsChangedMarkets.length === 0 && !m.bombsDifferent && (m.predsExtraProd.length > 0 || m.predsExtraSandbox.length > 0)).length;
-                const lSP = matches.filter(m => m.status === 'prod_only').length;
-                const lSS = matches.filter(m => m.status === 'sandbox_only').length;
-
-                return (
-                  <div key={`comp-${league}`} style={{ marginBottom: '16px' }}>
-                    {/* Header Lega con mini-summary */}
-                    <div
-                      onClick={() => setCollapsedLeagues(prev => { const n = new Set(prev); n.has(league) ? n.delete(league) : n.add(league); return n; })}
-                      style={{
-                        background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
-                        padding: '10px 14px', marginBottom: '6px', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s'
-                      }}
-                    >
-                      {leagueLogoUrl && <img src={leagueLogoUrl} alt="" style={{ width: '22px', height: '22px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                      {countryCode && <img src={`https://flagcdn.com/w40/${countryCode}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                      <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text, flex: 1 }}>{league}</span>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '10px' }}>
-                        {lIdent > 0 && <span style={{ color: theme.success, fontWeight: '700' }}>{lIdent}=</span>}
-                        {lDiv > 0 && <span style={{ color: theme.warning, fontWeight: '700' }}>{lDiv}~</span>}
-                        {lParz > 0 && <span style={{ color: '#ab47bc', fontWeight: '700' }}>{lParz}±</span>}
-                        {lSP > 0 && <span style={{ color: theme.cyan, fontWeight: '700' }}>+{lSP}P</span>}
-                        {lSS > 0 && <span style={{ color: '#ff9800', fontWeight: '700' }}>+{lSS}S</span>}
-                      </div>
-                      <span style={{ fontSize: '11px', color: theme.textDim }}>{matches.length}</span>
-                      <span style={{ fontSize: '11px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                    </div>
-
-                    {/* Card partite — layout a due colonne */}
-                    {!isCollapsed && matches.map((m) => {
-                      const isDiverse = m.predsChangedMarkets.length > 0 || m.bombsDifferent;
-                      const isParziale = !isDiverse && (m.predsExtraProd.length > 0 || m.predsExtraSandbox.length > 0);
-                      const barColor = m.status === 'prod_only' ? theme.cyan : m.status === 'sandbox_only' ? '#ff9800'
-                        : isDiverse ? theme.warning : isParziale ? '#ab47bc' : theme.success;
-                      const badgeLabel = m.status === 'prod_only' ? 'SOLO PROD' : m.status === 'sandbox_only' ? 'SOLO SANDBOX'
-                        : isDiverse ? 'DIVERSI' : isParziale ? 'PARZIALE' : 'IDENTICI';
-                      const prodTips = m.prodPred?.pronostici || [];
-                      const sandTips = m.sandboxPred?.pronostici || [];
-                      const prodTipSet = new Set(prodTips.map(p => `${p.tipo}-${p.pronostico}`));
-                      const sandTipSet = new Set(sandTips.map(p => `${p.tipo}-${p.pronostico}`));
-
-                      const renderTip = (p: any, odds: any, accent: string, isDiff: boolean) => {
-                        const q = p.quota || (p.tipo === 'SEGNO' && odds ? (odds as any)[p.pronostico] : null)
-                          || (p.tipo === 'GOL' && odds ? getGolQuota(p.pronostico, odds) : null);
-                        const hc = p.hit === true ? '#00ff88' : p.hit === false ? '#ff4466' : accent;
-                        return (
-                          <span style={{
-                            background: isDiff ? 'rgba(255,159,67,0.15)' : `${hc}12`,
-                            border: `1px solid ${isDiff ? theme.warning : hc}30`,
-                            borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '700', color: hc,
-                            display: 'inline-flex', alignItems: 'center', gap: '2px'
-                          }}>
-                            {isDiff && <span style={{ color: theme.warning, fontSize: '8px' }}>*</span>}
-                            {p.pronostico}{q ? ` @${Number(q).toFixed(2)}` : ''}{p.hit != null && (p.hit ? ' ✓' : ' ✗')}
-                          </span>
-                        );
-                      };
-
-                      return (
-                        <div key={`comp-${m.home}-${m.away}`} style={{
-                          background: theme.panel, border: theme.panelBorder, borderRadius: '10px',
-                          marginBottom: '4px', position: 'relative', overflow: 'hidden'
-                        }}>
-                          {/* Barra laterale */}
-                          <div style={{ position: 'absolute', top: 0, left: 0, width: '3px', height: '100%', background: barColor, borderRadius: '10px 0 0 10px' }} />
-
-                          {/* HEADER PARTITA */}
-                          <div style={{ padding: isMobile ? '8px 10px 6px 14px' : '10px 14px 8px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' as const }}>
-                              <span style={{ fontSize: '10px', color: theme.textDim }}>{m.match_time}</span>
-                              {(() => {
-                                const ref = m.prodPred || m.sandboxPred;
-                                if (!ref) return null;
-                                if (ref.real_score) return (
-                                  <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: '900', color: theme.text }}>
-                                    {ref.real_score.replace(':', ' - ')}
-                                  </span>
-                                );
-                                if (ref.live_status === 'Live' || ref.live_status === 'HT') return (
-                                  <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: '900', color: ref.live_status === 'Live' ? '#ef4444' : '#f59e0b', animation: ref.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                                      {ref.live_score || '– : –'}
-                                    </span>
-                                    <span style={{ fontSize: '8px', fontWeight: 900, color: ref.live_status === 'Live' ? '#ef4444' : '#f59e0b' }}>
-                                      {ref.live_status === 'Live' ? `${ref.live_minute || ''}'` : 'INT'}
-                                    </span>
-                                  </span>
-                                );
-                                return null;
-                              })()}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                              <img src={getStemmaUrl(m.home_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                              <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text }}>{m.home}</span>
-                              <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: '600' }}>vs</span>
-                              <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text }}>{m.away}</span>
-                              <img src={getStemmaUrl(m.away_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                            </div>
-                          </div>
-
-                          {/* BADGE STATO CENTRATO */}
-                          <div style={{
-                            display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '6px 0',
-                            background: `${barColor}10`, borderBottom: '1px solid rgba(255,255,255,0.06)', gap: '4px'
-                          }}>
-                            <span style={{
-                              fontSize: '12px', fontWeight: '900', color: barColor, letterSpacing: '1px',
-                              background: `${barColor}20`, padding: '4px 16px', borderRadius: '6px',
-                              border: `1px solid ${barColor}40`, textTransform: 'uppercase' as const,
-                            }}>{badgeLabel}</span>
-                            {/* Dettaglio differenze */}
-                            {(m.predsChangedMarkets.length > 0 || m.predsExtraProd.length > 0 || m.predsExtraSandbox.length > 0) && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', gap: '4px', fontSize: '10px' }}>
-                                {m.predsChangedMarkets.map(c => (
-                                  <span key={c.tipo} style={{ color: theme.warning, fontWeight: '700' }}>
-                                    {c.tipo}: {c.prod} → {c.sandbox}
-                                  </span>
-                                ))}
-                                {m.predsExtraProd.map(t => (
-                                  <span key={`ep-${t}`} style={{ color: '#ab47bc', fontWeight: '600' }}>
-                                    {t}: solo PROD
-                                  </span>
-                                ))}
-                                {m.predsExtraSandbox.map(t => (
-                                  <span key={`es-${t}`} style={{ color: '#ab47bc', fontWeight: '600' }}>
-                                    {t}: solo SANDBOX
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* DUE COLONNE: PROD | SANDBOX */}
-                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1px 1fr' }}>
-                            {/* Colonna PROD */}
-                            <div style={{ padding: isMobile ? '8px 10px 4px 14px' : '10px 14px 10px 16px' }}>
-                              <div style={{ fontSize: '9px', fontWeight: '800', color: theme.cyan, textTransform: 'uppercase' as const, marginBottom: '6px', letterSpacing: '0.5px' }}>
-                                PROD {m.prodPred?.hit != null && (m.prodPred.hit ? '✅' : '❌')}
-                              </div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '3px', marginBottom: '4px' }}>
-                                {prodTips.length > 0 ? prodTips.map((p, i) => (
-                                  <span key={i}>{renderTip(p, m.prodPred?.odds, theme.cyan, !sandTipSet.has(`${p.tipo}-${p.pronostico}`))}</span>
-                                )) : <span style={{ color: theme.textDim, fontStyle: 'italic', fontSize: '10px' }}>—</span>}
-                              </div>
-                              {m.prodBomb && (
-                                <div style={{ marginTop: '4px' }}>
-                                  <span style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '800', color: theme.gold }}>
-                                    💣 {m.prodBomb.segno_bomba}{m.prodBomb.hit != null && (m.prodBomb.hit ? ' ✓' : ' ✗')}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Separatore */}
-                            {!isMobile && <div style={{ background: 'rgba(255,255,255,0.08)' }} />}
-                            {isMobile && <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 10px' }} />}
-
-                            {/* Colonna SANDBOX */}
-                            <div style={{ padding: isMobile ? '4px 10px 8px 14px' : '10px 14px 10px 16px' }}>
-                              <div style={{ fontSize: '9px', fontWeight: '800', color: '#ff9800', textTransform: 'uppercase' as const, marginBottom: '6px', letterSpacing: '0.5px' }}>
-                                SANDBOX {m.sandboxPred?.hit != null && (m.sandboxPred.hit ? '✅' : '❌')}
-                              </div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '3px', marginBottom: '4px' }}>
-                                {sandTips.length > 0 ? sandTips.map((p, i) => (
-                                  <span key={i}>{renderTip(p, m.sandboxPred?.odds, '#ff9800', !prodTipSet.has(`${p.tipo}-${p.pronostico}`))}</span>
-                                )) : <span style={{ color: theme.textDim, fontStyle: 'italic', fontSize: '10px' }}>—</span>}
-                              </div>
-                              {m.sandboxBomb && (
-                                <div style={{ marginTop: '4px' }}>
-                                  <span style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '800', color: theme.gold }}>
-                                    💣 {m.sandboxBomb.segno_bomba}{m.sandboxBomb.hit != null && (m.sandboxBomb.hit ? ' ✓' : ' ✗')}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </>
-          );
-        })()}
-
-        {/* ==================== VISTA NORMALE (PROD/SANDBOX) ==================== */}
-        {mode !== 'confronto' && (<>
+        {/* ==================== VISTA PRINCIPALE ==================== */}
+        {(<>
         {/* TAB SWITCHER: Pronostici | Alto Rendimento */}
         <div style={{
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
@@ -2914,7 +2543,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const verified = filterCounts.centrate + filterCounts.mancate;
             const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
             if (hr === null) return null;
-            const hrThreshold = activeTab === 'high_risk' ? 25 : 50;
+            const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
             const hrColor = getHRColor(hr, hrThreshold);
             // HR Partite (almeno 1 pronostico corretto)
             const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...xFactorPredictions, ...exactScorePredictions, ...bombs]).filter(p => !!p.real_score);
@@ -2951,7 +2580,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           })()}
         </div>
         {/* 3 capsule HR% per sezione — solo High Risk */}
-        {activeTab === 'high_risk' && (() => {
+        {activeTab === 'alto_rendimento' && (() => {
           const esAll = exactScorePredictions.filter(p => !!p.real_score);
           const esHits = esAll.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
           const esHR = esAll.length > 0 ? Math.round((esHits / esAll.length) * 1000) / 10 : null;
@@ -3085,7 +2714,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN DATO */}
-        {mode !== 'confronto' && !loading && !error && predictions.length === 0 && bombs.length === 0 && (
+        {!loading && !error && predictions.length === 0 && bombs.length === 0 && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -3098,7 +2727,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN RISULTATO PER FILTRO */}
-        {mode !== 'confronto' && !loading && !error && statusFilter !== 'tutte' && (
+        {!loading && !error && statusFilter !== 'tutte' && (
           activeTab === 'pronostici'
             ? filteredPredictions.length === 0 && normalPredictions.length > 0
             : filteredExactScore.length === 0 && filteredXFactor.length === 0 && filteredBombs.length === 0 && (exactScorePredictions.length > 0 || xFactorPredictions.length > 0 || bombs.length > 0)
@@ -3123,12 +2752,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* CONTENUTO PRINCIPALE */}
-        {mode !== 'confronto' && !loading && !error && (
+        {!loading && !error && (
           <>
             {/* ==================== HIGH RISK: RE + XF + Bombe ==================== */}
 
             {/* SEZIONE RISULTATO ESATTO */}
-            {activeTab === 'high_risk' && filteredExactScore.length > 0 && (() => {
+            {activeTab === 'alto_rendimento' && filteredExactScore.length > 0 && (() => {
               const esFinished = filteredExactScore.filter(p => getMatchStatus(p) === 'finished').length;
               const esLive = filteredExactScore.filter(p => getMatchStatus(p) === 'live').length;
               const esToPlay = filteredExactScore.length - esFinished - esLive;
@@ -3247,7 +2876,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             })()}
 
             {/* SEZIONE X FACTOR */}
-            {activeTab === 'high_risk' && filteredXFactor.length > 0 && (() => {
+            {activeTab === 'alto_rendimento' && filteredXFactor.length > 0 && (() => {
               const xfFinishedN = filteredXFactor.filter(p => getMatchStatus(p) === 'finished').length;
               const xfLive = filteredXFactor.filter(p => getMatchStatus(p) === 'live').length;
               const xfToPlay = filteredXFactor.length - xfFinishedN - xfLive;
@@ -3366,7 +2995,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             })()}
 
             {/* SEZIONE BOMBE */}
-            {activeTab === 'high_risk' && filteredBombs.length > 0 && (() => {
+            {activeTab === 'alto_rendimento' && filteredBombs.length > 0 && (() => {
               const bmFinishedN = filteredBombs.filter(b => getMatchStatus(b) === 'finished').length;
               const bmLive = filteredBombs.filter(b => getMatchStatus(b) === 'live').length;
               const bmToPlay = filteredBombs.length - bmFinishedN - bmLive;

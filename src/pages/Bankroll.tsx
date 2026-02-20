@@ -140,34 +140,40 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
     <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', position: 'relative' }}>
+        {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: '1px solid rgba(255,255,255,0.1)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', position: 'absolute', left: 0 }}>← Indietro</button>}
+        <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0, flex: 1, textAlign: 'center', paddingRight: '20px' }}>
           Bankroll & ROI
         </h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '6px', position: 'absolute', right: 0 }}>
           <button
             onClick={() => window.location.href = '/money-management'}
-            style={{
-              background: 'rgba(255,215,0,0.1)',
-              border: '1px solid rgba(255,215,0,0.3)',
-              color: '#ffd700',
-              padding: '6px 14px', borderRadius: '8px',
-              cursor: 'pointer', fontSize: '12px', fontWeight: '700'
-            }}
+            style={{ background: 'rgba(0,240,255,0.08)', border: `1px solid ${theme.cyan}30`, color: theme.cyan, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
           >
-            📖 Come funziona?
+            💰 Money
           </button>
-          {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: 'none', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Indietro</button>}
+          <button
+            onClick={() => window.location.href = '/money-management'}
+            style={{ background: 'rgba(255,215,0,0.2)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+          >
+            ?
+          </button>
         </div>
       </div>
 
+      {/* Data di oggi */}
+      <div style={{ textAlign: 'center', marginBottom: '14px', fontSize: '13px', color: theme.textDim }}>
+        {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      </div>
+
       {/* Tab Pronostici / Alto Rendimento */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', borderRadius: '10px', overflow: 'hidden', border: theme.panelBorder }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         {([
           { id: 'pronostici' as const, label: 'Pronostici', icon: '📊' },
           { id: 'alto_rendimento' as const, label: 'Alto Rendimento', icon: '💎' },
         ]).map(tab => {
           const isActive = activeTab === tab.id;
+          const activeColor = tab.id === 'alto_rendimento' ? theme.gold : theme.cyan;
           return (
             <div
               key={tab.id}
@@ -181,19 +187,18 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
               style={{
                 flex: 1, textAlign: 'center', padding: '12px 16px', cursor: 'pointer',
                 background: isActive
-                  ? tab.id === 'alto_rendimento' ? 'rgba(255, 215, 0, 0.15)' : 'rgba(0, 240, 255, 0.1)'
+                  ? tab.id === 'alto_rendimento' ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 240, 255, 0.08)'
                   : theme.panel,
-                borderBottom: isActive
-                  ? `3px solid ${tab.id === 'alto_rendimento' ? theme.gold : theme.cyan}`
-                  : '3px solid transparent',
+                border: isActive
+                  ? `2px solid ${activeColor}`
+                  : `1px solid rgba(255,255,255,0.1)`,
+                borderRadius: '10px',
                 transition: 'all 0.2s',
               }}
             >
               <span style={{
                 fontSize: '14px', fontWeight: isActive ? '900' : '600',
-                color: isActive
-                  ? tab.id === 'alto_rendimento' ? theme.gold : theme.cyan
-                  : theme.textDim,
+                color: isActive ? activeColor : theme.textDim,
               }}>
                 {tab.icon} {tab.label}
               </span>

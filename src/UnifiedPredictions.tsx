@@ -1370,8 +1370,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           ) : isPremiumLoaded ? (
                             <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || pred.analysis_premium}</div>
                           ) : (
-                            <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
-                              Clicca per generare l'analisi AI
+                            <div
+                              onClick={() => fetchPremium()}
+                              style={{
+                                textAlign: 'center', padding: '12px', color: '#a855f7',
+                                cursor: 'pointer', fontWeight: 600, fontSize: '12px',
+                              }}
+                            >
+                              🤖 Genera Analisi AI Premium
                             </div>
                           )}
                         </div>

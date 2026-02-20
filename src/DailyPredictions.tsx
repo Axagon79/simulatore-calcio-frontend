@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { checkAdmin } from './permissions';
+import AddBetPopup from './components/AddBetPopup';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_prod' | 'solo_sandbox';
@@ -319,6 +320,7 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
     sandboxPredictions: Prediction[]; sandboxBombs: Bomb[];
   }>({ prodPredictions: [], prodBombs: [], sandboxPredictions: [], sandboxBombs: [] });
   const [confrontoFilter, setConfrontoFilter] = useState<ConfrontoFilter>('tutte');
+  const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
 
   // Reset UI state al cambio modalità PROD/SANDBOX
   useEffect(() => {
@@ -1171,6 +1173,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         </span>
                       )}
                       {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
+                      {!pred.real_score && quota && (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota)}); }}
+                          style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: '2px', opacity: 0.7, transition: 'opacity 0.2s' }}
+                          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                          title="Salva nel Tracker"
+                        >💰+</span>
+                      )}
                     </div>
                   );
                 })}
@@ -3679,6 +3690,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </>
         )}
       </div>
+      <AddBetPopup
+        isOpen={addBetPopup.isOpen}
+        onClose={() => setAddBetPopup(p => ({...p, isOpen: false}))}
+        home={addBetPopup.home}
+        away={addBetPopup.away}
+        market={addBetPopup.market}
+        prediction={addBetPopup.prediction}
+        odds={addBetPopup.odds}
+      />
     </div>
   );
 }

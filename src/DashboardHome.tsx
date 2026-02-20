@@ -362,10 +362,10 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               </div>
             </div>
 
-            {/* CARD PRONOSTICI DEL GIORNO */}
-            <div 
+            {/* CARD BEST PICKS — Pronostici Unificati */}
+            <div
               key="PREDICTIONS_CARD"
-              onClick={() => onSelectLeague('PREDICTIONS')}
+              onClick={() => window.location.href = '/best-picks'}
               style={{
                 background: 'linear-gradient(135deg, rgba(138,43,226,0.15), rgba(0,240,255,0.08))',
                 backdropFilter: 'blur(10px)',
@@ -399,7 +399,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                 color: 'white',
                 marginBottom: '8px'
               }}>
-                Pronostici del Giorno
+                Best Picks
               </div>
               <div style={{
                 fontSize: isMobile ? '12px' : '14px',

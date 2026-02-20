@@ -229,7 +229,7 @@ export default function BarraLaterale({
           📊 Bankroll
         </button>
         <button
-          onClick={() => { setMobileMenuOpen(false); window.location.href = '/money-management'; }}
+          onClick={() => { setMobileMenuOpen(false); window.location.href = '/money-tracker'; }}
           style={{
             flex: 1,
             padding: '15px 4px',
@@ -244,7 +244,7 @@ export default function BarraLaterale({
             transition: 'all 0.2s'
           }}
         >
-          📖 Guida
+          💰 MM
         </button>
       </div>
 

@@ -64,11 +64,14 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento'>('pronostici');
 
-  const fetchData = (fromDate: string) => {
+  const fetchData = (fromDate: string, tab?: 'pronostici' | 'alto_rendimento') => {
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE}/simulation/bankroll-stats?from=${fromDate}`)
+    const currentTab = tab ?? activeTab;
+    const quotaParam = currentTab === 'pronostici' ? '&quotaFilter=low' : '&quotaFilter=high';
+    fetch(`${API_BASE}/simulation/bankroll-stats?from=${fromDate}${quotaParam}`)
       .then(r => {
         if (!r.ok) throw new Error(`Errore server: ${r.status}`);
         const ct = r.headers.get('content-type') || '';
@@ -158,6 +161,47 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         </div>
       </div>
 
+      {/* Tab Pronostici / Alto Rendimento */}
+      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', borderRadius: '10px', overflow: 'hidden', border: theme.panelBorder }}>
+        {([
+          { id: 'pronostici' as const, label: 'Pronostici', icon: '📊' },
+          { id: 'alto_rendimento' as const, label: 'Alto Rendimento', icon: '💎' },
+        ]).map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <div
+              key={tab.id}
+              onClick={() => {
+                if (tab.id !== activeTab) {
+                  setActiveTab(tab.id);
+                  const fromDate = activeFilter ? getDaysAgoDate(activeFilter) : BASE_FROM;
+                  fetchData(fromDate > BASE_FROM ? fromDate : BASE_FROM, tab.id);
+                }
+              }}
+              style={{
+                flex: 1, textAlign: 'center', padding: '12px 16px', cursor: 'pointer',
+                background: isActive
+                  ? tab.id === 'alto_rendimento' ? 'rgba(255, 215, 0, 0.15)' : 'rgba(0, 240, 255, 0.1)'
+                  : theme.panel,
+                borderBottom: isActive
+                  ? `3px solid ${tab.id === 'alto_rendimento' ? theme.gold : theme.cyan}`
+                  : '3px solid transparent',
+                transition: 'all 0.2s',
+              }}
+            >
+              <span style={{
+                fontSize: '14px', fontWeight: isActive ? '900' : '600',
+                color: isActive
+                  ? tab.id === 'alto_rendimento' ? theme.gold : theme.cyan
+                  : theme.textDim,
+              }}>
+                {tab.icon} {tab.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Riepilogo globale */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
         {[
@@ -189,11 +233,11 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
               onClick={() => {
                 if (isActive) {
                   setActiveFilter(null);
-                  fetchData(BASE_FROM);
+                  fetchData(BASE_FROM, activeTab);
                 } else {
                   setActiveFilter(item.days);
                   const fromDate = getDaysAgoDate(item.days);
-                  fetchData(fromDate > BASE_FROM ? fromDate : BASE_FROM);
+                  fetchData(fromDate > BASE_FROM ? fromDate : BASE_FROM, activeTab);
                 }
               }}
               style={{
@@ -275,7 +319,7 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         <button
           onClick={() => {
             // Fetch all data and export
-            fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-10`)
+            fetch(`${API_BASE}/simulation/bankroll-stats?from=2026-02-10&quotaFilter=${activeTab === 'pronostici' ? 'low' : 'high'}`)
               .then(r => r.json())
               .then(json => {
                 if (!json.data) return;

@@ -582,86 +582,42 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 const renderGolDetailBar = (value: number, label: string, direction?: string) => {
   const pct = Math.min(100, Math.max(0, value));
   const color = value >= 70 ? theme.success : value >= 50 ? theme.cyan : value >= 35 ? theme.warning : theme.danger;
-  
-  // Icona direzione
-  let dirIcon = '';
+
+  // Direzione compatta
+  let dirText = '■ Neutro';
   let dirColor = theme.textDim;
   if (direction === 'over') {
-    dirIcon = '▲ Over';
+    dirText = '▲ Over';
     dirColor = theme.success;
   } else if (direction === 'under') {
-    dirIcon = '▼ Under';
+    dirText = '▼ Under';
     dirColor = theme.purple;
   } else if (direction === 'goal') {
-    dirIcon = '⚽ Goal';
+    dirText = '⚽ Goal';
     dirColor = theme.success;
   } else if (direction === 'nogoal') {
-    dirIcon = '🚫 NoGoal';
+    dirText = '🚫 NoGoal';
     dirColor = theme.warning;
   }
-  
+
   return (
-    <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
-     
-      {/* Linea verticale divisoria - solo desktop */}
-      {!isMobile && (
-        <div style={{
-          position: 'absolute',
-          right: '105px',
-          top: '5px',
-          bottom: '12px',
-          width: '1px',
-          background: 'rgba(255,255,255,0.1)'
-        }} />
-      )}
-      
-      {/* Titolo metrica + Direzione su mobile */}
-      <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '15px', fontWeight: 'bold', color: theme.text }}>
-          {label}
-        </span>
-        {isMobile && (
-        <span style={{ 
-          fontSize: '11px', 
-          fontWeight: '800',
-          color: dirColor,
-          background: 'rgba(255,255,255,0.05)',
-          padding: '2px 6px',
-          borderRadius: '4px'
-        }}>
-          {dirIcon || 'Neutro'}
-        </span>
-      )}
-      </div>
-      
-      {/* Barra valore */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Indice:</span>
-        <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px' }} />
-        </div>
-        <span style={{ fontSize: '14px', color: color, fontWeight: 'bold', minWidth: '35px' }}>{value.toFixed(1)}</span>
-      </div>
-      
-      {/* Direzione posizionata a destra */}
-      {!isMobile && (
-      <span style={{ 
-        position: 'absolute',
-        right: '0',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        fontSize: '13px', 
-        fontWeight: '800',
-        color: dirColor,
-        background: direction ? 'rgba(255,255,255,0.05)' : 'transparent',
-        padding: direction ? '20px 0px' : '0',
-        borderRadius: '4px',
-        width: '100px',
-        textAlign: 'center'
+    <div style={{ marginBottom: '8px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 55px 1px 40px',
+        columnGap: '12px',
+        fontSize: '11px',
+        marginBottom: '3px',
+        alignItems: 'center'
       }}>
-        {dirIcon || 'Neutro'}
-      </span>
-      )}
+        <span style={{ color: theme.textDim }}>{label}</span>
+        <span style={{ color: dirColor, fontWeight: 'bold', fontSize: '10px', textAlign: 'left' }}>{dirText}</span>
+        <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.15)' }} />
+        <span style={{ color, fontWeight: 'bold', textAlign: 'right' }}>{value.toFixed(1)}</span>
+      </div>
+      <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
+      </div>
     </div>
   );
 };
@@ -1599,12 +1555,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </div>
               )}
                 {pred.gol_dettaglio && pred.confidence_gol > 0 && (
-                <div style={{ marginBottom: '14px' }}>
+                <div style={{ marginBottom: '8px', marginTop: '20px' }}>
                   <div style={{
-                    height: '5px',
-                    background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
+                    height: '1px',
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 15%, rgba(255,255,255,0.3) 85%, transparent 100%)',
                     marginBottom: '20px',
-                    marginTop: '-10px'
+                    marginTop: '0px',
+                    marginLeft: isMobile ? '-10px' : '-14px',
+                    marginRight: isMobile ? '-10px' : '-14px'
                   }} />
                   <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.cyan, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     ⚽ Dettaglio Gol

@@ -3112,8 +3112,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {esMisses}</span>{sep}
                       <span style={{
                         fontWeight: '800',
-                        color: esHR !== null && esHR >= 20 ? '#00ff88' : '#ff4466',
-                        background: esHR !== null && esHR >= 20 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        color: (esHR ?? 0) >= 20 ? '#00ff88' : '#ff4466',
+                        background: (esHR ?? 0) >= 20 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
                         padding: '1px 8px', borderRadius: '10px'
                       }}>{esHR}%</span>
                     </>}
@@ -3231,8 +3231,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {xfMisses}</span>{sep}
                       <span style={{
                         fontWeight: '800',
-                        color: xfHR !== null && xfHR >= 25 ? '#00ff88' : '#ff4466',
-                        background: xfHR !== null && xfHR >= 25 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        color: (xfHR ?? 0) >= 25 ? '#00ff88' : '#ff4466',
+                        background: (xfHR ?? 0) >= 25 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
                         padding: '1px 8px', borderRadius: '10px'
                       }}>{xfHR}%</span>
                     </>}
@@ -3350,8 +3350,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {bmMisses}</span>{sep}
                       <span style={{
                         fontWeight: '800',
-                        color: bmHR !== null && bmHR >= 30 ? '#00ff88' : '#ff4466',
-                        background: bmHR !== null && bmHR >= 30 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        color: (bmHR ?? 0) >= 30 ? '#00ff88' : '#ff4466',
+                        background: (bmHR ?? 0) >= 30 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
                         padding: '1px 8px', borderRadius: '10px'
                       }}>{bmHR}%</span>
                     </>}

@@ -182,6 +182,11 @@ interface Prediction {
   is_exact_score?: boolean;
   exact_score_top3?: Array<{ score: string; prob: number }>;
   exact_score_gap?: number;
+  // Analisi del Match (22 checker contraddizioni)
+  analysis_free?: string;
+  analysis_alerts?: Array<{ id: string; severity: number; text: string }>;
+  analysis_score?: number;
+  analysis_premium?: string;
 }
 
 interface Bomb {
@@ -313,6 +318,9 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const toggleSection2 = (id: string) => setCollapsedSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const isAdmin = checkAdmin();
+  const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
+  const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
+  const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium'>>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   // Reset filtro al cambio data
   useEffect(() => {
@@ -1168,6 +1176,197 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               );
             })()}
 
+            {/* ═══ ANALISI DEL MATCH (ogni partita ha la sua analisi) ═══ */}
+            {pred.analysis_free && pred.analysis_score !== undefined && (() => {
+              const analysisKey = `${cardKey}-analysis`;
+              const isAnalysisOpen = expandedSections.has(analysisKey);
+              const score = pred.analysis_score;
+              const scoreColor = score >= 70 ? theme.success : score >= 40 ? '#facc15' : theme.danger;
+              const matchId = `${pred.home}-${pred.away}-${pred.date}`;
+              const currentTab = analysisTab[matchId] || 'free';
+              const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;
+              const isPremiumBusy = !!premiumLoading[matchId];
+
+              const fetchPremium = async () => {
+                if (isPremiumLoaded || isPremiumBusy) return;
+                setPremiumLoading(prev => ({ ...prev, [matchId]: true }));
+                try {
+                  const resp = await fetch(`${API_BASE}/chat/match-analysis-premium`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, isAdmin: 'true' }),
+                  });
+                  const data = await resp.json();
+                  if (data.success) {
+                    setPremiumAnalysis(prev => ({ ...prev, [matchId]: data.analysis }));
+                  }
+                } catch (err) {
+                  console.error('Premium analysis error:', err);
+                } finally {
+                  setPremiumLoading(prev => ({ ...prev, [matchId]: false }));
+                }
+              };
+
+              return (
+                <div style={{
+                  margin: '0 0 8px 8px', padding: '12px',
+                  background: score < 40 ? 'rgba(239, 68, 68, 0.06)' : 'rgba(250, 204, 21, 0.06)',
+                  border: `1px solid ${score < 40 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(250, 204, 21, 0.2)'}`,
+                  borderRadius: '6px',
+                }}>
+                  {/* Header collassabile */}
+                  <div
+                    className="collapsible-header"
+                    onClick={(e) => toggleSection(analysisKey, e)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      marginBottom: isAnalysisOpen ? '10px' : '0',
+                    }}
+                  >
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: scoreColor }}>
+                      {score < 50 ? '⚠️' : '🔍'} Analisi del Match · Coerenza {score}/100
+                    </span>
+                    <span style={{ fontSize: '10px', color: scoreColor, transition: 'transform 0.2s', transform: isAnalysisOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                  </div>
+
+                  {isAnalysisOpen && (
+                    <div style={{ animation: 'fadeIn 0.3s ease' }}>
+                      {/* Barra coerenza con gradiente + fasce + indicatore */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '12px', lineHeight: 1 }} title="Rischio alto">⚠️</span>
+                        <div style={{ flex: 1, position: 'relative' as const }}>
+                          {/* Track gradiente sfumato */}
+                          <div style={{
+                            height: '8px', borderRadius: '4px', overflow: 'hidden',
+                            background: 'linear-gradient(to right, #ef4444, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e)',
+                            opacity: 0.35,
+                          }} />
+                          {/* Track riempito fino allo score */}
+                          <div style={{
+                            position: 'absolute' as const, top: 0, left: 0,
+                            height: '8px', borderRadius: '4px', overflow: 'hidden',
+                            width: `${score}%`, transition: 'width 0.5s',
+                          }}>
+                            <div style={{
+                              width: `${10000 / Math.max(score, 1)}%`, height: '100%',
+                              background: 'linear-gradient(to right, #ef4444, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e)',
+                            }} />
+                          </div>
+                          {/* Tacche separatrici */}
+                          {[33, 66].map(pct => (
+                            <div key={pct} style={{
+                              position: 'absolute' as const, top: -1, left: `${pct}%`,
+                              width: '1px', height: '10px',
+                              background: 'rgba(255,255,255,0.3)',
+                            }} />
+                          ))}
+                          {/* Indicatore posizione score */}
+                          <div style={{
+                            position: 'absolute' as const, top: '-3px',
+                            left: `${score}%`, transform: 'translateX(-50%)',
+                            width: '14px', height: '14px', borderRadius: '50%',
+                            background: scoreColor,
+                            border: '2px solid rgba(0,0,0,0.5)',
+                            boxShadow: `0 0 6px ${scoreColor}`,
+                            transition: 'left 0.5s',
+                          }} />
+                        </div>
+                        <span style={{ fontSize: '12px', lineHeight: 1 }} title="Coerenza alta">✅</span>
+                      </div>
+
+                      {/* Tab Free / Premium */}
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', justifyContent: 'center' }}>
+                        <button
+                          className={`analysis-tab-free${currentTab === 'free' ? ' active' : ''}`}
+                          onClick={() => setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' }))}
+                          style={{
+                            padding: '6px 18px', borderRadius: '16px',
+                            border: currentTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : '1px solid rgba(255,255,255,0.18)',
+                            cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                            background: currentTab === 'free' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.08)',
+                            color: currentTab === 'free' ? theme.cyan : theme.textDim,
+                          }}
+                        >
+                          📊 Analisi Free
+                        </button>
+                        <button
+                          className={`analysis-tab-premium${currentTab === 'premium' ? ' active' : ''}`}
+                          onClick={() => {
+                            setAnalysisTab(prev => ({ ...prev, [matchId]: 'premium' }));
+                            if (isAdmin && !isPremiumLoaded) fetchPremium();
+                          }}
+                          style={{
+                            padding: '6px 18px', borderRadius: '16px',
+                            border: currentTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.6)' : '1px solid rgba(255,255,255,0.18)',
+                            cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                            background: currentTab === 'premium' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.08)',
+                            color: currentTab === 'premium' ? '#a855f7' : theme.textDim,
+                          }}
+                        >
+                          {isAdmin ? '🤖 Analisi AI Premium' : '🔒 Analisi AI Premium'}
+                        </button>
+                      </div>
+
+                      {/* Contenuto tab */}
+                      {currentTab === 'free' && (
+                        <div style={{
+                          fontSize: '11px', lineHeight: '1.7', color: theme.text,
+                          padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
+                          background: 'rgba(255,255,255,0.03)', borderRadius: '4px',
+                        }}>
+                          {pred.analysis_free}
+                        </div>
+                      )}
+
+                      {currentTab === 'premium' && (
+                        <div style={{
+                          fontSize: '11px', lineHeight: '1.7', color: theme.text,
+                          padding: '8px 10px',
+                          background: 'rgba(168, 85, 247, 0.04)', borderRadius: '4px',
+                          border: '1px solid rgba(168, 85, 247, 0.1)',
+                        }}>
+                          {!isAdmin ? (
+                            <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
+                              🔒 Disponibile nella versione Premium
+                            </div>
+                          ) : isPremiumBusy ? (
+                            <div style={{ textAlign: 'center', padding: '12px', color: '#a855f7' }}>
+                              🤖 Analisi in corso...
+                            </div>
+                          ) : isPremiumLoaded ? (
+                            <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || pred.analysis_premium}</div>
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
+                              Clicca per generare l'analisi AI
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Pill contraddizioni */}
+                      {pred.analysis_alerts && pred.analysis_alerts.length > 0 && (() => {
+                        const n = pred.analysis_alerts.length;
+                        const pillBg = n >= 4 ? 'rgba(239,68,68,0.18)' : n >= 2 ? 'rgba(245,158,11,0.18)' : 'rgba(34,197,94,0.18)';
+                        const pillColor = n >= 4 ? '#f87171' : n >= 2 ? '#fbbf24' : '#4ade80';
+                        return (
+                          <div style={{ marginTop: '8px' }}>
+                            <span style={{
+                              display: 'inline-block', padding: '3px 10px', borderRadius: '12px',
+                              fontSize: '10px', fontWeight: 600,
+                              background: pillBg, color: pillColor,
+                            }}>
+                              ⚠️ {n} contraddizion{n === 1 ? 'e rilevata' : 'i rilevate'}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Bottoni Commento + Dettaglio */}
             <div style={{
               display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
@@ -1258,6 +1457,42 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       };
                       const getColor = (val: number) => val > 0 ? theme.success : val < 0 ? theme.danger : theme.textDim;
 
+                      const TICK_COLORS = [
+                        '#22c55e', '#4ade80', '#a3e635', '#facc15', '#eab308',
+                        '#f59e0b', '#f97316', '#ea580c', '#ef4444', '#dc2626'
+                      ];
+                      const renderStreakBar = (n: number) => {
+                        const capped = Math.min(n, 10);
+                        return (
+                          <div style={{ display: 'inline-flex', gap: '1.5px', alignItems: 'flex-end' }}>
+                            {Array.from({ length: 10 }, (_, i) => {
+                              const active = i < capped;
+                              return (
+                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: i === 9 ? '10px' : '6px' }}>
+                                  <div style={{
+                                    width: '14px',
+                                    height: '5px',
+                                    borderRadius: '1.5px',
+                                    background: active ? TICK_COLORS[i] : 'rgba(255,255,255,0.08)',
+                                    border: active ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                                    boxSizing: 'border-box' as const,
+                                  }} />
+                                  <span style={{
+                                    fontSize: '5px',
+                                    color: active ? TICK_COLORS[i] : 'rgba(255,255,255,0.2)',
+                                    marginTop: '1px',
+                                    lineHeight: 1,
+                                    fontWeight: active ? 600 : 400,
+                                  }}>
+                                    {i < 9 ? i + 1 : '10+'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      };
+
                       const allTypes = Object.keys(STREAK_LABELS);
                       const active = allTypes.filter(t =>
                         (pred.streak_home?.[t] ?? 0) >= 2 || (pred.streak_away?.[t] ?? 0) >= 2
@@ -1282,9 +1517,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
                           <thead>
                             <tr style={{ borderBottom: `1px solid ${theme.cyan}20` }}>
-                              <th style={{ textAlign: 'left', padding: '3px 4px', color: theme.textDim, fontWeight: 'normal' }}>Striscia</th>
-                              <th style={{ textAlign: 'center', padding: '3px 4px', color: theme.cyan, fontWeight: 'bold', fontSize: '9px' }}>{pred.home}</th>
-                              <th style={{ textAlign: 'center', padding: '3px 4px', color: theme.purple, fontWeight: 'bold', fontSize: '9px' }}>{pred.away}</th>
+                              <th style={{ textAlign: 'left', padding: '3px 4px', color: theme.textDim, fontWeight: 'normal', width: '22%' }}>Striscia</th>
+                              <th style={{ textAlign: 'left', padding: '3px 8px', color: theme.cyan, fontWeight: 'bold', fontSize: '9px' }}>{pred.home}</th>
+                              <th style={{ textAlign: 'left', padding: '3px 8px 3px 16px', color: theme.purple, fontWeight: 'bold', fontSize: '9px' }}>{pred.away}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1295,19 +1530,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               const aCurve = getCurveVal(type, aN);
                               return (
                                 <tr key={type} style={{ borderBottom: `1px solid ${theme.cyan}10` }}>
-                                  <td style={{ padding: '3px 4px', color: theme.text }}>{STREAK_LABELS[type]}</td>
-                                  <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                  <td style={{ padding: '4px 4px', color: theme.text, verticalAlign: 'middle' }}>{STREAK_LABELS[type]}</td>
+                                  <td style={{ textAlign: 'left', padding: '4px 8px', verticalAlign: 'middle' }}>
                                     {hN >= 2 ? (
-                                      <span style={{ color: getColor(hCurve), fontWeight: 'bold' }}>
-                                        {hN} <span style={{ fontSize: '8px', opacity: 0.7 }}>({hCurve > 0 ? '+' : ''}{hCurve})</span>
-                                      </span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {renderStreakBar(hN)}
+                                        <span style={{ color: getColor(hCurve), fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                          {hN} <span style={{ fontSize: '7px', opacity: 0.7 }}>({hCurve > 0 ? '+' : ''}{hCurve})</span>
+                                        </span>
+                                      </div>
                                     ) : <span style={{ color: theme.textDim }}>—</span>}
                                   </td>
-                                  <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                  <td style={{ textAlign: 'left', padding: '4px 8px 4px 16px', verticalAlign: 'middle' }}>
                                     {aN >= 2 ? (
-                                      <span style={{ color: getColor(aCurve), fontWeight: 'bold' }}>
-                                        {aN} <span style={{ fontSize: '8px', opacity: 0.7 }}>({aCurve > 0 ? '+' : ''}{aCurve})</span>
-                                      </span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {renderStreakBar(aN)}
+                                        <span style={{ color: getColor(aCurve), fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                          {aN} <span style={{ fontSize: '7px', opacity: 0.7 }}>({aCurve > 0 ? '+' : ''}{aCurve})</span>
+                                        </span>
+                                      </div>
                                     ) : <span style={{ color: theme.textDim }}>—</span>}
                                   </td>
                                 </tr>
@@ -2175,6 +2416,27 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .analysis-tab-free, .analysis-tab-premium {
+          transition: all 0.25s ease;
+        }
+        .analysis-tab-free:hover {
+          background: rgba(6, 182, 212, 0.35) !important;
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.5), 0 0 20px rgba(6, 182, 212, 0.2);
+          transform: scale(1.04);
+        }
+        .analysis-tab-free.active {
+          border: 1px solid rgba(6, 182, 212, 0.6) !important;
+          box-shadow: 0 0 8px rgba(6, 182, 212, 0.4), 0 0 16px rgba(6, 182, 212, 0.15);
+        }
+        .analysis-tab-premium:hover {
+          background: rgba(168, 85, 247, 0.35) !important;
+          box-shadow: 0 0 10px rgba(168, 85, 247, 0.5), 0 0 20px rgba(168, 85, 247, 0.2);
+          transform: scale(1.04);
+        }
+        .analysis-tab-premium.active {
+          border: 1px solid rgba(168, 85, 247, 0.6) !important;
+          box-shadow: 0 0 8px rgba(168, 85, 247, 0.4), 0 0 16px rgba(168, 85, 247, 0.15);
+        }
       `}</style>
 
       <div style={{ width: '100%', maxWidth: '800px', paddingBottom: '40px' }}>

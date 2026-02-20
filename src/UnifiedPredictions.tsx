@@ -321,6 +321,32 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium'>>({});
+
+  // --- Premium Unlock (sequenza segreta P-F-P-F-P-F-P-P-P-P-P) ---
+  const UNLOCK_SEQ = 'pfpfpfppppp';
+  const PREMIUM_HASH = 'a39607';  // hash offuscato
+  const [tabSeq, setTabSeq] = useState('');
+  const [showPwPrompt, setShowPwPrompt] = useState(false);
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+  const [isPremiumUser] = useState(() => localStorage.getItem('pp_pu') === '1');
+  const trackTabClick = (tab: 'f' | 'p') => {
+    const next = (tabSeq + tab).slice(-11);
+    setTabSeq(next);
+    if (next === UNLOCK_SEQ) { setShowPwPrompt(true); setTabSeq(''); }
+  };
+  const verifyPw = (input: string) => {
+    // Simple hash: somma charCode * posizione, poi hex troncato
+    let h = 0; for (let i = 0; i < input.length; i++) h = ((h << 5) - h + input.charCodeAt(i)) | 0;
+    const hex = (h >>> 0).toString(16).slice(-6);
+    if (hex === PREMIUM_HASH) {
+      localStorage.setItem('pp_pu', '1');
+      window.location.reload();
+    } else {
+      setPwError(true);
+      setTimeout(() => setPwError(false), 2000);
+    }
+  };
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   // Reset filtro al cambio data
   useEffect(() => {
@@ -1279,7 +1305,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', justifyContent: 'center' }}>
                         <button
                           className={`analysis-tab-free${currentTab === 'free' ? ' active' : ''}`}
-                          onClick={() => setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' }))}
+                          onClick={() => { setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' })); trackTabClick('f'); }}
                           style={{
                             padding: '6px 18px', borderRadius: '16px',
                             border: currentTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : '1px solid rgba(255,255,255,0.18)',
@@ -1294,7 +1320,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           className={`analysis-tab-premium${currentTab === 'premium' ? ' active' : ''}`}
                           onClick={() => {
                             setAnalysisTab(prev => ({ ...prev, [matchId]: 'premium' }));
-                            if (isAdmin && !isPremiumLoaded) fetchPremium();
+                            trackTabClick('p');
+                            if ((isAdmin || isPremiumUser) && !isPremiumLoaded) fetchPremium();
                           }}
                           style={{
                             padding: '6px 18px', borderRadius: '16px',
@@ -1304,7 +1331,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             color: currentTab === 'premium' ? '#a855f7' : theme.textDim,
                           }}
                         >
-                          {isAdmin ? '🤖 Analisi AI Premium' : '🔒 Analisi AI Premium'}
+                          {(isAdmin || isPremiumUser) ? '🤖 Analisi AI Premium' : '🔒 Analisi AI Premium'}
                         </button>
                       </div>
 
@@ -1326,7 +1353,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           background: 'rgba(168, 85, 247, 0.04)', borderRadius: '4px',
                           border: '1px solid rgba(168, 85, 247, 0.1)',
                         }}>
-                          {!isAdmin ? (
+                          {(!isAdmin && !isPremiumUser) ? (
                             <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
                               🔒 Disponibile nella versione Premium
                             </div>
@@ -3433,6 +3460,57 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </>
         )}
       </div>
+
+      {/* Modal Password Premium Unlock */}
+      {showPwPrompt && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setShowPwPrompt(false)}>
+          <div style={{
+            background: '#1e2235', borderRadius: '16px', padding: '28px',
+            border: '1px solid rgba(168,85,247,0.4)',
+            boxShadow: '0 0 30px rgba(168,85,247,0.2)',
+            minWidth: '280px', textAlign: 'center',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '28px', marginBottom: '12px' }}>🔐</div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '16px' }}>
+              Inserisci codice di accesso
+            </div>
+            <input
+              type="password"
+              value={pwInput}
+              onChange={e => setPwInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') verifyPw(pwInput); }}
+              autoFocus
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: '8px',
+                border: pwError ? '1px solid #ef4444' : '1px solid rgba(168,85,247,0.4)',
+                background: 'rgba(255,255,255,0.05)', color: 'white',
+                fontSize: '16px', textAlign: 'center', outline: 'none',
+                boxSizing: 'border-box' as const,
+              }}
+              placeholder="••••••"
+            />
+            {pwError && (
+              <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '8px' }}>
+                Codice non valido
+              </div>
+            )}
+            <button
+              onClick={() => verifyPw(pwInput)}
+              style={{
+                marginTop: '16px', padding: '8px 28px', borderRadius: '12px',
+                border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                background: 'rgba(168,85,247,0.3)', color: '#a855f7',
+              }}
+            >
+              Conferma
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

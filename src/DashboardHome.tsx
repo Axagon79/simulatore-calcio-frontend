@@ -1053,6 +1053,71 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Money Tracker */}
+              <div
+                onClick={() => {
+                  setShowBankroll(false);
+                  window.location.href = '/money-tracker';
+                }}
+                style={{
+                  background: 'rgba(20, 22, 35, 0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  padding: isMobile ? '20px' : '25px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '15px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = theme.success;
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{
+                  width: isMobile ? '45px' : '55px',
+                  height: isMobile ? '45px' : '55px',
+                  borderRadius: '12px',
+                  background: 'rgba(5,249,182,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: isMobile ? '24px' : '28px',
+                  flexShrink: 0
+                }}>
+                  💰
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: '11px',
+                    color: theme.success,
+                    marginBottom: '4px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Gestione Scommesse
+                  </div>
+                  <div style={{
+                    fontSize: isMobile ? '16px' : '20px',
+                    fontWeight: '700',
+                    color: 'white'
+                  }}>
+                    Money Tracker
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: theme.textDim,
+                    marginTop: '4px'
+                  }}>
+                    Traccia scommesse, bankroll e stake suggeriti
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

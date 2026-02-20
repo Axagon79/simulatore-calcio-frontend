@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from './contexts/AuthContext'
+import AuthModal from './components/AuthModal'
 // --- CONFIGURAZIONE ---
-const IS_ADMIN = true; 
+const IS_ADMIN = true;
 
 // --- TEMA NEON DARK ---
 const theme = {
@@ -57,6 +59,8 @@ interface DashboardProps {
 
 export default function DashboardHome({ onSelectLeague }: DashboardProps) {
 
+  const { user, logout } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showOtherLeagues, setShowOtherLeagues] = useState(false);
   const [showCups, setShowCups] = useState(false);
   const [showBankroll, setShowBankroll] = useState(false);
@@ -150,6 +154,64 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
         display: 'flex', flexDirection: 'column', alignItems: 'center'
     }}>
       
+      {/* BOTTONE AUTH — angolo in alto a destra */}
+      <div style={{
+        position: 'fixed', top: isMobile ? 12 : 16, right: isMobile ? 22 : 70,
+        zIndex: 10001, fontFamily: '"Inter", "Segoe UI", sans-serif'
+      }}>
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${theme.cyan}40, ${theme.purple}40)`,
+              border: `2px solid ${theme.cyan}60`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: isMobile ? '12px' : '14px', fontWeight: '800', color: theme.cyan,
+              overflow: 'hidden'
+            }}>
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              ) : (
+                (user.email || 'U')[0].toUpperCase()
+              )}
+            </div>
+            {!isMobile && (
+              <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.displayName || user.email}
+              </span>
+            )}
+            <button
+              onClick={() => logout()}
+              style={{
+                background: 'rgba(255,42,109,0.1)', border: '1px solid rgba(255,42,109,0.25)',
+                color: theme.danger, padding: isMobile ? '4px 8px' : '5px 12px',
+                borderRadius: '8px', cursor: 'pointer',
+                fontSize: isMobile ? '10px' : '11px', fontWeight: '700'
+              }}
+            >
+              Esci
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            style={{
+              background: `linear-gradient(135deg, ${theme.cyan}15, ${theme.cyan}30)`,
+              border: `1px solid ${theme.cyan}40`,
+              color: theme.cyan, padding: isMobile ? '6px 14px' : '8px 20px',
+              borderRadius: '10px', cursor: 'pointer',
+              fontSize: isMobile ? '12px' : '13px', fontWeight: '700',
+              backdropFilter: 'blur(8px)'
+            }}
+          >
+            Accedi
+          </button>
+        )}
+      </div>
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
       {/* BOX CENTRALE CHE CONTIENE TUTTO */}
       <div style={{width: '100%', maxWidth: '1200px', paddingBottom: '40px'}}>
 

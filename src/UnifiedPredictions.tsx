@@ -322,7 +322,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium'>>({});
 
-  // --- Premium Unlock (sequenza segreta P-F-P-F-P-F-P-P-P-P-P) ---
+  // --- Premium Unlock (sequenza segreta P-F-P-F-P-F-P-P-P-P-P, max 2s tra click) ---
   const UNLOCK_SEQ = 'pfpfpfppppp';
   const PREMIUM_HASH = 'a39607';  // hash offuscato
   const [tabSeq, setTabSeq] = useState('');
@@ -330,8 +330,14 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
   const [isPremiumUser] = useState(() => localStorage.getItem('pp_pu') === '1');
+  const lastClickRef = useRef(0);
   const trackTabClick = (tab: 'f' | 'p') => {
-    const next = (tabSeq + tab).slice(-11);
+    const now = Date.now();
+    const elapsed = now - lastClickRef.current;
+    lastClickRef.current = now;
+    // Reset se più di 2 secondi dall'ultimo click
+    const base = elapsed > 2000 ? '' : tabSeq;
+    const next = (base + tab).slice(-11);
     setTabSeq(next);
     if (next === UNLOCK_SEQ) { setShowPwPrompt(true); setTabSeq(''); }
   };

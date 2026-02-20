@@ -720,8 +720,40 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return true;
   };
 
-  // --- PARTIZIONAMENTO: Normali vs High Risk ---
-  const normalPredictions = useMemo(() => predictions.filter(p => !p.is_x_factor && !p.is_exact_score), [predictions]);
+  // --- HELPER: quota di un singolo pronostico ---
+  const getPronosticoQuota = (p: any, pred: Prediction): number | null => {
+    return p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
+      || (p.tipo === 'DOPPIA_CHANCE' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
+      || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
+  };
+
+  // --- PARTIZIONAMENTO: Pronostici (<=2.50) vs Alto Rendimento (>2.50) ---
+  const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_x_factor && !p.is_exact_score), [predictions]);
+
+  const normalPredictions = useMemo(() => {
+    return allNormalPreds
+      .map(p => {
+        const lowQuota = p.pronostici?.filter(pr => {
+          const q = getPronosticoQuota(pr, p);
+          return !q || q <= 2.50;
+        }) || [];
+        return lowQuota.length > 0 ? { ...p, pronostici: lowQuota } : null;
+      })
+      .filter(Boolean) as Prediction[];
+  }, [allNormalPreds]);
+
+  const altoRendimentoPreds = useMemo(() => {
+    return allNormalPreds
+      .map(p => {
+        const highQuota = p.pronostici?.filter(pr => {
+          const q = getPronosticoQuota(pr, p);
+          return q != null && q > 2.50;
+        }) || [];
+        return highQuota.length > 0 ? { ...p, pronostici: highQuota } : null;
+      })
+      .filter(Boolean) as Prediction[];
+  }, [allNormalPreds]);
+
   const xFactorPredictions = useMemo(() => predictions.filter(p => p.is_x_factor), [predictions]);
   const exactScorePredictions = useMemo(() => predictions.filter(p => p.is_exact_score), [predictions]);
 
@@ -740,6 +772,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const filteredExactScore = statusFilter === 'tutte' ? exactScorePredictions : exactScorePredictions.filter(p => predMatchesFilter(p, statusFilter));
   const filteredBombs = statusFilter === 'tutte' ? bombs : bombs.filter(b => bombMatchesFilter(b, statusFilter));
   const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
+    if (!acc[p.league]) acc[p.league] = [];
+    acc[p.league].push(p);
+    return acc;
+  }, {});
+  const filteredAltoRendimento = statusFilter === 'tutte' ? altoRendimentoPreds : altoRendimentoPreds.filter(p => predMatchesFilter(p, statusFilter));
+  const filteredAltoRendimentoByLeague = filteredAltoRendimento.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
     return acc;
@@ -780,9 +818,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     if (activeTab === 'pronostici') {
       normalPredictions.forEach(p => countItem(p, 'normal'));
     } else {
-      xFactorPredictions.forEach(p => countItem(p, 'xf'));
-      exactScorePredictions.forEach(p => countItem(p, 're'));
-      bombs.forEach(b => countItem(b as any, 'bomb'));
+      altoRendimentoPreds.forEach(p => countItem(p, 'normal'));
     }
     return counts;
   }, [predictions, bombs, activeTab]);
@@ -2760,7 +2796,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         }}>
           {[
             { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🏆', color: theme.cyan },
-            { id: 'alto_rendimento' as const, label: `Alto Rendimento`, icon: '💎', color: '#ffd700' }
+            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: '#ffd700' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -2860,8 +2896,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             );
           })()}
         </div>
-        {/* 3 capsule HR% per sezione — solo High Risk */}
-        {activeTab === 'alto_rendimento' && (() => {
+        {/* 3 capsule HR% per sezione — NASCOSTO (vecchio XF/RE/Bombe) */}
+        {false && activeTab === 'alto_rendimento' && (() => {
           const esAll = exactScorePredictions.filter(p => !!p.real_score);
           const esHits = esAll.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
           const esHR = esAll.length > 0 ? Math.round((esHits / esAll.length) * 1000) / 10 : null;
@@ -3038,7 +3074,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* ==================== HIGH RISK: RE + XF + Bombe ==================== */}
 
             {/* SEZIONE RISULTATO ESATTO */}
-            {activeTab === 'alto_rendimento' && filteredExactScore.length > 0 && (() => {
+            {false && activeTab === 'alto_rendimento' && filteredExactScore.length > 0 && (() => {
               const esFinished = filteredExactScore.filter(p => getMatchStatus(p) === 'finished').length;
               const esLive = filteredExactScore.filter(p => getMatchStatus(p) === 'live').length;
               const esToPlay = filteredExactScore.length - esFinished - esLive;
@@ -3157,7 +3193,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             })()}
 
             {/* SEZIONE X FACTOR */}
-            {activeTab === 'alto_rendimento' && filteredXFactor.length > 0 && (() => {
+            {false && activeTab === 'alto_rendimento' && filteredXFactor.length > 0 && (() => {
               const xfFinishedN = filteredXFactor.filter(p => getMatchStatus(p) === 'finished').length;
               const xfLive = filteredXFactor.filter(p => getMatchStatus(p) === 'live').length;
               const xfToPlay = filteredXFactor.length - xfFinishedN - xfLive;
@@ -3276,7 +3312,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             })()}
 
             {/* SEZIONE BOMBE */}
-            {activeTab === 'alto_rendimento' && filteredBombs.length > 0 && (() => {
+            {false && activeTab === 'alto_rendimento' && filteredBombs.length > 0 && (() => {
               const bmFinishedN = filteredBombs.filter(b => getMatchStatus(b) === 'finished').length;
               const bmLive = filteredBombs.filter(b => getMatchStatus(b) === 'live').length;
               const bmToPlay = filteredBombs.length - bmFinishedN - bmLive;
@@ -3400,6 +3436,95 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             })()}
 
             {/* SEZIONE PRONOSTICI (raggruppati per lega) */}
+            {/* ==================== ALTO RENDIMENTO: Pronostici quota > 2.50 ==================== */}
+            {activeTab === 'alto_rendimento' && filteredAltoRendimento.length > 0 && (
+              <div style={{ animation: 'fadeIn 0.4s ease' }}>
+                <h2 style={{
+                  fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: '#ffd700',
+                  margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px'
+                }}>
+                  💎 Alto Rendimento
+                  <span style={{
+                    fontSize: '11px', background: 'rgba(255, 215, 0, 0.15)', color: '#ffd700',
+                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
+                  }}>
+                    {filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
+                  </span>
+                </h2>
+
+                {Object.entries(filteredAltoRendimentoByLeague).map(([leagueName, preds]) => {
+                  const isCollapsed = !collapsedLeagues.has(leagueName);
+                  const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
+                  const live = preds.filter(p => getMatchStatus(p) === 'live').length;
+                  const toPlay = preds.length - finished - live;
+                  const allP = preds.flatMap(p => p.pronostici || []);
+                  const hits = allP.filter(x => x.hit === true).length;
+                  const misses = allP.filter(x => x.hit === false).length;
+                  const verifiedP = hits + misses;
+                  const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
+                  const statusBg = finished === 0 ? 'rgba(255,255,255,0.05)' : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
+                  const statusColor = finished === 0 ? theme.textDim : finished === preds.length ? theme.success : theme.warning;
+                  const missRate = verifiedP > 0 ? misses / verifiedP : 0;
+                  const hitColor = hits === 0 ? theme.textDim : theme.success;
+                  const missColor = misses === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+                  const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+                  const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+                  const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                  const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                  const statsEls = (
+                    <>
+                      <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                      <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
+                      {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
+                      {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
+                      {sep}
+                      <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits}{!isMobile && ` ${hits === 1 ? 'centrato' : 'centrati'}`}</span>
+                      {sep}
+                      <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
+                      {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                    </>
+                  );
+                  return (
+                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                    <div
+                      style={{
+                        padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
+                        background: 'rgba(255, 215, 0, 0.04)', borderRadius: '8px',
+                        cursor: 'pointer', userSelect: 'none' as const,
+                        border: '1px solid rgba(255, 215, 0, 0.12)'
+                      }}
+                      onClick={() => toggleLeague(leagueName)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                            <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <span
+                              onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
+                              style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? '#ffd700' : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                            >{leagueName}</span>
+                            {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
+                          </div>
+                          {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
+                        </div>
+                        <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                      </div>
+                      {isMobile && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                          {statsEls}
+                        </div>
+                      )}
+                    </div>
+                    {!isCollapsed && preds.map((pred) => renderPredictionCard(pred))}
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ==================== PRONOSTICI: quota <= 2.50 ==================== */}
             {activeTab === 'pronostici' && filteredPredictions.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
                 <h2 style={{

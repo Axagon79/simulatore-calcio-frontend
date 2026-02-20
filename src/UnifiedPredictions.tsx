@@ -986,21 +986,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   <div key={idx} style={{
                     background: pillBg, border: `1px solid ${pillBorder}`,
                     borderRadius: '5px', padding: '3px 8px', marginBottom: '3px',
-                    display: 'flex', alignItems: 'center', gap: '6px'
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    ...(isMobile ? { flexWrap: 'wrap' as const } : {})
                   }}>
                     <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>
                       {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.pronostico}
                     </span>
                     <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                     {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
-                    {p.stake != null && p.stake > 0 && (
-                      <span style={{
-                        fontSize: '9px', fontWeight: '800', color: getStakeColor(p.stake),
-                        background: 'rgba(255,255,255,0.05)', borderRadius: '3px', padding: '1px 4px',
-                      }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
-                        S:{p.stake}
-                      </span>
-                    )}
                     {source && (
                       <span style={{
                         fontSize: '8px', fontWeight: '700', color: '#a78bfa',
@@ -1012,6 +1005,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     {isAdmin && p.edge != null && p.edge > 0 && (
                       <span style={{ fontSize: '8px', color: '#888' }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
                         E:+{p.edge?.toFixed(1)}%
+                      </span>
+                    )}
+                    {p.stake != null && p.stake > 0 && (
+                      <span style={{
+                        fontSize: '9px', fontWeight: '800', color: getStakeColor(p.stake),
+                        background: 'rgba(255,255,255,0.05)', borderRadius: '3px', padding: '1px 4px',
+                      }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
+                        Stake:{p.stake}
                       </span>
                     )}
                     {isHit !== null && <span style={{ fontSize: '11px', marginLeft: 'auto' }}>{isHit ? '✅' : '❌'}</span>}
@@ -1058,13 +1059,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               paddingLeft: '8px', marginBottom: '8px',
             }}>
               <div style={{
-                display: 'flex', alignItems: 'stretch',
+                display: 'flex', flexDirection: isMobile ? 'column' as const : 'row' as const, alignItems: isMobile ? undefined : 'stretch',
                 background: 'rgb(17 56 93 / 45%)',
                 border: '2px solid rgba(17, 56, 93, 0.6)',
                 borderRadius: '6px', overflow: 'hidden',
               }}>
-                {/* Parte sinistra — Quote */}
-                <div style={{ padding: '8px 12px' }}>
+                {/* Parte superiore/sinistra — Quote */}
+                <div style={{ padding: '8px 12px', ...(isMobile ? {} : {}) }}>
                   <div style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>
                     Quote
                   </div>
@@ -1084,11 +1085,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>}
                   </div>
                 </div>
-                {/* Separatore verticale */}
-                {hasAnalysis && <div style={{ width: '2px', background: 'rgba(17, 56, 93, 0.6)' }} />}
+                {/* Separatore */}
+                {hasAnalysis && <div style={isMobile ? { height: '2px', background: 'rgba(17, 56, 93, 0.6)' } : { width: '2px', background: 'rgba(17, 56, 93, 0.6)' }} />}
                 {/* Parte destra — Bottoni Analisi */}
                 {hasAnalysis && (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '8px 14px', gap: '6px', background: 'rgba(140, 90, 0, 0.22)' }}>
+                  <div style={{ ...(isMobile ? {} : { flex: 1 }), display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: isMobile ? '6px 12px' : '8px 14px', gap: '6px', background: 'rgba(140, 90, 0, 0.22)' }}>
                     <div style={{ fontSize: '10px', color: '#fbbf24', fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: '1px', textShadow: '0 0 8px rgba(0, 240, 255, 0.3)' }}>
                       Analisi Match
                     </div>
@@ -1528,9 +1529,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             {Array.from({ length: 10 }, (_, i) => {
                               const active = i < capped;
                               return (
-                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: i === 9 ? '10px' : '6px' }}>
+                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: i === 9 ? (isMobile ? '8px' : '10px') : (isMobile ? '4px' : '6px') }}>
                                   <div style={{
-                                    width: '14px',
+                                    width: isMobile ? '7px' : '14px',
                                     height: '5px',
                                     borderRadius: '1.5px',
                                     background: active ? TICK_COLORS[i] : 'rgba(255,255,255,0.08)',

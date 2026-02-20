@@ -1175,7 +1175,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                       {!pred.real_score && quota && (
                         <span
-                          onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota), confidence: p.confidence, probabilitaStimata: p.probabilita_stimata, systemStake: p.stake ?? undefined}); }}
+                          onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota), confidence: p.confidence, probabilitaStimata: p.probabilita_stimata ?? undefined, systemStake: p.stake ?? undefined}); }}
                           style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: '2px', opacity: 0.7, transition: 'opacity 0.2s' }}
                           onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                           onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}

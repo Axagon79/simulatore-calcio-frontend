@@ -803,6 +803,33 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
+    const matchId = `${pred.home}-${pred.away}-${pred.date}`;
+    const currentAnalysisTab = analysisTab[matchId];
+    const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;
+    const isPremiumBusy = !!premiumLoading[matchId];
+    const hasAnalysis = !!pred.analysis_free && pred.analysis_score !== undefined;
+    const analysisScore = pred.analysis_score ?? 0;
+    const analysisScoreColor = analysisScore >= 70 ? theme.success : analysisScore >= 40 ? '#facc15' : theme.danger;
+
+    const fetchPremium = async () => {
+      if (isPremiumLoaded || isPremiumBusy) return;
+      setPremiumLoading(prev => ({ ...prev, [matchId]: true }));
+      try {
+        const resp = await fetch(`${API_BASE}/chat/match-analysis-premium`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, isAdmin: 'true' }),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          setPremiumAnalysis(prev => ({ ...prev, [matchId]: data.analysis }));
+        }
+      } catch (err) {
+        console.error('Premium analysis error:', err);
+      } finally {
+        setPremiumLoading(prev => ({ ...prev, [matchId]: false }));
+      }
+    };
 
     return (
       <div
@@ -941,79 +968,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {isCardExpanded && (
           <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', animation: 'fadeIn 0.3s ease' }}>
 
-            {/* Quote — sezione dedicata sopra i pronostici */}
-            <div style={{
-              paddingLeft: '8px', marginBottom: '8px',
-            }}>
-              <div style={{
-                padding: '8px 12px',
-                background: 'rgb(17 56 93 / 45%)',
-                borderRadius: '6px',
-              }}>
-              <div style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>
-                Quote
-              </div>
-              <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap', fontSize: '11px' }}>
-                <span>1: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
-                <span>X: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
-                <span>2: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
-                {pred.odds?.over_25 != null && <>
-                  <span style={{ color: 'rgba(255,255,255,0.12)' }}>│</span>
-                  <span>O2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
-                  <span>U2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
-                </>}
-                {pred.odds?.gg != null && <>
-                  <span style={{ color: 'rgba(255,255,255,0.12)' }}>│</span>
-                  <span>GG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
-                  <span>NG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
-                </>}
-              </div>
-              </div>
-            </div>
-
-            {/* Top Score — risultati più probabili dalla simulazione */}
-            {(pred as any).simulation_data?.top_scores && (() => {
-              const isLive = !pred.real_score && getMatchStatus(pred) === 'live';
-              return (
-                <div style={{
-                  marginTop: '0', marginBottom: '8px', marginLeft: '8px',
-                  padding: '8px 12px',
-                  background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.15), rgba(30, 64, 175, 0.15))',
-                  border: '1px solid rgba(5, 150, 105, 0.2)',
-                  borderRadius: '6px',
-                  display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
-                }}>
-                  <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
-                  {((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3).map(([score, count], i, arr) => {
-                    const normS = normalizeScore(score);
-                    const reHit = pred.real_score && normS === normalizeScore(pred.real_score);
-                    const liveHit = isLive && pred.live_score && normS === normalizeScore(pred.live_score);
-                    return (
-                      <span key={i} style={{
-                        fontSize: '13px',
-                        color: reHit ? theme.success : liveHit ? theme.success : 'rgba(255,255,255,0.6)',
-                        fontWeight: 600,
-                        animation: liveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
-                      }}>
-                        {score} ({count}){reHit ? ' ✅' : ''}{i < arr.length - 1 ? '  ·' : ''}
-                      </span>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-            {/* Pronostici — Tabella 2 colonne SEGNO | GOL (collassabile) */}
+            {/* Pronostici — sempre aperto, stile sobrio */}
             {(() => {
-              const pronosticiKey = `${cardKey}-pronostici`;
-              const isPronosticiOpen = expandedSections.has(pronosticiKey);
               const segnoPreds = pred.pronostici?.filter(p => p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE') || [];
               const golPreds = pred.pronostici?.filter(p => p.tipo === 'GOL') || [];
 
               const renderPill = (p: typeof pred.pronostici[0], idx: number) => {
                 const isHit = pred.real_score ? p.hit : null;
-                const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,255,255,0.04)';
-                const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.1)';
+                const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(17, 56, 93, 0.45)';
+                const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(17, 56, 93, 0.7)';
                 const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
                 const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
                   || (p.tipo === 'DOPPIA_CHANCE' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
@@ -1057,53 +1020,309 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               };
 
               return (
-                <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
-                  {/* Header cliccabile — barra toggle */}
-                  <div
-                    className="collapsible-header"
-                    onClick={(e) => toggleSection(pronosticiKey, e)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', padding: '10px 12px', userSelect: 'none' as const,
-                      background: isPronosticiOpen ? 'rgba(0, 188, 212, 0.12)' : 'rgba(0, 188, 212, 0.06)',
-                      border: '1px solid rgba(0, 188, 212, 0.15)',
-                      borderRadius: '6px',
-                      position: 'relative' as const
-                    }}
-                  >
-                    <span style={{ fontSize: '11px', color: theme.cyan, fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
-                      Pronostici ({pred.pronostici?.length || 0})
-                    </span>
-                    <span style={{
-                      fontSize: '10px', color: theme.cyan, transition: 'transform 0.2s',
-                      transform: isPronosticiOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      position: 'absolute' as const, right: '12px'
-                    }}>▼</span>
+                <div style={{
+                  marginLeft: '8px', marginBottom: '8px',
+                  padding: '10px 12px',
+                  background: 'rgba(140, 90, 0, 0.22)',
+                  border: '2px solid rgba(140, 90, 0, 0.35)',
+                  borderRadius: '8px',
+                }}>
+                  {/* Titolo centrato */}
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: '8px', textAlign: 'center' as const }}>
+                    Pronostici
                   </div>
                   {/* Tabella 2 colonne */}
-                  {isPronosticiOpen && (
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                      {/* Colonna SEGNO */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Segno:</div>
-                        {segnoPreds.length > 0 ? segnoPreds.map((p, i) => renderPill(p, i)) : (
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', padding: '4px 0' }}>—</div>
-                        )}
-                      </div>
-                      {/* Separatore verticale */}
-                      <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)', alignSelf: 'stretch' }} />
-                      {/* Colonna GOL */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Gol:</div>
-                        {golPreds.length > 0 ? golPreds.map((p, i) => renderPill(p, i)) : (
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', padding: '4px 0' }}>—</div>
-                        )}
-                      </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* Colonna SEGNO */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Segno:</div>
+                      {segnoPreds.length > 0 ? segnoPreds.map((p, i) => renderPill(p, i)) : (
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', padding: '4px 0' }}>—</div>
+                      )}
                     </div>
-                  )}
+                    {/* Separatore verticale */}
+                    <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch' }} />
+                    {/* Colonna GOL */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Gol:</div>
+                      {golPreds.length > 0 ? golPreds.map((p, i) => renderPill(p, i)) : (
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', padding: '4px 0' }}>—</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })()}
+            {/* Quote — sezione dedicata sopra i pronostici */}
+            <div style={{
+              paddingLeft: '8px', marginBottom: '8px',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'stretch',
+                background: 'rgb(17 56 93 / 45%)',
+                border: '2px solid rgba(17, 56, 93, 0.6)',
+                borderRadius: '6px', overflow: 'hidden',
+              }}>
+                {/* Parte sinistra — Quote */}
+                <div style={{ padding: '8px 12px' }}>
+                  <div style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>
+                    Quote
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap', fontSize: '11px' }}>
+                    <span>1: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
+                    <span>X: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
+                    <span>2: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
+                    {pred.odds?.over_25 != null && <>
+                      <span style={{ color: 'rgba(255,255,255,0.12)' }}>│</span>
+                      <span>O2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
+                      <span>U2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
+                    </>}
+                    {pred.odds?.gg != null && <>
+                      <span style={{ color: 'rgba(255,255,255,0.12)' }}>│</span>
+                      <span>GG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
+                      <span>NG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
+                    </>}
+                  </div>
+                </div>
+                {/* Separatore verticale */}
+                {hasAnalysis && <div style={{ width: '2px', background: 'rgba(17, 56, 93, 0.6)' }} />}
+                {/* Parte destra — Bottoni Analisi */}
+                {hasAnalysis && (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '8px 14px', gap: '6px', background: 'rgba(140, 90, 0, 0.22)' }}>
+                    <div style={{ fontSize: '10px', color: '#fbbf24', fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: '1px', textShadow: '0 0 8px rgba(0, 240, 255, 0.3)' }}>
+                      Analisi Match
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnalysisTab(prev => {
+                          const next = { ...prev };
+                          if (next[matchId] === 'free') delete next[matchId];
+                          else next[matchId] = 'free';
+                          return next;
+                        });
+                        trackTabClick('f');
+                      }}
+                      className={`analysis-tab-free${currentAnalysisTab === 'free' ? ' active' : ''}`}
+                      style={{
+                        cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                        padding: '6px 20px', borderRadius: '16px', whiteSpace: 'nowrap' as const,
+                        background: currentAnalysisTab === 'free' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(6, 182, 212, 0.15)',
+                        color: currentAnalysisTab === 'free' ? '#fff' : 'rgba(180, 230, 240, 0.9)',
+                        border: currentAnalysisTab === 'free' ? '1px solid rgba(6, 182, 212, 0.7)' : '1px solid rgba(6, 182, 212, 0.3)',
+                        boxShadow: currentAnalysisTab === 'free' ? '0 0 12px rgba(6, 182, 212, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(6, 182, 212, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+                      }}
+                    >📊 Free</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnalysisTab(prev => {
+                          const next = { ...prev };
+                          if (next[matchId] === 'premium') delete next[matchId];
+                          else next[matchId] = 'premium';
+                          return next;
+                        });
+                        trackTabClick('p');
+                        if ((isAdmin || isPremiumUser) && !isPremiumBusy) fetchPremium();
+                      }}
+                      className={`analysis-tab-premium${currentAnalysisTab === 'premium' ? ' active' : ''}`}
+                      style={{
+                        cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                        padding: '6px 20px', borderRadius: '16px', whiteSpace: 'nowrap' as const,
+                        background: currentAnalysisTab === 'premium' ? 'rgba(168, 85, 247, 0.4)' : 'rgba(168, 85, 247, 0.15)',
+                        color: currentAnalysisTab === 'premium' ? '#fff' : 'rgba(210, 180, 250, 0.9)',
+                        border: currentAnalysisTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.7)' : '1px solid rgba(168, 85, 247, 0.3)',
+                        boxShadow: currentAnalysisTab === 'premium' ? '0 0 12px rgba(168, 85, 247, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+                      }}
+                    >{(isAdmin || isPremiumUser) ? '🤖 Premium' : '🔒 Premium'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Score — risultati più probabili dalla simulazione */}
+            {(pred as any).simulation_data?.top_scores && (() => {
+              const isLive = !pred.real_score && getMatchStatus(pred) === 'live';
+              return (
+                <div style={{
+                  marginTop: '0', marginBottom: '8px', marginLeft: '8px',
+                  padding: '7px 12px',
+                  background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.15), rgba(30, 64, 175, 0.15))',
+                  border: '1px solid rgba(5, 150, 105, 0.2)',
+                  borderRadius: '6px',
+                  display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                }}>
+                  <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
+                  {((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3).map(([score, count], i, arr) => {
+                    const normS = normalizeScore(score);
+                    const reHit = pred.real_score && normS === normalizeScore(pred.real_score);
+                    const liveHit = isLive && pred.live_score && normS === normalizeScore(pred.live_score);
+                    return (
+                      <span key={i} style={{
+                        fontSize: '13px',
+                        color: reHit ? theme.success : liveHit ? theme.success : 'rgba(255,255,255,0.6)',
+                        fontWeight: 600,
+                        animation: liveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
+                      }}>
+                        {score} ({count}){reHit ? ' ✅' : ''}{i < arr.length - 1 ? '  ·' : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* ═══ ANALISI DEL MATCH (tra quote e pronostici) ═══ */}
+            {hasAnalysis && currentAnalysisTab && (
+              <div style={{
+                margin: '0 0 8px 8px', padding: '12px',
+                background: analysisScore < 40 ? 'rgba(239, 68, 68, 0.06)' : 'rgba(250, 204, 21, 0.06)',
+                border: `2px solid ${analysisScore < 40 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(250, 204, 21, 0.35)'}`,
+                borderRadius: '6px',
+                animation: 'fadeIn 0.3s ease',
+              }}>
+                {/* Header con X per chiudere */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: analysisScoreColor }}>
+                    {analysisScore < 50 ? '⚠️' : '🔍'} Analisi del Match · Coerenza {analysisScore}/100
+                  </span>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAnalysisTab(prev => { const next = { ...prev }; delete next[matchId]; return next; });
+                    }}
+                    style={{ cursor: 'pointer', fontSize: '14px', color: theme.textDim, padding: '2px 6px', borderRadius: '4px', lineHeight: 1 }}
+                    title="Chiudi analisi"
+                  >✕</span>
+                </div>
+
+                {/* Barra coerenza con gradiente */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', lineHeight: 1 }} title="Rischio alto">⚠️</span>
+                  <div style={{ flex: 1, position: 'relative' as const }}>
+                    <div style={{
+                      height: '8px', borderRadius: '4px', overflow: 'hidden',
+                      background: 'linear-gradient(to right, #ef4444, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e)',
+                      opacity: 0.35,
+                    }} />
+                    <div style={{
+                      position: 'absolute' as const, top: 0, left: 0,
+                      height: '8px', borderRadius: '4px', overflow: 'hidden',
+                      width: `${analysisScore}%`, transition: 'width 0.5s',
+                    }}>
+                      <div style={{
+                        width: `${10000 / Math.max(analysisScore, 1)}%`, height: '100%',
+                        background: 'linear-gradient(to right, #ef4444, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e)',
+                      }} />
+                    </div>
+                    {[33, 66].map(pct => (
+                      <div key={pct} style={{
+                        position: 'absolute' as const, top: -1, left: `${pct}%`,
+                        width: '1px', height: '10px',
+                        background: 'rgba(255,255,255,0.3)',
+                      }} />
+                    ))}
+                    <div style={{
+                      position: 'absolute' as const, top: '-3px',
+                      left: `${analysisScore}%`, transform: 'translateX(-50%)',
+                      width: '14px', height: '14px', borderRadius: '50%',
+                      background: analysisScoreColor,
+                      border: '2px solid rgba(0,0,0,0.5)',
+                      boxShadow: `0 0 6px ${analysisScoreColor}`,
+                      transition: 'left 0.5s',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '12px', lineHeight: 1 }} title="Coerenza alta">✅</span>
+                </div>
+
+                {/* Tab switch Free/Premium dentro contenitore */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', justifyContent: 'center' }}>
+                  <button
+                    className={`analysis-tab-free${currentAnalysisTab === 'free' ? ' active' : ''}`}
+                    onClick={() => { setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' })); trackTabClick('f'); }}
+                    style={{
+                      padding: '4px 14px', borderRadius: '12px',
+                      border: currentAnalysisTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : '1px solid rgba(255,255,255,0.15)',
+                      cursor: 'pointer', fontSize: '10px', fontWeight: 600,
+                      background: currentAnalysisTab === 'free' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.06)',
+                      color: currentAnalysisTab === 'free' ? theme.cyan : theme.textDim,
+                    }}
+                  >Analisi Free</button>
+                  <button
+                    className={`analysis-tab-premium${currentAnalysisTab === 'premium' ? ' active' : ''}`}
+                    onClick={() => {
+                      setAnalysisTab(prev => ({ ...prev, [matchId]: 'premium' }));
+                      trackTabClick('p');
+                      if ((isAdmin || isPremiumUser) && !isPremiumBusy) fetchPremium();
+                    }}
+                    style={{
+                      padding: '4px 14px', borderRadius: '12px',
+                      border: currentAnalysisTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.6)' : '1px solid rgba(255,255,255,0.15)',
+                      cursor: 'pointer', fontSize: '10px', fontWeight: 600,
+                      background: currentAnalysisTab === 'premium' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.06)',
+                      color: currentAnalysisTab === 'premium' ? '#a855f7' : theme.textDim,
+                    }}
+                  >{(isAdmin || isPremiumUser) ? 'Analisi AI Premium' : '🔒 Premium'}</button>
+                </div>
+
+                {/* Contenuto */}
+                {currentAnalysisTab === 'free' && (
+                  <div style={{
+                    fontSize: '11px', lineHeight: '1.7', color: theme.text,
+                    padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
+                    background: 'rgba(255,255,255,0.03)', borderRadius: '4px',
+                  }}>
+                    {pred.analysis_free}
+                  </div>
+                )}
+
+                {currentAnalysisTab === 'premium' && (
+                  <div style={{
+                    fontSize: '11px', lineHeight: '1.7', color: theme.text,
+                    padding: '8px 10px',
+                    background: 'rgba(168, 85, 247, 0.04)', borderRadius: '4px',
+                    border: '1px solid rgba(168, 85, 247, 0.1)',
+                  }}>
+                    {(!isAdmin && !isPremiumUser) ? (
+                      <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
+                        🔒 Disponibile nella versione Premium
+                      </div>
+                    ) : isPremiumBusy ? (
+                      <div style={{ textAlign: 'center', padding: '12px', color: '#a855f7' }}>
+                        🤖 Analisi in corso...
+                      </div>
+                    ) : isPremiumLoaded ? (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || pred.analysis_premium}</div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
+                        Premi il tab Premium per generare l'analisi
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pill contraddizioni */}
+                {pred.analysis_alerts && pred.analysis_alerts.length > 0 && (() => {
+                  const n = pred.analysis_alerts.length;
+                  const pillBg = n >= 4 ? 'rgba(239,68,68,0.18)' : n >= 2 ? 'rgba(245,158,11,0.18)' : 'rgba(34,197,94,0.18)';
+                  const pillColor = n >= 4 ? '#f87171' : n >= 2 ? '#fbbf24' : '#4ade80';
+                  return (
+                    <div style={{ marginTop: '8px' }}>
+                      <span style={{
+                        display: 'inline-block', padding: '3px 10px', borderRadius: '12px',
+                        fontSize: '10px', fontWeight: 600,
+                        background: pillBg, color: pillColor,
+                      }}>
+                        ⚠️ {n} contraddizion{n === 1 ? 'e rilevata' : 'i rilevate'}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
 
             {/* Monte Carlo — identico a SistemaC, collassabile */}
             {(pred as any).simulation_data && (() => {
@@ -1132,7 +1351,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               );
               return (
                 <div style={{
-                  margin: '0 0 8px 8px', padding: '12px',
+                  margin: '0 0 8px 8px', padding: '7px 12px',
                   background: 'rgba(255, 107, 53, 0.06)',
                   border: '1px solid rgba(255, 107, 53, 0.2)',
                   borderRadius: '6px',
@@ -1203,198 +1422,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         </div>
                       </div>
                     </>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* ═══ ANALISI DEL MATCH (ogni partita ha la sua analisi) ═══ */}
-            {pred.analysis_free && pred.analysis_score !== undefined && (() => {
-              const analysisKey = `${cardKey}-analysis`;
-              const isAnalysisOpen = expandedSections.has(analysisKey);
-              const score = pred.analysis_score;
-              const scoreColor = score >= 70 ? theme.success : score >= 40 ? '#facc15' : theme.danger;
-              const matchId = `${pred.home}-${pred.away}-${pred.date}`;
-              const currentTab = analysisTab[matchId] || 'free';
-              const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;
-              const isPremiumBusy = !!premiumLoading[matchId];
-
-              const fetchPremium = async () => {
-                if (isPremiumLoaded || isPremiumBusy) return;
-                setPremiumLoading(prev => ({ ...prev, [matchId]: true }));
-                try {
-                  const resp = await fetch(`${API_BASE}/chat/match-analysis-premium`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, isAdmin: 'true' }),
-                  });
-                  const data = await resp.json();
-                  if (data.success) {
-                    setPremiumAnalysis(prev => ({ ...prev, [matchId]: data.analysis }));
-                  }
-                } catch (err) {
-                  console.error('Premium analysis error:', err);
-                } finally {
-                  setPremiumLoading(prev => ({ ...prev, [matchId]: false }));
-                }
-              };
-
-              return (
-                <div style={{
-                  margin: '0 0 8px 8px', padding: '12px',
-                  background: score < 40 ? 'rgba(239, 68, 68, 0.06)' : 'rgba(250, 204, 21, 0.06)',
-                  border: `1px solid ${score < 40 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(250, 204, 21, 0.2)'}`,
-                  borderRadius: '6px',
-                }}>
-                  {/* Header collassabile */}
-                  <div
-                    className="collapsible-header"
-                    onClick={(e) => toggleSection(analysisKey, e)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      cursor: 'pointer', userSelect: 'none' as const,
-                      marginBottom: isAnalysisOpen ? '10px' : '0',
-                    }}
-                  >
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: scoreColor }}>
-                      {score < 50 ? '⚠️' : '🔍'} Analisi del Match · Coerenza {score}/100
-                    </span>
-                    <span style={{ fontSize: '10px', color: scoreColor, transition: 'transform 0.2s', transform: isAnalysisOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-                  </div>
-
-                  {isAnalysisOpen && (
-                    <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                      {/* Barra coerenza con gradiente + fasce + indicatore */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '12px', lineHeight: 1 }} title="Rischio alto">⚠️</span>
-                        <div style={{ flex: 1, position: 'relative' as const }}>
-                          {/* Track gradiente sfumato */}
-                          <div style={{
-                            height: '8px', borderRadius: '4px', overflow: 'hidden',
-                            background: 'linear-gradient(to right, #ef4444, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e)',
-                            opacity: 0.35,
-                          }} />
-                          {/* Track riempito fino allo score */}
-                          <div style={{
-                            position: 'absolute' as const, top: 0, left: 0,
-                            height: '8px', borderRadius: '4px', overflow: 'hidden',
-                            width: `${score}%`, transition: 'width 0.5s',
-                          }}>
-                            <div style={{
-                              width: `${10000 / Math.max(score, 1)}%`, height: '100%',
-                              background: 'linear-gradient(to right, #ef4444, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e)',
-                            }} />
-                          </div>
-                          {/* Tacche separatrici */}
-                          {[33, 66].map(pct => (
-                            <div key={pct} style={{
-                              position: 'absolute' as const, top: -1, left: `${pct}%`,
-                              width: '1px', height: '10px',
-                              background: 'rgba(255,255,255,0.3)',
-                            }} />
-                          ))}
-                          {/* Indicatore posizione score */}
-                          <div style={{
-                            position: 'absolute' as const, top: '-3px',
-                            left: `${score}%`, transform: 'translateX(-50%)',
-                            width: '14px', height: '14px', borderRadius: '50%',
-                            background: scoreColor,
-                            border: '2px solid rgba(0,0,0,0.5)',
-                            boxShadow: `0 0 6px ${scoreColor}`,
-                            transition: 'left 0.5s',
-                          }} />
-                        </div>
-                        <span style={{ fontSize: '12px', lineHeight: 1 }} title="Coerenza alta">✅</span>
-                      </div>
-
-                      {/* Tab Free / Premium */}
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', justifyContent: 'center' }}>
-                        <button
-                          className={`analysis-tab-free${currentTab === 'free' ? ' active' : ''}`}
-                          onClick={() => { setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' })); trackTabClick('f'); }}
-                          style={{
-                            padding: '6px 18px', borderRadius: '16px',
-                            border: currentTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : '1px solid rgba(255,255,255,0.18)',
-                            cursor: 'pointer', fontSize: '11px', fontWeight: 600,
-                            background: currentTab === 'free' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.08)',
-                            color: currentTab === 'free' ? theme.cyan : theme.textDim,
-                          }}
-                        >
-                          📊 Analisi Free
-                        </button>
-                        <button
-                          className={`analysis-tab-premium${currentTab === 'premium' ? ' active' : ''}`}
-                          onClick={() => {
-                            setAnalysisTab(prev => ({ ...prev, [matchId]: 'premium' }));
-                            trackTabClick('p');
-                            if ((isAdmin || isPremiumUser) && !isPremiumBusy) fetchPremium();
-                          }}
-                          style={{
-                            padding: '6px 18px', borderRadius: '16px',
-                            border: currentTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.6)' : '1px solid rgba(255,255,255,0.18)',
-                            cursor: 'pointer', fontSize: '11px', fontWeight: 600,
-                            background: currentTab === 'premium' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.08)',
-                            color: currentTab === 'premium' ? '#a855f7' : theme.textDim,
-                          }}
-                        >
-                          {(isAdmin || isPremiumUser) ? '🤖 Analisi AI Premium' : '🔒 Analisi AI Premium'}
-                        </button>
-                      </div>
-
-                      {/* Contenuto tab */}
-                      {currentTab === 'free' && (
-                        <div style={{
-                          fontSize: '11px', lineHeight: '1.7', color: theme.text,
-                          padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
-                          background: 'rgba(255,255,255,0.03)', borderRadius: '4px',
-                        }}>
-                          {pred.analysis_free}
-                        </div>
-                      )}
-
-                      {currentTab === 'premium' && (
-                        <div style={{
-                          fontSize: '11px', lineHeight: '1.7', color: theme.text,
-                          padding: '8px 10px',
-                          background: 'rgba(168, 85, 247, 0.04)', borderRadius: '4px',
-                          border: '1px solid rgba(168, 85, 247, 0.1)',
-                        }}>
-                          {(!isAdmin && !isPremiumUser) ? (
-                            <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
-                              🔒 Disponibile nella versione Premium
-                            </div>
-                          ) : isPremiumBusy ? (
-                            <div style={{ textAlign: 'center', padding: '12px', color: '#a855f7' }}>
-                              🤖 Analisi in corso...
-                            </div>
-                          ) : isPremiumLoaded ? (
-                            <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || pred.analysis_premium}</div>
-                          ) : (
-                            <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
-                              Premi di nuovo il tab Premium per generare l'analisi
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Pill contraddizioni */}
-                      {pred.analysis_alerts && pred.analysis_alerts.length > 0 && (() => {
-                        const n = pred.analysis_alerts.length;
-                        const pillBg = n >= 4 ? 'rgba(239,68,68,0.18)' : n >= 2 ? 'rgba(245,158,11,0.18)' : 'rgba(34,197,94,0.18)';
-                        const pillColor = n >= 4 ? '#f87171' : n >= 2 ? '#fbbf24' : '#4ade80';
-                        return (
-                          <div style={{ marginTop: '8px' }}>
-                            <span style={{
-                              display: 'inline-block', padding: '3px 10px', borderRadius: '12px',
-                              fontSize: '10px', fontWeight: 600,
-                              background: pillBg, color: pillColor,
-                            }}>
-                              ⚠️ {n} contraddizion{n === 1 ? 'e rilevata' : 'i rilevate'}
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </div>
                   )}
                 </div>
               );

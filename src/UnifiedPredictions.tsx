@@ -1327,7 +1327,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           onClick={() => {
                             setAnalysisTab(prev => ({ ...prev, [matchId]: 'premium' }));
                             trackTabClick('p');
-                            if ((isAdmin || isPremiumUser) && !isPremiumLoaded) fetchPremium();
+                            if ((isAdmin || isPremiumUser) && !isPremiumBusy) fetchPremium();
                           }}
                           style={{
                             padding: '6px 18px', borderRadius: '16px',
@@ -1370,14 +1370,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           ) : isPremiumLoaded ? (
                             <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || pred.analysis_premium}</div>
                           ) : (
-                            <div
-                              onClick={() => fetchPremium()}
-                              style={{
-                                textAlign: 'center', padding: '12px', color: '#a855f7',
-                                cursor: 'pointer', fontWeight: 600, fontSize: '12px',
-                              }}
-                            >
-                              🤖 Genera Analisi AI Premium
+                            <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
+                              Premi di nuovo il tab Premium per generare l'analisi
                             </div>
                           )}
                         </div>

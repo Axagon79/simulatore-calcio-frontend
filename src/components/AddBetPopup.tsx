@@ -28,9 +28,12 @@ interface AddBetPopupProps {
   market: string;
   prediction: string;
   odds: number;
+  confidence?: number;
+  probabilitaStimata?: number;
+  systemStake?: number;
 }
 
-export default function AddBetPopup({ isOpen, onClose, home, away, market, prediction, odds }: AddBetPopupProps) {
+export default function AddBetPopup({ isOpen, onClose, home, away, market, prediction, odds, confidence, probabilitaStimata, systemStake }: AddBetPopupProps) {
   const { user, getIdToken } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [mode, setMode] = useState<'choose' | 'tracker' | 'done'>('choose');
@@ -59,7 +62,13 @@ export default function AddBetPopup({ isOpen, onClose, home, away, market, predi
     try {
       const data = await apiFetch('/suggest-stake', {
         method: 'POST',
-        body: JSON.stringify({ bet_type: 'singola', total_odds: odds })
+        body: JSON.stringify({
+          bet_type: 'singola',
+          total_odds: odds,
+          ...(confidence != null && { confidence }),
+          ...(probabilitaStimata != null && { probabilita_stimata: probabilitaStimata }),
+          ...(systemStake != null && { system_stake: systemStake })
+        })
       });
       setSuggestedStake(data.suggested_stake);
       if (!stake) setStake(String(data.suggested_stake));

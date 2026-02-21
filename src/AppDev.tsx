@@ -1828,6 +1828,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   if (!activeLeague) {
     return (
       <DashboardHome
+        onGoToToday={() => {
+          setViewMode('today');
+          setActiveLeague('TODAY');
+          setViewState('list');
+          window.history.pushState(null, '', '#today');
+        }}
         onSelectLeague={(id) => {
           // ✅ GESTIONE COPPE EUROPEE (UCL / UEL)
           if (id === 'UCL' || id === 'UEL') {

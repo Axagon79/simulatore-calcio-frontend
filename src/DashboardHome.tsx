@@ -61,9 +61,10 @@ const STEMMI_COPPE: Record<string, string> = {
 
 interface DashboardProps {
   onSelectLeague: (leagueId: string) => void;
+  onGoToToday?: () => void;
 }
 
-export default function DashboardHome({ onSelectLeague }: DashboardProps) {
+export default function DashboardHome({ onSelectLeague, onGoToToday }: DashboardProps) {
 
   const { user, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -314,7 +315,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
         }}>
           <div style={{ display: 'flex', gap: '10px' }}>
           {[
-            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: 'rgba(0,240,255,0.06)', borderColor: 'rgba(0,240,255,0.2)', onClick: () => { window.location.href = '/#today'; } },
+            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: 'rgba(0,240,255,0.06)', borderColor: 'rgba(0,240,255,0.2)', onClick: () => { if (onGoToToday) onGoToToday(); } },
             { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: 'rgba(5,249,182,0.06)', borderColor: `${theme.success}30`, onClick: () => { window.location.href = '/track-record'; } },
             { label: 'Coach AI', icon: '\uD83E\uDD16', color: '#bc13fe', bg: 'rgba(188,19,254,0.06)', borderColor: 'rgba(188,19,254,0.2)', onClick: () => setCoachOpen(true) }
           ].map(btn => (

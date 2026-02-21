@@ -176,7 +176,7 @@ export default function StepSystem({ onBack }: StepSystemProps) {
         <button onClick={() => setShowAuthModal(true)} style={{ ...btnStyle, background: 'rgba(0,240,255,0.15)', color: theme.cyan }}>
           Accedi
         </button>
-        {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+        {showAuthModal && <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />}
         {onBack && <button onClick={onBack} style={{ ...btnStyle, marginTop: '12px', background: 'rgba(255,255,255,0.05)', color: theme.textDim }}>Indietro</button>}
       </div>
     );
@@ -572,7 +572,7 @@ export default function StepSystem({ onBack }: StepSystemProps) {
         </div>
       )}
 
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      {showAuthModal && <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />}
     </div>
     </div>
   );

@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import AuthModal from './components/AuthModal'
 // --- CONFIGURAZIONE ---
-const IS_ADMIN = true;
-
 const isLocal = typeof window !== 'undefined' && (
   ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
   window.location.hostname.startsWith('192.168.')

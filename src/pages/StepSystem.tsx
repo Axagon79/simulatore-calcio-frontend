@@ -103,6 +103,7 @@ interface StepSystemProps {
 // ============================================
 
 export default function StepSystem({ onBack }: StepSystemProps) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const { user, getIdToken } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -429,33 +430,35 @@ export default function StepSystem({ onBack }: StepSystemProps) {
     <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font }}>
     <div style={{ padding: '16px', maxWidth: '900px', margin: '0 auto' }}>
 
-      {/* HEADER */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && <button onClick={onBack} style={{ background: 'none', border: 'none', color: theme.cyan, cursor: 'pointer', fontSize: '18px' }}>◀</button>}
-          <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>
-            <span style={{ color: theme.cyan }}>Step</span> System
-          </h1>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setShowCreateForm(true)} style={{ ...btnStyle, background: 'rgba(0,240,255,0.15)', color: theme.cyan, fontWeight: '700' }}>
-            + Nuova
-          </button>
-          <div
-            onClick={() => setShowInfo(true)}
-            style={{
-              width: '40px', height: '40px',
-              marginTop: '2px',
-              background: 'rgba(255,255,255,0.18)',
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
-          >
-            <img src={infoIcon} alt="Info" style={{ width: '26px', height: '26px' }} />
+      {/* HEADER — sticky su mobile */}
+      <div style={isMobile ? { position: 'sticky', top: 0, zIndex: 100, background: theme.bg, paddingBottom: '8px', marginLeft: '-16px', marginRight: '-16px', paddingLeft: '16px', paddingRight: '16px' } : {}}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {onBack && <button onClick={onBack} style={{ background: 'none', border: 'none', color: theme.cyan, cursor: 'pointer', fontSize: '18px' }}>◀</button>}
+            <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>
+              <span style={{ color: theme.cyan }}>Step</span> System
+            </h1>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setShowCreateForm(true)} style={{ ...btnStyle, background: 'rgba(0,240,255,0.15)', color: theme.cyan, fontWeight: '700' }}>
+              + Nuova
+            </button>
+            <div
+              onClick={() => setShowInfo(true)}
+              style={{
+                width: '40px', height: '40px',
+                marginTop: '2px',
+                background: 'rgba(255,255,255,0.18)',
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+            >
+              <img src={infoIcon} alt="Info" style={{ width: '26px', height: '26px' }} />
+            </div>
           </div>
         </div>
       </div>

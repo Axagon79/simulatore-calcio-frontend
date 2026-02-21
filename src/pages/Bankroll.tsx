@@ -139,54 +139,64 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   );
 
   return (
-    <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
+    <div style={isMobile
+      ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: theme.bg, overflowY: 'auto', overflowX: 'hidden', fontFamily: theme.font }
+      : { background: theme.bg, minHeight: '100vh', fontFamily: theme.font }
+    }>
       {/* Header sticky su mobile */}
-      <div style={isMobile ? { position: 'sticky', top: 0, zIndex: 100, background: theme.bg, paddingBottom: '8px', marginLeft: '-20px', marginRight: '-20px', paddingLeft: '20px', paddingRight: '20px' } : {}}>
-        {/* Riga 1: titolo + icona info */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-          {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: '1px solid rgba(0,240,255,0.25)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', marginRight: '12px' }}>← Indietro</button>}
-          <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0, flex: 1, textAlign: 'center', ...(isMobile ? { marginLeft: '-10px' } : {}) }}>
-            Bankroll & ROI
-          </h1>
-          <div
-            onClick={() => window.location.href = '/money-management'}
-            style={{
-              width: '32px', height: '32px',
-              background: 'rgba(255,255,255,0.18)',
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', transition: 'all 0.2s',
-              ...(isMobile ? { marginTop: '-2px' } : {})
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
-          >
-            <img src={infoIcon} alt="Info" style={{ width: '22px', height: '22px' }} />
-          </div>
-        </div>
+      <div style={isMobile
+        ? { position: 'sticky', top: 0, zIndex: 100, background: theme.bg, padding: '12px 20px 8px' }
+        : { maxWidth: '900px', margin: '0 auto', padding: '20px 20px 0' }
+      }>
+        <div style={isMobile ? { maxWidth: '900px', margin: '0 auto' } : {}}>
 
-        {/* Riga 2: data a sinistra, bottoni a destra */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <div style={{ fontSize: '13px', color: theme.textDim }}>
-            {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          {/* Riga 1: titolo + icona info */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+            {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: '1px solid rgba(0,240,255,0.25)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', marginRight: '12px' }}>← Indietro</button>}
+            <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0, flex: 1, textAlign: 'center', ...(isMobile ? { marginLeft: '-10px' } : {}) }}>
+              Bankroll & ROI
+            </h1>
+            <div
+              onClick={() => window.location.href = '/money-management'}
+              style={{
+                width: '32px', height: '32px',
+                background: 'rgba(255,255,255,0.18)',
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', transition: 'all 0.2s',
+                ...(isMobile ? { marginTop: '-2px' } : {})
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+            >
+              <img src={infoIcon} alt="Info" style={{ width: '22px', height: '22px' }} />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <button
-              onClick={() => window.location.href = '/step-system'}
-              style={{ background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.3)', color: '#bc13fe', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
-            >
-              📈 Step
-            </button>
-            <button
-              onClick={() => window.location.href = '/money-tracker'}
-              style={{ background: 'rgba(0,240,255,0.08)', border: `1px solid ${theme.cyan}30`, color: theme.cyan, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
-            >
-              💰 MM
-            </button>
+
+          {/* Riga 2: data a sinistra, bottoni a destra */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <div style={{ fontSize: '13px', color: theme.textDim }}>
+              {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <button
+                onClick={() => window.location.href = '/step-system'}
+                style={{ background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.3)', color: '#bc13fe', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+              >
+                📈 Step
+              </button>
+              <button
+                onClick={() => window.location.href = '/money-tracker'}
+                style={{ background: 'rgba(0,240,255,0.08)', border: `1px solid ${theme.cyan}30`, color: theme.cyan, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+              >
+                💰 MM
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '0 20px 20px' : '0 20px 20px' }}>
 
       {/* Tab Pronostici / Alto Rendimento */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>

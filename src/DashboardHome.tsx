@@ -1,8 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import AuthModal from './components/AuthModal'
 // --- CONFIGURAZIONE ---
 const IS_ADMIN = true;
+
+const isLocal = typeof window !== 'undefined' && (
+  ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
+  window.location.hostname.startsWith('192.168.')
+);
+const API_BASE = isLocal
+  ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:5001/puppals-456c7/us-central1/api`
+  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 // --- TEMA NEON DARK ---
 const theme = {
@@ -66,6 +74,13 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
   const [showBankroll, setShowBankroll] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Coach AI chat state
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachMessages, setCoachMessages] = useState<{id: number, sender: 'user'|'bot', text: string, isLoading?: boolean}[]>([]);
+  const [coachInput, setCoachInput] = useState('');
+  const [coachLoading, setCoachLoading] = useState(false);
+  const coachEndRef = useRef<HTMLDivElement>(null);
+
   // Detect mobile resize
   useEffect(() => {
     const handleResize = () => {
@@ -74,6 +89,52 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Coach AI: keyframes per animazione dots
+  useEffect(() => {
+    if (document.getElementById('coach-ai-keyframes')) return;
+    const style = document.createElement('style');
+    style.id = 'coach-ai-keyframes';
+    style.textContent = `@keyframes coachDot { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }`;
+    document.head.appendChild(style);
+  }, []);
+
+  // Coach AI: scroll to bottom on new messages
+  useEffect(() => {
+    coachEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [coachMessages]);
+
+  // Coach AI: send message
+  const sendCoachMessage = async (text?: string) => {
+    const msg = text || coachInput;
+    if (!msg.trim() || coachLoading) return;
+    setCoachInput('');
+    const userMsg = { id: Date.now(), sender: 'user' as const, text: msg };
+    const loadingMsg = { id: Date.now() + 1, sender: 'bot' as const, text: '', isLoading: true };
+    setCoachMessages(prev => [...prev, userMsg, loadingMsg]);
+    setCoachLoading(true);
+    try {
+      const history = coachMessages.filter(m => !m.isLoading).map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      }));
+      const res = await fetch(`${API_BASE}/chat/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, history, pageContext: 'dashboard' })
+      });
+      const data = await res.json();
+      setCoachMessages(prev => prev.filter(m => !m.isLoading).concat({
+        id: Date.now() + 2, sender: 'bot', text: data.success ? data.reply : 'Errore: ' + (data.error || 'sconosciuto')
+      }));
+    } catch {
+      setCoachMessages(prev => prev.filter(m => !m.isLoading).concat({
+        id: Date.now() + 2, sender: 'bot', text: 'Errore di connessione'
+      }));
+    } finally {
+      setCoachLoading(false);
+    }
+  };
 
   // --- LISTA CAMPIONATI PRINCIPALI ---
   const leagues = [
@@ -150,109 +211,154 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
-        padding: '20px',         
+        padding: isMobile ? '0 20px 20px' : '20px',
         display: 'flex', flexDirection: 'column', alignItems: 'center'
     }}>
       
-      {/* BOTTONE AUTH — angolo in alto a destra */}
-      <div style={{
-        position: 'fixed', top: isMobile ? 12 : 16, right: isMobile ? 22 : 70,
-        zIndex: 10001, fontFamily: '"Inter", "Segoe UI", sans-serif'
-      }}>
-        {user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: '50%',
-              background: `linear-gradient(135deg, ${theme.cyan}40, ${theme.purple}40)`,
-              border: `2px solid ${theme.cyan}60`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: isMobile ? '12px' : '14px', fontWeight: '800', color: theme.cyan,
-              overflow: 'hidden'
-            }}>
-              {user.photoURL ? (
-                <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-              ) : (
-                (user.email || 'U')[0].toUpperCase()
-              )}
-            </div>
-            {!isMobile && (
-              <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user.displayName || user.email}
-              </span>
-            )}
-            <button
-              onClick={() => logout()}
-              style={{
-                background: 'rgba(255,42,109,0.1)', border: '1px solid rgba(255,42,109,0.25)',
-                color: theme.danger, padding: isMobile ? '4px 8px' : '5px 12px',
-                borderRadius: '8px', cursor: 'pointer',
-                fontSize: isMobile ? '10px' : '11px', fontWeight: '700'
-              }}
-            >
-              Esci
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAuthModal(true)}
-            style={{
-              background: `linear-gradient(135deg, ${theme.cyan}15, ${theme.cyan}30)`,
-              border: `1px solid ${theme.cyan}40`,
-              color: theme.cyan, padding: isMobile ? '6px 14px' : '8px 20px',
-              borderRadius: '10px', cursor: 'pointer',
-              fontSize: isMobile ? '12px' : '13px', fontWeight: '700',
-              backdropFilter: 'blur(8px)'
-            }}
-          >
-            Accedi
-          </button>
-        )}
-      </div>
-
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
       {/* BOX CENTRALE CHE CONTIENE TUTTO */}
       <div style={{width: '100%', maxWidth: '1200px', paddingBottom: '40px'}}>
 
-        {/* HEADER RESPONSIVO */}
-        <div style={{textAlign: 'center', marginTop: '40px', marginBottom: '50px'}}>
-          <h1 style={{
-              fontSize: 'clamp(32px, 6vw, 64px)', 
-              fontWeight: '900', margin: '0 0 10px 0',
-              textShadow: `0 0 40px ${theme.purple}`,
-              letterSpacing: '-1px',
-              color: 'white'
+        {/* HEADER STICKY SU MOBILE (auth + titolo + sottotitolo) */}
+        <div style={isMobile ? {
+          position: 'sticky', top: 0, zIndex: 100,
+          background: '#1a1d2e',
+          margin: '0 -20px 20px',
+          padding: '20px 20px 12px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.6)'
+        } : {}}>
+
+          {/* BOTTONE AUTH */}
+          <div style={{
+            ...(isMobile
+              ? { display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }
+              : { position: 'fixed', top: 16, right: 70, zIndex: 10001 }),
+            fontFamily: '"Inter", "Segoe UI", sans-serif'
           }}>
-              <span style={{color: theme.cyan}}>AI</span> SIMULATOR
-          </h1>
-          <p style={{
-             color: theme.textDim, 
-             fontSize: 'clamp(14px, 3vw, 18px)', 
-             margin: 0 
-          }}>
-            SELEZIONA UN CAMPIONATO PER ACCEDERE AL CORE
-          </p>
+            {user ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${theme.cyan}40, ${theme.purple}40)`,
+                  border: `2px solid ${theme.cyan}60`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: isMobile ? '12px' : '14px', fontWeight: '800', color: theme.cyan,
+                  overflow: 'hidden'
+                }}>
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    (user.email || 'U')[0].toUpperCase()
+                  )}
+                </div>
+                {!isMobile && (
+                  <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.displayName || user.email}
+                  </span>
+                )}
+                <button
+                  onClick={() => logout()}
+                  style={{
+                    background: 'rgba(255,42,109,0.1)', border: '1px solid rgba(255,42,109,0.25)',
+                    color: theme.danger, padding: isMobile ? '4px 8px' : '5px 12px',
+                    borderRadius: '8px', cursor: 'pointer',
+                    fontSize: isMobile ? '10px' : '11px', fontWeight: '700'
+                  }}
+                >
+                  Esci
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  background: `linear-gradient(135deg, ${theme.cyan}15, ${theme.cyan}30)`,
+                  border: `1px solid ${theme.cyan}40`,
+                  color: theme.cyan, padding: isMobile ? '6px 14px' : '8px 20px',
+                  borderRadius: '10px', cursor: 'pointer',
+                  fontSize: isMobile ? '12px' : '13px', fontWeight: '700',
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
+                Accedi
+              </button>
+            )}
+          </div>
+
+          {/* HEADER RESPONSIVO */}
+          <div style={{textAlign: 'center', ...(isMobile ? {} : { marginTop: '40px', marginBottom: '50px' })}}>
+            <h1 style={{
+                fontSize: 'clamp(32px, 6vw, 64px)',
+                fontWeight: '900', margin: '0 0 10px 0',
+                textShadow: `0 0 40px ${theme.purple}`,
+                letterSpacing: '-1px',
+                color: 'white'
+            }}>
+                <span style={{color: theme.cyan}}>AI</span> SIMULATOR
+            </h1>
+            <p style={{
+               color: theme.textDim,
+               fontSize: 'clamp(14px, 3vw, 18px)',
+               margin: 0
+            }}>
+              SELEZIONA UN CAMPIONATO PER ACCEDERE AL CORE
+            </p>
+          </div>
         </div>
 
-        {/* BARRA ADMIN */}
-        {IS_ADMIN && (
-            <div style={{
-                background: 'rgba(255, 255, 255, 0.03)', 
-                border: '1px solid rgba(0, 240, 255, 0.1)',
-                borderRadius: '12px', padding: '15px', marginBottom: '40px',
-                display: 'flex', flexWrap: 'wrap', 
-                justifyContent: 'center', gap: '20px',
-                fontSize: '11px', fontFamily: 'monospace', color: theme.cyan
-            }}>
-                <span style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                  <span style={{width:'6px', height:'6px', borderRadius:'50%', background: theme.danger, boxShadow:`0 0 8px ${theme.danger}`}}></span> 
-                  ADMIN MODE
-                </span>
-                <span style={{color: theme.textDim}}>DB: <span style={{color:'white'}}>SYNCED</span></span>
-                <span style={{color: theme.textDim}}>AI: <span style={{color: theme.success}}>ACTIVE v4.2</span></span>
-            </div>
-        )}
+        {/* BARRA AZIONI RAPIDE */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(0, 240, 255, 0.1)',
+          borderRadius: '12px', padding: isMobile ? '10px' : '14px', marginBottom: '30px'
+        }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+          {[
+            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: 'rgba(0,240,255,0.06)', borderColor: 'rgba(0,240,255,0.2)', onClick: () => { window.location.href = '/#today'; } },
+            { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: 'rgba(5,249,182,0.06)', borderColor: `${theme.success}30`, onClick: () => { window.location.href = '/track-record'; } },
+            { label: 'Coach AI', icon: '\uD83E\uDD16', color: '#bc13fe', bg: 'rgba(188,19,254,0.06)', borderColor: 'rgba(188,19,254,0.2)', onClick: () => setCoachOpen(true) }
+          ].map(btn => (
+            <button
+              key={btn.label}
+              onClick={btn.onClick}
+              style={{
+                flex: 1, padding: isMobile ? '12px 8px' : '14px 16px', borderRadius: '12px',
+                background: btn.bg, border: `1px solid ${btn.borderColor}`,
+                color: btn.color, fontSize: isMobile ? '12px' : '13px', fontWeight: '800',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                fontFamily: '"Inter", "Segoe UI", sans-serif', transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = btn.color;
+                e.currentTarget.style.background = 'rgba(30, 35, 50, 0.8)';
+                e.currentTarget.style.transform = 'translateY(-3px)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = btn.borderColor;
+                e.currentTarget.style.background = btn.bg;
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              onTouchStart={e => {
+                e.currentTarget.style.borderColor = btn.color;
+                e.currentTarget.style.background = 'rgba(30, 35, 50, 0.9)';
+                e.currentTarget.style.transform = 'scale(0.96)';
+              }}
+              onTouchEnd={e => {
+                const t = e.currentTarget;
+                setTimeout(() => {
+                  t.style.borderColor = btn.borderColor;
+                  t.style.background = btn.bg;
+                  t.style.transform = 'scale(1)';
+                }, 200);
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>{btn.icon}</span> {btn.label}
+            </button>
+          ))}
+          </div>
+        </div>
 
         {/* GRIGLIA RESPONSIVA */}
         <div style={{
@@ -1180,6 +1286,123 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COACH AI CHAT OVERLAY */}
+      {coachOpen && (
+        <div onClick={() => setCoachOpen(false)} style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          zIndex: 10002, display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '100%', maxWidth: isMobile ? '100%' : '440px',
+            height: isMobile ? '85vh' : '520px',
+            background: '#0d0f1a', border: '1px solid rgba(188,19,254,0.3)',
+            borderRadius: isMobile ? '20px 20px 0 0' : '16px',
+            display: 'flex', flexDirection: 'column',
+            fontFamily: '"Inter", "Segoe UI", sans-serif',
+            ...(isMobile ? {} : { marginBottom: '30px' })
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              borderBottom: '1px solid rgba(255,255,255,0.08)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src="/coach-ai-robot.png" alt="" style={{ height: '30px', width: 'auto' }} />
+                <div>
+                  <div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Coach AI</div>
+                  <div style={{ color: theme.textDim, fontSize: '10px' }}>Assistente intelligente</div>
+                </div>
+              </div>
+              <button onClick={() => setCoachOpen(false)} style={{
+                background: 'none', border: 'none', color: theme.textDim, fontSize: '18px', cursor: 'pointer'
+              }}>&#10005;</button>
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {coachMessages.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '30px 10px' }}>
+                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>&#129302;</div>
+                  <div style={{ color: 'white', fontSize: '14px', fontWeight: 700, marginBottom: '6px' }}>Ciao! Sono il Coach AI</div>
+                  <div style={{ color: theme.textDim, fontSize: '12px', lineHeight: '1.5' }}>
+                    Chiedimi qualsiasi cosa sui pronostici, sulle partite di oggi o sulle statistiche del sistema.
+                  </div>
+                </div>
+              )}
+              {coachMessages.map(msg => (
+                <div key={msg.id} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '80%', padding: '10px 14px', borderRadius: '12px', fontSize: '13px', lineHeight: '1.5',
+                    ...(msg.sender === 'user'
+                      ? { background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)', color: 'white' }
+                      : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#e0e0e0' })
+                  }}>
+                    {msg.isLoading ? (
+                      <div style={{ display: 'flex', gap: '4px', padding: '4px 0' }}>
+                        {[0,1,2].map(i => (
+                          <span key={i} style={{
+                            width: '6px', height: '6px', borderRadius: '50%', background: '#bc13fe',
+                            animation: `coachDot 1.4s infinite ${i * 0.2}s`
+                          }} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div ref={coachEndRef} />
+            </div>
+
+            {/* Quick Actions */}
+            <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              {[
+                { label: 'Pronostici oggi', msg: 'Che pronostici ci sono oggi?' },
+                { label: 'Cosa gioco?', msg: 'Cosa mi consigli di giocare oggi?' },
+                { label: 'Come va il sistema?', msg: 'Come sta andando il sistema di pronostici?' }
+              ].map(qa => (
+                <button key={qa.label} onClick={() => sendCoachMessage(qa.msg)} disabled={coachLoading} style={{
+                  background: 'rgba(188,19,254,0.1)', border: '1px solid rgba(188,19,254,0.25)',
+                  color: '#bc13fe', padding: '5px 10px', borderRadius: '15px', fontSize: '11px',
+                  cursor: coachLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
+                  opacity: coachLoading ? 0.5 : 1, fontFamily: '"Inter", "Segoe UI", sans-serif'
+                }}>{qa.label}</button>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: '10px 12px', display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <input
+                value={coachInput}
+                onChange={e => setCoachInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !coachLoading && sendCoachMessage()}
+                placeholder="Chiedi al Coach..."
+                disabled={coachLoading}
+                autoFocus
+                style={{
+                  flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '10px', padding: '10px 14px', color: 'white', fontSize: '13px',
+                  outline: 'none', fontFamily: '"Inter", "Segoe UI", sans-serif',
+                  opacity: coachLoading ? 0.5 : 1
+                }}
+              />
+              <button
+                onClick={() => sendCoachMessage()}
+                disabled={coachLoading || !coachInput.trim()}
+                style={{
+                  background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)',
+                  borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
+                  color: '#bc13fe', fontSize: '16px',
+                  opacity: (coachLoading || !coachInput.trim()) ? 0.3 : 1
+                }}
+              >&#128640;</button>
             </div>
           </div>
         </div>

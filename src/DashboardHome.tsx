@@ -1316,7 +1316,7 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                 <img src="/coach-ai-robot.png" alt="" style={{ height: '30px', width: 'auto' }} />
                 <div>
                   <div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Coach AI</div>
-                  <div style={{ color: theme.textDim, fontSize: '10px' }}>Assistente intelligente</div>
+                  <div style={{ color: theme.textDim, fontSize: '10px' }}>Guida al sistema di pronostici</div>
                 </div>
               </div>
               <button onClick={() => setCoachOpen(false)} style={{
@@ -1327,11 +1327,26 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
             {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {coachMessages.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '30px 10px' }}>
-                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>&#129302;</div>
-                  <div style={{ color: 'white', fontSize: '14px', fontWeight: 700, marginBottom: '6px' }}>Ciao! Sono il Coach AI</div>
-                  <div style={{ color: theme.textDim, fontSize: '12px', lineHeight: '1.5' }}>
-                    Chiedimi qualsiasi cosa sui pronostici, sulle partite di oggi o sulle statistiche del sistema.
+                <div style={{ padding: '20px 6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <img src="/coach-ai-robot.png" alt="" style={{ height: '36px', width: 'auto' }} />
+                    <div style={{ color: 'white', fontSize: '15px', fontWeight: 700 }}>Ciao! Sono il tuo assistente.</div>
+                  </div>
+                  <div style={{
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px', padding: '14px 16px', lineHeight: '1.7', fontSize: '13px', color: '#ccc'
+                  }}>
+                    <p style={{ margin: '0 0 10px' }}>
+                      Sono qui per rispondere a qualsiasi <strong style={{ color: 'white' }}>curiosit&agrave; sul nostro sistema di pronostici</strong>.
+                      Come funzionano gli algoritmi? Cosa significano le stelle? Come vengono calcolate le quote? Chiedimi pure, senza limiti.
+                    </p>
+                    <p style={{ margin: '0 0 10px' }}>
+                      Se invece vuoi <strong style={{ color: '#bc13fe' }}>analizzare una partita specifica</strong> o dialogare sui pronostici del giorno,
+                      troverai un altro Coach AI dedicato direttamente dentro la pagina di ogni partita.
+                    </p>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#999' }}>
+                      Qui parliamo del sistema — l&agrave; si parla di calcio.
+                    </p>
                   </div>
                 </div>
               )}
@@ -1364,9 +1379,9 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
             {/* Quick Actions */}
             <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               {[
-                { label: 'Pronostici oggi', msg: 'Che pronostici ci sono oggi?' },
-                { label: 'Cosa gioco?', msg: 'Cosa mi consigli di giocare oggi?' },
-                { label: 'Come va il sistema?', msg: 'Come sta andando il sistema di pronostici?' }
+                { label: 'Come funziona?', msg: 'Come funziona il sistema di pronostici? Spiegamelo in modo semplice.' },
+                { label: 'Cosa sono le stelle?', msg: 'Cosa significano le stelle nei pronostici e come vengono calcolate?' },
+                { label: 'Quanti algoritmi ci sono?', msg: 'Quanti algoritmi utilizza il sistema e come lavorano insieme?' }
               ].map(qa => (
                 <button key={qa.label} onClick={() => sendCoachMessage(qa.msg)} disabled={coachLoading} style={{
                   background: 'rgba(188,19,254,0.1)', border: '1px solid rgba(188,19,254,0.25)',
@@ -1383,9 +1398,9 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
                 value={coachInput}
                 onChange={e => setCoachInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !coachLoading && sendCoachMessage()}
-                placeholder="Chiedi al Coach..."
+                placeholder="Chiedi qualsiasi cosa sul sistema..."
                 disabled={coachLoading}
-                autoFocus
+                autoComplete="off"
                 style={{
                   flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '10px', padding: '10px 14px', color: 'white', fontSize: '13px',

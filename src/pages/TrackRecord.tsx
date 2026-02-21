@@ -487,6 +487,24 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
         <h1 style={{ margin: 0, fontSize: isMobile ? '1.5em' : '2em' }}>Track Record</h1>
       </div>
 
+      {/* Banner fase di sviluppo */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(255,159,67,0.08), rgba(255,215,0,0.06))',
+        border: '1px solid rgba(255,159,67,0.25)',
+        borderRadius: '12px', padding: '14px 18px', marginBottom: '16px',
+        lineHeight: '1.6', fontSize: '0.85em'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <span style={{ fontSize: '1.1em' }}>{'\u{1F6A7}'}</span>
+          <strong style={{ color: '#ffb74d', fontSize: '0.95em' }}>Progetto in fase di sviluppo</strong>
+        </div>
+        <div style={{ color: '#bbb' }}>
+          Questo progetto <strong style={{ color: '#e0e0e0' }}>non è ancora un prodotto finito</strong> — è un sistema in costruzione. Gli algoritmi, i modelli e le strategie sono in fase di calibrazione attiva e vengono aggiornati costantemente.
+          I numeri che vedi qui sono <strong style={{ color: '#e0e0e0' }}>reali e completi</strong>: crediamo nella totale trasparenza, anche quando i risultati non riflettono ancora il potenziale del sistema a regime.
+          Ogni giorno il motore impara, si adatta e migliora — i risultati di oggi non rappresentano quelli di domani.
+        </div>
+      </div>
+
       {/* Tab Dati / Analisi */}
       <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
         {([
@@ -1078,7 +1096,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             </div>
           )}
 
-          {/* Analisi AI — placeholder */}
+          {/* Analisi AI — Coach AI */}
           <div style={{
             ...cardStyle,
             border: '1px solid rgba(138,43,226,0.3)',
@@ -1088,12 +1106,29 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               <span style={{ fontSize: '1.3em' }}>{'\u{1F916}'}</span> Analisi AI
             </div>
             <div style={{
-              color: '#888', fontSize: '0.9em', lineHeight: '1.6', fontStyle: 'italic',
-              padding: '20px', textAlign: 'center',
-              border: '1px dashed rgba(138,43,226,0.2)', borderRadius: '10px',
-              background: 'rgba(138,43,226,0.03)',
+              color: '#ccc', fontSize: '0.9em', lineHeight: '1.7',
+              padding: '16px 20px',
+              border: '1px solid rgba(138,43,226,0.15)', borderRadius: '10px',
+              background: 'rgba(138,43,226,0.04)',
             }}>
-              {"L'analisi AI avanzata sar\u00E0 disponibile prossimamente. Utilizzer\u00E0 un modello di intelligenza artificiale per fornire insight personalizzati pi\u00F9 approfonditi, pattern nascosti nei dati e suggerimenti predittivi basati sullo storico completo."}
+              <p style={{ margin: '0 0 10px' }}>
+                Vuoi un'analisi personalizzata? Apri il <strong style={{ color: '#b388ff' }}>Coach AI</strong> dalla Dashboard e chiedi:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                {[
+                  '"Come sta andando il sistema?"',
+                  '"Quali sono i punti di forza e debolezza?"',
+                  '"Cosa mi consigli di giocare oggi?"'
+                ].map(q => (
+                  <div key={q} style={{
+                    background: 'rgba(138,43,226,0.08)', borderRadius: '8px', padding: '8px 12px',
+                    fontSize: '0.85em', color: '#d1b3ff', fontStyle: 'italic'
+                  }}>{q}</div>
+                ))}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.85em', color: '#999' }}>
+                Il Coach analizza i dati in tempo reale e fornisce insight su misura basati sullo storico dei pronostici.
+              </p>
             </div>
           </div>
 

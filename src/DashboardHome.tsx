@@ -542,6 +542,68 @@ export default function DashboardHome({ onSelectLeague }: DashboardProps) {
               </div>
             </div>
 
+            {/* CARD STEP SYSTEM */}
+            <div
+              key="STEP_SYSTEM_CARD"
+              onClick={() => window.location.href = '/step-system'}
+              style={{
+                position: 'relative',
+                background: 'linear-gradient(135deg, rgba(188,19,254,0.15), rgba(138,43,226,0.08))',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(188,19,254,0.4)',
+                borderRadius: isMobile ? '16px' : '20px',
+                padding: isMobile ? '18px' : '25px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                height: isMobile ? '120px' : '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 10px 40px rgba(188,19,254,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <span style={{
+                position: 'absolute',
+                top: isMobile ? '8px' : '12px',
+                right: isMobile ? '8px' : '12px',
+                background: 'linear-gradient(135deg, #bc13fe, #8b5cf6)',
+                color: 'white',
+                fontSize: '10px',
+                fontWeight: '900',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                letterSpacing: '1px',
+                textTransform: 'uppercase'
+              }}>PRO</span>
+              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>📈</div>
+              <div style={{
+                fontSize: isMobile ? '18px' : '22px',
+                fontWeight: '800',
+                color: 'white',
+                marginBottom: '8px'
+              }}>
+                Step System
+              </div>
+              <div style={{
+                fontSize: isMobile ? '12px' : '14px',
+                color: '#bc13fe',
+                fontWeight: 'bold'
+              }}>
+                Sistema Progressivo
+              </div>
+            </div>
+
             {/* CARD BANKROLL & GESTIONE */}
             <div
               key="BANKROLL_CARD"

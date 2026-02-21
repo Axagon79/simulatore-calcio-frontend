@@ -25,7 +25,15 @@ export default function MoneyManagement({ onBack }: { onBack?: () => void }) {
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0 }}>Money Management</h1>
-        {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: 'none', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Indietro</button>}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={() => window.location.href = '/step-system'}
+            style={{ background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.3)', color: '#bc13fe', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+          >
+            📈 Step
+          </button>
+          {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: 'none', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Indietro</button>}
+        </div>
       </div>
 
       <Section title="Cos'e il Bankroll Management?">

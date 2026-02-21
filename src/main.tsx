@@ -12,6 +12,7 @@ import MoneyManagement from './pages/MoneyManagement';
 import SistemaC from './pages/SistemaC';
 import UnifiedPredictions from './UnifiedPredictions';
 import MoneyTracker from './pages/MoneyTracker';
+import StepSystem from './pages/StepSystem';
 
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path="/bankroll" element={<Bankroll onBack={() => window.history.back()} />} />
       <Route path="/money-management" element={<MoneyManagement onBack={() => window.history.back()} />} />
       <Route path="/money-tracker" element={<MoneyTracker onBack={() => window.history.back()} />} />
+      <Route path="/step-system" element={<StepSystem onBack={() => window.history.back()} />} />
       <Route path="/sistema-c" element={<SistemaC />} />
       <Route path="/best-picks" element={<UnifiedPredictions onBack={() => window.history.back()} />} />
       <Route path="/*" element={<AppDev />} />

@@ -147,6 +147,12 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
         </h1>
         <div style={{ display: 'flex', gap: '6px', position: 'absolute', right: 0 }}>
           <button
+            onClick={() => window.location.href = '/step-system'}
+            style={{ background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.3)', color: '#bc13fe', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+          >
+            📈 Step
+          </button>
+          <button
             onClick={() => window.location.href = '/money-tracker'}
             style={{ background: 'rgba(0,240,255,0.08)', border: `1px solid ${theme.cyan}30`, color: theme.cyan, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
           >

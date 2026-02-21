@@ -2261,23 +2261,41 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {mode === 'confronto' && (
               <span style={{ fontSize: '10px', color: theme.purple, fontWeight: 700, padding: '2px 8px', background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)', borderRadius: '6px' }}>⚖️ CONFRONTO</span>
             )}
-            <button
-              onClick={() => window.location.href = '/bankroll'}
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: theme.textDim,
-                padding: '5px 10px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                display: 'flex', alignItems: 'center',
-                flexShrink: 0,
-                position: 'absolute' as const, right: '15px'
-              }}
-            >
-              Bankroll →
-            </button>
+            <div style={{ display: 'flex', gap: '4px', position: 'absolute' as const, right: '15px' }}>
+              <button
+                onClick={() => window.location.href = '/step-system'}
+                style={{
+                  background: 'rgba(188,19,254,0.08)',
+                  border: '1px solid rgba(188,19,254,0.3)',
+                  color: '#bc13fe',
+                  padding: '5px 8px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  display: 'flex', alignItems: 'center',
+                  flexShrink: 0
+                }}
+              >
+                📈
+              </button>
+              <button
+                onClick={() => window.location.href = '/bankroll'}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: theme.textDim,
+                  padding: '5px 10px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  display: 'flex', alignItems: 'center',
+                  flexShrink: 0
+                }}
+              >
+                Bankroll →
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -2301,24 +2319,45 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               >
                 ← Dashboard
               </button>
-              <button
-                onClick={() => window.location.href = '/bankroll'}
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: theme.textDim,
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-              >
-                Bankroll →
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => window.location.href = '/step-system'}
+                  style={{
+                    background: 'rgba(188,19,254,0.08)',
+                    border: '1px solid rgba(188,19,254,0.3)',
+                    color: '#bc13fe',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(188,19,254,0.2)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(188,19,254,0.08)'; }}
+                >
+                  📈 Step
+                </button>
+                <button
+                  onClick={() => window.location.href = '/bankroll'}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: theme.textDim,
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                >
+                  Bankroll →
+                </button>
+              </div>
             </div>
 
             {/* BANNER SANDBOX */}

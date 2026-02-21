@@ -164,18 +164,24 @@ export default function AddBetPopup({ isOpen, onClose, home, away, market, predi
                 </div>
               </button>
 
-              <button disabled style={{
+              <button onClick={() => {
+                sessionStorage.setItem('stepSystemPrefill', JSON.stringify({
+                  match: `${home} vs ${away}`,
+                  odds: odds.toFixed(2),
+                }));
+                window.location.href = '/step-system';
+              }} style={{
                 padding: '14px', borderRadius: '10px',
-                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
-                color: theme.textDim, fontSize: '14px', fontWeight: '700',
-                cursor: 'not-allowed', opacity: 0.5,
+                background: 'rgba(188,19,254,0.06)', border: '1px solid rgba(188,19,254,0.2)',
+                color: '#bc13fe', fontSize: '14px', fontWeight: '800',
+                cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '10px'
               }}>
-                <span style={{ fontSize: '18px' }}>📝</span>
+                <span style={{ fontSize: '18px' }}>📈</span>
                 <div style={{ textAlign: 'left' }}>
-                  <div>Aggiungi in Bolletta</div>
-                  <div style={{ fontSize: '10px', fontWeight: '400', marginTop: '2px' }}>
-                    Prossimamente
+                  <div>Usa nello Step System</div>
+                  <div style={{ fontSize: '10px', fontWeight: '400', color: theme.textDim, marginTop: '2px' }}>
+                    Pre-compila quota e partita in una sessione Step
                   </div>
                 </div>
               </button>

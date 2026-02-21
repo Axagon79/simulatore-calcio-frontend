@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import infoIcon from '../assets/info-icon.png';
 
 const theme = {
   bg: '#05070a',
@@ -60,6 +61,7 @@ const getDaysAgoDate = (days: number) => {
 };
 
 export default function Bankroll({ onBack }: { onBack?: () => void }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const [data, setData] = useState<BankrollData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,37 +141,51 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   return (
     <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', position: 'relative' }}>
-        {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: '1px solid rgba(255,255,255,0.1)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', position: 'absolute', left: 0 }}>← Indietro</button>}
-        <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0, flex: 1, textAlign: 'center', paddingRight: '20px' }}>
-          Bankroll & ROI
-        </h1>
-        <div style={{ display: 'flex', gap: '6px', position: 'absolute', right: 0 }}>
-          <button
-            onClick={() => window.location.href = '/step-system'}
-            style={{ background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.3)', color: '#bc13fe', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
-          >
-            📈 Step
-          </button>
-          <button
-            onClick={() => window.location.href = '/money-tracker'}
-            style={{ background: 'rgba(0,240,255,0.08)', border: `1px solid ${theme.cyan}30`, color: theme.cyan, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
-          >
-            💰 MM
-          </button>
-          <button
+      {/* Header sticky su mobile */}
+      <div style={isMobile ? { position: 'sticky', top: 0, zIndex: 100, background: theme.bg, paddingBottom: '8px', marginLeft: '-20px', marginRight: '-20px', paddingLeft: '20px', paddingRight: '20px' } : {}}>
+        {/* Riga 1: titolo + icona info */}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+          {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.08)', color: theme.textDim, border: '1px solid rgba(0,240,255,0.25)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', marginRight: '12px' }}>← Indietro</button>}
+          <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0, flex: 1, textAlign: 'center', ...(isMobile ? { marginLeft: '-10px' } : {}) }}>
+            Bankroll & ROI
+          </h1>
+          <div
             onClick={() => window.location.href = '/money-management'}
-            style={{ background: 'rgba(255,215,0,0.2)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+            style={{
+              width: '32px', height: '32px',
+              background: 'rgba(255,255,255,0.18)',
+              borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'all 0.2s',
+              ...(isMobile ? { marginTop: '-2px' } : {})
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
           >
-            ?
-          </button>
+            <img src={infoIcon} alt="Info" style={{ width: '22px', height: '22px' }} />
+          </div>
         </div>
-      </div>
 
-      {/* Data di oggi */}
-      <div style={{ textAlign: 'center', marginBottom: '14px', fontSize: '13px', color: theme.textDim }}>
-        {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        {/* Riga 2: data a sinistra, bottoni a destra */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <div style={{ fontSize: '13px', color: theme.textDim }}>
+            {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <button
+              onClick={() => window.location.href = '/step-system'}
+              style={{ background: 'rgba(188,19,254,0.08)', border: '1px solid rgba(188,19,254,0.3)', color: '#bc13fe', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+            >
+              📈 Step
+            </button>
+            <button
+              onClick={() => window.location.href = '/money-tracker'}
+              style={{ background: 'rgba(0,240,255,0.08)', border: `1px solid ${theme.cyan}30`, color: theme.cyan, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}
+            >
+              💰 MM
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Tab Pronostici / Alto Rendimento */}

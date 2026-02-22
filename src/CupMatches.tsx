@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import CupMatchAnalysis from './CupMatchAnalysis';
 import CupMatchResult from './CupMatchResult';
+import { getTheme, getThemeMode } from './AppDev/costanti';
+
+const appTheme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 // --- TEMA COPPE EUROPEE ---
 const cupTheme = {
@@ -22,8 +26,8 @@ const cupTheme = {
   }
 };
 
-const baseBg = '#05070a';
-const textDim = '#8b9bb4';
+const baseBg = appTheme.bg;
+const textDim = appTheme.textDim;
 
 // Funzione per costruire URL stemma squadra
 const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
@@ -144,7 +148,7 @@ export default function CupMatches({ cupId, onOpenCoachAI }: CupMatchesProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'white'
+        color: appTheme.text
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>{theme.icon}</div>
@@ -166,7 +170,7 @@ export default function CupMatches({ cupId, onOpenCoachAI }: CupMatchesProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'white',
+        color: appTheme.text,
         padding: '20px'
       }}>
         <div style={{ textAlign: 'center' }}>
@@ -177,7 +181,7 @@ export default function CupMatches({ cupId, onOpenCoachAI }: CupMatchesProps) {
             style={{
               padding: '12px 24px',
               background: theme.primary,
-              color: 'white',
+              color: '#fff',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -278,7 +282,7 @@ if (viewState === 'analysis' && selectedMatch) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'white'
+        color: appTheme.text
       }}>
         <div style={{ fontSize: '64px', marginBottom: '30px' }}>{theme.icon}</div>
         <div style={{ 
@@ -352,7 +356,7 @@ if (viewState === 'analysis' && selectedMatch) {
             style={{
                 fontSize: isMobile ? '16px' : '20px',
                 fontWeight: '800',
-                color: 'white',
+                color: appTheme.text,
                 marginBottom: '15px',
                 display: 'flex',
                 alignItems: 'center',
@@ -391,7 +395,7 @@ if (viewState === 'analysis' && selectedMatch) {
                     }
                   }}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: appTheme.surfaceSubtle,
                     borderRadius: '20px',
                     overflow: 'hidden',
                     padding: isMobile ? '12px 10px' : '10px 15px',
@@ -406,13 +410,13 @@ if (viewState === 'analysis' && selectedMatch) {
                   }}
                   onMouseEnter={(e) => {
                     if (!isMobile) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                      e.currentTarget.style.background = (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)');
                       e.currentTarget.style.borderColor = theme.primary;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isMobile) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.background = appTheme.surfaceSubtle;
                       e.currentTarget.style.borderColor = `${theme.primary}20`;
                     }
                   }}
@@ -463,7 +467,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             <span style={{
                                 fontSize: '12px',
                                 fontWeight: 'bold',
-                                color: 'white',
+                                color: appTheme.text,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -519,7 +523,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             <span style={{
                                 fontSize: '12px',
                                 fontWeight: 'bold',
-                                color: 'white',
+                                color: appTheme.text,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -558,7 +562,7 @@ if (viewState === 'analysis' && selectedMatch) {
                           textAlign: 'right',
                           fontWeight: 'bold',
                           fontSize: '15px',
-                          color: 'white',
+                          color: appTheme.text,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'flex-end',
@@ -594,7 +598,7 @@ if (viewState === 'analysis' && selectedMatch) {
                           textAlign: 'left',
                           fontWeight: 'bold',
                           fontSize: '15px',
-                          color: 'white',
+                          color: appTheme.text,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'flex-start',
@@ -625,10 +629,10 @@ if (viewState === 'analysis' && selectedMatch) {
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
-                              background: 'rgba(255, 255, 255, 0.05)',
+                              background: (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              border: `1px solid ${appTheme.borderSubtle}`,
                               minWidth: '45px'
                             }}
                           >
@@ -641,7 +645,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             </span>
                             <span style={{
                               fontSize: '12px',
-                              color: 'white',
+                              color: appTheme.text,
                               fontWeight: 'bold',
                               fontFamily: 'monospace'
                             }}>
@@ -684,7 +688,7 @@ if (viewState === 'analysis' && selectedMatch) {
                         <div style={{
                             marginTop: '15px',
                             paddingTop: '15px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderTop: `1px solid ${appTheme.borderSubtle}`,
                             animation: 'fadeIn 0.3s ease'
                         }}>
 
@@ -719,7 +723,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                     <span style={{ 
                                         fontSize: '14px', 
                                         fontWeight: 'bold', 
-                                        color: 'white', 
+                                        color: appTheme.text, 
                                         textAlign: 'center',
                                         lineHeight: '1.2'
                                     }}>
@@ -762,7 +766,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                     <span style={{ 
                                         fontSize: '14px', 
                                         fontWeight: 'bold', 
-                                        color: 'white', 
+                                        color: appTheme.text, 
                                         textAlign: 'center',
                                         lineHeight: '1.2'
                                     }}>
@@ -791,10 +795,10 @@ if (viewState === 'analysis' && selectedMatch) {
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
-                              background: 'rgba(255, 255, 255, 0.05)',
+                              background: (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                               padding: '12px',
                               borderRadius: '8px',
-                              border: '1px solid rgba(255, 255, 255, 0.1)'
+                              border: `1px solid ${appTheme.borderSubtle}`
                             }}
                           >
                             <span style={{
@@ -807,7 +811,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             </span>
                             <span style={{
                               fontSize: '16px',
-                              color: 'white',
+                              color: appTheme.text,
                               fontWeight: 'bold',
                               fontFamily: 'monospace'
                             }}>
@@ -861,7 +865,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`,
                             border: 'none',
                             borderRadius: '12px',
-                            color: 'white',
+                            color: '#fff',
                             fontWeight: 'bold',
                             fontSize: '14px',
                             cursor: 'pointer',
@@ -886,7 +890,7 @@ if (viewState === 'analysis' && selectedMatch) {
                 style={{
                     fontSize: isMobile ? '16px' : '20px',
                     fontWeight: '800',
-                    color: 'white',
+                    color: appTheme.text,
                     marginTop: '30px',
                     marginBottom: '15px',
                     display: 'flex',
@@ -926,7 +930,7 @@ if (viewState === 'analysis' && selectedMatch) {
                         }
                       }}
                     style={{
-                        background: 'rgba(255, 255, 255, 0.03)',
+                        background: appTheme.surfaceSubtle,
                         borderRadius: '20px',
                         overflow: 'hidden',
                         padding: isMobile ? '12px 10px' : '10px 15px',
@@ -941,13 +945,13 @@ if (viewState === 'analysis' && selectedMatch) {
                     }}
                     onMouseEnter={(e) => {
                         if (!isMobile) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                        e.currentTarget.style.background = (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)');
                         e.currentTarget.style.borderColor = theme.primary;
                         }
                     }}
                     onMouseLeave={(e) => {
                         if (!isMobile) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                        e.currentTarget.style.background = appTheme.surfaceSubtle;
                         e.currentTarget.style.borderColor = `${theme.primary}20`;
                         }
                     }}
@@ -998,7 +1002,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             <span style={{
                                 fontSize: '12px',
                                 fontWeight: 'bold',
-                                color: 'white',
+                                color: appTheme.text,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -1054,7 +1058,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             <span style={{
                                 fontSize: '12px',
                                 fontWeight: 'bold',
-                                color: 'white',
+                                color: appTheme.text,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -1093,7 +1097,7 @@ if (viewState === 'analysis' && selectedMatch) {
                               textAlign: 'right',
                               fontWeight: 'bold',
                               fontSize: '15px',
-                              color: 'white',
+                              color: appTheme.text,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'flex-end',
@@ -1127,7 +1131,7 @@ if (viewState === 'analysis' && selectedMatch) {
                               textAlign: 'left',
                               fontWeight: 'bold',
                               fontSize: '15px',
-                              color: 'white',
+                              color: appTheme.text,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'flex-start',
@@ -1158,10 +1162,10 @@ if (viewState === 'analysis' && selectedMatch) {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                background: 'rgba(255, 255, 255, 0.05)',
+                                background: (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                                 padding: '6px 10px',
                                 borderRadius: '8px',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                border: `1px solid ${appTheme.borderSubtle}`,
                                 minWidth: '45px'
                                 }}
                             >
@@ -1174,7 +1178,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                 </span>
                                 <span style={{
                                 fontSize: '12px',
-                                color: 'white',
+                                color: appTheme.text,
                                 fontWeight: 'bold',
                                 fontFamily: 'monospace'
                                 }}>
@@ -1217,7 +1221,7 @@ if (viewState === 'analysis' && selectedMatch) {
                         <div style={{
                             marginTop: '15px',
                             paddingTop: '15px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderTop: `1px solid ${appTheme.borderSubtle}`,
                             animation: 'fadeIn 0.3s ease'
                         }}>
                             
@@ -1252,7 +1256,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                     <span style={{ 
                                         fontSize: '14px', 
                                         fontWeight: 'bold', 
-                                        color: 'white', 
+                                        color: appTheme.text, 
                                         textAlign: 'center',
                                         lineHeight: '1.2'
                                     }}>
@@ -1295,7 +1299,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                     <span style={{ 
                                         fontSize: '14px', 
                                         fontWeight: 'bold', 
-                                        color: 'white', 
+                                        color: appTheme.text, 
                                         textAlign: 'center',
                                         lineHeight: '1.2'
                                     }}>
@@ -1324,10 +1328,10 @@ if (viewState === 'analysis' && selectedMatch) {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                background: 'rgba(255, 255, 255, 0.05)',
+                                background: (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                                 padding: '12px',
                                 borderRadius: '8px',
-                                border: '1px solid rgba(255, 255, 255, 0.1)'
+                                border: `1px solid ${appTheme.borderSubtle}`
                                 }}
                             >
                                 <span style={{
@@ -1340,7 +1344,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                 </span>
                                 <span style={{
                                 fontSize: '16px',
-                                color: 'white',
+                                color: appTheme.text,
                                 fontWeight: 'bold',
                                 fontFamily: 'monospace'
                                 }}>
@@ -1394,7 +1398,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                 background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`,
                                 border: 'none',
                                 borderRadius: '12px',
-                                color: 'white',
+                                color: '#fff',
                                 fontWeight: 'bold',
                                 fontSize: '14px',
                                 cursor: 'pointer',

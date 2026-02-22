@@ -1,21 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 
-// --- TEMA ---
-const theme = {
-  bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.85)',
-  panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
-  cyan: '#00f0ff',
-  purple: '#bc13fe',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6',
-  warning: '#ff9f43',
-  gold: '#ffd700',
-  orange: '#ff6b35',
-  font: '"Inter", "Segoe UI", sans-serif'
-};
+// --- TEMA (centralizzato) ---
+import { getTheme } from '../AppDev/costanti';
+const theme = getTheme();
 
 // --- API BASE ---
 const API_BASE = window.location.hostname === 'localhost'

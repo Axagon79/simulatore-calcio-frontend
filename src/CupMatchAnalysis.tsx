@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import CupAnimatedField from './CupAnimatedField';
+import { getTheme, getThemeMode } from './AppDev/costanti';
+
+const appTheme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 // Tema coppe
 const cupTheme = {
@@ -21,8 +25,8 @@ const cupTheme = {
   }
 };
 
-const baseBg = '#05070a';
-const textDim = '#8b9bb4';
+const baseBg = appTheme.bg;
+const textDim = appTheme.textDim;
 
 // Funzione per costruire URL stemma squadra
 const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
@@ -148,7 +152,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
             <h1 style={{
               fontSize: isMobile ? '20px' : '28px',
               fontWeight: '900',
-              color: 'white',
+              color: appTheme.text,
               margin: 0,
               textShadow: `0 0 30px ${theme.glow}`
             }}>
@@ -175,7 +179,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
           <div>
             {/* CARD PARTITA */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: appTheme.surfaceSubtle,
               borderRadius: '20px',
               padding: '20px',
               border: `1px solid ${theme.primary}30`,
@@ -210,7 +214,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                 <div style={{
                   fontSize: '20px',
                   fontWeight: 'bold',
-                  color: 'white',
+                  color: appTheme.text,
                   textAlign: 'center',
                   display: 'flex',
                   alignItems: 'center',
@@ -238,7 +242,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                 <div style={{
                   fontSize: '20px',
                   fontWeight: 'bold',
-                  color: 'white',
+                  color: appTheme.text,
                   textAlign: 'center',
                   display: 'flex',
                   alignItems: 'center',
@@ -285,10 +289,10 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          background: 'rgba(255, 255, 255, 0.05)',
+                          background: (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                           padding: '12px',
                           borderRadius: '8px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                          border: `1px solid ${appTheme.borderSubtle}`
                         }}
                       >
                         <span style={{
@@ -301,7 +305,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                         </span>
                         <span style={{
                           fontSize: '18px',
-                          color: 'white',
+                          color: appTheme.text,
                           fontWeight: 'bold',
                           fontFamily: 'monospace'
                         }}>
@@ -317,7 +321,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
             {/* CARD RATING (se disponibile) */}
             {match.ratings && (
               <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: appTheme.surfaceSubtle,
                 borderRadius: '20px',
                 padding: '20px',
                 border: `1px solid ${theme.primary}30`
@@ -382,7 +386,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
           {/* COLONNA DESTRA: PANNELLO SIMULAZIONE */}
           <div>
             <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: appTheme.surfaceSubtle,
               borderRadius: '20px',
               padding: '25px',
               border: `1px solid ${theme.primary}30`,
@@ -392,7 +396,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
               <div style={{
                 fontSize: '18px',
                 fontWeight: 'bold',
-                color: 'white',
+                color: appTheme.text,
                 marginBottom: '20px',
                 textAlign: 'center'
               }}>
@@ -416,8 +420,8 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#111',
-                    color: 'white',
+                    background: (isLight ? '#f0f2f5' : '#111'),
+                    color: appTheme.text,
                     border: `1px solid ${theme.primary}40`,
                     borderRadius: '8px',
                     fontSize: '13px',
@@ -471,7 +475,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   style={{
                     width: '95%',
                     padding: '12px',
-                    background: '#111',
+                    background: (isLight ? '#f0f2f5' : '#111'),
                     color: theme.secondary,
                     border: `1px solid ${theme.primary}40`,
                     borderRadius: '8px',
@@ -503,9 +507,9 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                     style={{
                       flex: 1,
                       padding: '12px',
-                      background: !isAnimated ? theme.primary : '#111',
+                      background: !isAnimated ? theme.primary : (isLight ? '#f0f2f5' : '#111'),
                       color: !isAnimated ? 'white' : textDim,
-                      border: `1px solid ${!isAnimated ? theme.primary : '#333'}`,
+                      border: `1px solid ${!isAnimated ? theme.primary : (isLight ? '#ccc' : '#333')}`,
                       borderRadius: '8px',
                       fontSize: '12px',
                       fontWeight: 'bold',
@@ -520,9 +524,9 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                     style={{
                       flex: 1,
                       padding: '12px',
-                      background: isAnimated ? theme.primary : '#111',
+                      background: isAnimated ? theme.primary : (isLight ? '#f0f2f5' : '#111'),
                       color: isAnimated ? 'white' : textDim,
-                      border: `1px solid ${isAnimated ? theme.primary : '#333'}`,
+                      border: `1px solid ${isAnimated ? theme.primary : (isLight ? '#ccc' : '#333')}`,
                       borderRadius: '8px',
                       fontSize: '12px',
                       fontWeight: 'bold',
@@ -544,7 +548,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`,
                   border: 'none',
                   borderRadius: '12px',
-                  color: 'white',
+                  color: '#fff',
                   fontSize: '16px',
                   fontWeight: '900',
                   textTransform: 'uppercase',
@@ -569,7 +573,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
               <div style={{
                 marginTop: '20px',
                 padding: '12px',
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: appTheme.surfaceSubtle,
                 borderRadius: '8px',
                 fontSize: '11px',
                 color: textDim,

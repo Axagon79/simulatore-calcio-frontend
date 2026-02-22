@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const theme = {
-  bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.95)',
-  panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
-  cyan: '#00f0ff',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6',
-  gold: '#ffd700',
-  font: '"Inter", "Segoe UI", sans-serif'
-};
+import { getTheme } from '../AppDev/costanti';
+const theme = getTheme();
 
 interface AuthModalProps {
   isOpen: boolean;

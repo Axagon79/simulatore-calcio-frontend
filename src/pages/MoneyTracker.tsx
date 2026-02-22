@@ -6,27 +6,8 @@ import AuthModal from '../components/AuthModal';
 // THEME & CONSTANTS
 // ============================================
 
-const theme = {
-  bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.85)',
-  panelSolid: '#0d0f1a',
-  panelBorder: '1px solid rgba(0, 240, 255, 0.15)',
-  cyan: '#00f0ff',
-  purple: '#bc13fe',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6',
-  warning: '#ff9f43',
-  gold: '#ffd700',
-  font: '"Inter", "Segoe UI", sans-serif',
-  // Spreadsheet
-  cellBorder: '1px solid rgba(255,255,255,0.06)',
-  headerBg: 'rgba(0, 240, 255, 0.06)',
-  rowEven: 'rgba(255,255,255,0.015)',
-  rowOdd: 'transparent',
-  rowHover: 'rgba(0,240,255,0.04)',
-};
+import { getTheme } from '../AppDev/costanti';
+const theme = getTheme();
 
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'

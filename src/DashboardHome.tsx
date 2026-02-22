@@ -10,16 +10,11 @@ const API_BASE = isLocal
   ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:5001/puppals-456c7/us-central1/api`
   : 'https://api-6b34yfzjia-uc.a.run.app';
 
-// --- TEMA NEON DARK ---
-const theme = {
-  bg: '#05070a',
-  cyan: '#00f0ff',
-  purple: '#bc13fe',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6'
-};
+// --- TEMA (centralizzato) ---
+import { getTheme, getThemeMode, getMobileTheme } from './AppDev/costanti';
+const theme = getTheme();
+const isLight = getThemeMode() === 'light';
+const mobileTheme = getMobileTheme();
 
 // --- URL BASE STEMMI ---
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
@@ -203,10 +198,10 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
   return (
     <div style={{ 
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-        backgroundColor: isMobile ? '#1a1d2e' : theme.bg,
+        backgroundColor: isMobile ? mobileTheme.bg : theme.bg,
         backgroundImage: isMobile
-          ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
-          : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
+          ? `radial-gradient(circle at 50% 0%, ${isLight ? '#f5f6fa' : '#2a2d4a'} 0%, ${mobileTheme.bg} 70%)`
+          : `radial-gradient(circle at 50% 0%, ${isLight ? '#e0e3eb' : '#1a1d2e'} 0%, ${theme.bg} 70%)`,
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
@@ -223,10 +218,10 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         {/* HEADER STICKY SU MOBILE (auth + titolo + sottotitolo) */}
         <div style={isMobile ? {
           position: 'sticky', top: 0, zIndex: 100,
-          background: '#1a1d2e',
+          background: mobileTheme.bg,
           margin: '0 -20px 20px',
           padding: '20px 20px 12px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.6)'
+          boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.08)' : '0 2px 12px rgba(0,0,0,0.6)'
         } : {}}>
 
           {/* BOTTONE AUTH */}
@@ -260,7 +255,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 <button
                   onClick={() => logout()}
                   style={{
-                    background: 'rgba(255,42,109,0.1)', border: '1px solid rgba(255,42,109,0.25)',
+                    background: `${theme.danger}18`, border: `1px solid ${theme.danger}40`,
                     color: theme.danger, padding: isMobile ? '4px 8px' : '5px 12px',
                     borderRadius: '8px', cursor: 'pointer',
                     fontSize: isMobile ? '10px' : '11px', fontWeight: '700'
@@ -293,7 +288,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 fontWeight: '900', margin: '0 0 10px 0',
                 textShadow: `0 0 40px ${theme.purple}`,
                 letterSpacing: '-1px',
-                color: 'white'
+                color: theme.text
             }}>
                 <span style={{color: theme.cyan}}>AI</span> SIMULATOR
             </h1>
@@ -309,15 +304,15 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
         {/* BARRA AZIONI RAPIDE */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(0, 240, 255, 0.1)',
+          background: theme.surfaceSubtle,
+          border: `1px solid ${theme.cyan}1a`,
           borderRadius: '12px', padding: isMobile ? '10px' : '14px', marginBottom: '30px'
         }}>
           <div style={{ display: 'flex', gap: '10px' }}>
           {[
-            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: 'rgba(0,240,255,0.06)', borderColor: 'rgba(0,240,255,0.2)', onClick: () => { if (onGoToToday) onGoToToday(); } },
-            { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: 'rgba(5,249,182,0.06)', borderColor: `${theme.success}30`, onClick: () => { window.location.href = '/track-record'; } },
-            { label: 'Coach AI', icon: '\uD83E\uDD16', color: '#bc13fe', bg: 'rgba(188,19,254,0.06)', borderColor: 'rgba(188,19,254,0.2)', onClick: () => setCoachOpen(true) }
+            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: `${theme.cyan}0f`, borderColor: `${theme.cyan}33`, onClick: () => { if (onGoToToday) onGoToToday(); } },
+            { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: `${theme.success}0f`, borderColor: `${theme.success}30`, onClick: () => { window.location.href = '/track-record'; } },
+            { label: 'Coach AI', icon: '\uD83E\uDD16', color: theme.purple, bg: `${theme.purple}0f`, borderColor: `${theme.purple}33`, onClick: () => setCoachOpen(true) }
           ].map(btn => (
             <button
               key={btn.label}
@@ -331,7 +326,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = btn.color;
-                e.currentTarget.style.background = 'rgba(30, 35, 50, 0.8)';
+                e.currentTarget.style.background = theme.cardHoverBg;
                 e.currentTarget.style.transform = 'translateY(-3px)';
               }}
               onMouseLeave={e => {
@@ -341,7 +336,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               }}
               onTouchStart={e => {
                 e.currentTarget.style.borderColor = btn.color;
-                e.currentTarget.style.background = 'rgba(30, 35, 50, 0.9)';
+                e.currentTarget.style.background = theme.cardHoverBg;
                 e.currentTarget.style.transform = 'scale(0.96)';
               }}
               onTouchEnd={e => {
@@ -371,7 +366,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                  key={league.id}
                  onClick={() => onSelectLeague(league.id)}
                  style={{
-                     background: 'rgba(20, 22, 35, 0.6)',
+                     background: theme.cardBg,
                      backdropFilter: 'blur(10px)',
                      border: `1px solid ${league.color}40`,
                      borderRadius: isMobile ? '16px' : '20px',
@@ -388,19 +383,19 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                  onMouseEnter={(e) => {
                     if (!e.currentTarget) return;
                     e.currentTarget.style.borderColor = league.color;
-                    e.currentTarget.style.background = 'rgba(30, 35, 50, 0.8)';
+                    e.currentTarget.style.background = theme.cardHoverBg;
                     e.currentTarget.style.transform = 'translateY(-3px)';
                 }}
                 onMouseLeave={(e) => {
                     if (!e.currentTarget) return;
                     e.currentTarget.style.borderColor = `${league.color}40`;
-                    e.currentTarget.style.background = 'rgba(20, 22, 35, 0.6)';
+                    e.currentTarget.style.background = theme.cardBg;
                     e.currentTarget.style.transform = 'translateY(0)';
                 }}
                 onTouchStart={(e) => {
                     if (!e.currentTarget) return;
                     e.currentTarget.style.borderColor = league.color;
-                    e.currentTarget.style.background = 'rgba(30, 35, 50, 0.9)';
+                    e.currentTarget.style.background = theme.cardHoverBg;
                     e.currentTarget.style.transform = 'scale(0.98)';
                 }}
                 onTouchEnd={(e) => {
@@ -409,7 +404,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     setTimeout(() => {
                         if (!target) return;
                         target.style.borderColor = `${league.color}40`;
-                        target.style.background = 'rgba(20, 22, 35, 0.6)';
+                        target.style.background = theme.cardBg;
                         target.style.transform = 'scale(1)';
                     }, 200);
                 }}
@@ -441,9 +436,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                             {league.country}
                         </div>
                         <div style={{
-                            fontSize: isMobile ? '20px' : '26px', 
-                            fontWeight: '800', 
-                            color: 'white', 
+                            fontSize: isMobile ? '20px' : '26px',
+                            fontWeight: '800',
+                            color: theme.text,
                             marginTop: isMobile ? '2px' : '5px',
                             lineHeight: '1.1'
                         }}>
@@ -458,7 +453,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                           fontSize: isMobile ? '10px' : '12px', 
                           color: league.color, 
                           fontWeight:'bold', 
-                          background: 'rgba(0,0,0,0.3)', 
+                          background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.3)',
                           padding: isMobile ? '3px 8px' : '4px 10px', 
                           borderRadius:'6px',
                           whiteSpace: 'nowrap'
@@ -470,7 +465,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                           width: isMobile ? '30px' : '35px', 
                           height: isMobile ? '30px' : '35px', 
                           borderRadius: '50%', 
-                          background: 'white', color: 'black',
+                          background: isLight ? theme.text : '#fff', color: isLight ? '#fff' : '#000',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: isMobile ? '16px' : '18px', 
                           fontWeight:'bold'
@@ -486,7 +481,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               key={otherLeaguesCard.id}
               onClick={() => setShowOtherLeagues(true)}
               style={{
-                background: 'linear-gradient(135deg, rgba(188,19,254,0.2), rgba(0,240,255,0.1))',
+                background: `linear-gradient(135deg, ${theme.purple}33, ${theme.cyan}1a)`,
                 backdropFilter: 'blur(10px)',
                 border: `1px solid ${theme.purple}`,
                 borderRadius: isMobile ? '16px' : '20px',
@@ -515,7 +510,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 marginBottom: '8px'
               }}>
                 Altri Campionati
@@ -534,9 +529,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               key="PREDICTIONS_CARD"
               onClick={() => window.location.href = '/best-picks'}
               style={{
-                background: 'linear-gradient(135deg, rgba(138,43,226,0.15), rgba(0,240,255,0.08))',
+                background: `linear-gradient(135deg, ${theme.purple}26, ${theme.cyan}14)`,
                 backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(188,19,254,0.4)',
+                border: `1px solid ${theme.purple}66`,
                 borderRadius: isMobile ? '16px' : '20px',
                 padding: isMobile ? '18px' : '25px',
                 cursor: 'pointer',
@@ -551,7 +546,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               onMouseEnter={(e) => {
                 if (!e.currentTarget) return;
                 e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 10px 40px rgba(188,19,254,0.3)';
+                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.purple}4d`;
               }}
               onMouseLeave={(e) => {
                 if (!e.currentTarget) return;
@@ -563,14 +558,14 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 marginBottom: '8px'
               }}>
                 Best Picks
               </div>
               <div style={{
                 fontSize: isMobile ? '12px' : '14px',
-                color: '#bc13fe',
+                color: theme.purple,
                 fontWeight: 'bold'
               }}>
                 AI Predictions
@@ -582,7 +577,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               key={cupsCard.id}
               onClick={() => setShowCups(true)}
               style={{
-                background: 'linear-gradient(135deg, rgba(0,102,204,0.2), rgba(255,102,0,0.1))',
+                background: isLight ? 'linear-gradient(135deg, rgba(0,102,204,0.08), rgba(255,102,0,0.04))' : 'linear-gradient(135deg, rgba(0,102,204,0.2), rgba(255,102,0,0.1))',
                 backdropFilter: 'blur(10px)',
                 border: `1px solid ${theme.cyan}`,
                 borderRadius: isMobile ? '16px' : '20px',
@@ -633,7 +628,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 marginBottom: '8px'
               }}>
                 Coppe Europee
@@ -653,9 +648,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               onClick={() => window.location.href = '/step-system'}
               style={{
                 position: 'relative',
-                background: 'linear-gradient(135deg, rgba(188,19,254,0.15), rgba(138,43,226,0.08))',
+                background: `linear-gradient(135deg, ${theme.purple}26, ${theme.purple}14)`,
                 backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(188,19,254,0.4)',
+                border: `1px solid ${theme.purple}66`,
                 borderRadius: isMobile ? '16px' : '20px',
                 padding: isMobile ? '18px' : '25px',
                 cursor: 'pointer',
@@ -670,7 +665,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               onMouseEnter={(e) => {
                 if (!e.currentTarget) return;
                 e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 10px 40px rgba(188,19,254,0.3)';
+                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.purple}4d`;
               }}
               onMouseLeave={(e) => {
                 if (!e.currentTarget) return;
@@ -682,7 +677,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 position: 'absolute',
                 top: isMobile ? '8px' : '12px',
                 right: isMobile ? '8px' : '12px',
-                background: 'linear-gradient(135deg, #bc13fe, #8b5cf6)',
+                background: `linear-gradient(135deg, ${theme.purple}, #8b5cf6)`,
                 color: 'white',
                 fontSize: '10px',
                 fontWeight: '900',
@@ -695,14 +690,14 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 marginBottom: '8px'
               }}>
                 Step System
               </div>
               <div style={{
                 fontSize: isMobile ? '12px' : '14px',
-                color: '#bc13fe',
+                color: theme.purple,
                 fontWeight: 'bold'
               }}>
                 Sistema Progressivo
@@ -714,9 +709,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               key="BANKROLL_CARD"
               onClick={() => setShowBankroll(true)}
               style={{
-                background: 'linear-gradient(135deg, rgba(5,249,182,0.15), rgba(255,215,0,0.08))',
+                background: `linear-gradient(135deg, ${theme.success}26, ${theme.gold}14)`,
                 backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(5,249,182,0.4)',
+                border: `1px solid ${theme.success}66`,
                 borderRadius: isMobile ? '16px' : '20px',
                 padding: isMobile ? '18px' : '25px',
                 cursor: 'pointer',
@@ -731,7 +726,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               onMouseEnter={(e) => {
                 if (!e.currentTarget) return;
                 e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 10px 40px rgba(5,249,182,0.3)';
+                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.success}4d`;
               }}
               onMouseLeave={(e) => {
                 if (!e.currentTarget) return;
@@ -743,7 +738,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 marginBottom: '8px'
               }}>
                 Bankroll & Gestione
@@ -754,6 +749,54 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 fontWeight: 'bold'
               }}>
                 ROI & Money Management
+              </div>
+            </div>
+
+            {/* CARD IMPOSTAZIONI */}
+            <div
+              key="SETTINGS_CARD"
+              onClick={() => window.dispatchEvent(new Event('open-settings'))}
+              style={{
+                background: isLight ? 'linear-gradient(135deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01))' : 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${theme.borderSubtle}`,
+                borderRadius: isMobile ? '16px' : '20px',
+                padding: isMobile ? '18px' : '25px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                height: isMobile ? '120px' : '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+                e.currentTarget.style.boxShadow = isLight ? '0 10px 40px rgba(0,0,0,0.08)' : '0 10px 40px rgba(255,255,255,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget) return;
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>⚙️</div>
+              <div style={{
+                fontSize: isMobile ? '18px' : '22px',
+                fontWeight: '800',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Impostazioni
+              </div>
+              <div style={{
+                fontSize: isMobile ? '12px' : '14px',
+                color: theme.textDim,
+                fontWeight: 'bold'
+              }}>
+                Tema, Account & Preferenze
               </div>
             </div>
 
@@ -779,7 +822,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         >
           <div
             style={{
-              background: isMobile ? '#1a1d2e' : theme.bg,
+              background: isMobile ? mobileTheme.bg : theme.bg,
               border: `2px solid ${theme.purple}`,
               borderRadius: '20px',
               padding: isMobile ? '20px' : '30px',
@@ -804,7 +847,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <h2 style={{
                 fontSize: isMobile ? '22px' : '28px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 margin: 0
               }}>
                 🌍 Altri Campionati
@@ -841,8 +884,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     onSelectLeague(league.id);
                   }}
                   style={{
-                    background: 'rgba(20, 22, 35, 0.6)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: theme.cardBg,
+                    border: `1px solid ${theme.borderSubtle}`,
                     borderRadius: '12px',
                     padding: isMobile ? '15px' : '20px',
                     cursor: 'pointer',
@@ -856,13 +899,13 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     e.currentTarget.style.transform = 'translateY(-3px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.borderColor = theme.borderSubtle;
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
                   {/* STEMMA */}
-                  <img 
-                    src={STEMMI_CAMPIONATI[league.id]} 
+                  <img
+                    src={STEMMI_CAMPIONATI[league.id]}
                     alt={league.name}
                     style={{
                       width: isMobile ? '35px' : '40px',
@@ -883,7 +926,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     <div style={{
                       fontSize: isMobile ? '16px' : '18px',
                       fontWeight: '700',
-                      color: 'white'
+                      color: theme.text
                     }}>
                       {league.name}
                     </div>
@@ -913,7 +956,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         >
           <div
             style={{
-              background: isMobile ? '#1a1d2e' : theme.bg,
+              background: isMobile ? mobileTheme.bg : theme.bg,
               border: `2px solid ${theme.cyan}`,
               borderRadius: '20px',
               padding: isMobile ? '20px' : '30px',
@@ -935,7 +978,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <h2 style={{
                 fontSize: isMobile ? '22px' : '28px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 margin: 0
               }}>
                 🏆 Coppe Europee
@@ -970,8 +1013,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     onSelectLeague(cup.id);
                   }}
                   style={{
-                    background: 'rgba(20, 22, 35, 0.6)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: theme.cardBg,
+                    border: `1px solid ${theme.borderSubtle}`,
                     borderRadius: '12px',
                     padding: isMobile ? '20px' : '25px',
                     cursor: 'pointer',
@@ -985,7 +1028,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     e.currentTarget.style.transform = 'translateY(-3px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.borderColor = theme.borderSubtle;
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
@@ -1012,7 +1055,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     <div style={{
                       fontSize: isMobile ? '16px' : '20px',
                       fontWeight: '700',
-                      color: 'white'
+                      color: theme.text
                     }}>
                       {cup.name}
                     </div>
@@ -1042,7 +1085,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         >
           <div
             style={{
-              background: isMobile ? '#1a1d2e' : theme.bg,
+              background: isMobile ? mobileTheme.bg : theme.bg,
               border: `2px solid ${theme.success}`,
               borderRadius: '20px',
               padding: isMobile ? '20px' : '30px',
@@ -1064,7 +1107,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               <h2 style={{
                 fontSize: isMobile ? '22px' : '28px',
                 fontWeight: '800',
-                color: 'white',
+                color: theme.text,
                 margin: 0
               }}>
                 💰 Bankroll & Gestione
@@ -1098,8 +1141,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   window.location.href = '/bankroll';
                 }}
                 style={{
-                  background: 'rgba(20, 22, 35, 0.6)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: theme.cardBg,
+                  border: `1px solid ${theme.borderSubtle}`,
                   borderRadius: '12px',
                   padding: isMobile ? '20px' : '25px',
                   cursor: 'pointer',
@@ -1113,7 +1156,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   e.currentTarget.style.transform = 'translateY(-3px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.borderColor = theme.borderSubtle;
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -1121,7 +1164,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   width: isMobile ? '45px' : '55px',
                   height: isMobile ? '45px' : '55px',
                   borderRadius: '12px',
-                  background: 'rgba(5,249,182,0.15)',
+                  background: `${theme.success}26`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: isMobile ? '24px' : '28px',
                   flexShrink: 0
@@ -1142,7 +1185,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   <div style={{
                     fontSize: isMobile ? '16px' : '20px',
                     fontWeight: '700',
-                    color: 'white'
+                    color: theme.text
                   }}>
                     Bankroll & ROI
                   </div>
@@ -1163,8 +1206,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   window.location.href = '/money-management';
                 }}
                 style={{
-                  background: 'rgba(20, 22, 35, 0.6)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: theme.cardBg,
+                  border: `1px solid ${theme.borderSubtle}`,
                   borderRadius: '12px',
                   padding: isMobile ? '20px' : '25px',
                   cursor: 'pointer',
@@ -1174,11 +1217,11 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   gap: '15px'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#ffd700';
+                  e.currentTarget.style.borderColor = theme.gold;
                   e.currentTarget.style.transform = 'translateY(-3px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.borderColor = theme.borderSubtle;
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -1186,7 +1229,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   width: isMobile ? '45px' : '55px',
                   height: isMobile ? '45px' : '55px',
                   borderRadius: '12px',
-                  background: 'rgba(255,215,0,0.15)',
+                  background: `${theme.gold}26`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: isMobile ? '24px' : '28px',
                   flexShrink: 0
@@ -1196,7 +1239,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 <div>
                   <div style={{
                     fontSize: '11px',
-                    color: '#ffd700',
+                    color: theme.gold,
                     marginBottom: '4px',
                     fontWeight: '700',
                     textTransform: 'uppercase',
@@ -1207,7 +1250,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   <div style={{
                     fontSize: isMobile ? '16px' : '20px',
                     fontWeight: '700',
-                    color: 'white'
+                    color: theme.text
                   }}>
                     Money Management
                   </div>
@@ -1228,8 +1271,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   window.location.href = '/money-tracker';
                 }}
                 style={{
-                  background: 'rgba(20, 22, 35, 0.6)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: theme.cardBg,
+                  border: `1px solid ${theme.borderSubtle}`,
                   borderRadius: '12px',
                   padding: isMobile ? '20px' : '25px',
                   cursor: 'pointer',
@@ -1243,7 +1286,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   e.currentTarget.style.transform = 'translateY(-3px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.borderColor = theme.borderSubtle;
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -1251,7 +1294,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   width: isMobile ? '45px' : '55px',
                   height: isMobile ? '45px' : '55px',
                   borderRadius: '12px',
-                  background: 'rgba(5,249,182,0.15)',
+                  background: `${theme.success}26`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: isMobile ? '24px' : '28px',
                   flexShrink: 0
@@ -1272,7 +1315,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   <div style={{
                     fontSize: isMobile ? '16px' : '20px',
                     fontWeight: '700',
-                    color: 'white'
+                    color: theme.text
                   }}>
                     Money Tracker
                   </div>
@@ -1300,7 +1343,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           <div onClick={e => e.stopPropagation()} style={{
             width: '100%', maxWidth: isMobile ? '100%' : '440px',
             height: isMobile ? '85vh' : '520px',
-            background: '#0d0f1a', border: '1px solid rgba(188,19,254,0.3)',
+            background: theme.panelSolid, border: `1px solid ${theme.purple}4d`,
             borderRadius: isMobile ? '20px 20px 0 0' : '16px',
             display: 'flex', flexDirection: 'column',
             fontFamily: '"Inter", "Segoe UI", sans-serif',
@@ -1309,12 +1352,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             {/* Header */}
             <div style={{
               padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(255,255,255,0.08)'
+              borderBottom: `1px solid ${theme.borderSubtle}`
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <img src="/coach-ai-robot.png" alt="" style={{ height: '30px', width: 'auto' }} />
                 <div>
-                  <div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Coach AI</div>
+                  <div style={{ color: theme.text, fontWeight: 700, fontSize: '14px' }}>Coach AI</div>
                   <div style={{ color: theme.textDim, fontSize: '10px' }}>Guida al sistema di pronostici</div>
                 </div>
               </div>
@@ -1329,21 +1372,21 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 <div style={{ padding: '20px 6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
                     <img src="/coach-ai-robot.png" alt="" style={{ height: '36px', width: 'auto' }} />
-                    <div style={{ color: 'white', fontSize: '15px', fontWeight: 700 }}>Ciao! Sono il tuo assistente.</div>
+                    <div style={{ color: theme.text, fontSize: '15px', fontWeight: 700 }}>Ciao! Sono il tuo assistente.</div>
                   </div>
                   <div style={{
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '12px', padding: '14px 16px', lineHeight: '1.7', fontSize: '13px', color: '#ccc'
+                    background: theme.surfaceSubtle, border: `1px solid ${theme.borderSubtle}`,
+                    borderRadius: '12px', padding: '14px 16px', lineHeight: '1.7', fontSize: '13px', color: theme.textDim
                   }}>
                     <p style={{ margin: '0 0 10px' }}>
-                      Sono qui per rispondere a qualsiasi <strong style={{ color: 'white' }}>curiosit&agrave; sul nostro sistema di pronostici</strong>.
+                      Sono qui per rispondere a qualsiasi <strong style={{ color: theme.text }}>curiosit&agrave; sul nostro sistema di pronostici</strong>.
                       Come funzionano gli algoritmi? Cosa significano le stelle? Come vengono calcolate le quote? Chiedimi pure, senza limiti.
                     </p>
                     <p style={{ margin: '0 0 10px' }}>
-                      Se invece vuoi <strong style={{ color: '#bc13fe' }}>analizzare una partita specifica</strong> o dialogare sui pronostici del giorno,
+                      Se invece vuoi <strong style={{ color: theme.purple }}>analizzare una partita specifica</strong> o dialogare sui pronostici del giorno,
                       troverai un altro Coach AI dedicato direttamente dentro la pagina di ogni partita.
                     </p>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#999' }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: theme.textDim }}>
                       Qui parliamo del sistema — l&agrave; si parla di calcio.
                     </p>
                   </div>
@@ -1354,14 +1397,14 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   <div style={{
                     maxWidth: '80%', padding: '10px 14px', borderRadius: '12px', fontSize: '13px', lineHeight: '1.5',
                     ...(msg.sender === 'user'
-                      ? { background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)', color: 'white' }
-                      : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#e0e0e0' })
+                      ? { background: `${theme.purple}26`, border: `1px solid ${theme.purple}4d`, color: theme.text }
+                      : { background: theme.surfaceSubtle, border: `1px solid ${theme.borderSubtle}`, color: theme.textDim })
                   }}>
                     {msg.isLoading ? (
                       <div style={{ display: 'flex', gap: '4px', padding: '4px 0' }}>
                         {[0,1,2].map(i => (
                           <span key={i} style={{
-                            width: '6px', height: '6px', borderRadius: '50%', background: '#bc13fe',
+                            width: '6px', height: '6px', borderRadius: '50%', background: theme.purple,
                             animation: `coachDot 1.4s infinite ${i * 0.2}s`
                           }} />
                         ))}
@@ -1376,15 +1419,15 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             </div>
 
             {/* Quick Actions */}
-            <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: `1px solid ${theme.borderSubtle}` }}>
               {[
                 { label: 'Come funziona?', msg: 'Come funziona il sistema di pronostici? Spiegamelo in modo semplice.' },
                 { label: 'Cosa sono le stelle?', msg: 'Cosa significano le stelle nei pronostici e come vengono calcolate?' },
                 { label: 'Quanti algoritmi ci sono?', msg: 'Quanti algoritmi utilizza il sistema e come lavorano insieme?' }
               ].map(qa => (
                 <button key={qa.label} onClick={() => sendCoachMessage(qa.msg)} disabled={coachLoading} style={{
-                  background: 'rgba(188,19,254,0.1)', border: '1px solid rgba(188,19,254,0.25)',
-                  color: '#bc13fe', padding: '5px 10px', borderRadius: '15px', fontSize: '11px',
+                  background: `${theme.purple}1a`, border: `1px solid ${theme.purple}40`,
+                  color: theme.purple, padding: '5px 10px', borderRadius: '15px', fontSize: '11px',
                   cursor: coachLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
                   opacity: coachLoading ? 0.5 : 1, fontFamily: '"Inter", "Segoe UI", sans-serif'
                 }}>{qa.label}</button>
@@ -1392,7 +1435,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             </div>
 
             {/* Input */}
-            <div style={{ padding: '10px 12px', display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ padding: '10px 12px', display: 'flex', gap: '8px', borderTop: `1px solid ${theme.borderSubtle}` }}>
               <input
                 value={coachInput}
                 onChange={e => setCoachInput(e.target.value)}
@@ -1401,8 +1444,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 disabled={coachLoading}
                 autoComplete="off"
                 style={{
-                  flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '10px', padding: '10px 14px', color: 'white', fontSize: '13px',
+                  flex: 1, background: theme.surfaceSubtle, border: `1px solid ${theme.borderSubtle}`,
+                  borderRadius: '10px', padding: '10px 14px', color: theme.text, fontSize: '13px',
                   outline: 'none', fontFamily: '"Inter", "Segoe UI", sans-serif',
                   opacity: coachLoading ? 0.5 : 1
                 }}
@@ -1411,9 +1454,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 onClick={() => sendCoachMessage()}
                 disabled={coachLoading || !coachInput.trim()}
                 style={{
-                  background: 'rgba(188,19,254,0.15)', border: '1px solid rgba(188,19,254,0.3)',
+                  background: `${theme.purple}26`, border: `1px solid ${theme.purple}4d`,
                   borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
-                  color: '#bc13fe', fontSize: '16px',
+                  color: theme.purple, fontSize: '16px',
                   opacity: (coachLoading || !coachInput.trim()) ? 0.3 : 1
                 }}
               >&#128640;</button>

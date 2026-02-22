@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import './styles/SimulationAnimation.css';
 import './styles/SimulationAnimation-responsive.css';
 import type { MatchEvent, SimulationResult } from './types';
+import { getTheme, getThemeMode } from './AppDev/costanti';
+
+const appTheme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 // Il match delle coppe ha struttura variabile dal backend
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,12 +34,12 @@ const cupTheme = {
     danger: '#ef4444',
     purple: '#8b5cf6',
     success: '#10b981',
-    text: '#ffffff',
-    textDim: '#8b9bb4',
-    bg: '#05070a',
-    panel: 'rgba(18, 20, 35, 0.9)',
-    panelBorder: '1px solid rgba(255, 255, 255, 0.1)',
-    font: '"Inter", "Segoe UI", sans-serif',
+    text: appTheme.text,
+    textDim: appTheme.textDim,
+    bg: appTheme.bg,
+    panel: appTheme.panel,
+    panelBorder: appTheme.panelBorder,
+    font: appTheme.font,
     name: 'UEFA Champions League',
     icon: '⭐'
   },
@@ -47,12 +51,12 @@ const cupTheme = {
     danger: '#ef4444',
     purple: '#8b5cf6',
     success: '#10b981',
-    text: '#ffffff',
-    textDim: '#8b9bb4',
-    bg: '#05070a',
-    panel: 'rgba(18, 20, 35, 0.9)',
-    panelBorder: '1px solid rgba(255, 255, 255, 0.1)',
-    font: '"Inter", "Segoe UI", sans-serif',
+    text: appTheme.text,
+    textDim: appTheme.textDim,
+    bg: appTheme.bg,
+    panel: appTheme.panel,
+    panelBorder: appTheme.panelBorder,
+    font: appTheme.font,
     name: 'UEFA Europa League',
     icon: '🌟'
   }
@@ -102,7 +106,7 @@ export default function CupAnimatedField({
   const [, setViewState] = useState<'simulation' | 'result' | 'list'>('simulation');
 // Flag per evitare doppia animazione
   const [animationStarted, setAnimationStarted] = useState(false);
-  const baseBg = '#05070a';
+  const baseBg = appTheme.bg;
 
   const styles: Record<string, React.CSSProperties> = {
     wrapper: {
@@ -1828,7 +1832,7 @@ export default function CupAnimatedField({
             >
               <div 
                 style={{
-                  background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)',
+                  background: (isLight ? appTheme.panel : 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)'),
                   borderRadius: '16px',
                   padding: '24px',
                   maxWidth: '700px',
@@ -1846,7 +1850,7 @@ export default function CupAnimatedField({
                   alignItems: 'center',
                   marginBottom: '20px',
                   paddingBottom: '15px',
-                  borderBottom: `1px solid rgba(255,255,255,0.1)`
+                  borderBottom: `1px solid ${appTheme.borderSubtle}`
                 }}>
                   <h2 style={{ color: theme.text, margin: 0, fontSize: '20px' }}>
                     📋 FORMAZIONI UFFICIALI
@@ -1969,7 +1973,7 @@ export default function CupAnimatedField({
             >
               <div 
                 style={{
-                  background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)',
+                  background: (isLight ? appTheme.panel : 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)'),
                   borderRadius: '16px',
                   padding: '24px',
                   maxWidth: '500px',

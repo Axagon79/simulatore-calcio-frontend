@@ -1,4 +1,8 @@
 
+import { getTheme, getThemeMode } from './AppDev/costanti';
+
+const appTheme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 const cupTheme = {
   UCL: {
@@ -62,7 +66,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
         {/* Titolo della statistica */}
         <div style={{
           fontSize: '11px',
-          color: '#8b9bb4',
+          color: appTheme.textDim,
           marginBottom: '8px',
           textAlign: 'center',
           fontWeight: 'bold',
@@ -83,7 +87,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
             textAlign: 'right',
             fontSize: '16px',
             fontWeight: 'bold',
-            color: 'white'
+            color: appTheme.text
           }}>
             {homeNum}
           </div>
@@ -94,7 +98,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
             height: '14px',
             borderRadius: '7px',
             overflow: 'hidden',
-            background: 'rgba(255,255,255,0.1)', // Sfondo della barra (parte vuota se volessi usarla)
+            background: appTheme.borderSubtle, // Sfondo della barra (parte vuota se volessi usarla)
             position: 'relative'
           }}>
             <div style={{
@@ -118,7 +122,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
             textAlign: 'left',
             fontSize: '16px',
             fontWeight: 'bold',
-            color: 'white'
+            color: appTheme.text
           }}>
             {awayNum}
           </div>
@@ -134,7 +138,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
       left: isMobile ? 0 : '322px',  // Mobile: tutto schermo, Desktop: dopo sidebar
       right: 0,
       bottom: 0,
-      background: '#05070a',
+      background: appTheme.bg,
       backgroundImage: `radial-gradient(circle at 50% 0%, ${theme.primary}20, #05070a 70%)`,
       overflowY: 'auto',
       padding: '20px'
@@ -169,7 +173,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
           <h1 style={{
             fontSize: isMobile ? '18px' : '24px',
             fontWeight: '900',
-            color: 'white',
+            color: appTheme.text,
             margin: 0
           }}>
             {theme.icon} RISULTATO FINALE
@@ -178,7 +182,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
 
         {/* RISULTATO CENTRALE */}
         <div style={{
-          background: 'rgba(255,255,255,0.03)',
+          background: appTheme.surfaceSubtle,
           borderRadius: '20px',
           padding: isMobile ? '30px 15px' : '40px',
           marginBottom: '30px',
@@ -198,7 +202,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
               <div style={{
                 fontSize: isMobile ? '16px' : '24px',
                 fontWeight: '900',
-                color: 'white',
+                color: appTheme.text,
                 marginBottom: '10px'
               }}>
                 {homeTeam}
@@ -217,7 +221,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
               <div style={{
                 fontSize: isMobile ? '36px' : '48px',
                 fontWeight: '900',
-                color: 'white',
+                color: '#fff',
                 fontFamily: 'monospace'
               }}>
                 {homeScore} - {awayScore}
@@ -232,7 +236,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
               <div style={{
                 fontSize: isMobile ? '16px' : '24px',
                 fontWeight: '900',
-                color: 'white',
+                color: appTheme.text,
                 marginBottom: '10px'
               }}>
                 {awayTeam}
@@ -243,7 +247,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
 
         {/* STATISTICHE */}
         <div style={{
-          background: 'rgba(255,255,255,0.03)',
+          background: appTheme.surfaceSubtle,
           borderRadius: '20px',
           padding: isMobile ? '20px' : '30px',
           marginBottom: '20px',
@@ -252,7 +256,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
           <h2 style={{
             fontSize: '16px',
             fontWeight: '800',
-            color: 'white',
+            color: appTheme.text,
             marginBottom: '20px',
             textAlign: 'center'
           }}>
@@ -268,7 +272,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
         {/* EVENTI CHIAVE */}
         {eventi.length > 0 && (
           <div style={{
-            background: 'rgba(255,255,255,0.03)',
+            background: appTheme.surfaceSubtle,
             borderRadius: '20px',
             padding: isMobile ? '20px' : '30px',
             marginBottom: '20px',
@@ -277,7 +281,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
             <h2 style={{
               fontSize: '16px',
               fontWeight: '800',
-              color: 'white',
+              color: appTheme.text,
               marginBottom: '15px',
               textAlign: 'center'
             }}>
@@ -295,11 +299,11 @@ const eventi = (result.cronaca || []).filter((e: any) =>
                 <div key={idx} style={{
                   padding: '10px',
                   marginBottom: '8px',
-                  background: 'rgba(255,255,255,0.05)',
+                  background: (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                   borderRadius: '8px',
                   borderLeft: `3px solid ${borderColor}`,
                   fontSize: '13px',
-                  color: 'white'
+                  color: appTheme.text
                 }}>
                   {evento.testo}
                 </div>
@@ -317,7 +321,7 @@ const eventi = (result.cronaca || []).filter((e: any) =>
             background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`,
             border: 'none',
             borderRadius: '12px',
-            color: 'white',
+            color: '#fff',
             fontSize: '16px',
             fontWeight: '900',
             cursor: 'pointer',

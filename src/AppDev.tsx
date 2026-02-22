@@ -75,26 +75,73 @@ export default function AppDev() {
     sidebarPredictions,
   } = useDatiCampionato();
 
+  // --- RIPRISTINO STATO DA SESSIONSTORAGE (solo dopo cambio tema) ---
+  const savedNav = useMemo(() => {
+    const shouldRestore = sessionStorage.getItem('appdev_restore');
+    sessionStorage.removeItem('appdev_restore');
+    if (!shouldRestore) {
+      sessionStorage.removeItem('appdev_nav_state');
+      return null;
+    }
+    const raw = sessionStorage.getItem('appdev_nav_state');
+    if (raw) {
+      sessionStorage.removeItem('appdev_nav_state');
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+    return null;
+  }, []);
+
   // --- STATO APPLICAZIONE ---
-  const [selectedCup, setSelectedCup] = useState('');
+  const [selectedCup, setSelectedCup] = useState(savedNav?.selectedCup || '');
   const [activeLeague, setActiveLeague] = useState<string | null>(
-    (location.state as any)?.goTo === 'PREDICTIONS' || window.location.hash === '#predictions'
-      ? 'PREDICTIONS' : null
+    savedNav?.activeLeague !== undefined ? savedNav.activeLeague :
+    window.location.hash === '#today' ? 'TODAY' :
+    ((location.state as any)?.goTo === 'PREDICTIONS' || window.location.hash === '#predictions'
+      ? 'PREDICTIONS' : null)
   );
   // STATO SIMULAZIONE & UI
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
-  const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>('list');
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(savedNav?.selectedMatch || null);
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(savedNav?.expandedMatch || null);
+  const [viewState, setViewState] = useState<'list' | 'pre-match' | 'simulating' | 'result' | 'settings'>(savedNav?.viewState || 'list');
 
   // STATO "PARTITE DI OGGI"
-  const [viewMode, setViewMode] = useState<'calendar' | 'today'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'today'>(
+    savedNav?.viewMode || (window.location.hash === '#today' ? 'today' : 'calendar')
+  );
   const [todayData, setTodayData] = useState<TodayLeagueGroup[] | null>(null);
   const [todayLoading, setTodayLoading] = useState(false);
   const [todayLeagueFilter, setTodayLeagueFilter] = useState('');
   const [todayTimeFilter, setTodayTimeFilter] = useState('tutti');
 
   const [isVarActive, setIsVarActive] = useState(false);
+  const isRestoringState = useRef(!!savedNav);
 
+  // Resetta il flag dopo che tutti gli effetti iniziali si sono stabilizzati
+  useEffect(() => {
+    if (isRestoringState.current) {
+      const timer = setTimeout(() => { isRestoringState.current = false; }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // --- SALVA STATO NAVIGAZIONE (per ripristino dopo cambio tema) ---
+  useEffect(() => {
+    const saveState = () => {
+      sessionStorage.setItem('appdev_nav_state', JSON.stringify({
+        country, league, selectedCup, activeLeague, viewMode,
+        viewState, selectedMatch, expandedMatch
+      }));
+    };
+    window.addEventListener('beforeunload', saveState);
+    return () => window.removeEventListener('beforeunload', saveState);
+  }, [country, league, selectedCup, activeLeague, viewMode, viewState, selectedMatch, expandedMatch]);
+
+  // --- RIPRISTINO COUNTRY/LEAGUE DA SESSIONSTORAGE ---
+  useEffect(() => {
+    if (savedNav?.country && savedNav?.league) {
+      initFromDashboard(savedNav.country, savedNav.league);
+    }
+  }, [savedNav]);
 
   const handleAskAI = (matchData: any) => {
     // Prepariamo un riassunto tecnico per l'IA
@@ -516,6 +563,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   // Se l'utente seleziona un campionato dalla sidebar, torna a Calendario
   useEffect(() => {
+    if (isRestoringState.current) return;
     if (league && viewMode === 'today') {
       setViewMode('calendar');
     }

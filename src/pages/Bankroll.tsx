@@ -1,20 +1,8 @@
 import { useState, useEffect } from 'react';
 import infoIcon from '../assets/info-icon.png';
 
-const theme = {
-  bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.85)',
-  panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
-  cyan: '#00f0ff',
-  purple: '#bc13fe',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6',
-  warning: '#ff9f43',
-  gold: '#ffd700',
-  font: '"Inter", "Segoe UI", sans-serif'
-};
+import { getTheme } from '../AppDev/costanti';
+const theme = getTheme();
 
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'

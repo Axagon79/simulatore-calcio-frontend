@@ -91,10 +91,13 @@ export const STEMMI_COPPE: Record<string, string> = {
 };
 
 
-// --- TEMA NEON / SCI-FI ---
-export const theme = {
+// --- TEMI ---
+export type ThemeMode = 'dark' | 'light';
+
+export const themeDark = {
   bg: '#05070a',
   panel: 'rgba(18, 20, 35, 0.85)',
+  panelSolid: '#0d0f1a',
   panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
   cyan: '#00f0ff',
   purple: '#bc13fe',
@@ -103,16 +106,82 @@ export const theme = {
   danger: '#ff2a6d',
   success: '#05f9b6',
   warning: '#ff9f43',
-  font: '"Inter", "Segoe UI", sans-serif'
+  gold: '#ffd700',
+  orange: '#ff6b35',
+  font: '"Inter", "Segoe UI", sans-serif',
+  // Spreadsheet/tabelle
+  cellBorder: '1px solid rgba(255,255,255,0.06)',
+  headerBg: 'rgba(0, 240, 255, 0.06)',
+  rowEven: 'rgba(255,255,255,0.015)',
+  rowOdd: 'transparent',
+  rowHover: 'rgba(0,240,255,0.04)',
+  // Dashboard/card
+  cardBg: 'rgba(20, 22, 35, 0.6)',
+  cardHoverBg: 'rgba(30, 35, 50, 0.8)',
+  borderSubtle: 'rgba(255,255,255,0.1)',
+  surfaceSubtle: 'rgba(255,255,255,0.03)',
 };
 
+export const themeLight = {
+  bg: '#f0f2f5',
+  panel: 'rgba(255, 255, 255, 0.92)',
+  panelSolid: '#ffffff',
+  panelBorder: '1px solid rgba(0, 0, 0, 0.12)',
+  cyan: '#0077cc',
+  purple: '#7c3aed',
+  text: '#1a1a2e',
+  textDim: '#5a6377',
+  danger: '#dc2626',
+  success: '#059669',
+  warning: '#d97706',
+  gold: '#b8860b',
+  orange: '#ea580c',
+  font: '"Inter", "Segoe UI", sans-serif',
+  // Spreadsheet/tabelle
+  cellBorder: '1px solid rgba(0,0,0,0.08)',
+  headerBg: 'rgba(0, 119, 204, 0.06)',
+  rowEven: 'rgba(0,0,0,0.02)',
+  rowOdd: 'transparent',
+  rowHover: 'rgba(0,119,204,0.04)',
+  // Dashboard/card
+  cardBg: 'rgba(255, 255, 255, 0.85)',
+  cardHoverBg: 'rgba(235, 238, 248, 0.95)',
+  borderSubtle: 'rgba(0,0,0,0.1)',
+  surfaceSubtle: 'rgba(0,0,0,0.02)',
+};
+
+export function getThemeMode(): ThemeMode {
+  return (localStorage.getItem('puppals_theme') || 'dark') as ThemeMode;
+}
+
+export function getTheme(): typeof themeDark {
+  return getThemeMode() === 'light' ? themeLight : themeDark;
+}
+
+// Compatibilità — usato da componenti che importano `theme` direttamente
+export const theme = themeDark;
+
 // --- TEMA MOBILE (più chiaro, solo < 768px) ---
-export const themeMobile = {
+export const themeMobileDark = {
   bg: '#1a1d2e',
   panel: 'rgba(37, 40, 54, 0.92)',
   panelBorder: '1px solid rgba(0, 240, 255, 0.15)',
   sidebarBg: 'rgba(26, 29, 46, 0.98)',
 };
+
+export const themeMobileLight = {
+  bg: '#e8eaf0',
+  panel: 'rgba(255, 255, 255, 0.95)',
+  panelBorder: '1px solid rgba(0, 0, 0, 0.08)',
+  sidebarBg: 'rgba(245, 246, 250, 0.98)',
+};
+
+// Compatibilità
+export const themeMobile = themeMobileDark;
+
+export function getMobileTheme(): typeof themeMobileDark {
+  return getThemeMode() === 'light' ? themeMobileLight : themeMobileDark;
+}
 
 
 // --- PRESET VELOCITA' ---

@@ -5,21 +5,9 @@ import AddBetPopup from './components/AddBetPopup';
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_prod' | 'solo_sandbox';
 
-// --- TEMA (identico ad AppDev) ---
-const theme = {
-  bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.85)',
-  panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
-  cyan: '#00f0ff',
-  purple: '#bc13fe',
-  text: '#ffffff',
-  textDim: '#8b9bb4',
-  danger: '#ff2a6d',
-  success: '#05f9b6',
-  warning: '#ff9f43',
-  gold: '#ffd700',
-  font: '"Inter", "Segoe UI", sans-serif'
-};
+// --- TEMA (centralizzato) ---
+import { getTheme } from './AppDev/costanti';
+const theme = getTheme();
 
 // --- URL BASE STEMMI ---
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
@@ -47,7 +35,7 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'League of Ireland': 'Ireland', 'League of Ireland Premier Division': 'Ireland',
   'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil', 'Brasileirão Serie A': 'Brazil', 'Brasileirao Serie A': 'Brazil',
   'Primera División': 'Argentina',
-  'MLS': 'USA',
+  'MLS': 'USA', 'Major League Soccer': 'USA',
   'J1 League': 'Japan',
   'Champions League': 'Champions_League',
   'Europa League': 'Europa_League',
@@ -71,7 +59,7 @@ const LEAGUE_TO_LOGO: Record<string, string> = {
     'League of Ireland': 'league_of_ireland', 'League of Ireland Premier Division': 'league_of_ireland',
     'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao', 'Brasileirão Serie A': 'brasileirao', 'Brasileirao Serie A': 'brasileirao',
     'Primera División': 'primera_division_arg',
-    'MLS': 'mls',
+    'MLS': 'mls', 'Major League Soccer': 'mls',
     'J1 League': 'j1_league',
   };
 
@@ -111,7 +99,7 @@ const LEAGUE_TO_COUNTRY_CODE: Record<string, string> = {
     'League of Ireland': 'ie', 'League of Ireland Premier Division': 'ie',
     'Brasileirão': 'br', 'Brasileirao': 'br','Brasileirão Serie A': 'br', 'Brasileirao Serie A': 'br',
     'Primera División': 'ar',
-    'MLS': 'us',
+    'MLS': 'us', 'Major League Soccer': 'us',
     'J1 League': 'jp',
   };
 
@@ -321,6 +309,8 @@ export default function DailyPredictions({ onBack, onNavigateToLeague }: DailyPr
   }>({ prodPredictions: [], prodBombs: [], sandboxPredictions: [], sandboxBombs: [] });
   const [confrontoFilter, setConfrontoFilter] = useState<ConfrontoFilter>('tutte');
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
+  const [financeOpen, setFinanceOpen] = useState(false);
+  const [finLegendOpen, setFinLegendOpen] = useState(false);
 
   // Reset UI state al cambio modalità PROD/SANDBOX
   useEffect(() => {
@@ -3078,6 +3068,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   marginLeft: '4px'
                 }}>
                   HR% <span style={{ fontSize: '13px' }}>{hr}%</span>
+                  <span style={{ fontSize: '10px', opacity: 0.7 }}>{filterCounts.centrate}/{verified}</span>
                 </div>
                 {matchHR !== null && (
                   <div style={{
@@ -3157,14 +3148,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             if (q && q > 1) return (100 / q) + (MARGINS[sm] || 4);
             return FALLBACKS[sm] || 55;
           };
-          // FlatMap con quota inclusa
+          // FlatMap con quota + probabilita_stimata incluse
           const allTips = normalPredictions.flatMap(p =>
             (p.pronostici || []).map(t => ({
               ...t,
               _quota: t.quota
                 || (t.tipo === 'SEGNO' && p.odds ? (p.odds as any)[t.pronostico] : null)
                 || (t.tipo === 'GOL' && p.odds ? getGolQuota(t.pronostico, p.odds) : null)
-                || null
+                || null,
+              _probStimata: t.probabilita_stimata || null
             }))
           );
           // Calcolo per gruppo capsula
@@ -3175,7 +3167,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const hr = verified.length > 0 ? Math.round((hits / verified.length) * 1000) / 10 : null;
             const thresholds = verified.map(t => getTipThreshold(t));
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
-            return { label, color, finished: verified.length, hr, threshold: avgTh };
+            return { label, color, finished: verified.length, hits, hr, threshold: avgTh };
           };
           const capsules = [
             capsuleData('Segno', t => t.tipo === 'SEGNO', theme.cyan),
@@ -3185,9 +3177,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             capsuleData('GG/NG', t => t.tipo === 'GOL' && /^(goal|nogoal)$/i.test(t.pronostico), theme.success),
             capsuleData('DC', t => t.tipo === 'DOPPIA_CHANCE', '#ab47bc'),
           ];
+          // Calcolo metriche finanziarie (flat stake = 1 unità)
+          const verifiedWithQuota = allTips.filter(t => (t.hit === true || t.hit === false) && t._quota && t._quota > 1);
+          const totalBets = verifiedWithQuota.length;
+          const totalProfit = verifiedWithQuota.reduce((sum, t) => sum + (t.hit ? (t._quota - 1) : -1), 0);
+          const yieldPct = totalBets > 0 ? Math.round((totalProfit / totalBets) * 1000) / 10 : null;
+          const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
+          const roiPct = yieldPct; // flat stake: ROI = Yield
+          const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
+          const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
+          const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + (t._probStimata - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+
           if (!capsules.some(c => c.finished > 0)) return null;
           return (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+            <>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
               {capsules.map(c => {
                 if (c.finished === 0) return null;
                 const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : '#ff4466';
@@ -3199,10 +3203,67 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     <span style={{ fontSize: '10px', color: c.color, fontWeight: '700' }}>{c.label}</span>
                     <span style={{ fontSize: '12px', fontWeight: '900', color: clr }}>{c.hr ?? '—'}%</span>
+                    <span style={{ fontSize: '9px', opacity: 0.6, color: clr }}>{c.hits}/{c.finished}</span>
                   </div>
                 );
               })}
             </div>
+            {/* Contenitore Rendimento collassabile */}
+            {totalBets > 0 && (() => {
+              const yieldColor = yieldPct !== null && yieldPct >= 0 ? '#69f0ae' : '#ff4466';
+              return (
+                <div style={{
+                  background: '#1a1d2e', border: '1px solid #ffffff15',
+                  borderRadius: '12px', padding: '8px 14px', marginBottom: '16px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setFinanceOpen(!financeOpen)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#aaa', fontWeight: '700' }}>Rendimento</span>
+                      <span
+                        style={{ fontSize: '11px', color: '#666', background: '#ffffff10', borderRadius: '50%', width: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); setFinLegendOpen(!finLegendOpen); }}
+                      >?</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#aaa' }}>Yield</span>
+                      <span style={{ fontSize: '13px', fontWeight: '900', color: yieldColor }}>
+                        {yieldPct !== null ? `${yieldPct > 0 ? '+' : ''}${yieldPct}%` : '—'}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#666' }}>{financeOpen ? '▲' : '▼'}</span>
+                    </div>
+                  </div>
+                  {finLegendOpen && (
+                    <div style={{ marginTop: '8px', padding: '8px 10px', background: '#ffffff08', borderRadius: '8px', fontSize: '10px', color: '#999', lineHeight: '1.6' }}>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Yield</span> — Profitto per scommessa. +10% = guadagni 0.10 per ogni 1 puntato</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>P/L</span> — Profit/Loss in unita (1u = 1 scommessa). +3.2u = hai vinto 3.2 unita</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>ROI</span> — Return on Investment. Uguale al Yield con stake fisso</div>
+                      <div><span style={{ color: '#4fc3f7', fontWeight: '700' }}>Q.Media</span> — Quota media dei pronostici verificati</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Edge</span> — Vantaggio medio vs bookmaker. Positivo = il modello batte le quote</div>
+                    </div>
+                  )}
+                  {financeOpen && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
+                      {[
+                        { label: 'P/L', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? '#69f0ae' : '#ff4466' },
+                        { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? '#69f0ae' : '#ff4466' },
+                        { label: 'Q.Media', value: avgQuota !== null ? `@${avgQuota}` : '—', color: '#4fc3f7' },
+                        { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? '#69f0ae' : '#ff4466' },
+                      ].map(item => (
+                        <div key={item.label} style={{
+                          display: 'flex', alignItems: 'center', gap: '5px',
+                          background: `${item.color}10`, border: `1px solid ${item.color}25`,
+                          borderRadius: '10px', padding: '4px 10px'
+                        }}>
+                          <span style={{ fontSize: '9px', color: '#999', fontWeight: '700' }}>{item.label}</span>
+                          <span style={{ fontSize: '12px', fontWeight: '900', color: item.color }}>{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            </>
           );
         })()}
         </>)}

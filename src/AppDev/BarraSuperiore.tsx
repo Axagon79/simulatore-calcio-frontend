@@ -265,7 +265,7 @@ export default function BarraSuperiore({
       )}
 
       {/* 3. SEZIONE DESTRA: Admin, Crediti, User */}
-      <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto', zIndex: 10, paddingRight: isMobile ? '10px' : '20px' }}>
+      <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto', zIndex: 10, paddingRight: isMobile ? '0px' : '20px' }}>
         {isAdmin && !isMobile && (
           <div style={{
             background: 'linear-gradient(135deg, #ff0080, #ff8c00)',
@@ -287,21 +287,20 @@ export default function BarraSuperiore({
           </div>
         )}
 
-        <button onClick={() => alert('Tema toggle')} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🌙</button>
-
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          background: '#bc13fe',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-          boxShadow: '0 0 10px #bc13fe',
-          fontSize: '16px',
-          color: 'white'
-        }}>U</div>
+        {window.location.hash !== '#dialog' && (
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-settings'))}
+            style={{
+              width: '34px', height: '34px', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: '18px', transition: 'all 0.2s',
+              color: '#8b9bb4',
+              ...(isMobile ? { marginRight: '-15px' } : {})
+            }}
+            title="Impostazioni"
+          >⚙️</button>
+        )}
       </div>
     </div>
   );

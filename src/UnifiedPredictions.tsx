@@ -2998,7 +2998,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           const roiPct = yieldPct;
           const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
           const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
-          const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + (t._probStimata - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
 
           if (!capsules.some(c => c.finished > 0)) return null;
           return (

@@ -1040,8 +1040,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* Risultato + Freccia — spinto a destra */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {pred.real_score.replace(':', ' - ')}
+                {(pred.exact_score_top3 || []).some(t => t.score === pred.real_score) &&
+                  <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

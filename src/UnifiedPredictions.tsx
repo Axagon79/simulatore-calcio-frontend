@@ -378,7 +378,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         const predData = await predRes.json();
 
         if (predData.success) {
-          setPredictions(predData.predictions || []);
+          const unified = predData.predictions || [];
+          setPredictions(unified);
         } else {
           setPredictions([]);
         }
@@ -794,7 +795,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           }
         } else if (mode === 're') {
           if (item.real_score) {
-            const hit = (item.exact_score_top3 || []).some(t => t.score === item.real_score);
+            const hit = ((item as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(item.real_score!));
             if (hit) counts.centrate++;
             else counts.mancate++;
           }
@@ -913,8 +914,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* Risultato + Freccia — spinto a destra */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {pred.real_score.replace(':', ' - ')}
+                {((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(pred.real_score!)) &&
+                  <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -3542,6 +3545,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
                   const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                  const reHits = preds.filter(p => {
+                    if (!p.real_score) return false;
+                    const ts = (p as any).simulation_data?.top_scores;
+                    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(p.real_score!));
+                  }).length;
                   const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
@@ -3554,6 +3562,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {sep}
                       <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
                     </>
                   );
                   return (
@@ -3632,6 +3641,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
                   const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                  // Conteggio RE hits (top 4 Monte Carlo vs risultato reale)
+                  const reHits = preds.filter(p => {
+                    if (!p.real_score) return false;
+                    const ts = (p as any).simulation_data?.top_scores;
+                    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(p.real_score!));
+                  }).length;
                   const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
@@ -3644,6 +3659,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {sep}
                       <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
                     </>
                   );
                   return (

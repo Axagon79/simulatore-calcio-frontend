@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { getThemeMode } from '../AppDev/costanti';
 
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
@@ -67,7 +68,7 @@ const MARKET_LABELS: Record<string, string> = {
   'GG_NG': 'GG/NG',
 };
 
-const C = {
+const COLORS_DARK = {
   bg: '#060a14',
   cardBg: 'rgba(15, 23, 42, 0.55)',
   cardBorder: 'rgba(148, 163, 184, 0.07)',
@@ -84,7 +85,38 @@ const C = {
   textMuted: '#475569',
   divider: 'rgba(148, 163, 184, 0.06)',
   barBg: 'rgba(148, 163, 184, 0.06)',
-} as const;
+  surfaceSubtle: 'rgba(255,255,255,0.03)',
+  surfaceHover: 'rgba(255,255,255,0.08)',
+  rowAlt: 'rgba(255,255,255,0.015)',
+  optionBg: '#0f172a',
+  selectBg: 'rgba(15, 23, 42, 0.8)',
+};
+
+const COLORS_LIGHT = {
+  bg: '#f0f2f5',
+  cardBg: 'rgba(255, 255, 255, 0.85)',
+  cardBorder: 'rgba(0, 0, 0, 0.08)',
+  cyan: '#0077cc',
+  cyanDim: 'rgba(0, 119, 204, 0.08)',
+  cyanBorder: 'rgba(0, 119, 204, 0.2)',
+  amber: '#d97706',
+  amberDim: 'rgba(217, 119, 6, 0.08)',
+  amberBorder: 'rgba(217, 119, 6, 0.2)',
+  green: '#059669',
+  red: '#dc2626',
+  text: '#1a1a2e',
+  textSec: '#4b5563',
+  textMuted: '#9ca3af',
+  divider: 'rgba(0, 0, 0, 0.06)',
+  barBg: 'rgba(0, 0, 0, 0.06)',
+  surfaceSubtle: 'rgba(0,0,0,0.03)',
+  surfaceHover: 'rgba(0,0,0,0.06)',
+  rowAlt: 'rgba(0,0,0,0.025)',
+  optionBg: '#ffffff',
+  selectBg: 'rgba(255, 255, 255, 0.95)',
+};
+
+const C = getThemeMode() === 'light' ? COLORS_LIGHT : COLORS_DARK;
 
 const QUOTA_BANDS = [
   { label: '1.01-1.20', min: '1.01', max: '1.20' },
@@ -189,40 +221,79 @@ interface Insight {
   type: 'positive' | 'negative' | 'neutral' | 'warning';
 }
 
-function generateInsights(data: TrackRecordResponse): Record<string, Insight[]> {
+function generateInsights(data: TrackRecordResponse, sezione: 'pronostici' | 'alto_rendimento'): Record<string, Insight[]> {
   const result: Record<string, Insight[]> = { panoramica: [], puntiForza: [], miglioramento: [], consigli: [] };
-  const ml = MARKET_LABELS;
+  const isAR = sezione === 'alto_rendimento';
+  const round1 = (n: number) => Math.round(n * 10) / 10;
 
-  // Panoramica
+  // Soglie contestuali: AR ha quote > 2.50 quindi HR naturalmente più bassa
+  const hrExcellent = isAR ? 45 : 70;
+  const hrGood = isAR ? 35 : 60;
+  const hrMediocre = isAR ? 25 : 50;
+  const criticalThreshold = isAR ? 30 : 50;
+
+  // ── PANORAMICA ──────────────────────────────────────────────────────────────
+
   const hr = data.globale.hit_rate ?? 0;
+  const hrLevel = hr >= hrExcellent ? 'eccellente' : hr >= hrGood ? 'buono' : hr >= hrMediocre ? 'nella media' : 'sotto le attese';
   result.panoramica.push({
-    title: `Hit rate globale: ${hr}%`,
-    text: `Su ${data.globale.total} pronostici, ${data.globale.hits} azzeccati e ${data.globale.misses} sbagliati.`,
-    type: hr >= 65 ? 'positive' : hr >= 55 ? 'neutral' : 'negative',
+    title: `HR ${hr}% \u2014 Rendimento ${hrLevel}`,
+    text: `${data.globale.hits} centrati su ${data.globale.total}. ${isAR
+      ? 'Per quote sopra 2.50, un HR oltre il 35% indica gi\u00E0 un buon rendimento.'
+      : 'Per i pronostici standard, l\'obiettivo \u00E8 mantenersi stabilmente sopra il 60%.'}`,
+    type: hr >= hrGood ? 'positive' : hr >= hrMediocre ? 'neutral' : 'negative',
   });
 
+  // Trend ultimi 3 giorni
   if (data.serie_temporale.length >= 3) {
     const last3 = data.serie_temporale.slice(-3);
     const avgRecent = last3.reduce((s, d) => s + (d.hit_rate ?? 0), 0) / last3.length;
-    const diff = Math.round((avgRecent - hr) * 10) / 10;
+    const diff = round1(avgRecent - hr);
     if (Math.abs(diff) >= 2) {
       result.panoramica.push({
-        title: diff > 0 ? 'Trend in crescita' : 'Trend in calo',
-        text: `Media ultimi 3 giorni: ${Math.round(avgRecent)}% (${diff > 0 ? '+' : ''}${diff} vs media periodo).`,
+        title: diff > 0 ? 'Tendenza positiva' : 'Fase di flessione',
+        text: `Ultimi 3 giorni: ${round1(avgRecent)}% di media (${diff > 0 ? '+' : ''}${diff}pp vs periodo). ${diff > 0
+          ? 'Il sistema sta performando sopra la sua media.'
+          : 'Oscillazione fisiologica \u2014 monitorare nei prossimi giorni.'}`,
         type: diff > 0 ? 'positive' : 'warning',
       });
     }
   }
 
+  // Consistenza (deviazione standard HR giornaliera)
+  if (data.serie_temporale.length >= 5) {
+    const rates = data.serie_temporale.filter(d => d.total >= 3).map(d => d.hit_rate ?? 0);
+    if (rates.length >= 5) {
+      const mean = rates.reduce((s, r) => s + r, 0) / rates.length;
+      const variance = rates.reduce((s, r) => s + (r - mean) ** 2, 0) / rates.length;
+      const stdDev = round1(Math.sqrt(variance));
+      if (stdDev <= 12) {
+        result.panoramica.push({
+          title: `Risultati stabili (\u00B1${stdDev}%)`,
+          text: 'La variazione giornaliera \u00E8 contenuta. Indica un sistema affidabile e prevedibile nel tempo.',
+          type: 'positive',
+        });
+      } else if (stdDev >= 25) {
+        result.panoramica.push({
+          title: `Alta volatilit\u00E0 (\u00B1${stdDev}%)`,
+          text: 'I risultati oscillano molto tra un giorno e l\'altro. Tipico con pochi pronostici giornalieri o mercati ad alto rischio.',
+          type: 'warning',
+        });
+      }
+    }
+  }
+
+  // Campione ridotto
   if (data.globale.total < 50) {
     result.panoramica.push({
-      title: 'Campione ridotto',
-      text: `Solo ${data.globale.total} pronostici nel periodo. I risultati potrebbero non essere statisticamente affidabili.`,
+      title: 'Campione limitato',
+      text: `Con ${data.globale.total} pronostici le statistiche possono variare. Servono almeno 50\u2013100 per conclusioni affidabili.`,
       type: 'warning',
     });
   }
 
-  // Helpers
+  // ── PUNTI DI FORZA ──────────────────────────────────────────────────────────
+
   type Entry = [string, HitRateData];
   const findBest = (obj: Record<string, HitRateData>, min = 10): Entry | null => {
     const e = Object.entries(obj).filter(([, s]) => s.total >= min && s.hit_rate != null);
@@ -233,24 +304,19 @@ function generateInsights(data: TrackRecordResponse): Record<string, Insight[]> 
     return e.length ? e.reduce((a, b) => ((a[1].hit_rate ?? 0) <= (b[1].hit_rate ?? 0) ? a : b)) : null;
   };
 
-  const bestMarket = findBest(data.breakdown_mercato);
-  if (bestMarket) {
-    result.puntiForza.push({
-      title: `Miglior mercato: ${ml[bestMarket[0]] || bestMarket[0]}`,
-      text: `${bestMarket[1].hit_rate}% su ${bestMarket[1].total} pronostici.`,
-      type: 'positive',
-    });
-  }
-
+  // Miglior campionato
   const bestLeague = findBest(data.breakdown_campionato);
   if (bestLeague) {
+    const leagueHr = bestLeague[1].hit_rate ?? 0;
+    const diff = round1(leagueHr - hr);
     result.puntiForza.push({
       title: `Miglior campionato: ${bestLeague[0]}`,
-      text: `${bestLeague[1].hit_rate}% su ${bestLeague[1].total} pronostici.`,
+      text: `${leagueHr}% su ${bestLeague[1].total} pronostici${diff > 3 ? ` (+${diff}pp sopra la media)` : ''}.`,
       type: 'positive',
     });
   }
 
+  // Fascia quota pi\u00F9 redditizia (ROI)
   if (data.breakdown_quota) {
     const qe = Object.entries(data.breakdown_quota)
       .filter(([b, s]) => b !== 'N/D' && s.total >= 5 && s.roi != null) as [string, QuotaBandData][];
@@ -258,66 +324,204 @@ function generateInsights(data: TrackRecordResponse): Record<string, Insight[]> 
       const best = qe.reduce((a, b) => ((a[1].roi ?? -999) >= (b[1].roi ?? -999) ? a : b));
       if ((best[1].roi ?? 0) > 0) {
         result.puntiForza.push({
-          title: `Fascia pi\u00F9 redditizia: ${best[0]}`,
-          text: `ROI ${formatRoi(best[1].roi)} | Profitto ${formatProfit(best[1].profit)} | HR ${best[1].hit_rate}% su ${best[1].total}`,
+          title: `Fascia pi\u00F9 redditizia: quota ${best[0]}`,
+          text: `ROI ${formatRoi(best[1].roi)} con profitto ${formatProfit(best[1].profit)} su ${best[1].total} pronostici (HR ${best[1].hit_rate}%).`,
           type: 'positive',
         });
       }
     }
   }
 
-  const worstMarket = findWorst(data.breakdown_mercato);
-  if (worstMarket && (worstMarket[1].hit_rate ?? 100) < 60) {
-    result.miglioramento.push({
-      title: `Mercato debole: ${ml[worstMarket[0]] || worstMarket[0]}`,
-      text: `${worstMarket[1].hit_rate}% su ${worstMarket[1].total} pronostici.`,
-      type: 'warning',
-    });
+  // Stelle pi\u00F9 affidabili
+  if (data.breakdown_stelle) {
+    const starEntries = Object.entries(data.breakdown_stelle)
+      .filter(([, s]) => s.total >= 5 && s.hit_rate != null);
+    if (starEntries.length >= 2) {
+      const bestStar = starEntries.reduce((a, b) => ((a[1].hit_rate ?? 0) >= (b[1].hit_rate ?? 0) ? a : b));
+      const starHr = bestStar[1].hit_rate ?? 0;
+      if (starHr > hr) {
+        result.puntiForza.push({
+          title: `${bestStar[0]} stelle = pi\u00F9 affidabili`,
+          text: `HR ${starHr}% su ${bestStar[1].total} pronostici \u2014 il livello di confidenza pi\u00F9 preciso nel periodo.`,
+          type: 'positive',
+        });
+      }
+    }
   }
 
+  // Quota vincenti vs perdenti
+  if (data.quota_stats?.avg_quota_azzeccati != null && data.quota_stats?.avg_quota_sbagliati != null) {
+    const qWin = data.quota_stats.avg_quota_azzeccati;
+    const qLose = data.quota_stats.avg_quota_sbagliati;
+    if (qWin > qLose) {
+      const diff = round1(qWin - qLose);
+      result.puntiForza.push({
+        title: 'Si azzeccano anche le difficili',
+        text: `Quota media dei centrati: ${qWin.toFixed(2)} vs ${qLose.toFixed(2)} dei sbagliati (+${diff.toFixed(1)}). Il sistema \u00E8 preciso anche sulle quote pi\u00F9 alte.`,
+        type: 'positive',
+      });
+    }
+  }
+
+  // Edge medio positivo
+  if (data.serie_temporale.length >= 5) {
+    const edgeVals = data.serie_temporale.filter(d => d.edge != null).map(d => d.edge as number);
+    if (edgeVals.length >= 3) {
+      const avgEdge = round1(edgeVals.reduce((s, e) => s + e, 0) / edgeVals.length);
+      if (avgEdge > 2) {
+        result.puntiForza.push({
+          title: `Edge medio: +${avgEdge}%`,
+          text: 'Il sistema trova costantemente valore nelle quote. Un edge positivo significa che i bookmaker sottovalutano le probabilit\u00E0 reali.',
+          type: 'positive',
+        });
+      }
+    }
+  }
+
+  // ── DA MIGLIORARE ───────────────────────────────────────────────────────────
+
+  // Campionato critico
   const worstLeague = findWorst(data.breakdown_campionato);
-  if (worstLeague && (worstLeague[1].hit_rate ?? 100) < 55) {
+  if (worstLeague && (worstLeague[1].hit_rate ?? 100) < criticalThreshold) {
     result.miglioramento.push({
       title: `Campionato critico: ${worstLeague[0]}`,
-      text: `${worstLeague[1].hit_rate}% su ${worstLeague[1].total} pronostici.`,
+      text: `Solo ${worstLeague[1].hit_rate}% su ${worstLeague[1].total} pronostici. ${
+        worstLeague[1].total >= 15
+          ? 'Campione significativo \u2014 valutare se ridurre i pronostici su questo campionato.'
+          : 'Campione ridotto, potrebbe stabilizzarsi con pi\u00F9 dati.'}`,
       type: 'negative',
     });
   }
 
-  const critical = Object.entries(data.breakdown_campionato).filter(([, s]) => s.total >= 10 && (s.hit_rate ?? 100) < 50);
-  if (critical.length) {
+  // Campionati sotto soglia critica (lista)
+  const critical = Object.entries(data.breakdown_campionato)
+    .filter(([, s]) => s.total >= 10 && (s.hit_rate ?? 100) < criticalThreshold);
+  if (critical.length > 1) {
     result.miglioramento.push({
-      title: `${critical.length} campionat${critical.length > 1 ? 'i' : 'o'} sotto il 50%`,
-      text: critical.map(([n, s]) => `${n} (${s.hit_rate}%)`).join(', '),
+      title: `${critical.length} campionati sotto il ${criticalThreshold}%`,
+      text: critical.map(([n, s]) => `${n} (${s.hit_rate}% su ${s.total})`).join(', ') + '.',
       type: 'negative',
     });
   }
 
-  if (bestMarket && worstMarket && bestMarket[0] !== worstMarket[0]) {
-    const gap = (bestMarket[1].hit_rate ?? 0) - (worstMarket[1].hit_rate ?? 0);
-    if (gap >= 10) {
+  // Fascia quota in perdita
+  if (data.breakdown_quota) {
+    const qe = Object.entries(data.breakdown_quota)
+      .filter(([b, s]) => b !== 'N/D' && s.total >= 5 && s.roi != null) as [string, QuotaBandData][];
+    if (qe.length >= 2) {
+      const worst = qe.reduce((a, b) => ((a[1].roi ?? 0) <= (b[1].roi ?? 0) ? a : b));
+      if ((worst[1].roi ?? 0) < -10) {
+        result.miglioramento.push({
+          title: `Fascia in perdita: quota ${worst[0]}`,
+          text: `ROI ${formatRoi(worst[1].roi)} con ${formatProfit(worst[1].profit)} su ${worst[1].total} pronostici. Questa fascia erode il profitto complessivo.`,
+          type: 'warning',
+        });
+      }
+    }
+  }
+
+  // Edge negativo
+  if (data.serie_temporale.length >= 5) {
+    const edgeVals = data.serie_temporale.filter(d => d.edge != null).map(d => d.edge as number);
+    if (edgeVals.length >= 3) {
+      const avgEdge = round1(edgeVals.reduce((s, e) => s + e, 0) / edgeVals.length);
+      if (avgEdge < -3) {
+        result.miglioramento.push({
+          title: `Edge medio negativo (${avgEdge}%)`,
+          text: 'Il vantaggio medio sui bookmaker \u00E8 in deficit. Le quote offerte non giustificano il rischio \u2014 serve pi\u00F9 selettivit\u00E0.',
+          type: 'negative',
+        });
+      }
+    }
+  }
+
+  // ── CONSIGLI OPERATIVI ──────────────────────────────────────────────────────
+
+  // Specializzazione campionati
+  if (data.breakdown_campionato) {
+    const sorted = Object.entries(data.breakdown_campionato).sort(([, a], [, b]) => b.total - a.total);
+    const total = sorted.reduce((s, [, v]) => s + v.total, 0);
+    let cumul = 0;
+    let count80 = 0;
+    for (const [, v] of sorted) {
+      cumul += v.total;
+      count80++;
+      if (cumul >= total * 0.8) break;
+    }
+    if (count80 <= 3 && sorted.length >= 6) {
       result.consigli.push({
-        title: 'Concentrati sul mercato migliore',
-        text: `${ml[bestMarket[0]] || bestMarket[0]} ha ${gap}pp in pi\u00F9 rispetto a ${ml[worstMarket[0]] || worstMarket[0]}.`,
+        title: 'Buona specializzazione',
+        text: `L'80% del volume \u00E8 concentrato su ${count80} campionati. Specializzarsi paga \u2014 risultati pi\u00F9 prevedibili.`,
+        type: 'positive',
+      });
+    } else if (count80 >= 8) {
+      result.consigli.push({
+        title: 'Troppa dispersione',
+        text: `I pronostici si distribuiscono su ${sorted.length} campionati. Concentrarsi sui 5 migliori per HR potrebbe migliorare il rendimento.`,
+        type: 'warning',
+      });
+    }
+  }
+
+  // Rapporto rischio/rendimento
+  if (data.quota_stats?.avg_quota_tutti != null && data.quota_stats.total_con_quota >= 20) {
+    const avgQ = data.quota_stats.avg_quota_tutti;
+    const roi = data.quota_stats.roi_globale ?? 0;
+    if (avgQ < 1.50 && roi < 5) {
+      result.consigli.push({
+        title: 'Quote molto conservative',
+        text: `Quota media ${avgQ.toFixed(2)} \u2014 quote basse danno alta HR ma margini sottili. Un piccolo aumento della quota media potrebbe migliorare il rendimento.`,
+        type: 'neutral',
+      });
+    } else if (avgQ > 2.50 && !isAR) {
+      result.consigli.push({
+        title: 'Quote ambiziose per questa sezione',
+        text: `Quota media ${avgQ.toFixed(2)} \u2014 nella sezione pronostici standard, quote cos\u00EC alte aumentano il rischio. Se la HR resta sopra il 55%, il rendimento \u00E8 ottimo.`,
         type: 'neutral',
       });
     }
   }
 
+  // ROI complessivo
   if (data.quota_stats?.total_con_quota > 0) {
     const roi = data.quota_stats.roi_globale ?? 0;
-    if (roi > 0) {
+    if (roi > 5) {
       result.consigli.push({
-        title: 'ROI positivo',
-        text: `ROI +${data.quota_stats.roi_globale}% con profitto ${formatProfit(data.quota_stats.profit_globale)}. Il sistema genera valore.`,
+        title: `ROI positivo: ${formatRoi(data.quota_stats.roi_globale)}`,
+        text: `Profitto ${formatProfit(data.quota_stats.profit_globale)} su ${data.quota_stats.total_con_quota} pronostici con quota. Il sistema genera valore reale.`,
         type: 'positive',
       });
-    } else if (roi < -5) {
+    } else if (roi >= -2 && roi <= 5) {
       result.consigli.push({
-        title: 'ROI negativo',
-        text: `ROI ${data.quota_stats.roi_globale}% con perdita di ${data.quota_stats.profit_globale}\u20AC. Rivedi le fasce di quota.`,
+        title: `ROI neutro: ${formatRoi(data.quota_stats.roi_globale)}`,
+        text: `Il sistema \u00E8 in sostanziale equilibrio (${formatProfit(data.quota_stats.profit_globale)}). Piccoli miglioramenti nella selettivit\u00E0 possono fare la differenza.`,
+        type: 'neutral',
+      });
+    } else {
+      result.consigli.push({
+        title: `ROI in deficit: ${formatRoi(data.quota_stats.roi_globale)}`,
+        text: `Perdita di ${formatProfit(data.quota_stats.profit_globale)}. Analizzare fasce di quota e campionati per identificare dove si concentrano le perdite.`,
         type: 'negative',
       });
+    }
+  }
+
+  // Consiglio stelle
+  if (data.breakdown_stelle) {
+    const starEntries = Object.entries(data.breakdown_stelle)
+      .filter(([, s]) => s.total >= 5 && s.hit_rate != null)
+      .sort(([, a], [, b]) => (b.hit_rate ?? 0) - (a.hit_rate ?? 0));
+    if (starEntries.length >= 2) {
+      const best = starEntries[0];
+      const worst = starEntries[starEntries.length - 1];
+      const gap = round1((best[1].hit_rate ?? 0) - (worst[1].hit_rate ?? 0));
+      if (gap >= 8) {
+        result.consigli.push({
+          title: `Segui le stelle: ${best[0]}\u2605 al top`,
+          text: `I pronostici a ${best[0]} stelle centrano il ${best[1].hit_rate}%, quelli a ${worst[0]} stelle il ${worst[1].hit_rate}% (${gap}pp di differenza). Le stelle sono un buon indicatore.`,
+          type: 'positive',
+        });
+      }
     }
   }
 
@@ -418,7 +622,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
     fetchData();
   }, [periodo, filtroLeague, filtroMarket, filtroSezione, selectedBand, effectiveMin, effectiveMax, getDateRange]);
 
-  const insights = useMemo(() => data ? generateInsights(data) : null, [data]);
+  const insights = useMemo(() => data ? generateInsights(data, filtroSezione) : null, [data, filtroSezione]);
 
   // ─── Styles ──────────────────────────────────────────────────────────────
 
@@ -453,7 +657,9 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: `linear-gradient(160deg, ${C.bg} 0%, #0c1425 40%, #0a0f1f 100%)`,
+      background: getThemeMode() === 'light'
+        ? `linear-gradient(160deg, #f0f2f5 0%, #e8ebf0 40%, #f5f6f8 100%)`
+        : `linear-gradient(160deg, ${C.bg} 0%, #0c1425 40%, #0a0f1f 100%)`,
       color: C.text,
       padding: isMobile ? '16px' : '28px 32px',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -618,7 +824,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             onClick={() => setActiveView(tab.id)}
             style={{
               flex: 1,
-              background: activeView === tab.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+              background: activeView === tab.id ? C.surfaceHover : 'transparent',
               border: 'none',
               color: activeView === tab.id ? C.text : C.textMuted,
               borderRadius: '8px',
@@ -668,14 +874,14 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
           value={filtroLeague}
           onChange={e => setFiltroLeague(e.target.value)}
           style={{
-            background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${C.cardBorder}`,
+            background: C.selectBg, border: `1px solid ${C.cardBorder}`,
             color: filtroLeague ? C.text : C.textMuted,
             borderRadius: '8px', padding: '6px 10px', fontSize: '0.8em',
           }}
         >
-          <option value="" style={{ background: '#0f172a', color: C.textSec }}>Campionato</option>
+          <option value="" style={{ background: C.optionBg, color: C.textSec }}>Campionato</option>
           {availableLeagues.map(lg => (
-            <option key={lg} value={lg} style={{ background: '#0f172a', color: C.text }}>{lg}</option>
+            <option key={lg} value={lg} style={{ background: C.optionBg, color: C.text }}>{lg}</option>
           ))}
         </select>
 
@@ -684,14 +890,14 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
           value={filtroMarket}
           onChange={e => setFiltroMarket(e.target.value)}
           style={{
-            background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${C.cardBorder}`,
+            background: C.selectBg, border: `1px solid ${C.cardBorder}`,
             color: filtroMarket ? C.text : C.textMuted,
             borderRadius: '8px', padding: '6px 10px', fontSize: '0.8em',
           }}
         >
-          <option value="" style={{ background: '#0f172a', color: C.textSec }}>Mercato</option>
+          <option value="" style={{ background: C.optionBg, color: C.textSec }}>Mercato</option>
           {availableMarkets.map(mk => (
-            <option key={mk} value={mk} style={{ background: '#0f172a', color: C.text }}>{MARKET_LABELS[mk] || mk}</option>
+            <option key={mk} value={mk} style={{ background: C.optionBg, color: C.text }}>{MARKET_LABELS[mk] || mk}</option>
           ))}
         </select>
       </div>
@@ -713,7 +919,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                   disabled={isEmpty}
                   onClick={() => !isEmpty && setSelectedBand(isActive ? '' : band.label)}
                   style={{
-                    background: isEmpty ? 'transparent' : isActive ? `${accent}25` : 'rgba(255,255,255,0.03)',
+                    background: isEmpty ? 'transparent' : isActive ? `${accent}25` : C.surfaceSubtle,
                     border: isActive ? `1px solid ${accent}50` : `1px solid ${isEmpty ? 'transparent' : C.cardBorder}`,
                     color: isEmpty ? '#333' : isActive ? accent : C.textSec,
                     borderRadius: '6px', padding: '3px 7px', cursor: isEmpty ? 'default' : 'pointer',
@@ -992,13 +1198,13 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                     {Object.entries(data.cross_quota_mercato)
                       .filter(([b]) => b !== 'N/D')
                       .map(([band, markets], i) => (
-                        <tr key={band} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                        <tr key={band} style={{ background: i % 2 === 0 ? 'transparent' : C.rowAlt }}>
                           <td style={{ padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textSec, fontFamily: 'monospace', fontSize: '0.92em' }}>
                             {band}
                           </td>
                           {Object.keys(data.breakdown_mercato).sort().map(tipo => {
                             const d = markets[tipo];
-                            if (!d || d.total === 0) return <td key={tipo} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: '#333' }}>—</td>;
+                            if (!d || d.total === 0) return <td key={tipo} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textMuted }}>—</td>;
                             const r = d.hit_rate ?? 0;
                             return (
                               <td key={tipo} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}` }}>
@@ -1077,7 +1283,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                         key={pill.id}
                         onClick={() => setChartMetric(pill.id)}
                         style={{
-                          background: active ? `${accent}22` : 'rgba(255,255,255,0.03)',
+                          background: active ? `${accent}22` : C.surfaceSubtle,
                           border: active ? `1px solid ${accent}50` : `1px solid ${C.cardBorder}`,
                           color: active ? accent : C.textSec,
                           borderRadius: '16px',
@@ -1184,13 +1390,13 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                   </thead>
                   <tbody>
                     {Object.entries(data.cross_mercato_campionato).map(([tipo, leagues], i) => (
-                      <tr key={tipo} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                      <tr key={tipo} style={{ background: i % 2 === 0 ? 'transparent' : C.rowAlt }}>
                         <td style={{ padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textSec, fontWeight: 500 }}>
                           {MARKET_LABELS[tipo] || tipo}
                         </td>
                         {Object.keys(data.breakdown_campionato).sort().map(lg => {
                           const d = leagues[lg];
-                          if (!d || d.total === 0) return <td key={lg} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: '#333' }}>—</td>;
+                          if (!d || d.total === 0) return <td key={lg} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textMuted }}>—</td>;
                           const r = d.hit_rate ?? 0;
                           return (
                             <td key={lg} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}` }}>

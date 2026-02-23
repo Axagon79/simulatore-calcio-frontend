@@ -476,7 +476,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                 {match.home_team}
                             </span>
                             {match.home_mongo_id && (
-                                <img 
+                                <img
                                     src={getStemmaUrl(cupId, match.home_mongo_id)}
                                     alt=""
                                     style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
@@ -513,7 +513,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             paddingLeft: '2px'
                         }}>
                             {match.away_mongo_id && (
-                                <img 
+                                <img
                                     src={getStemmaUrl(cupId, match.away_mongo_id)}
                                     alt=""
                                     style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
@@ -570,7 +570,7 @@ if (viewState === 'analysis' && selectedMatch) {
                         }}>
                           {match.home_team}
                           {match.home_mongo_id && (
-                            <img 
+                            <img
                               src={getStemmaUrl(cupId, match.home_mongo_id)}
                               alt=""
                               style={{ width: '24px', height: '24px', objectFit: 'contain' }}
@@ -605,7 +605,7 @@ if (viewState === 'analysis' && selectedMatch) {
                           gap: '10px'
                         }}>
                           {match.away_mongo_id && (
-                            <img 
+                            <img
                               src={getStemmaUrl(cupId, match.away_mongo_id)}
                               alt=""
                               style={{ width: '24px', height: '24px', objectFit: 'contain' }}
@@ -708,14 +708,14 @@ if (viewState === 'analysis' && selectedMatch) {
                                     gap: '8px'
                                 }}>
                                     {match.home_mongo_id && (
-                                        <img 
+                                        <img
                                             src={getStemmaUrl(cupId, match.home_mongo_id)}
                                             alt=""
-                                            style={{ 
-                                                width: '45px',  // Più grandi qui nel dettaglio
-                                                height: '45px', 
+                                            style={{
+                                                width: '45px',
+                                                height: '45px',
                                                 objectFit: 'contain',
-                                                filter: `drop-shadow(0 0 10px ${theme.primary}60)` // Effetto neon leggero
+                                                filter: `drop-shadow(0 0 10px ${theme.primary}60)`
                                             }}
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                         />
@@ -751,12 +751,12 @@ if (viewState === 'analysis' && selectedMatch) {
                                     gap: '8px'
                                 }}>
                                     {match.away_mongo_id && (
-                                        <img 
+                                        <img
                                             src={getStemmaUrl(cupId, match.away_mongo_id)}
                                             alt=""
-                                            style={{ 
-                                                width: '45px', 
-                                                height: '45px', 
+                                            style={{
+                                                width: '45px',
+                                                height: '45px',
                                                 objectFit: 'contain',
                                                 filter: `drop-shadow(0 0 10px ${theme.secondary}60)`
                                             }}
@@ -1011,7 +1011,7 @@ if (viewState === 'analysis' && selectedMatch) {
                                 {match.home_team}
                             </span>
                             {match.home_mongo_id && (
-                                <img 
+                                <img
                                     src={getStemmaUrl(cupId, match.home_mongo_id)}
                                     alt=""
                                     style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
@@ -1048,7 +1048,7 @@ if (viewState === 'analysis' && selectedMatch) {
                             paddingLeft: '2px'
                         }}>
                             {match.away_mongo_id && (
-                                <img 
+                                <img
                                     src={getStemmaUrl(cupId, match.away_mongo_id)}
                                     alt=""
                                     style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
@@ -1105,12 +1105,12 @@ if (viewState === 'analysis' && selectedMatch) {
                             }}>
                               {match.home_team}
                               {match.home_mongo_id && (
-                                <img 
-                                  src={getStemmaUrl(cupId, match.home_mongo_id)}
-                                  alt=""
-                                  style={{ width: '24px', height: '24px', objectFit: 'contain' }}
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                />
+                                <img
+                              src={getStemmaUrl(cupId, match.home_mongo_id)}
+                              alt=""
+                              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
                               )}
                             </div>
                             <div style={{
@@ -1138,12 +1138,12 @@ if (viewState === 'analysis' && selectedMatch) {
                               gap: '10px'
                             }}>
                               {match.away_mongo_id && (
-                                <img 
-                                  src={getStemmaUrl(cupId, match.away_mongo_id)}
-                                  alt=""
-                                  style={{ width: '24px', height: '24px', objectFit: 'contain' }}
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                />
+                                <img
+                              src={getStemmaUrl(cupId, match.away_mongo_id)}
+                              alt=""
+                              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
                               )}
                               {match.away_team}
                             </div>
@@ -1241,14 +1241,14 @@ if (viewState === 'analysis' && selectedMatch) {
                                     gap: '8px'
                                 }}>
                                     {match.home_mongo_id && (
-                                        <img 
+                                        <img
                                             src={getStemmaUrl(cupId, match.home_mongo_id)}
                                             alt=""
-                                            style={{ 
-                                                width: '45px',  // Più grandi qui nel dettaglio
-                                                height: '45px', 
+                                            style={{
+                                                width: '45px',
+                                                height: '45px',
                                                 objectFit: 'contain',
-                                                filter: `drop-shadow(0 0 10px ${theme.primary}60)` // Effetto neon leggero
+                                                filter: `drop-shadow(0 0 10px ${theme.primary}60)`
                                             }}
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                         />
@@ -1284,12 +1284,12 @@ if (viewState === 'analysis' && selectedMatch) {
                                     gap: '8px'
                                 }}>
                                     {match.away_mongo_id && (
-                                        <img 
+                                        <img
                                             src={getStemmaUrl(cupId, match.away_mongo_id)}
                                             alt=""
-                                            style={{ 
-                                                width: '45px', 
-                                                height: '45px', 
+                                            style={{
+                                                width: '45px',
+                                                height: '45px',
                                                 objectFit: 'contain',
                                                 filter: `drop-shadow(0 0 10px ${theme.secondary}60)`
                                             }}

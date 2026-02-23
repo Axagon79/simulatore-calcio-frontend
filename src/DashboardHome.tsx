@@ -12,6 +12,7 @@ const API_BASE = isLocal
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode, getMobileTheme } from './AppDev/costanti';
+import StemmaImg from './components/StemmaImg';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 const mobileTheme = getMobileTheme();
@@ -371,12 +372,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                      border: `1px solid ${league.color}40`,
                      borderRadius: isMobile ? '16px' : '20px',
                      padding: isMobile ? '18px' : '25px',
-                     cursor: 'pointer', 
-                     transition: 'all 0.3s ease', 
-                     position: 'relative', 
-                     height: isMobile ? '120px' : '180px', 
-                     display: 'flex', 
-                     flexDirection: 'column', 
+                     cursor: 'pointer',
+                     transition: 'all 0.3s ease',
+                     position: 'relative',
+                     height: isMobile ? '120px' : '180px',
+                     display: 'flex',
+                     flexDirection: 'column',
                      justifyContent: 'space-between',
                      gap: isMobile ? '8px' : '0'
                  }}
@@ -410,18 +411,13 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 }}
                >
                    {/* PARTE SUPERIORE: STEMMA + INFO */}
-                   <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '15px' }}>
+                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '12px' : '15px' }}>
                       {/* STEMMA */}
-                      <img 
-                        src={STEMMI_CAMPIONATI[league.id]} 
+                      <StemmaImg
+                        src={STEMMI_CAMPIONATI[league.id]}
+                        size={isMobile ? 40 : 55}
                         alt={league.name}
-                        style={{
-                          width: isMobile ? '40px' : '55px',
-                          height: isMobile ? '40px' : '55px',
-                          objectFit: 'contain',
-                          flexShrink: 0
-                        }}
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        cardColor={league.color}
                       />
                       <div>
                         <div style={{
@@ -604,26 +600,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             >
               {/* STEMMI UCL + UEL AFFIANCATI */}
               <div style={{ display: 'flex', gap: isMobile ? '10px' : '15px', marginBottom: isMobile ? '8px' : '10px' }}>
-                <img 
-                  src={STEMMI_COPPE['UCL']} 
-                  alt="Champions League"
-                  style={{
-                    width: isMobile ? '35px' : '45px',
-                    height: isMobile ? '35px' : '45px',
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-                <img 
-                  src={STEMMI_COPPE['UEL']} 
-                  alt="Europa League"
-                  style={{
-                    width: isMobile ? '35px' : '45px',
-                    height: isMobile ? '35px' : '45px',
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
+                <StemmaImg src={STEMMI_COPPE['UCL']} size={isMobile ? 35 : 45} alt="Champions League" cardColor="#1a3c6e" />
+                <StemmaImg src={STEMMI_COPPE['UEL']} size={isMobile ? 35 : 45} alt="Europa League" cardColor="#e87500" />
               </div>
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
@@ -904,16 +882,11 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   }}
                 >
                   {/* STEMMA */}
-                  <img
+                  <StemmaImg
                     src={STEMMI_CAMPIONATI[league.id]}
+                    size={isMobile ? 35 : 40}
                     alt={league.name}
-                    style={{
-                      width: isMobile ? '35px' : '40px',
-                      height: isMobile ? '35px' : '40px',
-                      objectFit: 'contain',
-                      flexShrink: 0
-                    }}
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    cardColor={league.color}
                   />
                   <div>
                     <div style={{
@@ -1033,16 +1006,11 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   }}
                 >
                   {/* STEMMA COPPA */}
-                  <img 
-                    src={STEMMI_COPPE[cup.id]} 
+                  <StemmaImg
+                    src={STEMMI_COPPE[cup.id]}
+                    size={isMobile ? 45 : 55}
                     alt={cup.name}
-                    style={{
-                      width: isMobile ? '45px' : '55px',
-                      height: isMobile ? '45px' : '55px',
-                      objectFit: 'contain',
-                      flexShrink: 0
-                    }}
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    cardColor={cup.color}
                   />
                   <div>
                     <div style={{

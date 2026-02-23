@@ -222,7 +222,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   gap: '10px'
                 }}>
                   {match.home_mongo_id && (
-                    <img 
+                    <img
                       src={getStemmaUrl(cupId, match.home_mongo_id)}
                       alt=""
                       style={{ width: '32px', height: '32px', objectFit: 'contain' }}
@@ -250,7 +250,7 @@ export default function CupMatchAnalysis({ cupId, match, onBack, onSimulate }: C
                   gap: '10px'
                 }}>
                   {match.away_mongo_id && (
-                    <img 
+                    <img
                       src={getStemmaUrl(cupId, match.away_mongo_id)}
                       alt=""
                       style={{ width: '32px', height: '32px', objectFit: 'contain' }}

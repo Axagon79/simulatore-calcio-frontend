@@ -3,7 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 
+import { getThemeMode } from './AppDev/costanti';
 import { AuthProvider } from './contexts/AuthContext';
+
+// Setta data-theme sul body per regole CSS globali (es. stemmi drop-shadow)
+document.body.dataset.theme = getThemeMode();
 import AppDev from './AppDev';
 import TuningMixer from './pages/TuningMixer';
 import TrackRecord from './pages/TrackRecord';

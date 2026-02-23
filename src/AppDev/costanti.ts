@@ -151,7 +151,7 @@ export const themeDark = {
 
 export const themeLight = {
   bg: '#f0f2f5',
-  panel: 'rgba(255, 255, 255, 0.92)',
+  panel: '#ffffff',
   panelSolid: '#ffffff',
   panelBorder: '1px solid rgba(0, 0, 0, 0.12)',
   cyan: '#0077cc',
@@ -181,13 +181,13 @@ export const themeLight = {
   surface15: 'rgba(0,0,0,0.12)',
   // Hit/Miss (pronostici)
   hitText: '#059669',
-  hitBg: 'rgba(5,150,105,0.12)',
-  hitBgSoft: 'rgba(5,150,105,0.08)',
-  hitBorder: 'rgba(5,150,105,0.3)',
+  hitBg: '#bbf7d0',
+  hitBgSoft: '#dcfce7',
+  hitBorder: '#86efac',
   missText: '#dc2626',
-  missBg: 'rgba(220,38,38,0.10)',
-  missBgSoft: 'rgba(220,38,38,0.06)',
-  missBorder: 'rgba(220,38,38,0.25)',
+  missBg: '#fecaca',
+  missBgSoft: '#fee2e2',
+  missBorder: '#fca5a5',
   // LIVE badge
   liveText: '#dc2626',
   liveBg: 'rgba(220,38,38,0.08)',

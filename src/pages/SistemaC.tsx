@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 
 // --- TEMA (centralizzato) ---
 import { getTheme } from '../AppDev/costanti';
+import StemmaImg from '../components/StemmaImg';
 const theme = getTheme();
 
 // --- API BASE ---
@@ -420,12 +421,12 @@ export default function SistemaC() {
               <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600, minWidth: '38px' }}>
                 {pred.match_time || '--:--'}
               </span>
-              <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
+              <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               <span style={{ fontSize: '13px', fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {pred.home}
               </span>
               <span style={{ fontSize: '11px', color: theme.textDim }}>vs</span>
-              <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
+              <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               <span style={{ fontSize: '13px', fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {pred.away}
               </span>
@@ -689,7 +690,7 @@ export default function SistemaC() {
                 }}
               >
                 {leagueLogo ? (
-                  <img src={leagueLogo} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                  <StemmaImg src={leagueLogo} size={20} />
                 ) : countryCode ? (
                   <img src={`https://flagcdn.com/w40/${countryCode}.png`} alt="" style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: '2px' }} />
                 ) : null}

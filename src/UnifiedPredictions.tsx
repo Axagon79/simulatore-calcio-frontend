@@ -6,6 +6,7 @@ type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'm
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode } from './AppDev/costanti';
+import StemmaImg from './components/StemmaImg';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
@@ -162,11 +163,6 @@ interface Prediction {
   live_score?: string | null;
   live_status?: string | null;
   live_minute?: number | null;
-  // X Factor
-  is_x_factor?: boolean;
-  x_factor_signals?: string[];
-  x_factor_n_signals?: number;
-  x_factor_raw_score?: number;
   // Risultato Esatto
   is_exact_score?: boolean;
   exact_score_top3?: Array<{ score: string; prob: number }>;
@@ -176,33 +172,6 @@ interface Prediction {
   analysis_alerts?: Array<{ id: string; severity: number; text: string }>;
   analysis_score?: number;
   analysis_premium?: string;
-}
-
-interface Bomb {
-  date: string;
-  home: string;
-  away: string;
-  league: string;
-  match_time: string;
-  sfavorita: string;
-  segno_bomba: string;
-  confidence: number;
-  stars: number;
-  dettaglio: Record<string, number>;
-  odds: { '1': number; '2': number; 'X': number; src?: string;
-    over_15?: number; under_15?: number; over_25?: number; under_25?: number;
-    over_35?: number; under_35?: number; gg?: number; ng?: number;
-    src_ou_gg?: string; };
-  comment: string;
-  // Risultati reali (dal backend)
-  real_score?: string | null;
-  real_sign?: string | null;
-  match_finished?: boolean;
-  hit?: boolean | null;
-  // Live scores (polling)
-  live_score?: string | null;
-  live_status?: string | null;
-  live_minute?: number | null;
 }
 
 // --- HELPERS ---
@@ -295,14 +264,14 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [bombs, setBombs] = useState<Bomb[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [bombStats] = useState<{total:number,finished:number,pending:number,hits:number,misses:number,hit_rate:number|null}>({total:0,finished:0,pending:0,hits:0,misses:0,hit_rate:null});
+
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const toggleSection2 = (id: string) => setCollapsedSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -384,8 +353,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         } else {
           setPredictions([]);
         }
-        // Unified non ha bombe separate
-        setBombs([]);
+
       } catch (err: any) {
         console.error('Errore fetch pronostici unified:', err);
         setError(err.message || 'Errore di connessione');
@@ -414,7 +382,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         if (data.success && data.scores?.length > 0) {
           const scores = data.scores;
           setPredictions(prev => mergeLive(prev, scores));
-          setBombs(prev => mergeLive(prev, scores));
+
         }
       } catch { /* silenzioso */ }
     };
@@ -702,16 +670,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return true;
   };
 
-  const bombMatchesFilter = (bomb: Bomb, filter: StatusFilter): boolean => {
-    if (filter === 'tutte') return true;
-    const status = getMatchStatus(bomb);
-    if (filter === 'live') return status === 'live';
-    if (filter === 'da_giocare') return status === 'to_play';
-    if (filter === 'finite') return status === 'finished';
-    if (filter === 'centrate') return bomb.hit === true;
-    if (filter === 'mancate') return bomb.hit === false;
-    return true;
-  };
 
   // --- HELPER: quota di un singolo pronostico ---
   const getPronosticoQuota = (p: any, pred: Prediction): number | null => {
@@ -721,7 +679,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
   // --- PARTIZIONAMENTO: Pronostici (<=2.50) vs Alto Rendimento (>2.50) ---
-  const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_x_factor && !p.is_exact_score), [predictions]);
+  const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score), [predictions]);
 
   const normalPredictions = useMemo(() => {
     return allNormalPreds
@@ -747,23 +705,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       .filter(Boolean) as Prediction[];
   }, [allNormalPreds]);
 
-  const xFactorPredictions = useMemo(() => predictions.filter(p => p.is_x_factor), [predictions]);
   const exactScorePredictions = useMemo(() => predictions.filter(p => p.is_exact_score), [predictions]);
 
   // Auto-collapse sezioni High Risk se >=5 elementi
   useEffect(() => {
     const collapsed = new Set<string>();
     if (exactScorePredictions.length >= 5) collapsed.add('sec_exact_score');
-    if (xFactorPredictions.length >= 5) collapsed.add('sec_x_factor');
-    if (bombs.length >= 5) collapsed.add('sec_bombs');
     setCollapsedSections(collapsed);
-  }, [exactScorePredictions.length, xFactorPredictions.length, bombs.length]);
+  }, [exactScorePredictions.length]);
 
   // --- DATI FILTRATI ---
   const filteredPredictions = statusFilter === 'tutte' ? normalPredictions : normalPredictions.filter(p => predMatchesFilter(p, statusFilter));
-  const filteredXFactor = statusFilter === 'tutte' ? xFactorPredictions : xFactorPredictions.filter(p => predMatchesFilter(p, statusFilter));
   const filteredExactScore = statusFilter === 'tutte' ? exactScorePredictions : exactScorePredictions.filter(p => predMatchesFilter(p, statusFilter));
-  const filteredBombs = statusFilter === 'tutte' ? bombs : bombs.filter(b => bombMatchesFilter(b, statusFilter));
   const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
@@ -779,22 +732,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   // --- CONTEGGI FILTRI ---
   const filterCounts = useMemo(() => {
     const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-    const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 'xf' | 're' | 'bomb') => {
+    const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 're') => {
       counts.tutte++;
       const s = getMatchStatus(item);
       if (s === 'live') counts.live++;
       else if (s === 'to_play') counts.da_giocare++;
       else {
         counts.finite++;
-        if (mode === 'bomb') {
-          if (item.hit === true) counts.centrate++;
-          else if (item.hit === false) counts.mancate++;
-        } else if (mode === 'xf') {
-          if (item.real_score) {
-            if (item.real_sign === 'X') counts.centrate++;
-            else counts.mancate++;
-          }
-        } else if (mode === 're') {
+        if (mode === 're') {
           if (item.real_score) {
             const hit = ((item as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(item.real_score!));
             if (hit) counts.centrate++;
@@ -814,7 +759,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       altoRendimentoPreds.forEach(p => countItem(p, 'normal'));
     }
     return counts;
-  }, [predictions, bombs, activeTab]);
+  }, [predictions, activeTab]);
 
   // --- RENDER CARD PRONOSTICO ---
   const renderPredictionCard = (pred: Prediction) => {
@@ -870,8 +815,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           padding: isMobile ? '6px 10px' : '8px 14px',
           marginBottom: '4px',
           position: 'relative',
-          zIndex: isTipsOpen ? 50 : 'auto' as any
+          zIndex: isTipsOpen ? 50 : 'auto' as any,
+          transition: 'background 0.15s'
         }}
+        onMouseEnter={isLight ? (e) => { e.currentTarget.style.background = '#eee'; } : undefined}
+        onMouseLeave={isLight ? (e) => { e.currentTarget.style.background = theme.panel; } : undefined}
       >
         {/* BARRA LATERALE */}
         <div style={{
@@ -893,11 +841,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
           {/* Squadre — larghezza naturale, si restringe se serve */}
           <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
-            <img
-              src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt=""
-              style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {pred.home}
             </span>
@@ -905,11 +849,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {pred.away}
             </span>
-            <img
-              src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt=""
-              style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
 
           {/* Risultato + Freccia — spinto a destra */}
@@ -1006,8 +946,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
               const renderPill = (p: typeof pred.pronostici[0], idx: number) => {
                 const isHit = pred.real_score ? p.hit : null;
-                const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : 'rgba(17, 56, 93, 0.45)';
-                const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : 'rgba(17, 56, 93, 0.7)';
+                const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : (isLight ? '#e0f2fe' : 'rgba(17, 56, 93, 0.45)');
+                const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : (isLight ? '#7dd3fc' : 'rgba(17, 56, 93, 0.7)');
                 const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.cyan;
                 const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
                   || (p.tipo === 'DOPPIA_CHANCE' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
@@ -1069,7 +1009,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   borderRadius: '8px',
                 }}>
                   {/* Titolo centrato */}
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: '8px', textAlign: 'center' as const }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: isLight ? '#b45309' : '#fbbf24', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: '8px', textAlign: 'center' as const }}>
                     Pronostici
                   </div>
                   {/* Tabella 2 colonne */}
@@ -1106,22 +1046,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}>
                 {/* Parte superiore/sinistra — Quote */}
                 <div style={{ padding: '8px 12px', ...(isMobile ? {} : {}) }}>
-                  <div style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>
+                  <div style={{ fontSize: '11px', color: theme.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>
                     Quote
                   </div>
-                  <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap', fontSize: '11px' }}>
-                    <span>1: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
-                    <span>X: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
-                    <span>2: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
+                  <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap', fontSize: '12px' }}>
+                    <span>1: <span style={{ color: theme.text, fontWeight: 700 }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
+                    <span>X: <span style={{ color: theme.text, fontWeight: 700 }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
+                    <span>2: <span style={{ color: theme.text, fontWeight: 700 }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
                     {pred.odds?.over_25 != null && <>
                       <span style={{ color: theme.surface15 }}>│</span>
-                      <span>O2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
-                      <span>U2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
+                      <span>O2.5: <span style={{ color: theme.text, fontWeight: 700 }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
+                      <span>U2.5: <span style={{ color: theme.text, fontWeight: 700 }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
                     </>}
                     {pred.odds?.gg != null && <>
                       <span style={{ color: theme.surface15 }}>│</span>
-                      <span>GG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
-                      <span>NG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
+                      <span>GG: <span style={{ color: theme.text, fontWeight: 700 }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
+                      <span>NG: <span style={{ color: theme.text, fontWeight: 700 }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
                     </>}
                   </div>
                 </div>
@@ -1130,7 +1070,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 {/* Parte destra — Bottoni Analisi */}
                 {hasAnalysis && (
                   <div style={{ ...(isMobile ? {} : { flex: 1 }), display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: isMobile ? '6px 12px' : '8px 14px', gap: '6px', background: 'rgba(140, 90, 0, 0.22)' }}>
-                    <div style={{ fontSize: '10px', color: '#fbbf24', fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: '1px', textShadow: '0 0 8px rgba(0, 240, 255, 0.3)' }}>
+                    <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: '1px', textShadow: '0 0 8px rgba(0, 240, 255, 0.3)' }}>
                       Analisi Match
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
@@ -1149,10 +1089,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       style={{
                         cursor: 'pointer', fontSize: '12px', fontWeight: 700,
                         padding: '6px 20px', borderRadius: '16px', whiteSpace: 'nowrap' as const,
-                        background: currentAnalysisTab === 'free' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(6, 182, 212, 0.15)',
-                        color: currentAnalysisTab === 'free' ? '#fff' : 'rgba(180, 230, 240, 0.9)',
-                        border: currentAnalysisTab === 'free' ? '1px solid rgba(6, 182, 212, 0.7)' : '1px solid rgba(6, 182, 212, 0.3)',
-                        boxShadow: currentAnalysisTab === 'free' ? '0 0 12px rgba(6, 182, 212, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(6, 182, 212, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+                        background: currentAnalysisTab === 'free'
+                          ? (isLight ? '#cffafe' : 'rgba(6,182,212,0.4)')
+                          : (isLight ? '#ecfeff' : 'rgba(6,182,212,0.15)'),
+                        color: currentAnalysisTab === 'free'
+                          ? (isLight ? '#0891b2' : '#fff')
+                          : (isLight ? '#0891b2' : 'rgba(180,230,240,0.9)'),
+                        border: currentAnalysisTab === 'free'
+                          ? (isLight ? '1px solid rgba(6,182,212,0.5)' : '1px solid rgba(6,182,212,0.7)')
+                          : (isLight ? '1px solid rgba(6,182,212,0.25)' : '1px solid rgba(6,182,212,0.3)'),
+                        boxShadow: isLight ? 'none'
+                          : (currentAnalysisTab === 'free' ? '0 0 12px rgba(6,182,212,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(6,182,212,0.15), inset 0 1px 0 rgba(255,255,255,0.05)'),
                       }}
                     >📊 Free</span>
                     <span
@@ -1171,10 +1118,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       style={{
                         cursor: 'pointer', fontSize: '12px', fontWeight: 700,
                         padding: '6px 20px', borderRadius: '16px', whiteSpace: 'nowrap' as const,
-                        background: currentAnalysisTab === 'premium' ? 'rgba(168, 85, 247, 0.4)' : 'rgba(168, 85, 247, 0.15)',
-                        color: currentAnalysisTab === 'premium' ? '#fff' : 'rgba(210, 180, 250, 0.9)',
-                        border: currentAnalysisTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.7)' : '1px solid rgba(168, 85, 247, 0.3)',
-                        boxShadow: currentAnalysisTab === 'premium' ? '0 0 12px rgba(168, 85, 247, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+                        background: currentAnalysisTab === 'premium'
+                          ? (isLight ? '#ede9fe' : 'rgba(168,85,247,0.4)')
+                          : (isLight ? '#f5f3ff' : 'rgba(168,85,247,0.15)'),
+                        color: currentAnalysisTab === 'premium'
+                          ? (isLight ? '#7c3aed' : '#fff')
+                          : (isLight ? '#7c3aed' : 'rgba(210,180,250,0.9)'),
+                        border: currentAnalysisTab === 'premium'
+                          ? (isLight ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(168,85,247,0.7)')
+                          : (isLight ? '1px solid rgba(168,85,247,0.25)' : '1px solid rgba(168,85,247,0.3)'),
+                        boxShadow: isLight ? 'none'
+                          : (currentAnalysisTab === 'premium' ? '0 0 12px rgba(168,85,247,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(168,85,247,0.15), inset 0 1px 0 rgba(255,255,255,0.05)'),
                       }}
                     >{(isAdmin || isPremiumUser) ? '🤖 Premium' : '🔒 Premium'}</span>
                     </div>
@@ -1285,10 +1239,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     onClick={() => { setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' })); trackTabClick('f'); }}
                     style={{
                       padding: '4px 14px', borderRadius: '12px',
-                      border: currentAnalysisTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : `1px solid ${theme.surface15}`,
+                      border: currentAnalysisTab === 'free'
+                        ? (isLight ? '1px solid rgba(6,182,212,0.5)' : '1px solid rgba(6,182,212,0.6)')
+                        : `1px solid ${theme.surface15}`,
                       cursor: 'pointer', fontSize: '10px', fontWeight: 600,
-                      background: currentAnalysisTab === 'free' ? 'rgba(6, 182, 212, 0.25)' : theme.surface05,
-                      color: currentAnalysisTab === 'free' ? theme.cyan : theme.textDim,
+                      background: currentAnalysisTab === 'free'
+                        ? (isLight ? '#cffafe' : 'rgba(6,182,212,0.25)')
+                        : theme.surface05,
+                      color: currentAnalysisTab === 'free' ? (isLight ? '#0891b2' : theme.cyan) : theme.textDim,
                     }}
                   >Analisi Free</button>
                   <button
@@ -1300,10 +1258,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }}
                     style={{
                       padding: '4px 14px', borderRadius: '12px',
-                      border: currentAnalysisTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.6)' : `1px solid ${theme.surface15}`,
+                      border: currentAnalysisTab === 'premium'
+                        ? (isLight ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(168,85,247,0.6)')
+                        : `1px solid ${theme.surface15}`,
                       cursor: 'pointer', fontSize: '10px', fontWeight: 600,
-                      background: currentAnalysisTab === 'premium' ? 'rgba(168, 85, 247, 0.25)' : theme.surface05,
-                      color: currentAnalysisTab === 'premium' ? theme.purple : theme.textDim,
+                      background: currentAnalysisTab === 'premium'
+                        ? (isLight ? '#ede9fe' : 'rgba(168,85,247,0.25)')
+                        : theme.surface05,
+                      color: currentAnalysisTab === 'premium' ? (isLight ? '#7c3aed' : theme.purple) : theme.textDim,
                     }}
                   >{(isAdmin || isPremiumUser) ? 'Analisi AI Premium' : '🔒 Premium'}</button>
                 </div>
@@ -1931,251 +1893,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     );
   };
 
-  // --- RENDER CARD BOMBA ---
-  const renderBombCard = (bomb: Bomb) => {
-    const cardKey = `bomb-${bomb.home}-${bomb.away}`;
-    const commentKey = `${cardKey}-comment`;
-    const detailKey = `${cardKey}-detail`;
-    const isCommentOpen = !expandedSections.has(commentKey);
-    const isDetailOpen = expandedSections.has(detailKey);
-    const isCardExpanded = expandedCards.has(cardKey);
-    const tipsKey = `${cardKey}-tips`;
-    const isTipsOpen = expandedSections.has(tipsKey);
-
-    return (
-      <div
-        key={cardKey}
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,215,0,0.04), rgba(255,42,109,0.04))',
-          border: `1px solid ${theme.gold}40`,
-          borderRadius: '10px',
-          padding: isMobile ? '6px 10px' : '8px 14px',
-          marginBottom: '4px',
-          position: 'relative',
-          zIndex: isTipsOpen ? 50 : 'auto' as any
-        }}
-      >
-        {/* BARRA LATERALE */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
-          background: bomb.real_score ? (bomb.hit ? theme.hitText : theme.missText) : `linear-gradient(180deg, ${theme.gold}, ${theme.danger})`
-        }} />
-
-        {/* RIGA UNICA COMPATTA — click ovunque espande */}
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
-          onClick={() => setExpandedCards(prev => {
-            const next = new Set(prev);
-            if (next.has(cardKey)) next.delete(cardKey);
-            else next.add(cardKey);
-            return next;
-          })}
-        >
-          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? bomb.match_time : `🕐 ${bomb.match_time}`}</span>
-
-          {/* Squadre — larghezza naturale, si restringe se serve */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {bomb.home}
-            </span>
-            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {bomb.away}
-            </span>
-          </div>
-
-          {/* Risultato + Freccia — spinto a destra */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {bomb.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.hit ? theme.hitText : theme.missText }}>
-                {bomb.real_score.replace(':', ' - ')}
-              </span>
-            ) : getMatchStatus(bomb) === 'live' ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: bomb.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {bomb.live_score || '– : –'}
-                </span>
-                {(!isMobile || bomb.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: bomb.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
-                  {bomb.live_status === 'HT' ? 'INT' : `${bomb.live_minute || ''}'`}
-                </span>}
-              </span>
-            ) : (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
-            )}
-            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </div>
-        </div>
-
-        {/* Badge Bomba — ABSOLUTE, sganciato dal flex */}
-        <div
-          style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '65px' : '100px',
-            zIndex: 5
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            style={{
-              display: 'inline-flex', alignItems: 'baseline', gap: isMobile ? '3px' : '6px', cursor: 'pointer',
-              background: isTipsOpen ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.06)',
-              border: `1px solid ${isTipsOpen ? 'rgba(255,215,0,0.4)' : 'rgba(255,215,0,0.18)'}`,
-              borderRadius: '4px', padding: isMobile ? '3px 6px' : '4px 12px',
-              transition: 'all 0.2s', userSelect: 'none' as const
-            }}
-            onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
-          >
-            {!isMobile && <span style={{ fontSize: '9px' }}>💣</span>}
-            <span style={{ fontSize: '9px', fontWeight: '600', color: theme.gold, letterSpacing: '0.3px' }}>tip</span>
-            <span style={{ fontSize: '9px', color: theme.gold, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </div>
-
-          {/* POPOVER FLOTTANTE */}
-          {isTipsOpen && (
-            <div style={{
-              position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
-              background: theme.popoverBg, border: '1px solid rgba(255,215,0,0.45)',
-              borderRadius: '8px', padding: '8px 10px',
-              boxShadow: `0 0 12px rgba(255,215,0,0.15), 0 6px 24px ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.9)'}`,
-              minWidth: '160px', whiteSpace: 'nowrap' as const
-            }}>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                {(() => {
-                  const isHit = bomb.real_score ? bomb.hit : null;
-                  const pillBg = isHit === true ? theme.hitBg : isHit === false ? theme.missBg : 'rgba(255,215,0,0.1)';
-                  const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : `${theme.gold}30`;
-                  const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.gold;
-                  return (
-                    <span style={{
-                      background: pillBg, border: `1px solid ${pillBorder}`,
-                      borderRadius: '4px', padding: '2px 8px',
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      fontSize: '11px'
-                    }}>
-                      <span style={{ fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
-                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
-                      {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
-                    </span>
-                  );
-                })()}
-                <span style={{ fontSize: '10px', color: theme.gold }}>⚡ {bomb.sfavorita}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* DETTAGLIO ESPANSO (identico a prima) */}
-        {isCardExpanded && (
-          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,215,0,0.08)', paddingTop: '10px', animation: 'fadeIn 0.3s ease' }}>
-
-            {/* Pronostico bomba completo con stelle + confidence */}
-            <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
-              <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostico</div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {(() => {
-                  const isHit = bomb.real_score ? bomb.hit : null;
-                  const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : 'rgba(255,215,0,0.08)';
-                  const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : `${theme.gold}30`;
-                  const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.gold;
-                  return (
-                    <div style={{
-                      background: pillBg, border: `1px solid ${pillBorder}`,
-                      borderRadius: '6px', padding: '4px 10px',
-                      display: 'flex', alignItems: 'center', gap: '8px'
-                    }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
-                      <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
-                        <span style={{ color: theme.surface15 }}>★</span>
-                        <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
-                      </span>
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
-                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
-                      {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
-                    </div>
-                  );
-                })()}
-                <span style={{ fontSize: '10px', color: theme.gold }}>⚡ {bomb.sfavorita}</span>
-              </div>
-            </div>
-
-            {/* Quote */}
-            <div style={{
-              display: 'flex', alignItems: 'center', paddingLeft: '8px', paddingTop: '6px',
-              borderTop: '1px solid rgba(255,215,0,0.06)', fontSize: '11px'
-            }}>
-              <div style={{ display: 'flex', gap: '10px', color: theme.textDim, flexWrap: 'wrap' }}>
-                <span>1: <span style={{ color: theme.text }}>{bomb.odds?.['1'] != null ? Number(bomb.odds['1']).toFixed(2) : '-'}</span></span>
-                <span>X: <span style={{ color: theme.text }}>{bomb.odds?.['X'] != null ? Number(bomb.odds['X']).toFixed(2) : '-'}</span></span>
-                <span>2: <span style={{ color: theme.text }}>{bomb.odds?.['2'] != null ? Number(bomb.odds['2']).toFixed(2) : '-'}</span></span>
-                {bomb.odds?.over_25 != null && <>
-                  <span style={{ color: theme.surface15 }}>│</span>
-                  <span>O2.5: <span style={{ color: theme.text }}>{Number(bomb.odds.over_25).toFixed(2)}</span></span>
-                  <span>U2.5: <span style={{ color: theme.text }}>{Number(bomb.odds.under_25).toFixed(2)}</span></span>
-                </>}
-                {bomb.odds?.gg != null && <>
-                  <span style={{ color: theme.surface15 }}>│</span>
-                  <span>GG: <span style={{ color: theme.text }}>{Number(bomb.odds.gg).toFixed(2)}</span></span>
-                  <span>NG: <span style={{ color: theme.text }}>{Number(bomb.odds.ng).toFixed(2)}</span></span>
-                </>}
-              </div>
-            </div>
-
-            {/* Bottoni Commento + Dettaglio */}
-            <div style={{
-              display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
-              borderTop: '1px solid rgba(255,215,0,0.06)'
-            }}>
-              {bomb.comment && (
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-                  onClick={(e) => toggleSection(commentKey, e)}
-                >
-                  <span>💬 Commento</span>
-                  <span style={{ transition: 'transform 0.2s', transform: isCommentOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-                </div>
-              )}
-              {bomb.dettaglio && (
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-                  onClick={(e) => toggleSection(detailKey, e)}
-                >
-                  <span>🔍 Dettaglio</span>
-                  <span style={{ transition: 'transform 0.2s', transform: isDetailOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-                </div>
-              )}
-            </div>
-
-            {/* SEZIONE COMMENTO */}
-            {isCommentOpen && bomb.comment && (
-              <div style={{
-                marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
-                borderTop: `1px solid ${theme.gold}20`,
-                animation: 'fadeIn 0.3s ease', fontSize: '11px', color: theme.textDim, fontStyle: 'italic'
-              }}>
-                💬 {typeof bomb.comment === 'string' ? bomb.comment.replace(/BVS/g, 'MAP') : bomb.comment}
-              </div>
-            )}
-
-            {/* SEZIONE DETTAGLIO */}
-            {isDetailOpen && bomb.dettaglio && (
-              <div style={{
-                marginTop: '8px', paddingLeft: '8px', paddingTop: '8px',
-                borderTop: `1px solid ${theme.gold}20`,
-                animation: 'fadeIn 0.3s ease'
-              }}>
-                <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.gold, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  🔍 Dettaglio Bomba
-                </div>
-                {Object.entries(bomb.dettaglio).map(([key, val]) => {
-                  const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                  return renderDetailBar(val, label);
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // --- RENDER CARD RISULTATO ESATTO ---
   const renderExactScoreCard = (pred: Prediction) => {
@@ -2309,194 +2026,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     );
   };
 
-  // --- RENDER CARD X FACTOR ---
-  const renderXFactorCard = (pred: Prediction) => {
-    const cardKey = `xf-${pred.home}-${pred.away}`;
-    const isCardExpanded = expandedCards.has(cardKey);
-    const tipsKey = `${cardKey}-tips`;
-    const isTipsOpen = expandedSections.has(tipsKey);
-    const conf = pred.confidence_segno || 0;
-    const quotaX = pred.odds?.['X'];
-
-    // Hit/Miss: real_sign === 'X'
-    const isHitXF = pred.real_score ? pred.real_sign === 'X' : null;
-    const barColor = pred.real_score ? (isHitXF ? theme.hitText : theme.missText) : theme.purple;
-
-    return (
-      <div
-        key={cardKey}
-        style={{
-          background: 'linear-gradient(135deg, rgba(188,19,254,0.06), rgba(123,31,162,0.04))',
-          border: '1px solid rgba(188,19,254,0.25)',
-          borderRadius: '10px',
-          padding: isMobile ? '6px 10px' : '8px 14px',
-          marginBottom: '4px',
-          position: 'relative',
-          zIndex: isTipsOpen ? 50 : 'auto' as any
-        }}
-      >
-        {/* BARRA LATERALE viola */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
-          background: barColor, borderRadius: '3px 0 0 3px'
-        }} />
-
-        {/* RIGA COMPATTA */}
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
-          onClick={() => setExpandedCards(prev => {
-            const next = new Set(prev);
-            next.has(cardKey) ? next.delete(cardKey) : next.add(cardKey);
-            return next;
-          })}
-        >
-          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
-
-          {/* Squadre */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
-            <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
-            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
-            <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-          </div>
-
-          {/* Risultato + Freccia */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitXF ? theme.hitText : theme.missText }}>
-                {pred.real_score.replace(':', ' - ')} {isHitXF ? '✅' : '❌'}
-              </span>
-            ) : getMatchStatus(pred) === 'live' ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score || '– : –'}
-                </span>
-                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
-                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
-                </span>}
-              </span>
-            ) : (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
-            )}
-            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </div>
-        </div>
-
-        {/* Badge Tip — ABSOLUTE, come bomb/normal */}
-        <div
-          style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '65px' : '100px',
-            zIndex: 5
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            style={{
-              display: 'inline-flex', alignItems: 'baseline', gap: isMobile ? '3px' : '6px', cursor: 'pointer',
-              background: isTipsOpen ? 'rgba(188,19,254,0.15)' : 'rgba(188,19,254,0.06)',
-              border: `1px solid ${isTipsOpen ? 'rgba(188,19,254,0.4)' : 'rgba(188,19,254,0.18)'}`,
-              borderRadius: '4px', padding: isMobile ? '3px 6px' : '4px 12px',
-              transition: 'all 0.2s', userSelect: 'none' as const
-            }}
-            onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
-          >
-            {!isMobile && <span style={{ fontSize: '9px' }}>🔮</span>}
-            <span style={{ fontSize: '9px', fontWeight: '600', color: theme.purple, letterSpacing: '0.3px' }}>tip</span>
-            <span style={{ fontSize: '9px', color: theme.purple, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </div>
-
-          {/* POPOVER FLOTTANTE */}
-          {isTipsOpen && (
-            <div style={{
-              position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
-              background: theme.popoverBg, border: '1px solid rgba(188,19,254,0.45)',
-              borderRadius: '8px', padding: '8px 10px',
-              boxShadow: `0 0 12px rgba(188,19,254,0.15), 0 6px 24px ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.9)'}`,
-              minWidth: '160px', whiteSpace: 'nowrap' as const
-            }}>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                {(() => {
-                  const pillBg = isHitXF === true ? theme.hitBg : isHitXF === false ? theme.missBg : 'rgba(188,19,254,0.1)';
-                  const pillBorder = isHitXF === true ? theme.hitBorder : isHitXF === false ? theme.missBorder : 'rgba(188,19,254,0.3)';
-                  const nameColor = isHitXF === true ? theme.hitText : isHitXF === false ? theme.missText : theme.purple;
-                  return (
-                    <span style={{
-                      background: pillBg, border: `1px solid ${pillBorder}`,
-                      borderRadius: '4px', padding: '2px 8px',
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      fontSize: '11px'
-                    }}>
-                      <span style={{ fontWeight: '800', color: nameColor }}>X</span>
-                      {quotaX != null && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quotaX).toFixed(2)}</span>}
-                      {isHitXF !== null && <span>{isHitXF ? '✅' : '❌'}</span>}
-                    </span>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* DETTAGLIO ESPANSO */}
-        {isCardExpanded && (
-          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(188,19,254,0.15)', paddingTop: '10px', paddingLeft: '8px', animation: 'fadeIn 0.3s ease' }}>
-            {/* Pronostico X con stelle + confidence + quota */}
-            <div style={{ paddingBottom: '8px', marginBottom: '8px' }}>
-              <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostico</div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {(() => {
-                  const pillBg = isHitXF === true ? theme.hitBgSoft : isHitXF === false ? theme.missBgSoft : 'rgba(188,19,254,0.08)';
-                  const pillBorder = isHitXF === true ? theme.hitBorder : isHitXF === false ? theme.missBorder : 'rgba(188,19,254,0.3)';
-                  const nameColor = isHitXF === true ? theme.hitText : isHitXF === false ? theme.missText : theme.purple;
-                  return (
-                    <div style={{
-                      background: pillBg, border: `1px solid ${pillBorder}`,
-                      borderRadius: '6px', padding: '4px 10px',
-                      display: 'flex', alignItems: 'center', gap: '8px'
-                    }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>X</span>
-                      <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
-                        <span style={{ color: theme.surface15 }}>★</span>
-                        <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${conf}%`, color: theme.purple }}>★</span>
-                      </span>
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
-                      {quotaX != null && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quotaX).toFixed(2)}</span>}
-                      {isHitXF !== null && <span style={{ fontSize: '12px' }}>{isHitXF ? '✅' : '❌'}</span>}
-                    </div>
-                  );
-                })()}
-                {pred.x_factor_n_signals != null && (
-                  <span style={{ fontSize: '10px', color: theme.textDim }}>
-                    Segnali: <span style={{ fontWeight: '700', color: theme.purple }}>{pred.x_factor_n_signals}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-            {/* Quote */}
-            <div style={{
-              display: 'flex', gap: '10px', paddingTop: '6px', flexWrap: 'wrap',
-              borderTop: '1px solid rgba(188,19,254,0.1)', fontSize: '11px', color: theme.textDim
-            }}>
-              <span>1: <span style={{ color: theme.text }}>{pred.odds?.['1'] != null ? Number(pred.odds['1']).toFixed(2) : '-'}</span></span>
-              <span>X: <span style={{ color: theme.purple, fontWeight: '700' }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
-              <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
-              {pred.odds?.over_25 != null && <>
-                <span style={{ color: theme.surface15 }}>│</span>
-                <span>O2.5: <span style={{ color: theme.text }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
-                <span>U2.5: <span style={{ color: theme.text }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
-              </>}
-              {pred.odds?.gg != null && <>
-                <span style={{ color: theme.surface15 }}>│</span>
-                <span>GG: <span style={{ color: theme.text }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
-                <span>NG: <span style={{ color: theme.text }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
-              </>}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // --- RENDER PRINCIPALE ---
   return (
@@ -2869,7 +2398,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
             const hrColor = getHRColor(hr, hrThreshold);
             // HR Partite (almeno 1 pronostico corretto)
-            const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...xFactorPredictions, ...exactScorePredictions, ...bombs]).filter(p => !!p.real_score);
+            const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => !!p.real_score);
             const matchHits = matchesFinished.filter(p => p.hit === true).length;
             const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
             const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : hrColor;
@@ -2903,38 +2432,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             );
           })()}
         </div>
-        {/* 3 capsule HR% per sezione — NASCOSTO (vecchio XF/RE/Bombe) */}
-        {false && activeTab === 'alto_rendimento' && (() => {
-          const esAll = exactScorePredictions.filter(p => !!p.real_score);
-          const esHits = esAll.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
-          const esHR = esAll.length > 0 ? Math.round((esHits / esAll.length) * 1000) / 10 : null;
-          const xfAll = xFactorPredictions.filter(p => !!p.real_score);
-          const xfHits = xfAll.filter(p => p.real_sign === 'X').length;
-          const xfHR = xfAll.length > 0 ? Math.round((xfHits / xfAll.length) * 1000) / 10 : null;
-          const bHR = bombStats.hit_rate;
-          if (esAll.length === 0 && xfAll.length === 0 && bombStats.finished === 0) return null;
-          const pill = (label: string, hr: number | null, color: string, finished: number, threshold: number) => {
-            if (finished === 0) return null;
-            const c = hr !== null ? getHRColor(hr, threshold) : theme.missText;
-            return (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                background: `${color}10`, border: `1px solid ${color}30`,
-                borderRadius: '12px', padding: '4px 12px'
-              }}>
-                <span style={{ fontSize: '10px', color, fontWeight: '700' }}>{label}</span>
-                <span style={{ fontSize: '12px', fontWeight: '900', color: c }}>{hr ?? '—'}%</span>
-              </div>
-            );
-          };
-          return (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
-              {pill('RE', esHR, theme.warning, esAll.length, 18)}
-              {pill('XF', xfHR, '#bc13fe', xfAll.length, 32)}
-              {pill('Bombe', bHR, theme.gold, bombStats.finished, 30)}
-            </div>
-          );
-        })()}
         {/* Capsule HR% per tipo + Rendimento (soglie dinamiche da quote + mercato) */}
         {(activeTab === 'pronostici' || activeTab === 'alto_rendimento') && (() => {
           // Margini per sotto-mercato (dal documento soglie_minime_mercati_betting.md)
@@ -3109,7 +2606,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN DATO */}
-        {!loading && !error && predictions.length === 0 && bombs.length === 0 && (
+        {!loading && !error && predictions.length === 0 && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -3125,7 +2622,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {!loading && !error && statusFilter !== 'tutte' && (
           activeTab === 'pronostici'
             ? filteredPredictions.length === 0 && normalPredictions.length > 0
-            : filteredExactScore.length === 0 && filteredXFactor.length === 0 && filteredBombs.length === 0 && (exactScorePredictions.length > 0 || xFactorPredictions.length > 0 || bombs.length > 0)
+            : filteredExactScore.length === 0 && exactScorePredictions.length > 0
         ) && (
           <div style={{
             textAlign: 'center', padding: '40px 0', color: theme.textDim, fontSize: '13px'
@@ -3149,7 +2646,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* CONTENUTO PRINCIPALE */}
         {!loading && !error && (
           <>
-            {/* ==================== HIGH RISK: RE + XF + Bombe ==================== */}
+            {/* ==================== HIGH RISK: RE ==================== */}
 
             {/* SEZIONE RISULTATO ESATTO */}
             {false && activeTab === 'alto_rendimento' && filteredExactScore.length > 0 && (() => {
@@ -3233,9 +2730,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div
                           style={{
                             padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: 'rgba(255,152,0,0.04)', borderRadius: '8px',
+                            background: isLight ? '#eef7ff' : 'rgba(255,152,0,0.04)', borderRadius: '8px',
                             cursor: 'pointer', userSelect: 'none' as const,
-                            border: '1px solid rgba(255,152,0,0.12)'
+                            border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,152,0,0.12)'
                           }}
                           onClick={() => toggleLeague(key)}
                         >
@@ -3243,7 +2740,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                                 <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                                 <span
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.warning : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
@@ -3270,248 +2767,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               );
             })()}
 
-            {/* SEZIONE X FACTOR */}
-            {false && activeTab === 'alto_rendimento' && filteredXFactor.length > 0 && (() => {
-              const xfFinishedN = filteredXFactor.filter(p => getMatchStatus(p) === 'finished').length;
-              const xfLive = filteredXFactor.filter(p => getMatchStatus(p) === 'live').length;
-              const xfToPlay = filteredXFactor.length - xfFinishedN - xfLive;
-              const xfWithScore = filteredXFactor.filter(p => !!p.real_score);
-              const xfHits = xfWithScore.filter(p => p.real_sign === 'X').length;
-              const xfMisses = xfWithScore.length - xfHits;
-              const xfHR = xfWithScore.length > 0 ? Math.round((xfHits / xfWithScore.length) * 1000) / 10 : null;
-              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
-              return (
-              <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
-                <h2
-                  onClick={() => toggleSection2('sec_x_factor')}
-                  style={{
-                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: theme.purple,
-                    margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
-                    cursor: 'pointer', userSelect: 'none' as const,
-                    background: `${theme.purple}08`, border: `1px solid ${theme.purple}25`,
-                    borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap' as const
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_x_factor') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                  🔮 X Factor
-                  <span style={{
-                    fontSize: '11px', background: `${theme.purple}20`, color: theme.purple,
-                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
-                  }}>
-                    {filteredXFactor.length}
-                  </span>
-                  {xfLive > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {xfLive} LIVE</span>}
-                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
-                    {xfFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {xfFinishedN} {xfFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
-                    {xfToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {xfToPlay} da giocare</span>{sep}</>}
-                    {xfWithScore.length > 0 && <>
-                      <span style={{ color: theme.hitText, fontWeight: '700' }}>✓ {xfHits}</span>{sep}
-                      <span style={{ color: theme.missText, fontWeight: '700' }}>✗ {xfMisses}</span>{sep}
-                      <span style={{
-                        fontWeight: '800',
-                        color: (xfHR ?? 0) >= 25 ? theme.hitText : theme.missText,
-                        background: (xfHR ?? 0) >= 25 ? theme.hitBg : theme.missBg,
-                        padding: '1px 8px', borderRadius: '10px'
-                      }}>{xfHR}%</span>
-                    </>}
-                  </span>
-                </h2>
-                {!collapsedSections.has('sec_x_factor') && (() => {
-                  const grouped: Record<string, Prediction[]> = {};
-                  filteredXFactor.forEach(p => { (grouped[p.league] = grouped[p.league] || []).push(p); });
-                  return Object.entries(grouped).map(([leagueName, preds]) => {
-                    const key = `xf-${leagueName}`;
-                    const isCollapsed = !collapsedLeagues.has(key);
-                    const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
-                    const live = preds.filter(p => getMatchStatus(p) === 'live').length;
-                    const toPlay = preds.length - finished - live;
-                    const withScore = preds.filter(p => !!p.real_score);
-                    const hits = withScore.filter(p => p.real_sign === 'X').length;
-                    const misses = withScore.length - hits;
-                    const verified = hits + misses;
-                    const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
-                    const hrHue = hitRate !== null ? Math.min(130, hitRate * 4) : 0;
-                    const hrColor = hitRate !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
-                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
-                    const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
-                    const statsEls = (
-                      <>
-                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
-                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: `${theme.purple}15`, padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
-                        {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                                                {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
-                        {sep}
-                        <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
-                        {sep}
-                        <span style={{ fontSize: '9px', color: misses > 0 ? theme.missText : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
-                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRate}%</span></>}
-                      </>
-                    );
-                    return (
-                      <div key={key} style={{ marginBottom: '16px' }}>
-                        <div
-                          style={{
-                            padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: 'rgba(188,19,254,0.04)', borderRadius: '8px',
-                            cursor: 'pointer', userSelect: 'none' as const,
-                            border: '1px solid rgba(188,19,254,0.12)'
-                          }}
-                          onClick={() => toggleLeague(key)}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
-                                <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span
-                                  onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
-                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.purple : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
-                                >{leagueName}</span>
-                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
-                              </div>
-                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
-                            </div>
-                            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
-                          </div>
-                          {isMobile && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
-                              {statsEls}
-                            </div>
-                          )}
-                        </div>
-                        {!isCollapsed && preds.map(p => renderXFactorCard(p))}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-              );
-            })()}
 
-            {/* SEZIONE BOMBE */}
-            {false && activeTab === 'alto_rendimento' && filteredBombs.length > 0 && (() => {
-              const bmFinishedN = filteredBombs.filter(b => getMatchStatus(b) === 'finished').length;
-              const bmLive = filteredBombs.filter(b => getMatchStatus(b) === 'live').length;
-              const bmToPlay = filteredBombs.length - bmFinishedN - bmLive;
-              const bmWithScore = filteredBombs.filter(b => !!b.real_score);
-              const bmHits = bmWithScore.filter(b => b.hit === true).length;
-              const bmMisses = bmWithScore.length - bmHits;
-              const bmHR = bmWithScore.length > 0 ? Math.round((bmHits / bmWithScore.length) * 1000) / 10 : null;
-              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
-              return (
-              <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
-                <h2
-                  onClick={() => toggleSection2('sec_bombs')}
-                  style={{
-                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: theme.gold,
-                    margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
-                    cursor: 'pointer', userSelect: 'none' as const,
-                    background: 'rgba(255,215,0,0.04)', border: `1px solid ${theme.gold}25`,
-                    borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap' as const
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_bombs') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                  💣 Bombe del Giorno
-                  <span style={{
-                    fontSize: '11px', background: `${theme.gold}20`, color: theme.gold,
-                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
-                  }}>
-                    {filteredBombs.length}
-                  </span>
-                  {bmLive > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {bmLive} LIVE</span>}
-                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
-                    {bmFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {bmFinishedN} {bmFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
-                    {bmToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {bmToPlay} da giocare</span>{sep}</>}
-                    {bmWithScore.length > 0 && <>
-                      <span style={{ color: theme.hitText, fontWeight: '700' }}>✓ {bmHits}</span>{sep}
-                      <span style={{ color: theme.missText, fontWeight: '700' }}>✗ {bmMisses}</span>{sep}
-                      <span style={{
-                        fontWeight: '800',
-                        color: (bmHR ?? 0) >= 30 ? theme.hitText : theme.missText,
-                        background: (bmHR ?? 0) >= 30 ? theme.hitBg : theme.missBg,
-                        padding: '1px 8px', borderRadius: '10px'
-                      }}>{bmHR}%</span>
-                    </>}
-                  </span>
-                </h2>
-                {!collapsedSections.has('sec_bombs') && (() => {
-                  const groupedBombs: Record<string, Bomb[]> = {};
-                  filteredBombs.forEach(b => { (groupedBombs[b.league] = groupedBombs[b.league] || []).push(b); });
-                  return Object.entries(groupedBombs).map(([leagueName, lBombs]) => {
-                    const key = `bomb-${leagueName}`;
-                    const isCollapsed = !collapsedLeagues.has(key);
-                    const finished = lBombs.filter(b => getMatchStatus(b) === 'finished').length;
-                    const live = lBombs.filter(b => getMatchStatus(b) === 'live').length;
-                    const toPlay = lBombs.length - finished - live;
-                    const hits = lBombs.filter(b => b.hit === true).length;
-                    const misses = lBombs.filter(b => b.hit === false).length;
-                    const verifiedB = hits + misses;
-                    const hitRateB = verifiedB > 0 ? Math.round((hits / verifiedB) * 1000) / 10 : null;
-                    const statusBg = finished === 0 ? theme.surface05 : finished === lBombs.length ? `${theme.success}30` : `${theme.warning}30`;
-                    const statusColor = finished === 0 ? theme.textDim : finished === lBombs.length ? theme.success : theme.warning;
-                    const missRate = verifiedB > 0 ? misses / verifiedB : 0;
-                    const hitColor = hits === 0 ? theme.textDim : theme.success;
-                    const missColor = misses === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
-                    // Colore progressivo hit rate: 0%=rosso, 50%=giallo-verde, 100%=verde
-                    const hrHueB = hitRateB !== null ? Math.min(130, hitRateB * 1.3) : 0;
-                    const hrColorB = hitRateB !== null ? `hsl(${Math.round(hrHueB)}, 85%, 48%)` : theme.textDim;
-                    const hrBgB = hitRateB !== null ? `hsla(${Math.round(hrHueB)}, 85%, 48%, 0.15)` : theme.surface05;
-                    const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
-                    const statsEls = (
-                      <>
-                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
-                        <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {lBombs.length}</span>
-                        {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                                                {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
-                        {sep}
-                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {hits}{!isMobile && ` ${hits === 1 ? 'centrato' : 'centrati'}`}</span>
-                        {sep}
-                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
-                        {verifiedB > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColorB, fontWeight: '800', background: hrBgB, padding: '1px 8px', borderRadius: '10px' }}>{hitRateB}%</span></>}
-                      </>
-                    );
-                    return (
-                      <div key={key} style={{ marginBottom: '16px' }}>
-                        <div
-                          style={{
-                            padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: 'rgba(255,215,0,0.03)', borderRadius: '8px',
-                            cursor: 'pointer', userSelect: 'none' as const,
-                            border: `1px solid ${theme.gold}15`
-                          }}
-                          onClick={() => toggleLeague(key)}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
-                                <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span
-                                  onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
-                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
-                                >{leagueName}</span>
-                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
-                              </div>
-                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
-                            </div>
-                            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
-                          </div>
-                          {isMobile && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
-                              {statsEls}
-                            </div>
-                          )}
-                        </div>
-                        {!isCollapsed && lBombs.map((bomb) => renderBombCard(bomb))}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-              );
-            })()}
 
             {/* SEZIONE PRONOSTICI (raggruppati per lega) */}
             {/* ==================== ALTO RENDIMENTO: Pronostici quota > 2.50 ==================== */}
@@ -3573,9 +2829,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                        background: 'rgba(255, 215, 0, 0.04)', borderRadius: '8px',
+                        background: isLight ? '#eef7ff' : 'rgba(255, 215, 0, 0.04)', borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
-                        border: '1px solid rgba(255, 215, 0, 0.12)'
+                        border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255, 215, 0, 0.12)'
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >
@@ -3583,7 +2839,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                             <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                             <span
                               onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                               style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.gold : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
@@ -3671,9 +2927,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                        background: theme.surfaceSubtle, borderRadius: '8px',
+                        background: isLight ? '#eef7ff' : theme.surfaceSubtle, borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
-                        border: `1px solid ${theme.surface05}`
+                        border: isLight ? '1px solid #e0e2e6' : `1px solid ${theme.surface05}`
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >
@@ -3681,7 +2937,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                             <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                             <span
                               onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                               style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}

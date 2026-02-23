@@ -7,6 +7,7 @@ type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_pr
 
 // --- TEMA (centralizzato) ---
 import { getTheme } from './AppDev/costanti';
+import StemmaImg from './components/StemmaImg';
 const theme = getTheme();
 
 // --- URL BASE STEMMI ---
@@ -1018,11 +1019,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
           {/* Squadre — larghezza naturale, si restringe se serve */}
           <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
-            <img
-              src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt=""
-              style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {pred.home}
             </span>
@@ -1030,11 +1027,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {pred.away}
             </span>
-            <img
-              src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt=""
-              style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
 
           {/* Risultato + Freccia — spinto a destra */}
@@ -2789,7 +2782,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s'
                       }}
                     >
-                      {leagueLogoUrl && <img src={leagueLogoUrl} alt="" style={{ width: '22px', height: '22px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                      {leagueLogoUrl && <StemmaImg src={leagueLogoUrl} size={22} />}
                       {countryCode && <img src={`https://flagcdn.com/w40/${countryCode}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                       <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text, flex: 1 }}>{league}</span>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '10px' }}>
@@ -2867,13 +2860,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               })()}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                              <img src={getStemmaUrl(m.home_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              <img src={getStemmaUrl(m.home_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                               <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text }}>{m.home}</span>
                               <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: '600' }}>vs</span>
                               <span style={{ fontSize: '13px', fontWeight: '800', color: theme.text }}>{m.away}</span>
-                              <img src={getStemmaUrl(m.away_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              <img src={getStemmaUrl(m.away_mongo_id, m.league)} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             </div>
                           </div>
 
@@ -3417,9 +3408,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div
                           style={{
                             padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: 'rgba(255,152,0,0.04)', borderRadius: '8px',
+                            background: isLight ? '#eef7ff' : 'rgba(255,152,0,0.04)', borderRadius: '8px',
                             cursor: 'pointer', userSelect: 'none' as const,
-                            border: '1px solid rgba(255,152,0,0.12)'
+                            border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,152,0,0.12)'
                           }}
                           onClick={() => toggleLeague(key)}
                         >
@@ -3427,7 +3418,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                                 <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                                 <span
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? '#ff9800' : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
@@ -3536,9 +3527,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div
                           style={{
                             padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: 'rgba(188,19,254,0.04)', borderRadius: '8px',
+                            background: isLight ? '#eef7ff' : 'rgba(188,19,254,0.04)', borderRadius: '8px',
                             cursor: 'pointer', userSelect: 'none' as const,
-                            border: '1px solid rgba(188,19,254,0.12)'
+                            border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(188,19,254,0.12)'
                           }}
                           onClick={() => toggleLeague(key)}
                         >
@@ -3546,7 +3537,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                                 <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                                 <span
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.purple : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
@@ -3660,9 +3651,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div
                           style={{
                             padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: 'rgba(255,215,0,0.03)', borderRadius: '8px',
+                            background: isLight ? '#eef7ff' : 'rgba(255,215,0,0.03)', borderRadius: '8px',
                             cursor: 'pointer', userSelect: 'none' as const,
-                            border: `1px solid ${theme.gold}15`
+                            border: isLight ? '1px solid #e0e2e6' : `1px solid ${theme.gold}15`
                           }}
                           onClick={() => toggleLeague(key)}
                         >
@@ -3670,7 +3661,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                                 <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                                 <span
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
@@ -3753,9 +3744,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                        background: 'rgba(255,255,255,0.03)', borderRadius: '8px',
+                        background: isLight ? '#eef7ff' : 'rgba(255,255,255,0.03)', borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
-                        border: '1px solid rgba(255,255,255,0.06)'
+                        border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.06)'
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >
@@ -3763,7 +3754,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
                             <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
                             <span
                               onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                               style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}

@@ -851,9 +851,7 @@ export default function CupAnimatedField({
                 {/* Casa */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                   {selectedMatch?.home_mongo_id && (
-                    <img src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)} alt=""
-                      style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   )}
                   <span style={{
                     fontSize: '19px', fontWeight: '900', color: 'white', textTransform: 'uppercase',
@@ -863,9 +861,7 @@ export default function CupAnimatedField({
                 {/* Ospite */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                   {selectedMatch?.away_mongo_id && (
-                    <img src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)} alt=""
-                      style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   )}
                   <span style={{
                     fontSize: '19px', fontWeight: '900', color: 'white', textTransform: 'uppercase',
@@ -922,9 +918,7 @@ export default function CupAnimatedField({
                 }}>
                   {homeTeam}
                   {selectedMatch?.home_mongo_id && (
-                    <img src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)} alt=""
-                      style={{ width: '24px', height: '24px', objectFit: 'contain' }}
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={getStemmaUrl(cupId, selectedMatch.home_mongo_id)} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   )}
                 </div>
                 <div style={{
@@ -958,9 +952,7 @@ export default function CupAnimatedField({
                   display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px'
                 }}>
                   {selectedMatch?.away_mongo_id && (
-                    <img src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)} alt=""
-                      style={{ width: '24px', height: '24px', objectFit: 'contain' }}
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={getStemmaUrl(cupId, selectedMatch.away_mongo_id)} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   )}
                   {awayTeam}
                 </div>

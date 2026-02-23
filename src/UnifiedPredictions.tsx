@@ -3049,11 +3049,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   </div>
                   {finLegendOpen && (
                     <div style={{ marginTop: '8px', padding: '8px 10px', background: '#ffffff08', borderRadius: '8px', fontSize: '10px', color: '#999', lineHeight: '1.6' }}>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Yield</span> — Profitto per scommessa. +10% = guadagni 0.10 per ogni 1 puntato</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>P/L</span> — Profit/Loss in unita (1u = 1 scommessa). +3.2u = hai vinto 3.2 unita</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>ROI</span> — Return on Investment. Uguale al Yield con stake fisso</div>
-                      <div><span style={{ color: '#4fc3f7', fontWeight: '700' }}>Q.Media</span> — Quota media dei pronostici verificati</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Edge</span> — Vantaggio medio vs bookmaker. Positivo = il modello batte le quote</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Yield</span> — Rendimento medio per pronostico. +10% = ogni pronostico rende in media il 10% della puntata</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>P/L</span> — Guadagno o perdita totale. +3.2 = hai guadagnato 3.2 unit&agrave; in tutto (1 unit&agrave; = la tua puntata)</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>ROI</span> — Ritorno sull'investimento totale in percentuale</div>
+                      <div><span style={{ color: '#4fc3f7', fontWeight: '700' }}>Q.Media</span> — La quota media su cui il sistema ha pronosticato</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Edge</span> — Quanto il nostro sistema &egrave; pi&ugrave; preciso delle quote dei bookmaker. Positivo = troviamo valore</div>
                     </div>
                   )}
                   {financeOpen && (

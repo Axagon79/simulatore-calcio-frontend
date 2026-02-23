@@ -995,28 +995,32 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
 
           {/* ─── Serie Temporale ──────────────────────────────────────────── */}
           {data.serie_temporale.length > 0 && (() => {
-            const showProfit = !isPronostici;
-            const maxProfit = showProfit ? Math.max(...data.serie_temporale.map(d => Math.abs(d.profit)), 1) : 0;
+            const showYield = !isPronostici;
+            const yieldData = showYield ? data.serie_temporale.map(d => ({
+              ...d,
+              yield: d.total > 0 ? Math.round((d.profit / d.total) * 1000) / 10 : 0,
+            })) : [];
+            const maxYield = showYield ? Math.max(...yieldData.map(d => Math.abs(d.yield)), 1) : 0;
             return (
               <div style={card}>
                 <div style={sectionTitle}>
-                  {showProfit ? 'Profitto giornaliero (flat stake 1u)' : 'Hit Rate giornaliero (% pronostici centrati)'}
+                  {showYield ? 'Yield giornaliero (rendimento % per pronostico)' : 'Hit Rate giornaliero (% pronostici centrati)'}
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  {showProfit ? (
-                    /* ── Grafico profitto: barre sopra/sotto la linea zero ── */
+                  {showYield ? (
+                    /* ── Grafico Yield%: barre sopra/sotto la linea zero ── */
                     <div style={{ position: 'relative', minHeight: '130px', padding: '8px 0' }}>
                       <div style={{ display: 'flex', gap: '3px', alignItems: 'center', height: '130px' }}>
-                        {data.serie_temporale.map(day => {
-                          const isPositive = day.profit >= 0;
-                          const barH = Math.max((Math.abs(day.profit) / maxProfit) * 55, 3);
+                        {yieldData.map(day => {
+                          const isPositive = day.yield >= 0;
+                          const barH = Math.max((Math.abs(day.yield) / maxYield) * 55, 3);
                           const color = isPositive ? C.green : C.red;
                           return (
                             <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px', height: '100%', justifyContent: 'center' }}>
-                              {/* Metà superiore (profitto positivo) */}
+                              {/* Metà superiore (yield positivo) */}
                               <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <div style={{ fontSize: '0.55em', color, marginBottom: '2px' }}>
-                                  {isPositive ? `+${day.profit.toFixed(1)}` : ''}
+                                  {isPositive ? `+${day.yield}%` : ''}
                                 </div>
                                 {isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
@@ -1026,7 +1030,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                               </div>
                               {/* Linea zero */}
                               <div style={{ width: '100%', height: '1px', background: C.textMuted, opacity: 0.3 }} />
-                              {/* Metà inferiore (profitto negativo) */}
+                              {/* Metà inferiore (yield negativo) */}
                               <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center' }}>
                                 {!isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
@@ -1034,7 +1038,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                                   borderRadius: '0 0 3px 3px',
                                 }} />}
                                 <div style={{ fontSize: '0.55em', color, marginTop: '2px' }}>
-                                  {!isPositive ? day.profit.toFixed(1) : ''}
+                                  {!isPositive ? `${day.yield}%` : ''}
                                 </div>
                               </div>
                               <div style={{ fontSize: '0.5em', color: C.textMuted, whiteSpace: 'nowrap' }}>

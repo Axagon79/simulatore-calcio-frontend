@@ -519,8 +519,8 @@ export default function BarraLaterale({
           </div>
       )}
 
-      {/* Widget Pronostici del Giorno — solo admin */}
-      {isAdmin && sidebarPredictions.length > 0 && (
+      {/* Widget Pronostici del Giorno */}
+      {sidebarPredictions.length > 0 && (
         <div style={{ marginTop: '15px' }}>
           {sidebarPredictions.map((pred, idx) => {
             const mainPronostico = pred.pronostici?.[0];
@@ -531,7 +531,7 @@ export default function BarraLaterale({
             return (
               <div
                 key={idx}
-                onClick={() => setActiveLeague('PREDICTIONS')}
+                onClick={() => window.location.href = '/best-picks'}
                 style={{
                   ...styles.card,
                   padding: '13px 12px',

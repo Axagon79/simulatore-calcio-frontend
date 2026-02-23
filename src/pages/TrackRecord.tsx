@@ -4,11 +4,19 @@ const API_BASE = window.location.hostname === 'localhost'
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
   : 'https://api-6b34yfzjia-uc.a.run.app';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface HitRateData {
   total: number;
   hits: number;
   misses: number;
   hit_rate: number | null;
+}
+
+interface SectionData extends HitRateData {
+  roi: number | null;
+  profit: number;
+  avg_quota: number | null;
 }
 
 interface QuotaBandData extends HitRateData {
@@ -32,8 +40,8 @@ interface TrackRecordResponse {
   periodo: { from: string; to: string };
   globale: HitRateData;
   split_sezione: {
-    pronostici: HitRateData;
-    alto_rendimento: HitRateData;
+    pronostici: SectionData;
+    alto_rendimento: SectionData;
   };
   breakdown_mercato: Record<string, HitRateData>;
   breakdown_campionato: Record<string, HitRateData>;
@@ -50,48 +58,252 @@ interface TrackRecordProps {
   onBack: () => void;
 }
 
-// Helper: formatta hit rate con colore
-function HitRateBadge({ data }: { data: HitRateData }) {
-  if (!data || data.total === 0) return <span style={{ color: '#666' }}>—</span>;
-  const rate = data.hit_rate ?? 0;
-  const color = rate >= 65 ? '#00ff88' : rate >= 50 ? '#ffaa00' : '#ff4466';
-  return (
-    <span style={{ color, fontWeight: 'bold' }}>
-      {rate}% <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85em' }}>({data.hits}/{data.total})</span>
-    </span>
-  );
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const MARKET_LABELS: Record<string, string> = {
+  'SEGNO': '1X2',
+  'DOPPIA_CHANCE': 'Doppia Chance',
+  'OVER_UNDER': 'Over/Under',
+  'GG_NG': 'GG/NG',
+};
+
+const C = {
+  bg: '#060a14',
+  cardBg: 'rgba(15, 23, 42, 0.55)',
+  cardBorder: 'rgba(148, 163, 184, 0.07)',
+  cyan: '#06b6d4',
+  cyanDim: 'rgba(6, 182, 212, 0.12)',
+  cyanBorder: 'rgba(6, 182, 212, 0.25)',
+  amber: '#f59e0b',
+  amberDim: 'rgba(245, 158, 11, 0.10)',
+  amberBorder: 'rgba(245, 158, 11, 0.25)',
+  green: '#10b981',
+  red: '#ef4444',
+  text: '#f1f5f9',
+  textSec: '#94a3b8',
+  textMuted: '#475569',
+  divider: 'rgba(148, 163, 184, 0.06)',
+  barBg: 'rgba(148, 163, 184, 0.06)',
+} as const;
+
+const QUOTA_BANDS = [
+  { label: '1.01-1.20', min: '1.01', max: '1.20' },
+  { label: '1.21-1.40', min: '1.21', max: '1.40' },
+  { label: '1.41-1.60', min: '1.41', max: '1.60' },
+  { label: '1.61-1.80', min: '1.61', max: '1.80' },
+  { label: '1.81-2.00', min: '1.81', max: '2.00' },
+  { label: '2.01-2.20', min: '2.01', max: '2.20' },
+  { label: '2.21-2.50', min: '2.21', max: '2.50' },
+  { label: '2.51-3.00', min: '2.51', max: '3.00' },
+  { label: '3.01-3.50', min: '3.01', max: '3.50' },
+  { label: '3.51-4.00', min: '3.51', max: '4.00' },
+  { label: '4.01-5.00', min: '4.01', max: '5.00' },
+  { label: '5.00+', min: '5.01', max: '' },
+] as const;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function rateColor(rate: number) {
+  if (rate >= 65) return C.green;
+  if (rate >= 50) return C.amber;
+  return C.red;
 }
 
-// Helper: barra visuale hit rate
-function HitRateBar({ data }: { data: HitRateData }) {
-  if (!data || data.total === 0) return null;
-  const rate = data.hit_rate ?? 0;
-  const color = rate >= 65 ? '#00ff88' : rate >= 50 ? '#ffaa00' : '#ff4466';
+function profitColor(val: number) {
+  return val >= 0 ? C.green : C.red;
+}
+
+function formatProfit(val: number) {
+  return `${val >= 0 ? '+' : ''}${val.toFixed(1)}u`;
+}
+
+function formatRoi(val: number | null) {
+  if (val == null) return '—';
+  return `${val > 0 ? '+' : ''}${val}%`;
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function ProgressBar({ rate, height = 6, showLabel = false }: { rate: number; height?: number; showLabel?: boolean }) {
+  const color = rateColor(rate);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-      <div style={{ flex: 1, height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-        <div style={{ width: `${rate}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width 0.5s ease' }} />
+      <div style={{
+        flex: 1, height, background: C.barBg, borderRadius: height / 2, overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${rate}%`, height: '100%', borderRadius: height / 2,
+          background: `linear-gradient(90deg, ${color}88, ${color})`,
+          transition: 'width 0.6s ease',
+        }} />
       </div>
-      <span style={{ color, fontWeight: 'bold', fontSize: '0.9em', minWidth: '45px', textAlign: 'right' }}>{rate}%</span>
+      {showLabel && (
+        <span style={{ color, fontWeight: 600, fontSize: '0.85em', minWidth: '42px', textAlign: 'right' }}>
+          {rate}%
+        </span>
+      )}
     </div>
   );
 }
 
-// Interfaccia insight
+function KpiCard({ label, value, color, sub }: { label: string; value: string; color: string; sub?: string }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '12px 8px' }}>
+      <div style={{ fontSize: '1.5em', fontWeight: 700, color, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: '0.72em', color: C.textMuted, marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {label}
+      </div>
+      {sub && <div style={{ fontSize: '0.7em', color: C.textMuted, marginTop: '2px' }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ─── Insights Generator ──────────────────────────────────────────────────────
+
 interface Insight {
-  icon: string;
   title: string;
   text: string;
   type: 'positive' | 'negative' | 'neutral' | 'warning';
 }
 
-// Nomi mercato leggibili
-const MARKET_LABELS: Record<string, string> = {
-  'SEGNO': '1X2 (Segno)',
-  'DOPPIA_CHANCE': 'Doppia Chance',
-  'OVER_UNDER': 'Over/Under',
-  'GG_NG': 'Goal/NoGoal',
-};
+function generateInsights(data: TrackRecordResponse): Record<string, Insight[]> {
+  const result: Record<string, Insight[]> = { panoramica: [], puntiForza: [], miglioramento: [], consigli: [] };
+  const ml = MARKET_LABELS;
+
+  // Panoramica
+  const hr = data.globale.hit_rate ?? 0;
+  result.panoramica.push({
+    title: `Hit rate globale: ${hr}%`,
+    text: `Su ${data.globale.total} pronostici, ${data.globale.hits} azzeccati e ${data.globale.misses} sbagliati.`,
+    type: hr >= 65 ? 'positive' : hr >= 55 ? 'neutral' : 'negative',
+  });
+
+  if (data.serie_temporale.length >= 3) {
+    const last3 = data.serie_temporale.slice(-3);
+    const avgRecent = last3.reduce((s, d) => s + (d.hit_rate ?? 0), 0) / last3.length;
+    const diff = Math.round((avgRecent - hr) * 10) / 10;
+    if (Math.abs(diff) >= 2) {
+      result.panoramica.push({
+        title: diff > 0 ? 'Trend in crescita' : 'Trend in calo',
+        text: `Media ultimi 3 giorni: ${Math.round(avgRecent)}% (${diff > 0 ? '+' : ''}${diff} vs media periodo).`,
+        type: diff > 0 ? 'positive' : 'warning',
+      });
+    }
+  }
+
+  if (data.globale.total < 50) {
+    result.panoramica.push({
+      title: 'Campione ridotto',
+      text: `Solo ${data.globale.total} pronostici nel periodo. I risultati potrebbero non essere statisticamente affidabili.`,
+      type: 'warning',
+    });
+  }
+
+  // Helpers
+  type Entry = [string, HitRateData];
+  const findBest = (obj: Record<string, HitRateData>, min = 10): Entry | null => {
+    const e = Object.entries(obj).filter(([, s]) => s.total >= min && s.hit_rate != null);
+    return e.length ? e.reduce((a, b) => ((a[1].hit_rate ?? 0) >= (b[1].hit_rate ?? 0) ? a : b)) : null;
+  };
+  const findWorst = (obj: Record<string, HitRateData>, min = 10): Entry | null => {
+    const e = Object.entries(obj).filter(([, s]) => s.total >= min && s.hit_rate != null);
+    return e.length ? e.reduce((a, b) => ((a[1].hit_rate ?? 0) <= (b[1].hit_rate ?? 0) ? a : b)) : null;
+  };
+
+  const bestMarket = findBest(data.breakdown_mercato);
+  if (bestMarket) {
+    result.puntiForza.push({
+      title: `Miglior mercato: ${ml[bestMarket[0]] || bestMarket[0]}`,
+      text: `${bestMarket[1].hit_rate}% su ${bestMarket[1].total} pronostici.`,
+      type: 'positive',
+    });
+  }
+
+  const bestLeague = findBest(data.breakdown_campionato);
+  if (bestLeague) {
+    result.puntiForza.push({
+      title: `Miglior campionato: ${bestLeague[0]}`,
+      text: `${bestLeague[1].hit_rate}% su ${bestLeague[1].total} pronostici.`,
+      type: 'positive',
+    });
+  }
+
+  if (data.breakdown_quota) {
+    const qe = Object.entries(data.breakdown_quota)
+      .filter(([b, s]) => b !== 'N/D' && s.total >= 5 && s.roi != null) as [string, QuotaBandData][];
+    if (qe.length) {
+      const best = qe.reduce((a, b) => ((a[1].roi ?? -999) >= (b[1].roi ?? -999) ? a : b));
+      if ((best[1].roi ?? 0) > 0) {
+        result.puntiForza.push({
+          title: `Fascia pi\u00F9 redditizia: ${best[0]}`,
+          text: `ROI ${formatRoi(best[1].roi)} | Profitto ${formatProfit(best[1].profit)} | HR ${best[1].hit_rate}% su ${best[1].total}`,
+          type: 'positive',
+        });
+      }
+    }
+  }
+
+  const worstMarket = findWorst(data.breakdown_mercato);
+  if (worstMarket && (worstMarket[1].hit_rate ?? 100) < 60) {
+    result.miglioramento.push({
+      title: `Mercato debole: ${ml[worstMarket[0]] || worstMarket[0]}`,
+      text: `${worstMarket[1].hit_rate}% su ${worstMarket[1].total} pronostici.`,
+      type: 'warning',
+    });
+  }
+
+  const worstLeague = findWorst(data.breakdown_campionato);
+  if (worstLeague && (worstLeague[1].hit_rate ?? 100) < 55) {
+    result.miglioramento.push({
+      title: `Campionato critico: ${worstLeague[0]}`,
+      text: `${worstLeague[1].hit_rate}% su ${worstLeague[1].total} pronostici.`,
+      type: 'negative',
+    });
+  }
+
+  const critical = Object.entries(data.breakdown_campionato).filter(([, s]) => s.total >= 10 && (s.hit_rate ?? 100) < 50);
+  if (critical.length) {
+    result.miglioramento.push({
+      title: `${critical.length} campionat${critical.length > 1 ? 'i' : 'o'} sotto il 50%`,
+      text: critical.map(([n, s]) => `${n} (${s.hit_rate}%)`).join(', '),
+      type: 'negative',
+    });
+  }
+
+  if (bestMarket && worstMarket && bestMarket[0] !== worstMarket[0]) {
+    const gap = (bestMarket[1].hit_rate ?? 0) - (worstMarket[1].hit_rate ?? 0);
+    if (gap >= 10) {
+      result.consigli.push({
+        title: 'Concentrati sul mercato migliore',
+        text: `${ml[bestMarket[0]] || bestMarket[0]} ha ${gap}pp in pi\u00F9 rispetto a ${ml[worstMarket[0]] || worstMarket[0]}.`,
+        type: 'neutral',
+      });
+    }
+  }
+
+  if (data.quota_stats?.total_con_quota > 0) {
+    const roi = data.quota_stats.roi_globale ?? 0;
+    if (roi > 0) {
+      result.consigli.push({
+        title: 'ROI positivo',
+        text: `ROI +${data.quota_stats.roi_globale}% con profitto ${formatProfit(data.quota_stats.profit_globale)}. Il sistema genera valore.`,
+        type: 'positive',
+      });
+    } else if (roi < -5) {
+      result.consigli.push({
+        title: 'ROI negativo',
+        text: `ROI ${data.quota_stats.roi_globale}% con perdita di ${data.quota_stats.profit_globale}\u20AC. Rivedi le fasce di quota.`,
+        type: 'negative',
+      });
+    }
+  }
+
+  return result;
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function TrackRecord({ onBack }: TrackRecordProps) {
   const [data, setData] = useState<TrackRecordResponse | null>(null);
@@ -112,43 +324,18 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   const [debouncedQuotaMax, setDebouncedQuotaMax] = useState('');
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const QUOTA_BANDS = [
-    { label: '1.01-1.20', min: '1.01', max: '1.20' },
-    { label: '1.21-1.40', min: '1.21', max: '1.40' },
-    { label: '1.41-1.60', min: '1.41', max: '1.60' },
-    { label: '1.61-1.80', min: '1.61', max: '1.80' },
-    { label: '1.81-2.00', min: '1.81', max: '2.00' },
-    { label: '2.01-2.20', min: '2.01', max: '2.20' },
-    { label: '2.21-2.50', min: '2.21', max: '2.50' },
-    { label: '2.51-3.00', min: '2.51', max: '3.00' },
-    { label: '3.01-3.50', min: '3.01', max: '3.50' },
-    { label: '3.51-4.00', min: '3.51', max: '4.00' },
-    { label: '4.01-5.00', min: '4.01', max: '5.00' },
-    { label: '5.00+', min: '5.01', max: '' },
-  ] as const;
-
   const isMobile = window.innerWidth < 768;
 
   const getDateRange = useCallback(() => {
     const to = new Date().toISOString().split('T')[0];
-    let from: string;
     const now = new Date();
-    if (periodo === '7d') {
-      now.setDate(now.getDate() - 7);
-      from = now.toISOString().split('T')[0];
-    } else if (periodo === '30d') {
-      now.setDate(now.getDate() - 30);
-      from = now.toISOString().split('T')[0];
-    } else if (periodo === '90d') {
-      now.setDate(now.getDate() - 90);
-      from = now.toISOString().split('T')[0];
-    } else {
-      from = '2024-01-01';
-    }
-    return { from, to };
+    if (periodo === '7d') now.setDate(now.getDate() - 7);
+    else if (periodo === '30d') now.setDate(now.getDate() - 30);
+    else if (periodo === '90d') now.setDate(now.getDate() - 90);
+    return { from: periodo === 'tutto' ? '2024-01-01' : now.toISOString().split('T')[0], to };
   }, [periodo]);
 
-  // Debounce per input quota manuali (500ms)
+  // Debounce quota inputs
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -158,14 +345,12 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, [quotaMin, quotaMax]);
 
-  // Reset filtro quota quando cambiano mercato/lega/periodo
   useEffect(() => {
     setSelectedBand('');
     setQuotaMin('');
     setQuotaMax('');
   }, [filtroMarket, filtroLeague, periodo]);
 
-  // Calcola min/max effettivi: pillola ha priorità, altrimenti input manuali
   const activeBand = QUOTA_BANDS.find(b => b.label === selectedBand);
   const effectiveMin = activeBand ? activeBand.min : debouncedQuotaMin;
   const effectiveMax = activeBand ? activeBand.max : debouncedQuotaMax;
@@ -188,14 +373,13 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
         const json = await res.json();
         if (!json.success) throw new Error('Risposta non valida');
         setData(json);
-        // Aggiorna liste disponibili dalla risposta senza filtri
+
         if (!filtroLeague && json.breakdown_campionato) {
           setAvailableLeagues(Object.keys(json.breakdown_campionato).sort());
         }
         if (!filtroMarket && json.breakdown_mercato) {
           setAvailableMarkets(Object.keys(json.breakdown_mercato));
         }
-        // Salva conteggi fasce quando nessun filtro quota è attivo
         if (!effectiveMin && !effectiveMax && json.breakdown_quota) {
           const counts: Record<string, number> = {};
           for (const [band, stats] of Object.entries(json.breakdown_quota)) {
@@ -212,550 +396,396 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
     fetchData();
   }, [periodo, filtroLeague, filtroMarket, filtroSezione, selectedBand, effectiveMin, effectiveMax, getDateRange]);
 
-  // Stile container principale
-  const containerStyle: React.CSSProperties = {
-    minHeight: '100vh',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box',
-    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a1628 100%)',
-    color: '#e0e0e0',
-    padding: isMobile ? '16px' : '32px',
-    fontFamily: "'Inter', 'Segoe UI', sans-serif",
-  };
+  const insights = useMemo(() => data ? generateInsights(data) : null, [data]);
 
-  const cardStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.05)',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '16px',
-    padding: isMobile ? '16px' : '24px',
-    marginBottom: '20px',
-    width: '100%',
-    boxSizing: 'border-box',
-  };
+  // ─── Styles ──────────────────────────────────────────────────────────────
 
-  const headerStyle: React.CSSProperties = {
-    fontSize: isMobile ? '1.1em' : '1.3em',
-    fontWeight: 'bold',
+  const card: React.CSSProperties = {
+    background: C.cardBg,
+    backdropFilter: 'blur(12px)',
+    border: `1px solid ${C.cardBorder}`,
+    borderRadius: '14px',
+    padding: isMobile ? '16px' : '22px',
     marginBottom: '16px',
-    color: '#fff',
   };
 
-  // Genera insights dall'oggetto data corrente
-  const insights = useMemo(() => {
-    if (!data) return null;
+  const sectionTitle: React.CSSProperties = {
+    fontSize: '0.78em',
+    fontWeight: 600,
+    color: C.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: '14px',
+  };
 
-    const result: Record<string, Insight[]> = {
-      panoramica: [],
-      puntiForza: [],
-      miglioramento: [],
-      consigli: [],
-    };
+  // ─── Sezione attiva ────────────────────────────────────────────────────
 
-    const ml = MARKET_LABELS;
+  const isPronostici = filtroSezione === 'pronostici';
+  const accent = isPronostici ? C.cyan : C.amber;
 
-    // --- PANORAMICA ---
-    const hr = data.globale.hit_rate ?? 0;
-    const hrClass = hr >= 65 ? 'ottimo' : hr >= 55 ? 'discreto' : 'critico';
-    const hrColor = hr >= 65 ? 'positivo' : hr >= 55 ? 'neutro' : 'negativo';
-    result.panoramica.push({
-      icon: hr >= 65 ? '\u{2705}' : hr >= 55 ? '\u{1F7E1}' : '\u{1F534}',
-      title: `Hit rate globale: ${hr}%`,
-      text: `Su ${data.globale.total} pronostici analizzati, ${data.globale.hits} sono stati azzeccati e ${data.globale.misses} sbagliati. Il rendimento complessivo è ${hrClass}.`,
-      type: hrColor === 'positivo' ? 'positive' : hrColor === 'neutro' ? 'neutral' : 'negative',
-    });
+  const proData = data?.split_sezione?.pronostici;
+  const arData = data?.split_sezione?.alto_rendimento;
 
-    // Trend ultimi giorni
-    if (data.serie_temporale.length >= 3) {
-      const last3 = data.serie_temporale.slice(-3);
-      const avgRecent = last3.reduce((s, d) => s + (d.hit_rate ?? 0), 0) / last3.length;
-      const diff = Math.round((avgRecent - hr) * 10) / 10;
-      if (Math.abs(diff) >= 2) {
-        result.panoramica.push({
-          icon: diff > 0 ? '\u{1F4C8}' : '\u{1F4C9}',
-          title: diff > 0 ? 'Trend in crescita' : 'Trend in calo',
-          text: `Negli ultimi 3 giorni la media hit rate è ${Math.round(avgRecent)}% (${diff > 0 ? '+' : ''}${diff} punti rispetto alla media del periodo). ${diff > 0 ? 'Il sistema sta migliorando.' : 'Potrebbe essere utile rivedere i parametri.'}`,
-          type: diff > 0 ? 'positive' : 'warning',
-        });
-      }
-    }
-
-    // Volume
-    if (data.globale.total < 50) {
-      result.panoramica.push({
-        icon: '\u{26A0}\u{FE0F}',
-        title: 'Campione ridotto',
-        text: `Solo ${data.globale.total} pronostici nel periodo selezionato. I risultati statistici potrebbero non essere ancora affidabili. Considera di estendere il periodo di analisi.`,
-        type: 'warning',
-      });
-    }
-
-    // --- HELPER: trova best/worst ---
-    type Entry = [string, HitRateData];
-    const findBest = (obj: Record<string, HitRateData>, minSample = 10): Entry | null => {
-      const entries = Object.entries(obj).filter(([, s]) => s.total >= minSample && s.hit_rate != null);
-      if (entries.length === 0) return null;
-      return entries.reduce((a, b) => ((a[1].hit_rate ?? 0) >= (b[1].hit_rate ?? 0) ? a : b));
-    };
-    const findWorst = (obj: Record<string, HitRateData>, minSample = 10): Entry | null => {
-      const entries = Object.entries(obj).filter(([, s]) => s.total >= minSample && s.hit_rate != null);
-      if (entries.length === 0) return null;
-      return entries.reduce((a, b) => ((a[1].hit_rate ?? 0) <= (b[1].hit_rate ?? 0) ? a : b));
-    };
-
-    // --- PUNTI DI FORZA ---
-    const bestMarket = findBest(data.breakdown_mercato);
-    if (bestMarket) {
-      result.puntiForza.push({
-        icon: '\u{1F3AF}',
-        title: `Miglior mercato: ${ml[bestMarket[0]] || bestMarket[0]}`,
-        text: `Hit rate del ${bestMarket[1].hit_rate}% su ${bestMarket[1].total} pronostici. Questo è il mercato dove il sistema performa meglio.`,
-        type: 'positive',
-      });
-    }
-
-    const bestLeague = findBest(data.breakdown_campionato);
-    if (bestLeague) {
-      result.puntiForza.push({
-        icon: '\u{1F3C6}',
-        title: `Miglior campionato: ${bestLeague[0]}`,
-        text: `Hit rate del ${bestLeague[1].hit_rate}% su ${bestLeague[1].total} pronostici. Campionato dove i pronostici sono più affidabili.`,
-        type: 'positive',
-      });
-    }
-
-    // Miglior fascia quota (per ROI)
-    if (data.breakdown_quota) {
-      const quotaEntries = Object.entries(data.breakdown_quota)
-        .filter(([b, s]) => b !== 'N/D' && s.total >= 5 && s.roi != null) as [string, QuotaBandData][];
-      if (quotaEntries.length > 0) {
-        const bestQuota = quotaEntries.reduce((a, b) => ((a[1].roi ?? -999) >= (b[1].roi ?? -999) ? a : b));
-        if ((bestQuota[1].roi ?? 0) > 0) {
-          result.puntiForza.push({
-            icon: '\u{1F4B0}',
-            title: `Fascia più redditizia: ${bestQuota[0]}`,
-            text: `ROI del ${bestQuota[1].roi! > 0 ? '+' : ''}${bestQuota[1].roi}% con profitto di ${bestQuota[1].profit >= 0 ? '+' : ''}${bestQuota[1].profit}\u20AC (base 1\u20AC/scommessa). Hit rate: ${bestQuota[1].hit_rate}% su ${bestQuota[1].total} pronostici.`,
-            type: 'positive',
-          });
-        }
-      }
-    }
-
-    // Miglior confidence
-    const bestConf = findBest(data.breakdown_confidence, 5);
-    if (bestConf) {
-      result.puntiForza.push({
-        icon: '\u{1F4AA}',
-        title: `Miglior fascia confidence: ${bestConf[0]}`,
-        text: `I pronostici con confidence ${bestConf[0]} hanno hit rate del ${bestConf[1].hit_rate}% su ${bestConf[1].total} campioni. La confidence del sistema è ben calibrata in questa fascia.`,
-        type: 'positive',
-      });
-    }
-
-    // --- AREE DI MIGLIORAMENTO ---
-    const worstMarket = findWorst(data.breakdown_mercato);
-    if (worstMarket && (worstMarket[1].hit_rate ?? 100) < 60) {
-      result.miglioramento.push({
-        icon: '\u{26A0}\u{FE0F}',
-        title: `Mercato più debole: ${ml[worstMarket[0]] || worstMarket[0]}`,
-        text: `Hit rate del ${worstMarket[1].hit_rate}% su ${worstMarket[1].total} pronostici. Questo mercato abbassa la media complessiva.`,
-        type: 'warning',
-      });
-    }
-
-    const worstLeague = findWorst(data.breakdown_campionato);
-    if (worstLeague && (worstLeague[1].hit_rate ?? 100) < 55) {
-      result.miglioramento.push({
-        icon: '\u{1F534}',
-        title: `Campionato problematico: ${worstLeague[0]}`,
-        text: `Hit rate del ${worstLeague[1].hit_rate}% su ${worstLeague[1].total} pronostici. Valuta se i dati disponibili per questo campionato sono sufficienti o se serve una calibrazione specifica.`,
-        type: 'negative',
-      });
-    }
-
-    // Campionati sotto 50%
-    const criticalLeagues = Object.entries(data.breakdown_campionato)
-      .filter(([, s]) => s.total >= 10 && (s.hit_rate ?? 100) < 50);
-    if (criticalLeagues.length > 0) {
-      const names = criticalLeagues.map(([n, s]) => `${n} (${s.hit_rate}%)`).join(', ');
-      result.miglioramento.push({
-        icon: '\u{1F6A8}',
-        title: `${criticalLeagues.length} campionat${criticalLeagues.length > 1 ? 'i' : 'o'} sotto il 50%`,
-        text: `Campionati critici: ${names}. Con hit rate sotto il 50% stai perdendo pi\u00F9 pronostici di quanti ne azzecchi.`,
-        type: 'negative',
-      });
-    }
-
-    // Peggior fascia quota (ROI)
-    if (data.breakdown_quota) {
-      const quotaEntries = Object.entries(data.breakdown_quota)
-        .filter(([b, s]) => b !== 'N/D' && s.total >= 5 && s.roi != null) as [string, QuotaBandData][];
-      if (quotaEntries.length > 0) {
-        const worstQuota = quotaEntries.reduce((a, b) => ((a[1].roi ?? 999) <= (b[1].roi ?? 999) ? a : b));
-        if ((worstQuota[1].roi ?? 0) < -10) {
-          result.miglioramento.push({
-            icon: '\u{1F4B8}',
-            title: `Fascia quota in perdita: ${worstQuota[0]}`,
-            text: `ROI del ${worstQuota[1].roi}% con perdita di ${worstQuota[1].profit}\u20AC. Questa fascia di quote sta generando perdite significative.`,
-            type: 'negative',
-          });
-        }
-      }
-    }
-
-    // --- CONSIGLI OPERATIVI ---
-    // Concentrati sul mercato migliore
-    if (bestMarket && worstMarket && bestMarket[0] !== worstMarket[0]) {
-      const gap = (bestMarket[1].hit_rate ?? 0) - (worstMarket[1].hit_rate ?? 0);
-      if (gap >= 10) {
-        result.consigli.push({
-          icon: '\u{1F3AF}',
-          title: 'Concentrati sul mercato migliore',
-          text: `Il mercato ${ml[bestMarket[0]] || bestMarket[0]} ha ${gap} punti percentuali in pi\u00F9 rispetto a ${ml[worstMarket[0]] || worstMarket[0]}. Considera di aumentare il volume su ${ml[bestMarket[0]] || bestMarket[0]} e ridurre quello su ${ml[worstMarket[0]] || worstMarket[0]}.`,
-          type: 'neutral',
-        });
-      }
-    }
-
-    // Quote basse vs alte
-    if (data.quota_stats && data.quota_stats.total_con_quota > 0) {
-      const avgAzz = data.quota_stats.avg_quota_azzeccati;
-      const avgSba = data.quota_stats.avg_quota_sbagliati;
-      if (avgAzz != null && avgSba != null) {
-        if (avgSba > avgAzz + 0.2) {
-          result.consigli.push({
-            icon: '\u{1F4CA}',
-            title: 'Attenzione alle quote alte',
-            text: `La quota media dei pronostici sbagliati (${avgSba}) \u00E8 significativamente pi\u00F9 alta di quella degli azzeccati (${avgAzz}). Le quote pi\u00F9 alte sono pi\u00F9 difficili da azzeccare \u2014 bilancia rischio e rendimento.`,
-            type: 'warning',
-          });
-        }
-      }
-      if ((data.quota_stats.roi_globale ?? 0) > 0) {
-        result.consigli.push({
-          icon: '\u{2705}',
-          title: 'ROI positivo',
-          text: `Il ROI globale \u00E8 del +${data.quota_stats.roi_globale}% con un profitto di +${data.quota_stats.profit_globale}\u20AC (base 1\u20AC/scommessa). Il sistema sta generando valore. Mantieni questa strategia.`,
-          type: 'positive',
-        });
-      } else if ((data.quota_stats.roi_globale ?? 0) < -5) {
-        result.consigli.push({
-          icon: '\u{26A0}\u{FE0F}',
-          title: 'ROI negativo',
-          text: `Il ROI globale \u00E8 del ${data.quota_stats.roi_globale}% con una perdita di ${data.quota_stats.profit_globale}\u20AC. Rivedi i parametri di selezione, in particolare le fasce di quota con perdite maggiori.`,
-          type: 'negative',
-        });
-      }
-    }
-
-    // Campionato con hit rate alto ma poco volume
-    const highHrLowVol = Object.entries(data.breakdown_campionato)
-      .filter(([, s]) => s.total >= 5 && s.total < 20 && (s.hit_rate ?? 0) >= 70);
-    if (highHrLowVol.length > 0) {
-      const names = highHrLowVol.map(([n]) => n).join(', ');
-      result.consigli.push({
-        icon: '\u{1F50D}',
-        title: 'Potenziale inesplorato',
-        text: `${names}: hit rate alto (>70%) ma con pochi pronostici. Se i dati sono affidabili, potresti aumentare il volume su questi campionati per capitalizzare il vantaggio.`,
-        type: 'neutral',
-      });
-    }
-
-    // Campionato che trascina giù
-    if (worstLeague && (worstLeague[1].hit_rate ?? 100) < 50 && worstLeague[1].total >= 15) {
-      result.consigli.push({
-        icon: '\u{1F6D1}',
-        title: `Valuta di escludere ${worstLeague[0]}`,
-        text: `Con hit rate del ${worstLeague[1].hit_rate}% su ${worstLeague[1].total} pronostici, ${worstLeague[0]} sta trascinando gi\u00F9 la media complessiva. Potresti temporaneamente ridurre o escludere i pronostici su questo campionato.`,
-        type: 'warning',
-      });
-    }
-
-    return result;
-  }, [data]);
+  // ─── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: `linear-gradient(160deg, ${C.bg} 0%, #0c1425 40%, #0a0f1f 100%)`,
+      color: C.text,
+      padding: isMobile ? '16px' : '28px 32px',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    }}>
+
+      {/* ─── Header ─────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', color: C.textSec, cursor: 'pointer',
+          fontSize: '1.4em', padding: '4px 8px', borderRadius: '8px',
+          transition: 'color 0.2s',
+        }}
+          onMouseOver={e => (e.currentTarget.style.color = C.text)}
+          onMouseOut={e => (e.currentTarget.style.color = C.textSec)}
+        >
+          {'\u2190'}
+        </button>
+        <div>
+          <h1 style={{ margin: 0, fontSize: isMobile ? '1.4em' : '1.7em', fontWeight: 700, letterSpacing: '-0.02em' }}>
+            Track Record
+          </h1>
+          <div style={{ fontSize: '0.75em', color: C.textMuted, marginTop: '2px' }}>
+            Analisi performance sistema MoE
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Hero Cards: Pronostici / Alto Rendimento ────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+        {/* Card Pronostici */}
         <button
-          onClick={onBack}
+          onClick={() => setFiltroSezione('pronostici')}
           style={{
-            background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff',
-            borderRadius: '12px', padding: '10px 16px', cursor: 'pointer', fontSize: '1em'
+            background: isPronostici
+              ? `linear-gradient(135deg, ${C.cyanDim}, rgba(6, 182, 212, 0.04))`
+              : C.cardBg,
+            border: isPronostici ? `1.5px solid ${C.cyanBorder}` : `1px solid ${C.cardBorder}`,
+            borderRadius: '14px',
+            padding: isMobile ? '16px 12px' : '20px',
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.25s ease',
+            transform: isPronostici ? 'scale(1.01)' : 'scale(1)',
+            opacity: isPronostici ? 1 : 0.6,
           }}
         >
-          Indietro
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div>
+              <div style={{ fontSize: isMobile ? '0.85em' : '0.95em', fontWeight: 700, color: isPronostici ? C.cyan : C.textSec }}>
+                Pronostici
+              </div>
+              <div style={{ fontSize: '0.68em', color: C.textMuted }}>Quota {'\u2264'} 2.50</div>
+            </div>
+            {isPronostici && <div style={{
+              width: '8px', height: '8px', borderRadius: '50%', background: C.cyan,
+              boxShadow: `0 0 8px ${C.cyan}`,
+            }} />}
+          </div>
+          {proData && proData.total > 0 ? (
+            <>
+              <div style={{ fontSize: isMobile ? '2em' : '2.4em', fontWeight: 800, color: isPronostici ? rateColor(proData.hit_rate ?? 0) : C.textMuted, lineHeight: 1, letterSpacing: '-0.03em' }}>
+                {proData.hit_rate ?? '—'}<span style={{ fontSize: '0.5em', opacity: 0.7 }}>%</span>
+              </div>
+              <div style={{ fontSize: '0.72em', color: C.textMuted, marginTop: '4px' }}>
+                {proData.hits}/{proData.total} centrati
+              </div>
+              {proData.roi != null && (
+                <div style={{ fontSize: '0.72em', color: isPronostici ? profitColor(proData.profit) : C.textMuted, marginTop: '2px' }}>
+                  ROI {formatRoi(proData.roi)} &middot; {formatProfit(proData.profit)}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ fontSize: '1.4em', color: C.textMuted }}>—</div>
+          )}
         </button>
-        <h1 style={{ margin: 0, fontSize: isMobile ? '1.5em' : '2em' }}>Track Record</h1>
+
+        {/* Card Alto Rendimento */}
+        <button
+          onClick={() => setFiltroSezione('alto_rendimento')}
+          style={{
+            background: !isPronostici
+              ? `linear-gradient(135deg, ${C.amberDim}, rgba(245, 158, 11, 0.03))`
+              : C.cardBg,
+            border: !isPronostici ? `1.5px solid ${C.amberBorder}` : `1px solid ${C.cardBorder}`,
+            borderRadius: '14px',
+            padding: isMobile ? '16px 12px' : '20px',
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.25s ease',
+            transform: !isPronostici ? 'scale(1.01)' : 'scale(1)',
+            opacity: !isPronostici ? 1 : 0.6,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div>
+              <div style={{ fontSize: isMobile ? '0.85em' : '0.95em', fontWeight: 700, color: !isPronostici ? C.amber : C.textSec }}>
+                Alto Rendimento
+              </div>
+              <div style={{ fontSize: '0.68em', color: C.textMuted }}>Quota &gt; 2.50</div>
+            </div>
+            {!isPronostici && <div style={{
+              width: '8px', height: '8px', borderRadius: '50%', background: C.amber,
+              boxShadow: `0 0 8px ${C.amber}`,
+            }} />}
+          </div>
+          {arData && arData.total > 0 ? (
+            <>
+              {/* Hero: Yield (non HR%) */}
+              <div style={{ fontSize: isMobile ? '2em' : '2.4em', fontWeight: 800, color: !isPronostici ? profitColor(arData.roi ?? 0) : C.textMuted, lineHeight: 1, letterSpacing: '-0.03em' }}>
+                {arData.roi != null ? (
+                  <>{arData.roi > 0 ? '+' : ''}{arData.roi}<span style={{ fontSize: '0.5em', opacity: 0.7 }}>%</span></>
+                ) : '—'}
+              </div>
+              <div style={{ fontSize: '0.72em', color: C.textMuted, marginTop: '4px' }}>
+                Yield &middot; {formatProfit(arData.profit)}
+              </div>
+              <div style={{ fontSize: '0.72em', color: !isPronostici ? (C.textSec) : C.textMuted, marginTop: '2px' }}>
+                HR {arData.hit_rate ?? '—'}% &middot; {arData.hits}/{arData.total}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: '1.4em', color: C.textMuted }}>—</div>
+          )}
+        </button>
       </div>
 
-      {/* Banner fase di sviluppo */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(255,159,67,0.08), rgba(255,215,0,0.06))',
-        border: '1px solid rgba(255,159,67,0.25)',
-        borderRadius: '12px', padding: '14px 18px', marginBottom: '16px',
-        lineHeight: '1.6', fontSize: '0.85em'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '1.1em' }}>{'\u{1F6A7}'}</span>
-          <strong style={{ color: '#ffb74d', fontSize: '0.95em' }}>Progetto in fase di sviluppo</strong>
-        </div>
-        <div style={{ color: '#bbb' }}>
-          Questo progetto <strong style={{ color: '#e0e0e0' }}>non è ancora un prodotto finito</strong> — è un sistema in costruzione. Gli algoritmi, i modelli e le strategie sono in fase di calibrazione attiva e vengono aggiornati costantemente.
-          I numeri che vedi qui sono <strong style={{ color: '#e0e0e0' }}>reali e completi</strong>: crediamo nella totale trasparenza, anche quando i risultati non riflettono ancora il potenziale del sistema a regime.
-          Ogni giorno il motore impara, si adatta e migliora — i risultati di oggi non rappresentano quelli di domani.
-        </div>
-      </div>
-
-      {/* Tab Dati / Analisi */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+      {/* ─── Tab Dati / Analisi ──────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: '2px', marginBottom: '16px', background: C.barBg, borderRadius: '10px', padding: '3px' }}>
         {([
-          { id: 'dati' as const, label: 'Dati', icon: '\u{1F4CA}' },
-          { id: 'analisi' as const, label: 'Analisi', icon: '\u{1F4A1}' },
+          { id: 'dati' as const, label: 'Statistiche' },
+          { id: 'analisi' as const, label: 'Insights' },
         ]).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
             style={{
-              background: activeView === tab.id ? 'rgba(0,200,255,0.25)' : 'rgba(255,255,255,0.05)',
-              border: activeView === tab.id ? '1px solid rgba(0,200,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
-              color: activeView === tab.id ? '#fff' : '#888',
-              borderRadius: '10px', padding: '10px 20px', cursor: 'pointer',
-              fontSize: '0.95em', fontWeight: activeView === tab.id ? 'bold' : 'normal',
+              flex: 1,
+              background: activeView === tab.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+              border: 'none',
+              color: activeView === tab.id ? C.text : C.textMuted,
+              borderRadius: '8px',
+              padding: '9px 16px',
+              cursor: 'pointer',
+              fontSize: '0.85em',
+              fontWeight: activeView === tab.id ? 600 : 400,
               transition: 'all 0.2s ease',
             }}
           >
-            {tab.icon} {tab.label}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Card navigazione: Pronostici / Alto Rendimento */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-        {([
-          { id: 'pronostici' as const, label: 'Pronostici', sub: 'Quota ≤ 2.50', color: '#00ccff', bg: 'rgba(0,200,255,0.08)', border: 'rgba(0,200,255,0.25)' },
-          { id: 'alto_rendimento' as const, label: 'Alto Rendimento', sub: 'Quota > 2.50', color: '#ffaa00', bg: 'rgba(255,170,0,0.08)', border: 'rgba(255,170,0,0.25)' },
-        ]).map(s => {
-          const isActive = filtroSezione === s.id;
-          const sezData = data?.split_sezione?.[s.id];
-          return (
-            <button
-              key={s.id}
-              onClick={() => setFiltroSezione(s.id)}
-              style={{
-                background: isActive ? s.bg : 'rgba(255,255,255,0.04)',
-                border: isActive ? `2px solid ${s.border}` : '2px solid rgba(255,255,255,0.1)',
-                borderRadius: '14px', padding: '18px 16px', cursor: 'pointer',
-                textAlign: 'center', transition: 'all 0.2s ease',
-                transform: isActive ? 'scale(1.02)' : 'scale(1)',
-              }}
-            >
-              <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: isActive ? s.color : '#888', marginBottom: '4px' }}>
-                {s.label}
-              </div>
-              <div style={{ fontSize: '0.75em', color: '#666', marginBottom: '8px' }}>{s.sub}</div>
-              {sezData && sezData.total > 0 ? (
-                <>
-                  <div style={{
-                    fontSize: '2em', fontWeight: 'bold',
-                    color: isActive ? ((sezData.hit_rate ?? 0) >= 60 ? '#00ff88' : (sezData.hit_rate ?? 0) >= 50 ? '#ffaa00' : '#ff4466') : '#555'
-                  }}>
-                    {sezData.hit_rate ?? '—'}%
-                  </div>
-                  <div style={{ fontSize: '0.8em', color: '#666' }}>{sezData.hits}/{sezData.total}</div>
-                </>
-              ) : (
-                <div style={{ fontSize: '1.2em', color: '#555' }}>—</div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filtri */}
-      <div style={{ ...cardStyle, display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+      {/* ─── Filtri ──────────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center',
+        marginBottom: '16px', padding: '12px 14px',
+        background: C.cardBg, borderRadius: '12px', border: `1px solid ${C.cardBorder}`,
+      }}>
         {/* Periodo */}
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '3px', background: C.barBg, borderRadius: '8px', padding: '2px' }}>
           {(['7d', '30d', '90d', 'tutto'] as const).map(p => (
             <button
               key={p}
               onClick={() => setPeriodo(p)}
               style={{
-                background: periodo === p ? 'rgba(0,200,255,0.3)' : 'rgba(255,255,255,0.08)',
-                border: periodo === p ? '1px solid rgba(0,200,255,0.6)' : '1px solid rgba(255,255,255,0.15)',
-                color: '#fff', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '0.85em'
+                background: periodo === p ? `${accent}22` : 'transparent',
+                border: 'none',
+                color: periodo === p ? accent : C.textMuted,
+                borderRadius: '6px', padding: '6px 12px', cursor: 'pointer',
+                fontSize: '0.8em', fontWeight: periodo === p ? 600 : 400,
+                transition: 'all 0.2s',
               }}
             >
-              {p === '7d' ? '7 giorni' : p === '30d' ? '30 giorni' : p === '90d' ? '90 giorni' : 'Tutto'}
+              {p === 'tutto' ? 'Tutto' : p}
             </button>
           ))}
         </div>
-        {/* Filtro campionato */}
+
+        {/* Separatore */}
+        <div style={{ width: '1px', height: '24px', background: C.divider }} />
+
+        {/* Campionato */}
         <select
           value={filtroLeague}
-          onChange={(e) => setFiltroLeague(e.target.value)}
+          onChange={e => setFiltroLeague(e.target.value)}
           style={{
-            background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)',
-            color: '#fff', borderRadius: '8px', padding: '8px 12px', fontSize: '0.85em'
+            background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${C.cardBorder}`,
+            color: filtroLeague ? C.text : C.textMuted,
+            borderRadius: '8px', padding: '6px 10px', fontSize: '0.8em',
           }}
         >
-          <option value="" style={{ background: '#1a1a2e', color: '#fff' }}>Tutti i campionati</option>
+          <option value="" style={{ background: '#0f172a', color: C.textSec }}>Campionato</option>
           {availableLeagues.map(lg => (
-            <option key={lg} value={lg} style={{ background: '#1a1a2e', color: '#fff' }}>{lg}</option>
+            <option key={lg} value={lg} style={{ background: '#0f172a', color: C.text }}>{lg}</option>
           ))}
         </select>
-        {/* Filtro mercato */}
+
+        {/* Mercato */}
         <select
           value={filtroMarket}
-          onChange={(e) => setFiltroMarket(e.target.value)}
+          onChange={e => setFiltroMarket(e.target.value)}
           style={{
-            background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)',
-            color: '#fff', borderRadius: '8px', padding: '8px 12px', fontSize: '0.85em'
+            background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${C.cardBorder}`,
+            color: filtroMarket ? C.text : C.textMuted,
+            borderRadius: '8px', padding: '6px 10px', fontSize: '0.8em',
           }}
         >
-          <option value="" style={{ background: '#1a1a2e', color: '#fff' }}>Tutti i mercati</option>
+          <option value="" style={{ background: '#0f172a', color: C.textSec }}>Mercato</option>
           {availableMarkets.map(mk => (
-            <option key={mk} value={mk} style={{ background: '#1a1a2e', color: '#fff' }}>{MARKET_LABELS[mk] || mk}</option>
+            <option key={mk} value={mk} style={{ background: '#0f172a', color: C.text }}>{MARKET_LABELS[mk] || mk}</option>
           ))}
         </select>
       </div>
-      {/* Filtro quota: fasce predefinite + input manuali — solo in tab Dati */}
-      {activeView === 'dati' && <div style={{ ...cardStyle, padding: isMobile ? '12px' : '16px', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
-          <span style={{ color: '#888', fontSize: '0.85em', whiteSpace: 'nowrap' }}>Fascia quota:</span>
-          {QUOTA_BANDS.map(band => {
-            const isActive = selectedBand === band.label;
-            const count = unfilteredQuotaCounts[band.label] ?? 0;
-            const isEmpty = count === 0;
-            return (
+
+      {/* ─── Quota Band Filter (solo tab Dati) ───────────────────────────── */}
+      {activeView === 'dati' && (
+        <div style={{
+          ...card, padding: isMobile ? '12px' : '14px', marginBottom: '16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75em', color: C.textMuted, marginRight: '4px' }}>Quota:</span>
+            {QUOTA_BANDS.map(band => {
+              const isActive = selectedBand === band.label;
+              const count = unfilteredQuotaCounts[band.label] ?? 0;
+              const isEmpty = count === 0;
+              return (
+                <button
+                  key={band.label}
+                  disabled={isEmpty}
+                  onClick={() => !isEmpty && setSelectedBand(isActive ? '' : band.label)}
+                  style={{
+                    background: isEmpty ? 'transparent' : isActive ? `${accent}25` : 'rgba(255,255,255,0.03)',
+                    border: isActive ? `1px solid ${accent}50` : `1px solid ${isEmpty ? 'transparent' : C.cardBorder}`,
+                    color: isEmpty ? '#333' : isActive ? accent : C.textSec,
+                    borderRadius: '6px', padding: '3px 7px', cursor: isEmpty ? 'default' : 'pointer',
+                    fontSize: '0.72em', fontFamily: 'monospace', opacity: isEmpty ? 0.3 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {band.label}
+                  {!isEmpty && <span style={{ marginLeft: '3px', opacity: 0.5 }}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.72em', color: C.textMuted }}>Range:</span>
+            <input
+              type="number" placeholder="Min" value={quotaMin}
+              onChange={e => { setQuotaMin(e.target.value); setSelectedBand(''); }}
+              step="0.01" min="1.00"
+              style={{
+                width: '65px', background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${C.cardBorder}`,
+                color: C.text, borderRadius: '6px', padding: '5px 8px', fontSize: '0.8em',
+              }}
+            />
+            <span style={{ color: C.textMuted, fontSize: '0.8em' }}>{'\u2014'}</span>
+            <input
+              type="number" placeholder="Max" value={quotaMax}
+              onChange={e => { setQuotaMax(e.target.value); setSelectedBand(''); }}
+              step="0.01" min="1.00"
+              style={{
+                width: '65px', background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${C.cardBorder}`,
+                color: C.text, borderRadius: '6px', padding: '5px 8px', fontSize: '0.8em',
+              }}
+            />
+            {(quotaMin || quotaMax || selectedBand) && (
               <button
-                key={band.label}
-                disabled={isEmpty}
-                onClick={() => {
-                  if (isEmpty) return;
-                  setSelectedBand(isActive ? '' : band.label);
-                }}
+                onClick={() => { setQuotaMin(''); setQuotaMax(''); setSelectedBand(''); }}
                 style={{
-                  background: isEmpty ? 'rgba(255,255,255,0.02)' : isActive ? 'rgba(0,200,255,0.3)' : 'rgba(255,255,255,0.06)',
-                  border: isEmpty ? '1px solid rgba(255,255,255,0.05)' : isActive ? '1px solid rgba(0,200,255,0.6)' : '1px solid rgba(255,255,255,0.12)',
-                  color: isEmpty ? '#444' : isActive ? '#fff' : '#aaa',
-                  borderRadius: '14px', padding: '4px 8px', cursor: isEmpty ? 'default' : 'pointer',
-                  fontSize: '0.78em', fontFamily: 'monospace', whiteSpace: 'nowrap',
-                  opacity: isEmpty ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: '4px'
+                  background: 'rgba(239, 68, 68, 0.1)', border: `1px solid rgba(239,68,68,0.3)`,
+                  color: C.red, borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '0.75em',
                 }}
               >
-                {band.label}
-                {!isEmpty && (
-                  <span style={{
-                    background: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                    borderRadius: '8px', padding: '1px 5px', fontSize: '0.85em', lineHeight: '1.2'
-                  }}>
-                    {count}
-                  </span>
-                )}
+                Reset
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ color: '#666', fontSize: '0.8em', whiteSpace: 'nowrap' }}>Personalizzato:</span>
-          <input
-            type="number"
-            placeholder="Min"
-            value={quotaMin}
-            onChange={(e) => { setQuotaMin(e.target.value); setSelectedBand(''); }}
-            step="0.01"
-            min="1.00"
-            style={{
-              width: '72px', background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)',
-              color: '#fff', borderRadius: '8px', padding: '8px 10px', fontSize: '0.85em'
-            }}
-          />
-          <span style={{ color: '#666' }}>—</span>
-          <input
-            type="number"
-            placeholder="Max"
-            value={quotaMax}
-            onChange={(e) => { setQuotaMax(e.target.value); setSelectedBand(''); }}
-            step="0.01"
-            min="1.00"
-            style={{
-              width: '72px', background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)',
-              color: '#fff', borderRadius: '8px', padding: '8px 10px', fontSize: '0.85em'
-            }}
-          />
-          {(quotaMin || quotaMax || selectedBand) && (
-            <button
-              onClick={() => { setQuotaMin(''); setQuotaMax(''); setSelectedBand(''); }}
-              style={{
-                background: 'rgba(255,68,102,0.2)', border: '1px solid rgba(255,68,102,0.4)',
-                color: '#ff4466', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.8em'
-              }}
-            >
-              Reset
-            </button>
-          )}
-        </div>
-      </div>}
+      )}
 
+      {/* ─── Loading / Error ─────────────────────────────────────────────── */}
       {loading && (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#888' }}>
-          Caricamento dati...
+        <div style={{ textAlign: 'center', padding: '60px', color: C.textMuted }}>
+          <div style={{
+            width: '32px', height: '32px', border: `2px solid ${C.cardBorder}`, borderTop: `2px solid ${accent}`,
+            borderRadius: '50%', margin: '0 auto 12px',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          Caricamento...
         </div>
       )}
 
       {error && (
-        <div style={{ ...cardStyle, borderColor: 'rgba(255,68,102,0.4)', color: '#ff4466' }}>
+        <div style={{ ...card, borderColor: 'rgba(239,68,68,0.3)', color: C.red, textAlign: 'center' }}>
           Errore: {error}
         </div>
       )}
 
-      {/* ===== TAB DATI ===== */}
+      {/* ═══════════════ TAB DATI ═══════════════════════════════════════════ */}
       {activeView === 'dati' && data && !loading && (
         <>
-          {/* Riepilogo globale */}
-          <div style={{ ...cardStyle, background: 'linear-gradient(135deg, rgba(0,200,255,0.1), rgba(138,43,226,0.1))' }}>
-            <div style={headerStyle}>Riepilogo Globale</div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '16px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#00ccff' }}>{data.globale.total}</div>
-                <div style={{ color: '#888', fontSize: '0.85em' }}>Pronostici</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#00ff88' }}>{data.globale.hits}</div>
-                <div style={{ color: '#888', fontSize: '0.85em' }}>Azzeccati</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#ff4466' }}>{data.globale.misses}</div>
-                <div style={{ color: '#888', fontSize: '0.85em' }}>Sbagliati</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '2em', fontWeight: 'bold',
-                  color: (data.globale.hit_rate ?? 0) >= 60 ? '#00ff88' : (data.globale.hit_rate ?? 0) >= 50 ? '#ffaa00' : '#ff4466'
-                }}>
-                  {data.globale.hit_rate ?? '—'}%
-                </div>
-                <div style={{ color: '#888', fontSize: '0.85em' }}>Hit Rate</div>
-              </div>
+          {/* ─── KPI Strip ───────────────────────────────────────────────── */}
+          <div style={{
+            ...card,
+            background: `linear-gradient(135deg, ${isPronostici ? C.cyanDim : C.amberDim}, ${C.cardBg})`,
+            padding: 0, overflow: 'hidden',
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)',
+              gap: 0,
+            }}>
+              <KpiCard label="Totale" value={String(data.globale.total)} color={C.text} />
+              <KpiCard label="Centrati" value={String(data.globale.hits)} color={C.green} />
+              <KpiCard
+                label="Hit Rate"
+                value={`${data.globale.hit_rate ?? '—'}%`}
+                color={rateColor(data.globale.hit_rate ?? 0)}
+              />
+              {data.quota_stats && (
+                <>
+                  <KpiCard
+                    label="ROI"
+                    value={formatRoi(data.quota_stats.roi_globale)}
+                    color={profitColor(data.quota_stats.roi_globale ?? 0)}
+                  />
+                  <KpiCard
+                    label="Profitto"
+                    value={formatProfit(data.quota_stats.profit_globale)}
+                    color={profitColor(data.quota_stats.profit_globale)}
+                    sub={`Q.med ${data.quota_stats.avg_quota_tutti ?? '—'}`}
+                  />
+                </>
+              )}
             </div>
           </div>
 
-          {/* Breakdown per mercato */}
-          <div style={cardStyle}>
-            <div style={headerStyle}>Per Mercato</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ─── Per Mercato ──────────────────────────────────────────────── */}
+          <div style={card}>
+            <div style={sectionTitle}>Per Mercato</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {Object.entries(data.breakdown_mercato).map(([tipo, stats]) => (
-                <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ minWidth: isMobile ? '100px' : '160px', color: '#ccc', fontSize: '0.9em' }}>
+                <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ minWidth: isMobile ? '85px' : '130px', fontSize: '0.85em', color: C.textSec, fontWeight: 500 }}>
                     {MARKET_LABELS[tipo] || tipo}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <HitRateBar data={stats} />
+                    <ProgressBar rate={stats.hit_rate ?? 0} showLabel />
                   </div>
-                  <div style={{ minWidth: '80px', textAlign: 'right', fontSize: '0.85em', color: '#888' }}>
+                  <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
                     {stats.hits}/{stats.total}
                   </div>
                 </div>
@@ -763,21 +793,21 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             </div>
           </div>
 
-          {/* Breakdown per campionato */}
-          <div style={cardStyle}>
-            <div style={headerStyle}>Per Campionato</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ─── Per Campionato ───────────────────────────────────────────── */}
+          <div style={card}>
+            <div style={sectionTitle}>Per Campionato</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {Object.entries(data.breakdown_campionato)
                 .sort(([, a], [, b]) => b.total - a.total)
                 .map(([league, stats]) => (
-                  <div key={league} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ minWidth: isMobile ? '100px' : '160px', color: '#ccc', fontSize: '0.9em' }}>
+                  <div key={league} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ minWidth: isMobile ? '85px' : '130px', fontSize: '0.83em', color: C.textSec }}>
                       {league}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <HitRateBar data={stats} />
+                      <ProgressBar rate={stats.hit_rate ?? 0} showLabel />
                     </div>
-                    <div style={{ minWidth: '80px', textAlign: 'right', fontSize: '0.85em', color: '#888' }}>
+                    <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
                       {stats.hits}/{stats.total}
                     </div>
                   </div>
@@ -785,155 +815,126 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             </div>
           </div>
 
-          {/* Confidence vs Accuratezza */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
-            <div style={cardStyle}>
-              <div style={headerStyle}>Per Confidence</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ─── Confidence & Stelle ──────────────────────────────────────── */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ ...card, marginBottom: 0 }}>
+              <div style={sectionTitle}>Per Confidence</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {Object.entries(data.breakdown_confidence).map(([band, stats]) => (
-                  <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ minWidth: '60px', color: '#ccc', fontSize: '0.9em' }}>{band}</div>
-                    <div style={{ flex: 1 }}><HitRateBar data={stats} /></div>
-                    <div style={{ minWidth: '60px', textAlign: 'right', fontSize: '0.85em', color: '#888' }}>
-                      {stats.hits}/{stats.total}
-                    </div>
+                  <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ minWidth: '50px', fontSize: '0.82em', color: C.textSec, fontFamily: 'monospace' }}>{band}</div>
+                    <div style={{ flex: 1 }}><ProgressBar rate={stats.hit_rate ?? 0} showLabel /></div>
+                    <div style={{ minWidth: '40px', textAlign: 'right', fontSize: '0.75em', color: C.textMuted }}>{stats.hits}/{stats.total}</div>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div style={cardStyle}>
-              <div style={headerStyle}>Per Stelle</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ ...card, marginBottom: 0 }}>
+              <div style={sectionTitle}>Per Stelle</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {Object.entries(data.breakdown_stelle).map(([band, stats]) => (
-                  <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ minWidth: '60px', color: '#ccc', fontSize: '0.9em' }}>{band}</div>
-                    <div style={{ flex: 1 }}><HitRateBar data={stats} /></div>
-                    <div style={{ minWidth: '60px', textAlign: 'right', fontSize: '0.85em', color: '#888' }}>
-                      {stats.hits}/{stats.total}
-                    </div>
+                  <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ minWidth: '50px', fontSize: '0.82em', color: C.textSec, fontFamily: 'monospace' }}>{band}</div>
+                    <div style={{ flex: 1 }}><ProgressBar rate={stats.hit_rate ?? 0} showLabel /></div>
+                    <div style={{ minWidth: '40px', textAlign: 'right', fontSize: '0.75em', color: C.textMuted }}>{stats.hits}/{stats.total}</div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Riepilogo Quote — stats globali */}
+          {/* ─── Riepilogo Quote ──────────────────────────────────────────── */}
           {data.quota_stats && data.quota_stats.total_con_quota > 0 && (
-            <div style={{ ...cardStyle, background: 'linear-gradient(135deg, rgba(255,170,0,0.08), rgba(138,43,226,0.08))' }}>
-              <div style={headerStyle}>Riepilogo Quote</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '16px' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#ffaa00' }}>{data.quota_stats.avg_quota_tutti ?? '—'}</div>
-                  <div style={{ color: '#888', fontSize: '0.8em' }}>Quota media</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#00ff88' }}>{data.quota_stats.avg_quota_azzeccati ?? '—'}</div>
-                  <div style={{ color: '#888', fontSize: '0.8em' }}>Media azzeccati</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#ff4466' }}>{data.quota_stats.avg_quota_sbagliati ?? '—'}</div>
-                  <div style={{ color: '#888', fontSize: '0.8em' }}>Media sbagliati</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    fontSize: '1.6em', fontWeight: 'bold',
-                    color: (data.quota_stats.roi_globale ?? 0) >= 0 ? '#00ff88' : '#ff4466'
-                  }}>
-                    {data.quota_stats.roi_globale != null ? `${data.quota_stats.roi_globale > 0 ? '+' : ''}${data.quota_stats.roi_globale}%` : '—'}
-                  </div>
-                  <div style={{ color: '#888', fontSize: '0.8em' }}>ROI</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    fontSize: '1.6em', fontWeight: 'bold',
-                    color: data.quota_stats.profit_globale >= 0 ? '#00ff88' : '#ff4466'
-                  }}>
-                    {data.quota_stats.profit_globale >= 0 ? '+' : ''}{data.quota_stats.profit_globale}€
-                  </div>
-                  <div style={{ color: '#888', fontSize: '0.8em' }}>Profitto (1€/bet)</div>
-                </div>
+            <div style={{
+              ...card,
+              background: `linear-gradient(135deg, ${C.amberDim}, ${C.cardBg})`,
+            }}>
+              <div style={sectionTitle}>Quote</div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: 0 }}>
+                <KpiCard label="Q. Media" value={String(data.quota_stats.avg_quota_tutti ?? '—')} color={C.amber} />
+                <KpiCard label="Q. Centrate" value={String(data.quota_stats.avg_quota_azzeccati ?? '—')} color={C.green} />
+                <KpiCard label="Q. Sbagliate" value={String(data.quota_stats.avg_quota_sbagliati ?? '—')} color={C.red} />
+                <KpiCard
+                  label="ROI"
+                  value={formatRoi(data.quota_stats.roi_globale)}
+                  color={profitColor(data.quota_stats.roi_globale ?? 0)}
+                />
+                <KpiCard
+                  label="Profitto"
+                  value={formatProfit(data.quota_stats.profit_globale)}
+                  color={profitColor(data.quota_stats.profit_globale)}
+                />
               </div>
-              {data.quota_stats.total_senza_quota > 0 && (
-                <div style={{ marginTop: '10px', fontSize: '0.75em', color: '#666', textAlign: 'right' }}>
-                  {data.quota_stats.total_senza_quota} pronostici senza quota esclusi dal calcolo
-                </div>
-              )}
             </div>
           )}
 
-          {/* Per Fascia Quota — con ROI */}
+          {/* ─── Per Fascia Quota ─────────────────────────────────────────── */}
           {data.breakdown_quota && Object.keys(data.breakdown_quota).length > 0 && (
-            <div style={cardStyle}>
-              <div style={headerStyle}>Per Fascia Quota</div>
-              {/* Header colonne */}
+            <div style={card}>
+              <div style={sectionTitle}>Per Fascia Quota</div>
+              {/* Header */}
               {!isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ minWidth: '100px', fontSize: '0.75em', color: '#666' }}>Fascia</div>
-                  <div style={{ flex: 1, fontSize: '0.75em', color: '#666' }}>Hit Rate</div>
-                  <div style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.75em', color: '#666' }}>Risultato</div>
-                  <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.75em', color: '#666' }}>ROI</div>
-                  <div style={{ minWidth: '65px', textAlign: 'right', fontSize: '0.75em', color: '#666' }}>Profitto</div>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '90px 1fr 60px 55px 60px',
+                  gap: '8px', padding: '0 0 8px', borderBottom: `1px solid ${C.divider}`,
+                  marginBottom: '6px',
+                }}>
+                  {['Fascia', 'Hit Rate', 'Esito', 'ROI', 'P/L'].map(h => (
+                    <div key={h} style={{ fontSize: '0.68em', color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: h === 'Fascia' || h === 'Hit Rate' ? 'left' : 'right' }}>
+                      {h}
+                    </div>
+                  ))}
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {Object.entries(data.breakdown_quota)
-                  .filter(([band]) => band !== 'N/D')
+                  .filter(([b]) => b !== 'N/D')
                   .map(([band, stats]) => {
-                    const roi = (stats as QuotaBandData).roi;
-                    const profit = (stats as QuotaBandData).profit;
+                    const s = stats as QuotaBandData;
                     return (
-                      <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-                        <div style={{ minWidth: isMobile ? '80px' : '100px', color: '#ccc', fontSize: '0.9em', fontFamily: 'monospace' }}>
+                      <div key={band} style={{
+                        display: isMobile ? 'flex' : 'grid',
+                        gridTemplateColumns: '90px 1fr 60px 55px 60px',
+                        flexWrap: isMobile ? 'wrap' : undefined,
+                        gap: '8px', alignItems: 'center',
+                        padding: '4px 0',
+                        borderBottom: `1px solid ${C.divider}`,
+                      }}>
+                        <div style={{ minWidth: isMobile ? '70px' : undefined, fontSize: '0.82em', color: C.textSec, fontFamily: 'monospace' }}>
                           {band}
                         </div>
-                        <div style={{ flex: 1, minWidth: isMobile ? '100%' : 'auto', order: isMobile ? 3 : 0 }}><HitRateBar data={stats} /></div>
-                        <div style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85em', color: '#888' }}>
-                          {stats.hits}/{stats.total}
+                        <div style={{ flex: isMobile ? 1 : undefined, minWidth: isMobile ? '100%' : undefined, order: isMobile ? 3 : undefined }}>
+                          <ProgressBar rate={s.hit_rate ?? 0} showLabel />
                         </div>
-                        <div style={{
-                          minWidth: '55px', textAlign: 'right', fontSize: '0.85em', fontWeight: 'bold',
-                          color: roi != null ? (roi >= 0 ? '#00ff88' : '#ff4466') : '#444'
-                        }}>
-                          {roi != null ? `${roi > 0 ? '+' : ''}${roi}%` : '—'}
+                        <div style={{ textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
+                          {s.hits}/{s.total}
                         </div>
-                        <div style={{
-                          minWidth: '65px', textAlign: 'right', fontSize: '0.85em',
-                          color: profit != null ? (profit >= 0 ? '#00ff88' : '#ff4466') : '#444'
-                        }}>
-                          {profit != null ? `${profit >= 0 ? '+' : ''}${profit}€` : '—'}
+                        <div style={{ textAlign: 'right', fontSize: '0.78em', fontWeight: 600, color: s.roi != null ? profitColor(s.roi) : C.textMuted }}>
+                          {formatRoi(s.roi)}
+                        </div>
+                        <div style={{ textAlign: 'right', fontSize: '0.78em', color: s.profit != null ? profitColor(s.profit) : C.textMuted }}>
+                          {formatProfit(s.profit)}
                         </div>
                       </div>
                     );
                   })}
-                {data.breakdown_quota['N/D'] && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: 0.4, marginTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
-                    <div style={{ minWidth: isMobile ? '80px' : '100px', color: '#888', fontSize: '0.85em', fontStyle: 'italic' }}>
-                      Senza quota
-                    </div>
-                    <div style={{ flex: 1 }}><HitRateBar data={data.breakdown_quota['N/D']} /></div>
-                    <div style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85em', color: '#666' }}>
-                      {data.breakdown_quota['N/D'].hits}/{data.breakdown_quota['N/D'].total}
-                    </div>
-                    <div style={{ minWidth: '55px' }} />
-                    <div style={{ minWidth: '65px' }} />
-                  </div>
-                )}
               </div>
             </div>
           )}
 
-          {/* Quota × Mercato */}
+          {/* ─── Quota x Mercato ──────────────────────────────────────────── */}
           {data.cross_quota_mercato && Object.keys(data.cross_quota_mercato).length > 0 && (
-            <div style={cardStyle}>
-              <div style={headerStyle}>Quota x Mercato</div>
+            <div style={card}>
+              <div style={sectionTitle}>Quota x Mercato</div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85em' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82em' }}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#888' }}>Fascia</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textMuted, fontSize: '0.9em', fontWeight: 500 }}>
+                        Fascia
+                      </th>
                       {Object.keys(data.breakdown_mercato).sort().map(tipo => (
-                        <th key={tipo} style={{ textAlign: 'center', padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#888' }}>
+                        <th key={tipo} style={{ textAlign: 'center', padding: '8px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textMuted, fontSize: '0.9em', fontWeight: 500 }}>
                           {MARKET_LABELS[tipo] || tipo}
                         </th>
                       ))}
@@ -941,17 +942,23 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                   </thead>
                   <tbody>
                     {Object.entries(data.cross_quota_mercato)
-                      .filter(([band]) => band !== 'N/D')
-                      .map(([band, markets]) => (
-                        <tr key={band}>
-                          <td style={{ padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#ccc', fontFamily: 'monospace', fontSize: '0.9em' }}>
+                      .filter(([b]) => b !== 'N/D')
+                      .map(([band, markets], i) => (
+                        <tr key={band} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                          <td style={{ padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textSec, fontFamily: 'monospace', fontSize: '0.92em' }}>
                             {band}
                           </td>
-                          {Object.keys(data.breakdown_mercato).sort().map(tipo => (
-                            <td key={tipo} style={{ textAlign: 'center', padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              {markets[tipo] ? <HitRateBadge data={markets[tipo]} /> : <span style={{ color: '#444' }}>—</span>}
-                            </td>
-                          ))}
+                          {Object.keys(data.breakdown_mercato).sort().map(tipo => {
+                            const d = markets[tipo];
+                            if (!d || d.total === 0) return <td key={tipo} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: '#333' }}>—</td>;
+                            const r = d.hit_rate ?? 0;
+                            return (
+                              <td key={tipo} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}` }}>
+                                <span style={{ color: rateColor(r), fontWeight: 600 }}>{r}%</span>
+                                <span style={{ color: C.textMuted, fontSize: '0.85em' }}> ({d.hits}/{d.total})</span>
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                   </tbody>
@@ -960,25 +967,26 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             </div>
           )}
 
-          {/* Serie temporale */}
+          {/* ─── Serie Temporale ──────────────────────────────────────────── */}
           {data.serie_temporale.length > 0 && (
-            <div style={cardStyle}>
-              <div style={headerStyle}>Andamento nel Tempo</div>
+            <div style={card}>
+              <div style={sectionTitle}>Andamento</div>
               <div style={{ overflowX: 'auto' }}>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', minHeight: '120px', padding: '8px 0' }}>
-                  {data.serie_temporale.map((day) => {
+                <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', minHeight: '110px', padding: '8px 0' }}>
+                  {data.serie_temporale.map(day => {
                     const rate = day.hit_rate ?? 0;
-                    const color = rate >= 65 ? '#00ff88' : rate >= 50 ? '#ffaa00' : '#ff4466';
+                    const color = rateColor(rate);
                     return (
-                      <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '28px' }}>
-                        <div style={{ fontSize: '0.65em', color: '#888', marginBottom: '4px' }}>{rate}%</div>
+                      <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px' }}>
+                        <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{rate}%</div>
                         <div style={{
-                          width: '100%', maxWidth: '24px',
-                          height: `${Math.max(rate, 5)}px`,
-                          background: color, borderRadius: '4px 4px 0 0',
-                          transition: 'height 0.3s ease'
+                          width: '100%', maxWidth: '20px',
+                          height: `${Math.max(rate * 0.9, 4)}px`,
+                          background: `linear-gradient(180deg, ${color}, ${color}88)`,
+                          borderRadius: '3px 3px 0 0',
+                          transition: 'height 0.4s ease',
                         }} />
-                        <div style={{ fontSize: '0.55em', color: '#666', marginTop: '4px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '0.52em', color: C.textMuted, marginTop: '3px', whiteSpace: 'nowrap' }}>
                           {day.date.slice(5)}
                         </div>
                       </div>
@@ -989,33 +997,41 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             </div>
           )}
 
-          {/* Incrocio mercato × campionato */}
+          {/* ─── Mercato x Campionato ─────────────────────────────────────── */}
           {Object.keys(data.cross_mercato_campionato).length > 0 && (
-            <div style={cardStyle}>
-              <div style={headerStyle}>Mercato x Campionato</div>
+            <div style={card}>
+              <div style={sectionTitle}>Mercato x Campionato</div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85em' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82em' }}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#888' }}>Mercato</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textMuted, fontSize: '0.9em', fontWeight: 500 }}>
+                        Mercato
+                      </th>
                       {Object.keys(data.breakdown_campionato).sort().map(lg => (
-                        <th key={lg} style={{ textAlign: 'center', padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#888' }}>
+                        <th key={lg} style={{ textAlign: 'center', padding: '8px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textMuted, fontSize: '0.9em', fontWeight: 500 }}>
                           {lg}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(data.cross_mercato_campionato).map(([tipo, leagues]) => (
-                      <tr key={tipo}>
-                        <td style={{ padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#ccc' }}>
+                    {Object.entries(data.cross_mercato_campionato).map(([tipo, leagues], i) => (
+                      <tr key={tipo} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                        <td style={{ padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: C.textSec, fontWeight: 500 }}>
                           {MARKET_LABELS[tipo] || tipo}
                         </td>
-                        {Object.keys(data.breakdown_campionato).sort().map(lg => (
-                          <td key={lg} style={{ textAlign: 'center', padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            {leagues[lg] ? <HitRateBadge data={leagues[lg]} /> : <span style={{ color: '#444' }}>—</span>}
-                          </td>
-                        ))}
+                        {Object.keys(data.breakdown_campionato).sort().map(lg => {
+                          const d = leagues[lg];
+                          if (!d || d.total === 0) return <td key={lg} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}`, color: '#333' }}>—</td>;
+                          const r = d.hit_rate ?? 0;
+                          return (
+                            <td key={lg} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}` }}>
+                              <span style={{ color: rateColor(r), fontWeight: 600 }}>{r}%</span>
+                              <span style={{ color: C.textMuted, fontSize: '0.85em' }}> ({d.hits}/{d.total})</span>
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -1026,171 +1042,68 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
         </>
       )}
 
-      {/* ===== TAB ANALISI ===== */}
+      {/* ═══════════════ TAB ANALISI ════════════════════════════════════════ */}
       {activeView === 'analisi' && data && !loading && insights && (
         <>
-          {/* Panoramica */}
-          {insights.panoramica.length > 0 && (
-            <div style={cardStyle}>
-              <div style={{ ...headerStyle, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '1.3em' }}>{'\u{1F4CB}'}</span> Panoramica
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {insights.panoramica.map((ins, i) => {
-                  const borderColor = ins.type === 'positive' ? '#00ff88' : ins.type === 'negative' ? '#ff4466' : ins.type === 'warning' ? '#ffaa00' : '#00ccff';
-                  return (
-                    <div key={i} style={{
-                      borderLeft: `3px solid ${borderColor}`,
-                      background: 'rgba(255,255,255,0.03)',
-                      borderRadius: '0 10px 10px 0',
-                      padding: '14px 18px',
-                    }}>
-                      <div style={{ fontWeight: 'bold', color: borderColor, marginBottom: '6px', fontSize: '0.95em' }}>
-                        {ins.icon} {ins.title}
+          {Object.entries({
+            panoramica: { title: 'Panoramica', accent: C.cyan },
+            puntiForza: { title: 'Punti di Forza', accent: C.green },
+            miglioramento: { title: 'Da Migliorare', accent: C.red },
+            consigli: { title: 'Consigli', accent: C.amber },
+          }).map(([key, meta]) => {
+            const items = insights[key];
+            if (!items || items.length === 0) return null;
+            return (
+              <div key={key} style={card}>
+                <div style={{ ...sectionTitle, color: meta.accent }}>{meta.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {items.map((ins: Insight, i: number) => {
+                    const borderColor = ins.type === 'positive' ? C.green : ins.type === 'negative' ? C.red : ins.type === 'warning' ? C.amber : C.cyan;
+                    return (
+                      <div key={i} style={{
+                        borderLeft: `3px solid ${borderColor}`,
+                        background: `${borderColor}08`,
+                        borderRadius: '0 10px 10px 0',
+                        padding: '12px 16px',
+                      }}>
+                        <div style={{ fontWeight: 600, color: borderColor, marginBottom: '4px', fontSize: '0.9em' }}>
+                          {ins.title}
+                        </div>
+                        <div style={{ color: C.textSec, fontSize: '0.82em', lineHeight: 1.5 }}>
+                          {ins.text}
+                        </div>
                       </div>
-                      <div style={{ color: '#bbb', fontSize: '0.88em', lineHeight: '1.5' }}>
-                        {ins.text}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
 
-          {/* Punti di Forza */}
-          {insights.puntiForza.length > 0 && (
-            <div style={{ ...cardStyle, borderColor: 'rgba(0,255,136,0.15)' }}>
-              <div style={{ ...headerStyle, display: 'flex', alignItems: 'center', gap: '10px', color: '#00ff88' }}>
-                <span style={{ fontSize: '1.3em' }}>{'\u{2B50}'}</span> Punti di Forza
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {insights.puntiForza.map((ins, i) => (
-                  <div key={i} style={{
-                    borderLeft: '3px solid #00ff88',
-                    background: 'rgba(0,255,136,0.03)',
-                    borderRadius: '0 10px 10px 0',
-                    padding: '14px 18px',
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#00ff88', marginBottom: '6px', fontSize: '0.95em' }}>
-                      {ins.icon} {ins.title}
-                    </div>
-                    <div style={{ color: '#bbb', fontSize: '0.88em', lineHeight: '1.5' }}>
-                      {ins.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Aree di Miglioramento */}
-          {insights.miglioramento.length > 0 && (
-            <div style={{ ...cardStyle, borderColor: 'rgba(255,68,102,0.15)' }}>
-              <div style={{ ...headerStyle, display: 'flex', alignItems: 'center', gap: '10px', color: '#ff6b6b' }}>
-                <span style={{ fontSize: '1.3em' }}>{'\u{1F6A9}'}</span> Aree di Miglioramento
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {insights.miglioramento.map((ins, i) => {
-                  const borderColor = ins.type === 'negative' ? '#ff4466' : '#ffaa00';
-                  return (
-                    <div key={i} style={{
-                      borderLeft: `3px solid ${borderColor}`,
-                      background: ins.type === 'negative' ? 'rgba(255,68,102,0.03)' : 'rgba(255,170,0,0.03)',
-                      borderRadius: '0 10px 10px 0',
-                      padding: '14px 18px',
-                    }}>
-                      <div style={{ fontWeight: 'bold', color: borderColor, marginBottom: '6px', fontSize: '0.95em' }}>
-                        {ins.icon} {ins.title}
-                      </div>
-                      <div style={{ color: '#bbb', fontSize: '0.88em', lineHeight: '1.5' }}>
-                        {ins.text}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Consigli Operativi */}
-          {insights.consigli.length > 0 && (
-            <div style={{ ...cardStyle, borderColor: 'rgba(0,200,255,0.15)' }}>
-              <div style={{ ...headerStyle, display: 'flex', alignItems: 'center', gap: '10px', color: '#00ccff' }}>
-                <span style={{ fontSize: '1.3em' }}>{'\u{1F9ED}'}</span> Consigli Operativi
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {insights.consigli.map((ins, i) => {
-                  const borderColor = ins.type === 'positive' ? '#00ff88' : ins.type === 'negative' ? '#ff4466' : ins.type === 'warning' ? '#ffaa00' : '#00ccff';
-                  return (
-                    <div key={i} style={{
-                      borderLeft: `3px solid ${borderColor}`,
-                      background: 'rgba(0,200,255,0.03)',
-                      borderRadius: '0 10px 10px 0',
-                      padding: '14px 18px',
-                    }}>
-                      <div style={{ fontWeight: 'bold', color: borderColor, marginBottom: '6px', fontSize: '0.95em' }}>
-                        {ins.icon} {ins.title}
-                      </div>
-                      <div style={{ color: '#bbb', fontSize: '0.88em', lineHeight: '1.5' }}>
-                        {ins.text}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Analisi AI — Coach AI */}
+          {/* Coach AI promo */}
           <div style={{
-            ...cardStyle,
-            border: '1px solid rgba(138,43,226,0.3)',
-            background: 'linear-gradient(135deg, rgba(138,43,226,0.08), rgba(0,100,255,0.05))',
+            ...card,
+            border: `1px solid rgba(139, 92, 246, 0.2)`,
+            background: `linear-gradient(135deg, rgba(139, 92, 246, 0.06), ${C.cardBg})`,
           }}>
-            <div style={{ ...headerStyle, display: 'flex', alignItems: 'center', gap: '10px', color: '#b388ff' }}>
-              <span style={{ fontSize: '1.3em' }}>{'\u{1F916}'}</span> Analisi AI
-            </div>
-            <div style={{
-              color: '#ccc', fontSize: '0.9em', lineHeight: '1.7',
-              padding: '16px 20px',
-              border: '1px solid rgba(138,43,226,0.15)', borderRadius: '10px',
-              background: 'rgba(138,43,226,0.04)',
-            }}>
-              <p style={{ margin: '0 0 10px' }}>
-                Vuoi un'analisi personalizzata? Apri il <strong style={{ color: '#b388ff' }}>Coach AI</strong> dalla Dashboard e chiedi:
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                {[
-                  '"Come sta andando il sistema?"',
-                  '"Quali sono i punti di forza e debolezza?"',
-                  '"Cosa mi consigli di giocare oggi?"'
-                ].map(q => (
-                  <div key={q} style={{
-                    background: 'rgba(138,43,226,0.08)', borderRadius: '8px', padding: '8px 12px',
-                    fontSize: '0.85em', color: '#d1b3ff', fontStyle: 'italic'
-                  }}>{q}</div>
-                ))}
-              </div>
-              <p style={{ margin: 0, fontSize: '0.85em', color: '#999' }}>
-                Il Coach analizza i dati in tempo reale e fornisce insight su misura basati sullo storico dei pronostici.
-              </p>
+            <div style={{ ...sectionTitle, color: '#a78bfa' }}>Analisi AI</div>
+            <div style={{ color: C.textSec, fontSize: '0.85em', lineHeight: 1.6 }}>
+              Apri il <strong style={{ color: '#a78bfa' }}>Coach AI</strong> dalla Dashboard per un'analisi personalizzata in tempo reale.
             </div>
           </div>
 
-          {/* Nessun insight */}
           {insights.panoramica.length === 0 && insights.puntiForza.length === 0 &&
            insights.miglioramento.length === 0 && insights.consigli.length === 0 && (
-            <div style={{ ...cardStyle, textAlign: 'center', color: '#888', padding: '40px' }}>
-              Non ci sono abbastanza dati per generare un'analisi. Prova a estendere il periodo di analisi.
+            <div style={{ ...card, textAlign: 'center', color: C.textMuted, padding: '40px' }}>
+              Dati insufficienti per generare insights. Estendi il periodo di analisi.
             </div>
           )}
         </>
       )}
 
       {activeView === 'analisi' && !data && !loading && (
-        <div style={{ ...cardStyle, textAlign: 'center', color: '#888', padding: '40px' }}>
-          Nessun dato disponibile. Seleziona un periodo diverso.
+        <div style={{ ...card, textAlign: 'center', color: C.textMuted, padding: '40px' }}>
+          Nessun dato disponibile.
         </div>
       )}
     </div>

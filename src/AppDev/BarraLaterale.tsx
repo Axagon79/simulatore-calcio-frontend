@@ -519,8 +519,8 @@ export default function BarraLaterale({
           </div>
       )}
 
-      {/* Widget Pronostici del Giorno */}
-      {sidebarPredictions.length > 0 && (
+      {/* Widget Pronostici del Giorno — solo admin */}
+      {isAdmin && sidebarPredictions.length > 0 && (
         <div style={{ marginTop: '15px' }}>
           {sidebarPredictions.map((pred, idx) => {
             const mainPronostico = pred.pronostici?.[0];

@@ -13,7 +13,6 @@ export const getStyles = (isMobile: boolean): Record<string, React.CSSProperties
   const m = getMobileTheme();
   const isLight = getThemeMode() === 'light';
 
-  const bg = isMobile ? m.bg : t.bg;
   const panel = isMobile ? m.panel : t.panel;
   const border = isMobile ? m.panelBorder : t.panelBorder;
 

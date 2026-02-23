@@ -1813,8 +1813,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   };
 
 
-  // --- BLOCCO 0: PAGINA PRONOSTICI ---
-  if (activeLeague === 'PREDICTIONS') {
+  // --- BLOCCO 0: PAGINA PRONOSTICI (solo admin) ---
+  if (activeLeague === 'PREDICTIONS' && isAdmin) {
     return (
       <>
         <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px' }}>Caricamento pronostici...</div>}>
@@ -1891,8 +1891,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             return;
           }
 
-          // ✅ GESTIONE PRONOSTICI DEL GIORNO
-          if (id === 'PREDICTIONS') {
+          // ✅ GESTIONE PRONOSTICI DEL GIORNO (solo admin)
+          if (id === 'PREDICTIONS' && isAdmin) {
             setActiveLeague('PREDICTIONS');
             setSelectedCup('');
             setLeague('');

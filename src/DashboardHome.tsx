@@ -294,11 +294,33 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 <span style={{color: theme.cyan}}>AI</span> SIMULATOR
             </h1>
             <p style={{
-               color: theme.textDim,
-               fontSize: 'clamp(14px, 3vw, 18px)',
-               margin: 0
+               color: isLight ? '#475569' : '#b0bec5',
+               fontSize: 'clamp(15px, 3.2vw, 20px)',
+               margin: '30px 0 -10px 0',
+               fontFamily: "'Georgia', 'Times New Roman', serif",
+               fontStyle: 'italic',
+               letterSpacing: '0.5px',
+               lineHeight: '1.8',
+               opacity: 0.9,
             }}>
-              SELEZIONA UN CAMPIONATO PER ACCEDERE AL CORE
+              <span style={{ position: 'relative', display: 'inline', padding: '0 6px' }}>
+                <span style={{
+                  position: 'absolute', inset: '-2px -6px',
+                  background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-1&color=${isLight ? 'd4a017' : 'daa520'})`,
+                  backgroundSize: '100% 100%',
+                  opacity: 0.45, zIndex: -1,
+                }} />
+                <span style={{ position: 'relative' }}>Ogni partita ha una storia.</span>
+              </span><br />
+              <span style={{ position: 'relative', display: 'inline', padding: '0 6px' }}>
+                <span style={{
+                  position: 'absolute', inset: '-2px -6px',
+                  background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-2&color=${isLight ? 'd4a017' : 'daa520'})`,
+                  backgroundSize: '100% 100%',
+                  opacity: 0.45, zIndex: -1,
+                }} />
+                <span style={{ position: 'relative' }}>Noi la scriviamo prima che accada.</span>
+              </span>
             </p>
           </div>
         </div>

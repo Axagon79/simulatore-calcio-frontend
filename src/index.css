@@ -30,6 +30,26 @@ body {
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden !important;
+  background: url('/bg-stadium.png') center center / cover no-repeat fixed;
+}
+
+/* Overlay sfondo per tema — usa ::before per non coprire il contenuto */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Dark mode: overlay scuro semi-trasparente */
+body[data-theme="dark"]::before {
+  background: rgba(18, 20, 30, 0.82);
+}
+
+/* Light mode: overlay bianco forte */
+body[data-theme="light"]::before {
+  background: rgba(240, 242, 245, 0.85);
 }
 
 #root {

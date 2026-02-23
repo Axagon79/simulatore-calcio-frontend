@@ -51,7 +51,7 @@ interface TrackRecordResponse {
   quota_stats: QuotaStats;
   cross_quota_mercato: Record<string, Record<string, HitRateData>>;
   cross_mercato_campionato: Record<string, Record<string, HitRateData>>;
-  serie_temporale: Array<{ date: string; profit: number } & HitRateData>;
+  serie_temporale: Array<{ date: string; profit: number; avg_quota: number | null; edge: number | null } & HitRateData>;
 }
 
 interface TrackRecordProps {
@@ -316,6 +316,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   const [availableMarkets, setAvailableMarkets] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<'dati' | 'analisi'>('dati');
   const [filtroSezione, setFiltroSezione] = useState<'pronostici' | 'alto_rendimento'>('pronostici');
+  const [chartMetric, setChartMetric] = useState<'hr' | 'yield' | 'pl' | 'centrati' | 'volume' | 'qmedia' | 'edge'>('hr');
   const [quotaMin, setQuotaMin] = useState('');
   const [quotaMax, setQuotaMax] = useState('');
   const [selectedBand, setSelectedBand] = useState('');
@@ -995,32 +996,89 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
 
           {/* ─── Serie Temporale ──────────────────────────────────────────── */}
           {data.serie_temporale.length > 0 && (() => {
-            const showYield = !isPronostici;
-            const yieldData = showYield ? data.serie_temporale.map(d => ({
-              ...d,
-              yield: d.total > 0 ? Math.round((d.profit / d.total) * 1000) / 10 : 0,
-            })) : [];
-            const maxYield = showYield ? Math.max(...yieldData.map(d => Math.abs(d.yield)), 1) : 0;
+            const CHART_PILLS = [
+              { id: 'hr' as const, label: 'HR%' },
+              { id: 'yield' as const, label: 'Yield' },
+              { id: 'pl' as const, label: 'P/L' },
+              { id: 'centrati' as const, label: 'Centrati' },
+              { id: 'volume' as const, label: 'Volume' },
+              { id: 'qmedia' as const, label: 'Q.Media' },
+              { id: 'edge' as const, label: 'Edge' },
+            ];
+
+            // Calcola valori per la metrica selezionata
+            const chartData = data.serie_temporale.map(d => {
+              let val = 0;
+              if (chartMetric === 'hr') val = d.hit_rate ?? 0;
+              else if (chartMetric === 'yield') val = d.total > 0 ? Math.round((d.profit / d.total) * 1000) / 10 : 0;
+              else if (chartMetric === 'pl') val = d.profit;
+              else if (chartMetric === 'centrati') val = d.hits;
+              else if (chartMetric === 'volume') val = d.total;
+              else if (chartMetric === 'qmedia') val = d.avg_quota ?? 0;
+              else if (chartMetric === 'edge') val = d.edge ?? 0;
+              return { ...d, val };
+            });
+
+            // Metriche che possono essere negative (sopra/sotto zero)
+            const hasNegative = chartMetric === 'yield' || chartMetric === 'pl' || chartMetric === 'edge';
+            // Per HR% coloriamo per soglia, per le altre verde/rosso in base al segno
+            const useRateColor = chartMetric === 'hr';
+            // Suffissi per le label
+            const suffix = chartMetric === 'hr' || chartMetric === 'yield' || chartMetric === 'edge' ? '%' : chartMetric === 'pl' ? 'u' : '';
+            const showSign = chartMetric === 'yield' || chartMetric === 'pl' || chartMetric === 'edge';
+
+            const maxVal = Math.max(...chartData.map(d => Math.abs(d.val)), 0.1);
+
+            const formatVal = (v: number) => {
+              const sign = showSign && v > 0 ? '+' : '';
+              if (chartMetric === 'qmedia') return v.toFixed(2);
+              if (chartMetric === 'centrati' || chartMetric === 'volume') return String(Math.round(v));
+              return `${sign}${Math.round(v * 10) / 10}${suffix}`;
+            };
+
             return (
               <div style={card}>
-                <div style={sectionTitle}>
-                  {showYield ? 'Yield giornaliero (rendimento % per pronostico)' : 'Hit Rate giornaliero (% pronostici centrati)'}
+                {/* Pillole selezione metrica */}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                  {CHART_PILLS.map(pill => {
+                    const active = chartMetric === pill.id;
+                    return (
+                      <button
+                        key={pill.id}
+                        onClick={() => setChartMetric(pill.id)}
+                        style={{
+                          background: active ? `${accent}22` : 'rgba(255,255,255,0.03)',
+                          border: active ? `1px solid ${accent}50` : `1px solid ${C.cardBorder}`,
+                          color: active ? accent : C.textSec,
+                          borderRadius: '16px',
+                          padding: '5px 12px',
+                          cursor: 'pointer',
+                          fontSize: '0.75em',
+                          fontWeight: active ? 700 : 400,
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {pill.label}
+                      </button>
+                    );
+                  })}
                 </div>
+
                 <div style={{ overflowX: 'auto' }}>
-                  {showYield ? (
-                    /* ── Grafico Yield%: barre sopra/sotto la linea zero ── */
+                  {hasNegative ? (
+                    /* ── Grafico sopra/sotto zero ── */
                     <div style={{ position: 'relative', minHeight: '130px', padding: '8px 0' }}>
                       <div style={{ display: 'flex', gap: '3px', alignItems: 'center', height: '130px' }}>
-                        {yieldData.map(day => {
-                          const isPositive = day.yield >= 0;
-                          const barH = Math.max((Math.abs(day.yield) / maxYield) * 55, 3);
+                        {chartData.map(day => {
+                          const isPositive = day.val >= 0;
+                          const barH = Math.max((Math.abs(day.val) / maxVal) * 55, 3);
                           const color = isPositive ? C.green : C.red;
                           return (
                             <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px', height: '100%', justifyContent: 'center' }}>
-                              {/* Metà superiore (yield positivo) */}
                               <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <div style={{ fontSize: '0.55em', color, marginBottom: '2px' }}>
-                                  {isPositive ? `+${day.yield}%` : ''}
+                                  {isPositive ? formatVal(day.val) : ''}
                                 </div>
                                 {isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
@@ -1028,9 +1086,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                                   borderRadius: '3px 3px 0 0',
                                 }} />}
                               </div>
-                              {/* Linea zero */}
                               <div style={{ width: '100%', height: '1px', background: C.textMuted, opacity: 0.3 }} />
-                              {/* Metà inferiore (yield negativo) */}
                               <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center' }}>
                                 {!isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
@@ -1038,7 +1094,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                                   borderRadius: '0 0 3px 3px',
                                 }} />}
                                 <div style={{ fontSize: '0.55em', color, marginTop: '2px' }}>
-                                  {!isPositive ? `${day.yield}%` : ''}
+                                  {!isPositive ? formatVal(day.val) : ''}
                                 </div>
                               </div>
                               <div style={{ fontSize: '0.5em', color: C.textMuted, whiteSpace: 'nowrap' }}>
@@ -1050,17 +1106,17 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                       </div>
                     </div>
                   ) : (
-                    /* ── Grafico HR%: barre classiche ── */
+                    /* ── Grafico barre classiche (solo positive) ── */
                     <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', minHeight: '110px', padding: '8px 0' }}>
-                      {data.serie_temporale.map(day => {
-                        const rate = day.hit_rate ?? 0;
-                        const color = rateColor(rate);
+                      {chartData.map(day => {
+                        const color = useRateColor ? rateColor(day.val) : accent;
+                        const barH = maxVal > 0 ? Math.max((day.val / maxVal) * 90, 4) : 4;
                         return (
                           <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px' }}>
-                            <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{rate}%</div>
+                            <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{formatVal(day.val)}</div>
                             <div style={{
                               width: '100%', maxWidth: '20px',
-                              height: `${Math.max(rate * 0.9, 4)}px`,
+                              height: `${barH}px`,
                               background: `linear-gradient(180deg, ${color}, ${color}88)`,
                               borderRadius: '3px 3px 0 0',
                               transition: 'height 0.4s ease',

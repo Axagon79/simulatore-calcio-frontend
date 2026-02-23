@@ -51,7 +51,7 @@ interface TrackRecordResponse {
   quota_stats: QuotaStats;
   cross_quota_mercato: Record<string, Record<string, HitRateData>>;
   cross_mercato_campionato: Record<string, Record<string, HitRateData>>;
-  serie_temporale: Array<{ date: string } & HitRateData>;
+  serie_temporale: Array<{ date: string; profit: number } & HitRateData>;
 }
 
 interface TrackRecordProps {
@@ -478,6 +478,13 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
         </div>
       </div>
 
+      {/* ─── Intro sezioni ─────────────────────────────────────────────── */}
+      <div style={{ marginBottom: '14px', fontSize: '0.84em', color: C.textSec, lineHeight: 1.6 }}>
+        Il nostro sistema genera ogni giorno due categorie di pronostici, consultabili in
+        {' '}<strong style={{ color: C.text }}>due sezioni separate</strong> del sito.
+        Seleziona una sezione per visualizzare le statistiche corrispondenti.
+      </div>
+
       {/* ─── Hero Cards: Pronostici / Alto Rendimento ────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
         {/* Card Pronostici */}
@@ -507,7 +514,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             }} />}
           </div>
           <div style={{ fontSize: '0.68em', color: C.textMuted, lineHeight: 1.4, marginBottom: '10px' }}>
-            I pronostici con la probabilit{'\u00E0'} pi{'\u00F9'} alta di riuscita. Quote pi{'\u00F9'} basse ({'\u2264'} 2.50), rischio contenuto.
+            Quote {'\u2264'} 2.50, rischio pi{'\u00F9'} contenuto
           </div>
           {proData && proData.total > 0 ? (
             <>
@@ -555,7 +562,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             }} />}
           </div>
           <div style={{ fontSize: '0.68em', color: C.textMuted, lineHeight: 1.4, marginBottom: '10px' }}>
-            Pronostici con quote superiori a 2.50. Rischio maggiore, ma quando si centrano il profitto {'\u00E8'} nettamente pi{'\u00F9'} alto.
+            Quote &gt; 2.50, rischio maggiore ma profitto pi{'\u00F9'} alto
           </div>
           {arData && arData.total > 0 ? (
             <>
@@ -987,34 +994,85 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
           )}
 
           {/* ─── Serie Temporale ──────────────────────────────────────────── */}
-          {data.serie_temporale.length > 0 && (
-            <div style={card}>
-              <div style={sectionTitle}>Andamento</div>
-              <div style={{ overflowX: 'auto' }}>
-                <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', minHeight: '110px', padding: '8px 0' }}>
-                  {data.serie_temporale.map(day => {
-                    const rate = day.hit_rate ?? 0;
-                    const color = rateColor(rate);
-                    return (
-                      <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px' }}>
-                        <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{rate}%</div>
-                        <div style={{
-                          width: '100%', maxWidth: '20px',
-                          height: `${Math.max(rate * 0.9, 4)}px`,
-                          background: `linear-gradient(180deg, ${color}, ${color}88)`,
-                          borderRadius: '3px 3px 0 0',
-                          transition: 'height 0.4s ease',
-                        }} />
-                        <div style={{ fontSize: '0.52em', color: C.textMuted, marginTop: '3px', whiteSpace: 'nowrap' }}>
-                          {day.date.slice(5)}
-                        </div>
+          {data.serie_temporale.length > 0 && (() => {
+            const showProfit = !isPronostici;
+            const maxProfit = showProfit ? Math.max(...data.serie_temporale.map(d => Math.abs(d.profit)), 1) : 0;
+            return (
+              <div style={card}>
+                <div style={sectionTitle}>
+                  {showProfit ? 'Profitto giornaliero (flat stake 1u)' : 'Hit Rate giornaliero (% pronostici centrati)'}
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  {showProfit ? (
+                    /* ── Grafico profitto: barre sopra/sotto la linea zero ── */
+                    <div style={{ position: 'relative', minHeight: '130px', padding: '8px 0' }}>
+                      <div style={{ display: 'flex', gap: '3px', alignItems: 'center', height: '130px' }}>
+                        {data.serie_temporale.map(day => {
+                          const isPositive = day.profit >= 0;
+                          const barH = Math.max((Math.abs(day.profit) / maxProfit) * 55, 3);
+                          const color = isPositive ? C.green : C.red;
+                          return (
+                            <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px', height: '100%', justifyContent: 'center' }}>
+                              {/* Metà superiore (profitto positivo) */}
+                              <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <div style={{ fontSize: '0.55em', color, marginBottom: '2px' }}>
+                                  {isPositive ? `+${day.profit.toFixed(1)}` : ''}
+                                </div>
+                                {isPositive && <div style={{
+                                  width: '100%', maxWidth: '18px', height: `${barH}px`,
+                                  background: `linear-gradient(180deg, ${color}, ${color}88)`,
+                                  borderRadius: '3px 3px 0 0',
+                                }} />}
+                              </div>
+                              {/* Linea zero */}
+                              <div style={{ width: '100%', height: '1px', background: C.textMuted, opacity: 0.3 }} />
+                              {/* Metà inferiore (profitto negativo) */}
+                              <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center' }}>
+                                {!isPositive && <div style={{
+                                  width: '100%', maxWidth: '18px', height: `${barH}px`,
+                                  background: `linear-gradient(180deg, ${color}88, ${color})`,
+                                  borderRadius: '0 0 3px 3px',
+                                }} />}
+                                <div style={{ fontSize: '0.55em', color, marginTop: '2px' }}>
+                                  {!isPositive ? day.profit.toFixed(1) : ''}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.5em', color: C.textMuted, whiteSpace: 'nowrap' }}>
+                                {day.date.slice(5)}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ) : (
+                    /* ── Grafico HR%: barre classiche ── */
+                    <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', minHeight: '110px', padding: '8px 0' }}>
+                      {data.serie_temporale.map(day => {
+                        const rate = day.hit_rate ?? 0;
+                        const color = rateColor(rate);
+                        return (
+                          <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px' }}>
+                            <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{rate}%</div>
+                            <div style={{
+                              width: '100%', maxWidth: '20px',
+                              height: `${Math.max(rate * 0.9, 4)}px`,
+                              background: `linear-gradient(180deg, ${color}, ${color}88)`,
+                              borderRadius: '3px 3px 0 0',
+                              transition: 'height 0.4s ease',
+                            }} />
+                            <div style={{ fontSize: '0.52em', color: C.textMuted, marginTop: '3px', whiteSpace: 'nowrap' }}>
+                              {day.date.slice(5)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ─── Mercato x Campionato ─────────────────────────────────────── */}
           {Object.keys(data.cross_mercato_campionato).length > 0 && (

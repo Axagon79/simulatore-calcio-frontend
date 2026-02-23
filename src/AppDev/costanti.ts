@@ -153,7 +153,7 @@ export const themeLight = {
   bg: '#f0f2f5',
   panel: '#ffffff',
   panelSolid: '#ffffff',
-  panelBorder: '1px solid rgba(0, 0, 0, 0.12)',
+  panelBorder: '1px solid rgba(0, 0, 0, 0.20)',
   cyan: '#0077cc',
   purple: '#7c3aed',
   text: '#1a1a2e',
@@ -226,7 +226,7 @@ export const themeMobileDark = {
 export const themeMobileLight = {
   bg: '#e8eaf0',
   panel: 'rgba(255, 255, 255, 0.95)',
-  panelBorder: '1px solid rgba(0, 0, 0, 0.08)',
+  panelBorder: '1px solid rgba(0, 0, 0, 0.18)',
   sidebarBg: 'rgba(245, 246, 250, 0.98)',
 };
 

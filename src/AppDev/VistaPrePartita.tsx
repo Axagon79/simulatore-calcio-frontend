@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Dispatch, SetStateAction, CSSProperties } from 'react';
 import type { Match } from '../types';
-import { API_BASE } from './costanti';
+import { API_BASE, getThemeMode } from './costanti';
 
 // ============================================================
 // TYPES & INTERFACES
@@ -85,6 +85,7 @@ export default function VistaPrePartita({
   startSimulation,
   league
 }: VistaPrePartitaProps) {
+    const isLight = getThemeMode() === 'light';
 
     // --- STRISCE: State + Fetch ---
     interface StreakData {
@@ -383,15 +384,15 @@ export default function VistaPrePartita({
               <line key={i}
                 x1={cx + inner * Math.cos(a)} y1={cy - inner * Math.sin(a)}
                 x2={cx + outer * Math.cos(a)} y2={cy - outer * Math.sin(a)}
-                stroke="rgba(255,255,255,0.15)" strokeWidth="1"
+                stroke={isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)"} strokeWidth="1"
               />
             );
           })}
           {/* Lancetta */}
           <line x1={cx} y1={cy} x2={needleX} y2={needleY}
-            stroke="#fff" strokeWidth="2" strokeLinecap="round" filter="url(#glowSegno)" />
+            stroke={isLight ? "#333" : "#fff"} strokeWidth="2" strokeLinecap="round" filter="url(#glowSegno)" />
           <circle cx={needleX} cy={needleY} r="3.5" fill={dominantColor} filter="url(#glowSegno)" />
-          <circle cx={cx} cy={cy} r="6" fill="#1a1a24" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+          <circle cx={cx} cy={cy} r="6" fill={isLight ? "#fff" : "#1a1a24"} stroke={isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.3)"} strokeWidth="1" />
           {/* Nomi squadre sopra ai lati */}
           <text x="30" y="22" fontSize="9" fill={theme.cyan} fontWeight="bold" textAnchor="start"
             style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -402,7 +403,7 @@ export default function VistaPrePartita({
             {(selectedMatch?.away || '').substring(0, 14)}
           </text>
           {/* X sopra l'arco (centro alto) */}
-          <text x={xTop.x} y={xTop.y - 14} fontSize="12" fill="#888" fontWeight="900" textAnchor="middle"
+          <text x={xTop.x} y={xTop.y - 14} fontSize="12" fill={isLight ? "#6b7280" : "#888"} fontWeight="900" textAnchor="middle"
             style={{ fontFamily: 'Inter, sans-serif' }}>
             X
           </text>
@@ -410,8 +411,8 @@ export default function VistaPrePartita({
           <text x={cx - R - 14} y={cy + 5} fontSize="14" fill={theme.cyan} fontWeight="900" textAnchor="middle">1</text>
           <text x={cx + R + 14} y={cy + 5} fontSize="14" fill={theme.purple} fontWeight="900" textAnchor="middle">2</text>
           {/* Percentuale e segno al centro */}
-          <text x={cx} y={cy - 25} fontSize="24" fill="#fff" fontWeight="900" textAnchor="middle"
-            filter="url(#glowSegno)" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <text x={cx} y={cy - 25} fontSize="24" fill={isLight ? "#1e293b" : "#fff"} fontWeight="900" textAnchor="middle"
+            filter={isLight ? undefined : "url(#glowSegno)"} style={{ fontFamily: 'Inter, sans-serif' }}>
             {pctFavorito}%
           </text>
           <text x={cx} y={cy - 8} fontSize="9" fill={dominantColor} fontWeight="bold" textAnchor="middle"
@@ -461,11 +462,11 @@ export default function VistaPrePartita({
                 <line
                   x1={cx + inner * Math.cos(a)} y1={cy - inner * Math.sin(a)}
                   x2={cx + outer * Math.cos(a)} y2={cy - outer * Math.sin(a)}
-                  stroke={isMajor ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)'} strokeWidth={isMajor ? 1.5 : 0.8}
+                  stroke={isMajor ? (isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.4)') : (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)')} strokeWidth={isMajor ? 1.5 : 0.8}
                 />
                 {isMajor && (
                   <text x={cx + (R + 18) * Math.cos(a)} y={cy - (R + 18) * Math.sin(a) + 3}
-                    fontSize="8" fill="rgba(255,255,255,0.5)" fontWeight="bold" textAnchor="middle"
+                    fontSize="8" fill={isLight ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.5)"} fontWeight="bold" textAnchor="middle"
                     style={{ fontFamily: 'Inter, sans-serif' }}>
                     {golVal}
                   </text>
@@ -475,12 +476,12 @@ export default function VistaPrePartita({
           })}
           {/* Lancetta */}
           <line x1={cx} y1={cy} x2={needleX} y2={needleY}
-            stroke="#fff" strokeWidth="2" strokeLinecap="round" filter="url(#glowGol)" />
+            stroke={isLight ? "#333" : "#fff"} strokeWidth="2" strokeLinecap="round" filter="url(#glowGol)" />
           <circle cx={needleX} cy={needleY} r="3.5" fill={golColor} filter="url(#glowGol)" />
-          <circle cx={cx} cy={cy} r="6" fill="#1a1a24" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+          <circle cx={cx} cy={cy} r="6" fill={isLight ? "#fff" : "#1a1a24"} stroke={isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.3)"} strokeWidth="1" />
           {/* Valore gol al centro */}
-          <text x={cx} y={cy - 25} fontSize="24" fill="#fff" fontWeight="900" textAnchor="middle"
-            filter="url(#glowGol)" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <text x={cx} y={cy - 25} fontSize="24" fill={isLight ? "#1e293b" : "#fff"} fontWeight="900" textAnchor="middle"
+            filter={isLight ? undefined : "url(#glowGol)"} style={{ fontFamily: 'Inter, sans-serif' }}>
             {golAttesi.toFixed(1)}
           </text>
           <text x={cx} y={cy - 8} fontSize="9" fill={golColor} fontWeight="bold" textAnchor="middle"
@@ -488,7 +489,7 @@ export default function VistaPrePartita({
             {golAttesi < 1.5 ? 'UNDER' : golAttesi > 2.5 ? 'OVER' : 'EQUILIBRIO'}
           </text>
           {/* Label sotto */}
-          <text x={cx} y={cy + 18} fontSize="8" fill="rgba(255,255,255,0.4)" textAnchor="middle"
+          <text x={cx} y={cy + 18} fontSize="8" fill={isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)"} textAnchor="middle"
             letterSpacing="2" style={{ fontFamily: 'Inter, sans-serif' }}>
             GOL ATTESI
           </text>
@@ -576,7 +577,7 @@ export default function VistaPrePartita({
         const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
         return `${center + radius * Math.cos(angle)},${center + radius * Math.sin(angle)}`;
       }).join(' ');
-      return <polygon points={points} fill="none" stroke="#444" strokeWidth="0.5" strokeOpacity={opacity} />;
+      return <polygon points={points} fill="none" stroke={isLight ? "#9ca3af" : "#444"} strokeWidth="0.5" strokeOpacity={opacity} />;
     };
 
     const drawPentagonAxes = () => {
@@ -585,36 +586,43 @@ export default function VistaPrePartita({
         const angle = (Math.PI * 2 * i) / totalPoints - Math.PI / 2;
         const x2 = center + radius * Math.cos(angle);
         const y2 = center + radius * Math.sin(angle);
-        return <line key={i} x1={center} y1={center} x2={x2} y2={y2} stroke="#444" strokeWidth="0.5" />;
+        return <line key={i} x1={center} y1={center} x2={x2} y2={y2} stroke={isLight ? "#9ca3af" : "#444"} strokeWidth="0.5" />;
       });
     };
 
     // --- 3. RENDER ---
     return (
-      <div style={styles.arenaContent}>
-
-        {/* HEADER - SIMMETRIA ASSOLUTA PRO */}
+      <>
+        {/* HEADER - SIMMETRIA ASSOLUTA PRO (fuori da arenaContent per sticky) */}
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: 'center',
           justifyContent: isMobile ? 'center' : 'space-between',
-          marginBottom: '30px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          paddingBottom: '8px',
+          marginBottom: isMobile ? 0 : '30px',
+          borderBottom: `1px solid ${isLight ? '#b0b5c0' : 'rgba(255, 255, 255, 0.15)'}`,
+          paddingBottom: isMobile ? '9px' : '8px',
           paddingTop: isMobile ? '0' : '25px',
-          position: 'relative'
+          maxWidth: '1200px',
+          width: '100%',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          paddingLeft: '8px',
+          paddingRight: '8px',
+          boxSizing: 'border-box' as const,
+          ...(isMobile ? { position: 'fixed' as const, top: '60px', left: 0, right: 0, zIndex: 50, background: theme.bg, borderRadius: '0 0 12px 12px', boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.06)' : '0 2px 8px rgba(0,0,0,0.3)' } : { position: 'relative' as const })
         }}>
 
           {/* 1. SINISTRA: Tasto Indietro (Bilanciato con il lato destro del monitor) */}
-          <div style={{ width: isMobile ? '100%' : '200px', display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', zIndex: 10 }}>
+          <div style={{ width: isMobile ? '100%' : '200px', display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', alignItems: 'center', ...(isMobile ? { position: 'relative' as const } : {}), zIndex: 10 }}>
             <button
               onClick={() => setViewState('list')}
               style={{
-                height: '35px',
-                background: 'rgba(0, 240, 255, 0.05)',
-                border: '1px solid rgba(0, 240, 255, 0.2)',
-                color: '#00f0ff',
+                height: isMobile ? '23px' : '35px',
+                ...(isMobile ? { position: 'absolute' as const, left: 0, top: '3px' } : {}),
+                background: isLight ? 'rgba(0,119,204,0.08)' : 'rgba(0, 240, 255, 0.05)',
+                border: isLight ? '1px solid rgba(0,119,204,0.3)' : '1px solid rgba(0, 240, 255, 0.2)',
+                color: theme.cyan,
                 padding: '0 16px',
                 borderRadius: '6px',
                 fontSize: '11px',
@@ -628,6 +636,44 @@ export default function VistaPrePartita({
             >
               <span>←</span> Lista
             </button>
+            {isMobile && (
+              <div style={{
+                fontSize: '10px',
+                color: theme.cyan,
+                letterSpacing: '3px',
+                textTransform: 'uppercase',
+                opacity: 0.8,
+                whiteSpace: 'nowrap',
+                marginTop: '2px'
+              }}>
+                Analysis Core
+              </div>
+            )}
+            {/* Data/ora a destra (solo mobile) */}
+            {isMobile && (
+              <div style={{
+                position: 'absolute' as const,
+                right: 0,
+                top: '3px',
+                height: '23px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(111, 149, 170, 0.1)',
+                padding: '0 8px',
+                borderRadius: '6px',
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255, 255, 255, 0.1)'}`,
+                fontSize: '12px',
+                fontWeight: '600',
+                color: isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255, 255, 255, 0.6)',
+                pointerEvents: 'auto'
+              }}>
+                <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).date_obj ? new Date((selectedMatch as any).date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }) : '27/12'}</span>
+                <span style={{ opacity: 0.2 }}>|</span>
+                <span style={{ fontFamily: 'monospace' }}>{(selectedMatch as any).match_time || '18:00'}</span>
+              </div>
+            )}
           </div>
 
           {/* 2. BLOCCO CENTRALE ASSOLUTO (Ancorato al centro dello schermo) */}
@@ -639,26 +685,27 @@ export default function VistaPrePartita({
             flexDirection: isMobile ? 'column' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: isMobile ? '15px' : '30px',
+            gap: isMobile ? '6px' : '30px',
+            ...(isMobile ? { marginTop: '18px' } : {}),
             pointerEvents: 'none',
             width: isMobile ? '100%' : 'auto'
           }}>
 
             {/* A. BOX DATA (Larghezza fissa per non sbilanciare) */}
             <div style={{
-              width: isMobile ? 'auto' : '110px', // FISSO per simmetria con il Risultato
+              display: isMobile ? 'none' : 'flex',
+              width: '110px', // FISSO per simmetria con il Risultato
               height: '35px',
-              display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              background: 'rgba(111, 149, 170, 0.1)',
+              background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(111, 149, 170, 0.1)',
               padding: '0 10px',
               borderRadius: '6px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255, 255, 255, 0.1)'}`,
               fontSize: '15px',
               fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.6)',
+              color: isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255, 255, 255, 0.6)',
               order: isMobile ? 2 : 1,
               pointerEvents: 'auto'
             }}>
@@ -678,10 +725,11 @@ export default function VistaPrePartita({
             }}>
               {/* Analysis Core */}
               <div style={{
-                position: isMobile ? 'static' : 'absolute',
-                top: isMobile ? '0' : '-22px',
+                display: isMobile ? 'none' : 'block',
+                position: 'absolute' as const,
+                top: '-22px',
                 fontSize: '10px',
-                marginTop: isMobile ? '10px' : '0',
+                marginTop: '0',
                 color: theme.cyan,
                 letterSpacing: '3px',
                 textTransform: 'uppercase',
@@ -698,8 +746,8 @@ export default function VistaPrePartita({
                 alignItems: 'center',
                 fontSize: isMobile ? '15px' : '25px',
                 fontWeight: '900',
-                color: '#fff',
-                lineHeight: '35px'
+                color: theme.text,
+                lineHeight: isMobile ? '28px' : '35px'
               }}>
                 
                 {/* 1. CASA - Allineata a destra verso il VS (Testo + Stemma) */}
@@ -777,13 +825,37 @@ export default function VistaPrePartita({
                   </span>
                 </div>
               </div>
+              {/* Risultato a destra dei nomi (solo mobile) */}
+              {isMobile && (
+                <div style={{
+                  position: 'absolute' as const,
+                  right: '-55px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '900',
+                  background: selectedMatch?.real_score ? 'rgba(34, 197, 94, 0.12)' : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255, 255, 255, 0.04)'),
+                  color: selectedMatch?.real_score ? '#22c55e' : (isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255, 255, 255, 0.2)'),
+                  border: selectedMatch?.real_score ? '1px solid rgba(34, 197, 94, 0.3)' : `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255, 255, 255, 0.1)'}`,
+                  fontFamily: 'monospace',
+                  pointerEvents: 'auto'
+                }}>
+                  {selectedMatch?.real_score ? selectedMatch.real_score : "- : -"}
+                </div>
+              )}
             </div>
 
             {/* C. BOX RISULTATO (Larghezza fissa identica alla Data) */}
             <div style={{
-              width: isMobile ? '75px' : '130px', // FISSO come la Data per bilanciare il VS al centro
+              display: isMobile ? 'none' : 'flex',
+              width: '130px', // FISSO come la Data per bilanciare il VS al centro
               height: '35px',
-              display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '6px',
@@ -804,6 +876,10 @@ export default function VistaPrePartita({
           <div style={{ width: isMobile ? '0' : '200px' }}></div>
         </div>
 
+        {/* Spacer per compensare l'header fixed su mobile */}
+        {isMobile && <div style={{ height: '100px' }} />}
+
+        <div style={styles.arenaContent}>
         {/* === GRIGLIA PRINCIPALE === */}
         <div className="dashboard-main-grid">
 
@@ -831,8 +907,8 @@ export default function VistaPrePartita({
                 <button
                   onClick={() => setViewState('settings')}
                   style={{
-                    background: 'transparent', border: '1px solid #444',
-                    color: '#888', cursor: 'pointer', borderRadius: '4px',
+                    background: 'transparent', border: `1px solid ${isLight ? '#d1d5db' : '#444'}`,
+                    color: isLight ? '#6b7280' : '#888', cursor: 'pointer', borderRadius: '4px',
                     padding: '4px 8px', fontSize: '10px', textTransform: 'uppercase'
                   }}
                   title="Apri Impostazioni Complete"
@@ -842,10 +918,10 @@ export default function VistaPrePartita({
               </div>
 
               <div style={{
-                background: '#0a0a0a',
+                background: isLight ? '#f0f1f3' : '#0a0a0a',
                 padding: '10px',
                 borderRadius: '12px',
-                border: '1px solid #222',
+                border: `1px solid ${isLight ? '#d1d5db' : '#222'}`,
                 marginLeft: '-15px',
                 marginRight: '-15px',
                 marginTop: '8px',
@@ -865,10 +941,10 @@ export default function VistaPrePartita({
                   gap: '40px',
                   paddingLeft: '-5px'
                 }}>
-                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '5px', marginLeft: '5px' }}>
+                  <div style={{ fontSize: '10px', color: isLight ? '#9ca3af' : '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '5px', marginLeft: '5px' }}>
                     ENGINE: <span style={{ color: theme.cyan }}>CUSTOM</span>
                   </div>
-                  <div style={{ fontSize: '10px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '5px', marginLeft: '-30px' }}>
+                  <div style={{ fontSize: '10px', color: isLight ? '#9ca3af' : '#666', fontWeight: 'bold', letterSpacing: '0.5px', marginTop: '5px', marginLeft: '-30px' }}>
                     C. ATTUALI: <span style={{ color: theme.cyan, fontSize: '12px'}}>{customCycles === 0 ? 1 : customCycles}</span>
                   </div>
                 </div>
@@ -879,11 +955,11 @@ export default function VistaPrePartita({
                   marginTop: '5px',
                   justifyContent: 'space-between',
                   padding: '3px 5px',
-                  background: '#111',
+                  background: isLight ? '#e5e7eb' : '#111',
                   borderRadius: '8px',
-                  border: '1px solid #1a1a1a'
+                  border: `1px solid ${isLight ? '#d1d5db' : '#1a1a1a'}`
                 }}>
-                  <label style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>
+                  <label style={{ color: theme.text, fontSize: '12px', fontWeight: 'bold' }}>
                     Cicli:
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -918,7 +994,7 @@ export default function VistaPrePartita({
                       }}
                       style={{
                         width: '60px',
-                        background: '#000',
+                        background: isLight ? '#e5e7eb' : '#000',
                         color: theme.cyan,
                         border: `1px solid ${theme.cyan}40`,
                         padding: '5px',
@@ -934,9 +1010,9 @@ export default function VistaPrePartita({
                       onClick={() => setIsFlashActive(!isFlashActive)}
                       disabled={viewState === 'simulating'}
                       style={{
-                        background: isFlashActive ? '#ff9800' : '#1a1a1a',
-                        border: isFlashActive ? '1px solid #ff9800' : '1px solid #333',
-                        color: isFlashActive ? '#fff' : '#aaa',
+                        background: isFlashActive ? '#ff9800' : (isLight ? '#e5e7eb' : '#1a1a1a'),
+                        border: isFlashActive ? '1px solid #ff9800' : `1px solid ${isLight ? '#d1d5db' : '#333'}`,
+                        color: isFlashActive ? '#fff' : (isLight ? '#6b7280' : '#aaa'),
                         fontSize: '11px',
                         fontWeight: 'bold',
                         marginTop: '15px',
@@ -960,9 +1036,9 @@ export default function VistaPrePartita({
                   style={{
                     width: '100%',
                     height: '30px',
-                    background: '#111',
-                    color: '#fff',
-                    border: '1px solid #333',
+                    background: isLight ? '#e5e7eb' : '#111',
+                    color: theme.text,
+                    border: `1px solid ${isLight ? '#d1d5db' : '#333'}`,
                     marginTop: '10px',
                     padding: '0 10px',
                     borderRadius: '6px',
@@ -991,9 +1067,9 @@ export default function VistaPrePartita({
                       marginTop: '5px',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      border: `1px solid ${simMode === 'fast' ? theme.cyan : '#333'}`,
-                      background: simMode === 'fast' ? theme.cyan : '#111',
-                      color: simMode === 'fast' ? '#000' : '#888',
+                      border: `1px solid ${simMode === 'fast' ? theme.cyan : (isLight ? '#d1d5db' : '#333')}`,
+                      background: simMode === 'fast' ? theme.cyan : (isLight ? '#e5e7eb' : '#111'),
+                      color: simMode === 'fast' ? '#000' : (isLight ? '#6b7280' : '#888'),
                       transition: '0.2s'
                     }}
                   >
@@ -1011,9 +1087,9 @@ export default function VistaPrePartita({
                       fontWeight: 'bold',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      border: `1px solid ${simMode === 'animated' ? theme.cyan : '#333'}`,
-                      background: simMode === 'animated' ? theme.cyan : '#111',
-                      color: simMode === 'animated' ? '#000' : '#888',
+                      border: `1px solid ${simMode === 'animated' ? theme.cyan : (isLight ? '#d1d5db' : '#333')}`,
+                      background: simMode === 'animated' ? theme.cyan : (isLight ? '#e5e7eb' : '#111'),
+                      color: simMode === 'animated' ? '#000' : (isLight ? '#6b7280' : '#888'),
                       transition: '0.2s'
                     }}
                   >
@@ -1101,7 +1177,7 @@ export default function VistaPrePartita({
                               {homeAvg}%
                             </span>
                             {/* BARRA SOTTILE CON GRADIENTE MASCHERATO */}
-                            <div className="avg-progress-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                            <div className="avg-progress-container" style={{ height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', overflow: 'visible' }}>
                               <div className="avg-progress-bar" style={{
                                 width: `${valHome}%`,
                                 height: '100%',
@@ -1149,7 +1225,7 @@ export default function VistaPrePartita({
                               {awayAvg}%
                             </span>
                             {/* BARRA SOTTILE CON GRADIENTE MASCHERATO */}
-                            <div className="avg-progress-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                            <div className="avg-progress-container" style={{ height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', overflow: 'visible' }}>
                               <div className="avg-progress-bar" style={{
                                 width: `${valAway}%`,
                                 height: '100%',
@@ -1230,10 +1306,10 @@ export default function VistaPrePartita({
                     <>
                       {/* SQUADRA CASA */}
                       <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                        <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: theme.text }}>
                           {selectedMatch?.home}
                         </span>
-                        <div className="progress-bar-container" style={{ flex: '2', height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ flex: '2', height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', overflow: 'visible' }}>
                           <div
                             className="progress-bar home"
                             style={{
@@ -1261,10 +1337,10 @@ export default function VistaPrePartita({
 
                       {/* SQUADRA TRASFERTA */}
                       <div className="team-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                        <span className="team-name" style={{ flex: '1', fontSize: '12px', fontWeight: 'bold', color: theme.text }}>
                           {selectedMatch?.away}
                         </span>
-                        <div className="progress-bar-container" style={{ flex: '2', height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ flex: '2', height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', overflow: 'visible' }}>
                           <div
                             className="progress-bar away"
                             style={{
@@ -1300,12 +1376,12 @@ export default function VistaPrePartita({
                   <div className="history-summary-box" style={{
                     marginTop: '8px',
                     padding: '5px 12px',
-                    backgroundColor: 'rgba(82, 64, 117, 0.16)',
+                    backgroundColor: isLight ? 'rgba(82, 64, 117, 0.06)' : 'rgba(82, 64, 117, 0.16)',
                     borderRadius: '6px',
-                    borderLeft: `2px solid rgba(32, 238, 245, 0.6)`,
-                    borderRight: `2px solid rgba(32, 238, 245, 0.6)`,
+                    borderLeft: `2px solid ${isLight ? 'rgba(0, 119, 204, 0.5)' : 'rgba(32, 238, 245, 0.6)'}`,
+                    borderRight: `2px solid ${isLight ? 'rgba(0, 119, 204, 0.5)' : 'rgba(32, 238, 245, 0.6)'}`,
                     fontSize: '12px',
-                    color: 'rgb(201, 250, 252)',
+                    color: isLight ? '#1e40af' : 'rgb(201, 250, 252)',
                     fontStyle: 'italic',
                     display: 'flex',
                     justifyContent: 'center'
@@ -1321,7 +1397,7 @@ export default function VistaPrePartita({
               <div className="header-title" style={{ marginBottom: '20px', marginTop: '-10px' }}>CAMPO & AFFIDABILITÀ</div>
 
               {/* --- SOTTO-SEZIONE: FATTORE STADIO --- */}
-              <div style={{ fontSize: '9px', color: '#888', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>🏟️ Fattore Stadio</div>
+              <div style={{ fontSize: '9px', color: isLight ? '#6b7280' : '#888', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>🏟️ Fattore Stadio</div>
               <div className="content-container">
                 {(() => {
                   const fullScaleGradient = `linear-gradient(90deg,
@@ -1337,14 +1413,14 @@ export default function VistaPrePartita({
                     <>
                       <div className="team-row" style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
                         <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.home}</span>
-                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
                           <div className="progress-bar home" style={{ width: `${homeFieldFactor}%`, height: '100%', borderRadius: '3px', backgroundImage: fullScaleGradient, backgroundSize: `${homeFieldFactor > 0 ? (10000 / homeFieldFactor) : 100}% 100%`, boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadHome}`, transition: 'width 0.5s ease-in-out' }} />
                         </div>
                         <span className="team-percentage home" style={{ width: '40px', textAlign: 'right', fontWeight: 'bold', color: colHome, textShadow: `0 0 8px ${shadHome}` }}>{homeFieldFactor}%</span>
                       </div>
                       <div className="team-row" style={{ display: 'flex', alignItems: 'center' }}>
                         <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.away}</span>
-                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
                           <div className="progress-bar away" style={{ width: `${awayFieldFactor}%`, height: '100%', borderRadius: '3px', backgroundImage: fullScaleGradient, backgroundSize: `${awayFieldFactor > 0 ? (10000 / awayFieldFactor) : 100}% 100%`, boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadAway}`, transition: 'width 0.5s ease-in-out' }} />
                         </div>
                         <span className="team-percentage away" style={{ width: '40px', textAlign: 'right', fontWeight: 'bold', color: colAway, textShadow: `0 0 8px ${shadAway}` }}>{awayFieldFactor}%</span>
@@ -1355,10 +1431,10 @@ export default function VistaPrePartita({
               </div>
 
               {/* --- DIVISORE --- */}
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '12px 0' }} />
+              <div style={{ height: '1px', background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)', margin: '12px 0' }} />
 
               {/* --- SOTTO-SEZIONE: STABILITÀ --- */}
-              <div style={{ fontSize: '9px', color: '#888', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>🧠 Stabilità</div>
+              <div style={{ fontSize: '9px', color: isLight ? '#6b7280' : '#888', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>🧠 Stabilità</div>
               <div className="content-container">
                 {(() => {
                   const fullScaleGradient = `linear-gradient(90deg,
@@ -1376,14 +1452,14 @@ export default function VistaPrePartita({
                     <>
                       <div className="team-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
                         <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.home}</span>
-                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
                           <div className="progress-bar home" style={{ width: `${valHome}%`, height: '100%', borderRadius: '3px', backgroundImage: fullScaleGradient, backgroundSize: `${valHome > 0 ? (10000 / valHome) : 100}% 100%`, boxShadow: `0 0 5px ${colHome}, 0 0 10px ${shadHome}`, transition: 'width 0.5s ease-in-out' }} />
                         </div>
                         <span className="team-percentage home" style={{ width: '40px', textAlign: 'right', fontWeight: 'bold', color: colHome, textShadow: `0 0 8px ${shadHome}` }}>{valHome}%</span>
                       </div>
                       <div className="team-row" style={{ display: 'flex', alignItems: 'center' }}>
                         <span className="team-name" style={{ width: '30%', fontWeight: 'bold' }}>{selectedMatch?.away}</span>
-                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ flex: 1, height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', margin: '0 10px', overflow: 'visible' }}>
                           <div className="progress-bar away" style={{ width: `${valAway}%`, height: '100%', borderRadius: '3px', backgroundImage: fullScaleGradient, backgroundSize: `${valAway > 0 ? (10000 / valAway) : 100}% 100%`, boxShadow: `0 0 5px ${colAway}, 0 0 10px ${shadAway}`, transition: 'width 0.5s ease-in-out' }} />
                         </div>
                         <span className="team-percentage away" style={{ width: '40px', textAlign: 'right', fontWeight: 'bold', color: colAway, textShadow: `0 0 8px ${shadAway}` }}>{valAway}%</span>
@@ -1420,7 +1496,7 @@ export default function VistaPrePartita({
                           {valHome.toFixed(1)}
                         </div>
                       </div>
-                      <div className="progress-bar-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                      <div className="progress-bar-container" style={{ height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', overflow: 'visible' }}>
                         <div className="progress-bar home" style={{
                           width: `${pctHome}%`, height: '100%', borderRadius: '3px',
                           backgroundImage: fullScaleGradient,
@@ -1435,7 +1511,7 @@ export default function VistaPrePartita({
                             {valAway.toFixed(1)}
                           </div>
                         </div>
-                        <div className="progress-bar-container" style={{ height: '3px', backgroundColor: '#333', borderRadius: '3px', overflow: 'visible' }}>
+                        <div className="progress-bar-container" style={{ height: '3px', backgroundColor: isLight ? '#d1d5db' : '#333', borderRadius: '3px', overflow: 'visible' }}>
                           <div className="progress-bar away" style={{
                             width: `${pctAway}%`, height: '100%', borderRadius: '3px',
                             backgroundImage: fullScaleGradient,
@@ -1455,8 +1531,8 @@ export default function VistaPrePartita({
               <div className="header-title" style={{
                 fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px',
                 textTransform: 'uppercase' as const, textAlign: 'center',
-                color: 'rgba(255,255,255,0.5)', marginBottom: '5px',
-                borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '5px'
+                color: isLight ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)', marginBottom: '5px',
+                borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}`, paddingBottom: '5px'
               }}>
                 ANALISI PRE-PARTITA
               </div>
@@ -1469,16 +1545,16 @@ export default function VistaPrePartita({
                 width: '100%'
               }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', marginBottom: '2px', textTransform: 'uppercase' as const }}>SEGNO</div>
+                  <div style={{ fontSize: '8px', color: isLight ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.35)', letterSpacing: '1px', marginBottom: '2px', textTransform: 'uppercase' as const }}>SEGNO</div>
                   {predictionData ? renderGaugeSegno() : (
                     <div style={{ fontSize: '10px', color: theme.textDim, padding: '30px 0', textAlign: 'center' }}>
                       Dati non disponibili
                     </div>
                   )}
                 </div>
-                <div style={{ width: '1px', height: '80px', background: 'rgba(255,255,255,0.08)', display: isMobile ? 'none' : 'block' }} />
+                <div style={{ width: '1px', height: '80px', background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)', display: isMobile ? 'none' : 'block' }} />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', marginBottom: '2px', textTransform: 'uppercase' as const }}>GOL</div>
+                  <div style={{ fontSize: '8px', color: isLight ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.35)', letterSpacing: '1px', marginBottom: '2px', textTransform: 'uppercase' as const }}>GOL</div>
                   {predictionData ? renderGaugeGol() : (
                     <div style={{ fontSize: '10px', color: theme.textDim, padding: '30px 0', textAlign: 'center' }}>
                       Dati non disponibili
@@ -1543,7 +1619,7 @@ export default function VistaPrePartita({
                       }}
                     >
                       <div style={{ position: 'absolute', top: '-25px', left: 0, right: 0, display: 'flex', alignItems: 'center' }}>
-                        <div style={{ flex: 1, height: '3px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ flex: 1, height: '3px', backgroundColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
                           <div style={{ width: `${Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%`, height: '100%', backgroundColor: theme.cyan, boxShadow: `0 0 5px ${theme.cyan}` }}></div>
                         </div>
                         <span style={{ marginLeft: '4px', color: theme.cyan, fontSize: '9px', fontWeight: 'bold' }}>{Math.round(homeRadar.reduce((a, b) => a + b, 0) / 5)}%</span>
@@ -1565,7 +1641,7 @@ export default function VistaPrePartita({
                       }}
                     >
                       <div style={{ position: 'absolute', top: '-25px', left: 0, right: 0, display: 'flex', alignItems: 'center' }}>
-                        <div style={{ flex: 1, height: '3px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ flex: 1, height: '3px', backgroundColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
                           <div style={{ width: `${Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%`, height: '100%', backgroundColor: theme.danger, boxShadow: `0 0 5px ${theme.danger}` }}></div>
                         </div>
                         <span style={{ marginLeft: '4px', color: theme.danger, fontSize: '9px', fontWeight: 'bold' }}>{Math.round(awayRadar.reduce((a, b) => a + b, 0) / 5)}%</span>
@@ -1581,7 +1657,7 @@ export default function VistaPrePartita({
                 {/* Contenitore Radar - Rimane bloccato dove l'avevi messo tu */}
                 <div className="radar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0px', padding: '0px', marginTop: isMobile ? '0' : '15px' }}>
                   <div style={isMobile ? { display: 'contents' } : {
-                    background: 'rgba(0, 0, 0, 0.4)',
+                    background: isLight ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.4)',
                     borderRadius: '10px',
                     padding: '10px 10px 0 10px',
                     marginLeft: '0px',
@@ -1600,11 +1676,11 @@ export default function VistaPrePartita({
                     {drawPentagonGrid(45, 0.5)} {drawPentagonGrid(30, 0.2)} {drawPentagonGrid(15, 0.2)} {drawPentagonAxes()}
 
                     {/* Etichette fisse (ATT, TEC...) - Le lasciamo non interattive qui, usiamo i punti */}
-                    <text x="60" y="13" fontSize="5" fill="#aaa" textAnchor="middle">ATT</text>
-                    <text x="105" y="50" fontSize="5" fill="#aaa" textAnchor="start">TEC</text>
-                    <text x="88" y="102" fontSize="5" fill="#aaa" textAnchor="start">DIF</text>
-                    <text x="32" y="102" fontSize="5" fill="#aaa" textAnchor="end">VAL</text>
-                    <text x="15" y="50" fontSize="5" fill="#aaa" textAnchor="end">FRM</text>
+                    <text x="60" y="13" fontSize="5" fill={isLight ? "#6b7280" : "#aaa"} textAnchor="middle">ATT</text>
+                    <text x="105" y="50" fontSize="5" fill={isLight ? "#6b7280" : "#aaa"} textAnchor="start">TEC</text>
+                    <text x="88" y="102" fontSize="5" fill={isLight ? "#6b7280" : "#aaa"} textAnchor="start">DIF</text>
+                    <text x="32" y="102" fontSize="5" fill={isLight ? "#6b7280" : "#aaa"} textAnchor="end">VAL</text>
+                    <text x="15" y="50" fontSize="5" fill={isLight ? "#6b7280" : "#aaa"} textAnchor="end">FRM</text>
 
                     {/* LOGICA DI VISUALIZZAZIONE CONDIZIONALE */}
                     {(radarFocus === 'all' || radarFocus === 'home') && drawPentagramRadar(homeRadar, theme.cyan,)}
@@ -1616,10 +1692,10 @@ export default function VistaPrePartita({
                         {/* Rettangolo leggermente più largo per ospitare il % */}
                         <rect
                           x="-12" y="-6" width="24" height="10" rx="3"
-                          fill="rgba(0,0,0,0.9)" stroke={pointTooltip.color} strokeWidth="0.5"
+                          fill={isLight ? "rgba(255,255,255,0.95)" : "rgba(0,0,0,0.9)"} stroke={pointTooltip.color} strokeWidth="0.5"
                         />
                         {/* Testo con il simbolo % aggiunto */}
-                        <text x="0" y="1" fontSize="5" fontWeight="bold" fill="#fff" textAnchor="middle">
+                        <text x="0" y="1" fontSize="5" fontWeight="bold" fill={isLight ? "#1e293b" : "#fff"} textAnchor="middle">
                           {Math.round(pointTooltip.val)}%
                         </text>
                       </g>
@@ -1753,17 +1829,17 @@ export default function VistaPrePartita({
                 STRISCE
               </div>
               {streakLoading ? (
-                <div style={{ textAlign: 'center', color: '#888', padding: '20px 10px', fontSize: '11px' }}>
+                <div style={{ textAlign: 'center', color: isLight ? '#6b7280' : '#888', padding: '20px 10px', fontSize: '11px' }}>
                   Caricamento...
                 </div>
               ) : !streakData ? (
-                <div style={{ textAlign: 'center', color: '#666', padding: '20px 10px', fontSize: '11px' }}>
-                  <div style={{ color: '#888' }}>Nessun dato disponibile</div>
+                <div style={{ textAlign: 'center', color: isLight ? '#9ca3af' : '#666', padding: '20px 10px', fontSize: '11px' }}>
+                  <div style={{ color: isLight ? '#6b7280' : '#888' }}>Nessun dato disponibile</div>
                 </div>
               ) : (() => {
                 const anyActive = ALL_STREAK_TYPES.some(t => (streakData.streak_home?.[t] ?? 0) >= 2 || (streakData.streak_away?.[t] ?? 0) >= 2);
                 if (!anyActive) return (
-                  <div style={{ textAlign: 'center', color: '#666', padding: '15px 10px', fontSize: '11px' }}>
+                  <div style={{ textAlign: 'center', color: isLight ? '#9ca3af' : '#666', padding: '15px 10px', fontSize: '11px' }}>
                     Nessuna striscia attiva
                   </div>
                 );
@@ -1788,7 +1864,7 @@ export default function VistaPrePartita({
                   const pct = Math.min((n / MAX_BAR) * 100, 100);
                   const isPos = curveVal > 0;
                   const isNeg = curveVal < 0;
-                  const barFill = isPos ? theme.success : isNeg ? theme.danger : '#555';
+                  const barFill = isPos ? theme.success : isNeg ? theme.danger : (isLight ? '#9ca3af' : '#555');
                   const barBg = isPos ? 'rgba(0,255,136,0.08)' : isNeg ? 'rgba(255,68,68,0.08)' : 'rgba(136,136,136,0.08)';
                   const glow = isPos ? `0 0 6px rgba(0,255,136,0.4)` : isNeg ? `0 0 6px rgba(255,68,68,0.4)` : 'none';
                   return (
@@ -1816,7 +1892,7 @@ export default function VistaPrePartita({
                 return (
                   <div>
                     {/* Header squadre */}
-                    <div style={{ display: 'flex', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', marginBottom: '6px', paddingBottom: '4px', borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}` }}>
                       <div style={{ flex: '0 0 85px' }} />
                       <div style={{ flex: 1, textAlign: 'center', fontSize: '9px', fontWeight: 'bold', color: theme.cyan, letterSpacing: '0.5px' }}>
                         {selectedMatch?.home?.substring(0, 12)}
@@ -1905,7 +1981,7 @@ export default function VistaPrePartita({
                           </div>
 
                           {/* Header squadre contesto */}
-                          <div style={{ display: 'flex', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ display: 'flex', marginBottom: '6px', paddingBottom: '4px', borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}` }}>
                             <div style={{ flex: '0 0 85px' }} />
                             <div style={{ flex: 1, textAlign: 'center', fontSize: '8px', fontWeight: 'bold', color: theme.cyan, opacity: 0.8 }}>
                               {selectedMatch?.home?.substring(0, 10)} (C)
@@ -1953,6 +2029,7 @@ export default function VistaPrePartita({
           </div>
         </div>
       </div>
+      </>
 
     );
 }

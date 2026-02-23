@@ -16,6 +16,39 @@
     --theme-success: #05f9b6;
     --theme-warning: #ff9f43;
     --theme-font: "Inter", "Segoe UI", sans-serif;
+    --theme-surface-subtle: rgba(255, 255, 255, 0.05);
+    --theme-bar-track: #333;
+    --theme-border-subtle: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Tema Light Mode */
+  body[data-theme="light"] {
+    --theme-bg: #f0f2f5;
+    --theme-panel: rgba(255, 255, 255, 0.95);
+    --theme-cyan: #0077cc;
+    --theme-purple: #7c3aed;
+    --theme-text: #1a1a2e;
+    --theme-text-dim: #6b7280;
+    --theme-danger: #dc2626;
+    --theme-success: #059669;
+    --theme-warning: #d97706;
+    --theme-surface-subtle: rgba(0, 0, 0, 0.04);
+    --theme-bar-track: #d1d5db;
+    --theme-border-subtle: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Light mode — bordi card visibili */
+  body[data-theme="light"] .card-campo,
+  body[data-theme="light"] .card-affidabilita,
+  body[data-theme="light"] .card-campo-affidabilita,
+  body[data-theme="light"] .card-configurazione-left,
+  body[data-theme="light"] .card-configurazione,
+  body[data-theme="light"] .card-strisce,
+  body[data-theme="light"] .card-gauge,
+  body[data-theme="light"] .card-bias-core,
+  body[data-theme="light"] .card-dna,
+  body[data-theme="light"] .card-storia {
+    border: 1px solid #b0b5c0 !important;
   }
 
   /* Tema mobile più chiaro */
@@ -83,7 +116,7 @@
   
   .card-forma .team-name {
     font-size: 12px;
-    color: white;
+    color: var(--theme-text);
   }
   
   .card-forma .team-value {
@@ -96,7 +129,7 @@
   .card-forma .progress-bar-container {
     width: 100%;
     height: 5px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--theme-surface-subtle);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -190,7 +223,7 @@
   
   .card-trend .team-name {
     font-size: 14px;
-    color: white;
+    color: var(--theme-text);
     font-weight: bold;
     width: 120px;
     line-height: 1;
@@ -216,7 +249,7 @@
   .card-trend .avg-progress-container {
     width: 100%;
     height: 4px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--theme-border-subtle);
     border-radius: 2px;
   }
   
@@ -242,7 +275,7 @@
     height: 14px;
     border-radius: 2px;
     opacity: 0.9;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--theme-border-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -297,14 +330,14 @@
   
   .card-storia .team-name {
     font-size: 11px;
-    color: white;
+    color: var(--theme-text);
     width: 90px;
   }
   
   .card-storia .progress-bar-container {
     flex: 1;
     height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--theme-surface-subtle);
     border-radius: 2px;
     margin: 0 10px;
   }
@@ -372,14 +405,14 @@
   
   .card-campo .team-name {
     font-size: 11px;
-    color: white;
+    color: var(--theme-text);
     width: 90px;
   }
   
   .card-campo .progress-bar-container {
     flex: 1;
     height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--theme-surface-subtle);
     border-radius: 2px;
     margin: 0 10px;
   }
@@ -447,14 +480,14 @@
   
   .card-affidabilita .team-name {
     font-size: 11px;
-    color: white;
+    color: var(--theme-text);
     width: 90px;
   }
   
   .card-affidabilita .progress-bar-container {
     flex: 1;
     height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--theme-surface-subtle);
     border-radius: 2px;
     margin: 0 10px;
   }
@@ -616,7 +649,7 @@
   .card-bias-core .rating-bar-container {
     width: 100%;
     height: 6px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--theme-surface-subtle);
     border-radius: 3px;
     position: relative;
     overflow: visible;
@@ -628,7 +661,7 @@
     top: -2px;
     width: 1px;
     height: 10px;
-    background: rgba(255, 255, 255, 0.4);
+    background: var(--theme-text-dim);
     z-index: 4;
   }
   
@@ -655,7 +688,7 @@
   }
   
   .card-bias-core .rating-label-neutral {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--theme-text-dim);
   }
   
   .card-bias-core .rating-label-strong {
@@ -680,7 +713,7 @@
   
   .card-bias-core .team-item-name {
     font-size: 13px;
-    color: white;
+    color: var(--theme-text);
   }
   
   .card-bias-core .team-item-value {
@@ -692,7 +725,7 @@
   .card-bias-core .team-item-bar-container {
     width: 100%;
     height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--theme-surface-subtle);
     border-radius: 2px;
     overflow: hidden;
   }
@@ -703,7 +736,7 @@
   }
   
   .card-bias-core .odds-section {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--theme-surface-subtle);
     padding-top: 0px;
     margin-top: 10px;
     display: flex;
@@ -726,10 +759,10 @@
   .card-bias-core .odds-value {
     padding: 6px 10px;
     background: rgba(50, 38, 78, 0.37);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border: 0.5px solid var(--theme-border-subtle);
     border-radius: 8px;
     font-size: 12px;
-    color: white;
+    color: var(--theme-text);
     font-weight: bold;
   }
   
@@ -775,7 +808,7 @@
   
   .card-dna .header-section {
     width: 100%;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 2px solid var(--theme-surface-subtle);
     margin-top: 10px;
     margin-bottom: 30px;
     padding-bottom: 5px;
@@ -835,7 +868,7 @@
   }
   
   .card-dna .legend-text {
-    color: white;
+    color: var(--theme-text);
   }
   
   .card-dna .radar-container {
@@ -924,9 +957,9 @@
   .card-configurazione select {
     width: 100%;
     padding: 6px;
-    background: #000;
-    color: white;
-    border: 1px solid #333;
+    background: var(--theme-panel);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-text-dim);
     border-radius: 4px;
     font-size: 10px;
     outline: none;
@@ -969,7 +1002,7 @@
     background: linear-gradient(90deg, var(--theme-cyan), var(--theme-purple));
     border: none;
     border-radius: 6px;
-    color: white;
+    color: var(--theme-text);
     font-weight: 900;
     font-size: 12px;
     cursor: pointer;

@@ -36,7 +36,8 @@ export const getStyles = (isMobile: boolean): Record<string, React.CSSProperties
       WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '2px'
     },
     mainContent: {
-      display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden'
+      display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden',
+      ...(isMobile ? { marginTop: '60px' } : {})
     },
 
     // SIDEBAR NAVIGAZIONE

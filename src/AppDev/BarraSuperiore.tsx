@@ -52,7 +52,7 @@ export default function BarraSuperiore({
   return (
     <div style={{
       ...styles.topBar,
-      ...(isMobile ? { position: 'sticky' as const, top: 0, zIndex: 100 } : {}),
+      ...(isMobile ? { position: 'fixed' as const, top: 0, left: 0, right: 0, zIndex: 100, background: isLight ? 'rgb(215, 220, 235)' : theme.bg } : {}),
     }}>
       {/* HAMBURGER MENU + TOGGLE (Mobile) */}
       {isMobile && (

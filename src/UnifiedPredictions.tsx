@@ -3049,11 +3049,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   </div>
                   {finLegendOpen && (
                     <div style={{ marginTop: '8px', padding: '8px 10px', background: '#ffffff08', borderRadius: '8px', fontSize: '10px', color: '#999', lineHeight: '1.6' }}>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Yield</span> — Rendimento medio per pronostico. +10% = ogni pronostico rende in media il 10% della puntata</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>P/L</span> — Guadagno o perdita totale. +3.2 = hai guadagnato 3.2 unit&agrave; in tutto (1 unit&agrave; = la tua puntata)</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>ROI</span> — Ritorno sull'investimento totale in percentuale</div>
-                      <div><span style={{ color: '#4fc3f7', fontWeight: '700' }}>Q.Media</span> — La quota media su cui il sistema ha pronosticato</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Edge</span> — Quanto il nostro sistema &egrave; pi&ugrave; preciso delle quote dei bookmaker. Positivo = troviamo valore</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Yield</span> — Se punti 1&euro; su ogni pronostico, quanto guadagni in media? +10% = guadagni 0.10&euro; per ogni euro puntato</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>P/L</span> — Il totale che hai in tasca alla fine. +3.2 = hai 3.20&euro; in pi&ugrave; rispetto a quando hai iniziato</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>ROI</span> — Stesso concetto del Yield: quanto ti rende ogni euro investito, in percentuale</div>
+                      <div><span style={{ color: '#4fc3f7', fontWeight: '700' }}>Q.Media</span> — A che livello di difficolt&agrave; giochiamo. Pi&ugrave; &egrave; alta, pi&ugrave; &egrave; rischioso ma pi&ugrave; si pu&ograve; vincere</div>
+                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Edge</span> — Il nostro vantaggio: se &egrave; positivo, il sistema trova opportunit&agrave; che i bookmaker sottovalutano</div>
                     </div>
                   )}
                   {financeOpen && (

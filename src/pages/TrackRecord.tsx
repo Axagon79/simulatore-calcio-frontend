@@ -117,6 +117,16 @@ function rateColor(rate: number, arMode = false) {
   return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
+function withAlpha(color: string, alpha: number) {
+  // Supporta sia hex (#rrggbb) che hsl(h, s%, l%)
+  if (color.startsWith('hsl')) return color.replace(')', `, ${alpha})`);
+  // hex → rgba
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function profitColor(val: number) {
   return val >= 0 ? C.green : C.red;
 }
@@ -1102,7 +1112,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                                 </div>
                                 {isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
-                                  background: `linear-gradient(180deg, ${color}, ${color}88)`,
+                                  background: `linear-gradient(180deg, ${color}, ${withAlpha(color, 0.53)})`,
                                   borderRadius: '3px 3px 0 0',
                                 }} />}
                               </div>
@@ -1110,7 +1120,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                               <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center' }}>
                                 {!isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
-                                  background: `linear-gradient(180deg, ${color}88, ${color})`,
+                                  background: `linear-gradient(180deg, ${withAlpha(color, 0.53)}, ${color})`,
                                   borderRadius: '0 0 3px 3px',
                                 }} />}
                                 <div style={{ fontSize: '0.55em', color, marginTop: '2px' }}>
@@ -1137,7 +1147,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                             <div style={{
                               width: '100%', maxWidth: '20px',
                               height: `${barH}px`,
-                              background: `linear-gradient(180deg, ${color}, ${color}88)`,
+                              background: `linear-gradient(180deg, ${color}, ${withAlpha(color, 0.53)})`,
                               borderRadius: '3px 3px 0 0',
                               transition: 'height 0.4s ease',
                             }} />

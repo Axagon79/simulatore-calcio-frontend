@@ -39,9 +39,7 @@ function AppRoot() {
           {import.meta.env.DEV && (
             <Route path="/mixer" element={<TuningMixer />} />
           )}
-          {import.meta.env.DEV && (
-            <Route path="/track-record" element={<TrackRecord onBack={() => window.history.back()} />} />
-          )}
+          <Route path="/track-record" element={<TrackRecord onBack={() => window.history.back()} />} />
           {import.meta.env.DEV && (
             <Route path="/predictions-mixer" element={<PredictionsMixer />} />
           )}

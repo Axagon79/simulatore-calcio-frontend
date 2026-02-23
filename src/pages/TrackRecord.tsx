@@ -497,17 +497,17 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             opacity: isPronostici ? 1 : 0.6,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: isMobile ? '0.85em' : '0.95em', fontWeight: 700, color: isPronostici ? C.cyan : C.textSec }}>
-                Pronostici
-              </div>
-              <div style={{ fontSize: '0.68em', color: C.textMuted }}>Quota {'\u2264'} 2.50</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: isMobile ? '0.85em' : '0.95em', fontWeight: 700, color: isPronostici ? C.cyan : C.textSec }}>
+              Pronostici
             </div>
             {isPronostici && <div style={{
               width: '8px', height: '8px', borderRadius: '50%', background: C.cyan,
               boxShadow: `0 0 8px ${C.cyan}`,
             }} />}
+          </div>
+          <div style={{ fontSize: '0.68em', color: C.textMuted, lineHeight: 1.4, marginBottom: '10px' }}>
+            I pronostici con la probabilit{'\u00E0'} pi{'\u00F9'} alta di riuscita. Quote pi{'\u00F9'} basse ({'\u2264'} 2.50), rischio contenuto.
           </div>
           {proData && proData.total > 0 ? (
             <>
@@ -545,17 +545,17 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             opacity: !isPronostici ? 1 : 0.6,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: isMobile ? '0.85em' : '0.95em', fontWeight: 700, color: !isPronostici ? C.amber : C.textSec }}>
-                Alto Rendimento
-              </div>
-              <div style={{ fontSize: '0.68em', color: C.textMuted }}>Quota &gt; 2.50</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: isMobile ? '0.85em' : '0.95em', fontWeight: 700, color: !isPronostici ? C.amber : C.textSec }}>
+              Alto Rendimento
             </div>
             {!isPronostici && <div style={{
               width: '8px', height: '8px', borderRadius: '50%', background: C.amber,
               boxShadow: `0 0 8px ${C.amber}`,
             }} />}
+          </div>
+          <div style={{ fontSize: '0.68em', color: C.textMuted, lineHeight: 1.4, marginBottom: '10px' }}>
+            Pronostici con quote superiori a 2.50. Rischio maggiore, ma quando si centrano il profitto {'\u00E8'} nettamente pi{'\u00F9'} alto.
           </div>
           {arData && arData.total > 0 ? (
             <>

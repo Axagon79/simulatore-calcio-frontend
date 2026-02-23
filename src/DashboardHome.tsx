@@ -290,15 +290,16 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 fontSize: 'clamp(32px, 6vw, 64px)',
                 fontWeight: '900', margin: '0 0 10px 0',
                 textShadow: `0 0 40px ${theme.purple}`,
-                letterSpacing: '-1px',
-                color: theme.text
+                letterSpacing: isMobile ? '1px' : '-1px',
+                color: theme.text,
+                fontFamily: "'Russo One', sans-serif"
             }}>
                 <span style={{color: theme.cyan}}>AI</span> SIMULATOR
             </h1>
             <p style={{
                color: isLight ? '#475569' : '#b0bec5',
                fontSize: 'clamp(15px, 3.2vw, 20px)',
-               margin: isMobile ? '0px 0 -10px 0' :'30px 0 -10px 0',
+               margin: isMobile ? '-5px 0 -10px 0' :'30px 0 -10px 0',
                fontFamily: "'Georgia', 'Times New Roman', serif",
                fontStyle: 'italic',
                letterSpacing: '0.5px',

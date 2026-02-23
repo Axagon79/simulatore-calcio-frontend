@@ -6,9 +6,10 @@ type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'm
 type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_prod' | 'solo_sandbox';
 
 // --- TEMA (centralizzato) ---
-import { getTheme } from './AppDev/costanti';
+import { getTheme, getThemeMode } from './AppDev/costanti';
 import StemmaImg from './components/StemmaImg';
 const theme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 // --- URL BASE STEMMI ---
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';

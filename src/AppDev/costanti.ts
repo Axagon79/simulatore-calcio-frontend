@@ -120,6 +120,33 @@ export const themeDark = {
   cardHoverBg: 'rgba(30, 35, 50, 0.8)',
   borderSubtle: 'rgba(255,255,255,0.1)',
   surfaceSubtle: 'rgba(255,255,255,0.03)',
+  // Superfici graduali
+  surface05: 'rgba(255,255,255,0.05)',
+  surface08: 'rgba(255,255,255,0.08)',
+  surface15: 'rgba(255,255,255,0.15)',
+  // Hit/Miss (pronostici)
+  hitText: '#00ff88',
+  hitBg: 'rgba(0,255,136,0.15)',
+  hitBgSoft: 'rgba(0,255,136,0.10)',
+  hitBorder: 'rgba(0,255,136,0.3)',
+  missText: '#ff4466',
+  missBg: 'rgba(255,68,102,0.15)',
+  missBgSoft: 'rgba(255,68,102,0.10)',
+  missBorder: 'rgba(255,68,102,0.3)',
+  // LIVE badge
+  liveText: '#ff1744',
+  liveBg: 'rgba(255,23,68,0.12)',
+  liveBorder: 'rgba(255,23,68,0.3)',
+  // Popover/Card espandibile
+  popoverBg: '#1a1a24',
+  // Testo secondario extra
+  textMuted: '#aaa',
+  textFaint: '#999',
+  textDisabled: '#666',
+  // Finanza
+  financePositive: '#69f0ae',
+  financeNegative: '#ff4466',
+  quotaText: '#4dd0e1',
 };
 
 export const themeLight = {
@@ -148,6 +175,33 @@ export const themeLight = {
   cardHoverBg: 'rgba(235, 238, 248, 0.95)',
   borderSubtle: 'rgba(0,0,0,0.1)',
   surfaceSubtle: 'rgba(0,0,0,0.02)',
+  // Superfici graduali
+  surface05: 'rgba(0,0,0,0.04)',
+  surface08: 'rgba(0,0,0,0.07)',
+  surface15: 'rgba(0,0,0,0.12)',
+  // Hit/Miss (pronostici)
+  hitText: '#059669',
+  hitBg: 'rgba(5,150,105,0.12)',
+  hitBgSoft: 'rgba(5,150,105,0.08)',
+  hitBorder: 'rgba(5,150,105,0.3)',
+  missText: '#dc2626',
+  missBg: 'rgba(220,38,38,0.10)',
+  missBgSoft: 'rgba(220,38,38,0.06)',
+  missBorder: 'rgba(220,38,38,0.25)',
+  // LIVE badge
+  liveText: '#dc2626',
+  liveBg: 'rgba(220,38,38,0.08)',
+  liveBorder: 'rgba(220,38,38,0.25)',
+  // Popover/Card espandibile
+  popoverBg: '#ffffff',
+  // Testo secondario extra
+  textMuted: '#6b7280',
+  textFaint: '#9ca3af',
+  textDisabled: '#d1d5db',
+  // Finanza
+  financePositive: '#059669',
+  financeNegative: '#dc2626',
+  quotaText: '#0077cc',
 };
 
 export function getThemeMode(): ThemeMode {

@@ -5,8 +5,9 @@ import AddBetPopup from './components/AddBetPopup';
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 
 // --- TEMA (centralizzato) ---
-import { getTheme } from './AppDev/costanti';
+import { getTheme, getThemeMode } from './AppDev/costanti';
 const theme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 // --- HELPER: normalizza score per confronto ---
 const normalizeScore = (s: string): string => s.replace(/\s/g, '').replace(':', '-');
@@ -233,11 +234,11 @@ const getStakeLabel = (stake: number): string => {
 };
 
 const getStakeColor = (stake: number): string => {
-  if (stake === 0) return '#666';
-  if (stake <= 2) return '#4dd0e1';
-  if (stake <= 3) return '#66bb6a';
-  if (stake <= 5) return '#ffa726';
-  return '#ff5252';
+  if (stake === 0) return theme.textDisabled;
+  if (stake <= 2) return theme.quotaText;
+  if (stake <= 3) return theme.success;
+  if (stake <= 5) return theme.warning;
+  return theme.danger;
 };
 
 const formatDateLabel = (dateStr: string): string => {
@@ -462,7 +463,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           <span style={{ color: theme.textDim }}>{label}</span>
           <span style={{ color, fontWeight: 'bold' }}>{value.toFixed(1)}</span>
         </div>
-        <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ height: '4px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
         </div>
       </div>
@@ -529,7 +530,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     const frase_random = frasi_equilibrio[Math.floor(Math.random() * frasi_equilibrio.length)];
     
     return (
-      <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: label === 'Fattore Campo' ? 'none' : '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+      <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: label === 'Fattore Campo' ? 'none' : `1px solid ${theme.surface05}`, position: 'relative' }}>
         {/* Linea verticale divisoria - solo desktop */}
         {!isMobile && (
           <div style={{
@@ -538,7 +539,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
             top: '25px',
             bottom: '12px',
             width: '1px',
-            background: 'rgba(255,255,255,0.1)'
+            background: theme.borderSubtle
           }} />
         )}
         {/* Titolo metrica + Vantaggio su mobile */}
@@ -551,7 +552,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
               fontSize: '11px', 
               fontWeight: '800',
               color: favored ? theme.success : theme.textDim,
-              background: favored ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.05)',
+              background: favored ? theme.hitBg : theme.surface05,
               padding: '2px 6px',
               borderRadius: '4px'
             }}>
@@ -563,7 +564,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         {/* Barra Affidabilità */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
         <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Affidabilità:</span>
-          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
+          <div style={{ flex: 1, height: '6px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
             <div style={{ height: '100%', width: `${affidabilita}%`, background: affColor, borderRadius: '2px' }} />
           </div>
           <span style={{ fontSize: '14px', color: affColor, fontWeight: 'bold', minWidth: '35px' }}>{affidabilita.toFixed(1)}</span>
@@ -572,7 +573,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         {/* Barra squadra casa */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
         <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{homeName}:</span>
-          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px' }}>
+          <div style={{ flex: 1, height: '6px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden', maxWidth: '500px' }}>
             <div style={{ height: '100%', width: `${homePct}%`, background: theme.cyan, borderRadius: '2px' }} />
           </div>
           <span style={{ fontSize: '14px', color: theme.text, fontWeight: 'bold', minWidth: '35px' }}>{typeof homeValue === 'number' ? homeValue.toFixed(1) : homeValue}</span>
@@ -581,7 +582,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         {/* Barra squadra trasferta */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '14px', color: theme.text, width: '85px', minWidth: '85px', maxWidth: '85px', position: 'relative', top: '-2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{awayName}:</span>
-          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
+          <div style={{ flex: 1, height: '6px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden', maxWidth: '500px', alignSelf: 'center' }}>
             <div style={{ height: '100%', width: `${awayPct}%`, background: theme.purple, borderRadius: '2px' }} />
           </div>
           <span style={{ fontSize: '14px', color: theme.text, fontWeight: 'bold', minWidth: '35px' }}>{typeof awayValue === 'number' ? awayValue.toFixed(1) : awayValue}</span>
@@ -644,10 +645,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }}>
         <span style={{ color: theme.textDim }}>{label}</span>
         <span style={{ color: dirColor, fontWeight: 'bold', fontSize: '10px', textAlign: 'left' }}>{dirText}</span>
-        <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.15)' }} />
+        <span style={{ width: '1px', height: '12px', background: theme.surface15 }} />
         <span style={{ color, fontWeight: 'bold', textAlign: 'right' }}>{value.toFixed(1)}</span>
       </div>
-      <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{ height: '4px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
       </div>
     </div>
@@ -667,11 +668,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
   // --- HR% COLOR SCALE (5 livelli) ---
   const getHRColor = (hr: number, threshold: number): string => {
-    if (hr < threshold * 0.5) return '#ff4466';      // rosso
-    if (hr < threshold * 0.8) return '#ff9800';      // arancione
-    if (hr < threshold) return '#cddc39';             // giallo-verdino
-    if (hr < threshold * 1.4) return '#69f0ae';      // verde chiaro
-    return '#00c853';                                  // verde scuro
+    if (hr < threshold * 0.5) return theme.missText;
+    if (hr < threshold * 0.8) return theme.warning;
+    if (hr < threshold) return isLight ? '#a3a723' : '#cddc39';
+    if (hr < threshold * 1.4) return theme.financePositive;
+    return isLight ? '#047857' : '#00c853';
   };
 
   // --- HELPERS STATUS FILTRO ---
@@ -827,7 +828,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       : (pred.comment?.segno || pred.comment?.gol || pred.comment?.doppia_chance || pred.comment?.gol_extra);
     const hasDetail = !!(pred.segno_dettaglio || pred.gol_dettaglio || (pred.streak_home && pred.streak_away));
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
-    const barColor = pred.real_score ? (pred.hit ? '#00ff88' : '#ff4466') : getConfidenceColor(bestConf);
+    const barColor = pred.real_score ? (pred.hit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
@@ -914,10 +915,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* Risultato + Freccia — spinto a destra */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? '#00ff88' : '#ff4466', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {pred.real_score.replace(':', ' - ')}
                 {((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(pred.real_score!)) &&
-                  <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
+                  <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -963,17 +964,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {isTipsOpen && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
-              background: '#1a1a24', border: '1px solid rgba(0,240,255,0.45)',
+              background: theme.popoverBg, border: '1px solid rgba(0,240,255,0.45)',
               borderRadius: '8px', padding: '8px 10px',
-              boxShadow: '0 0 12px rgba(0,240,255,0.15), 0 6px 24px rgba(0,0,0,0.9)',
+              boxShadow: `0 0 12px rgba(0,240,255,0.15), 0 6px 24px ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.9)'}`,
               minWidth: '160px', whiteSpace: 'nowrap' as const
             }}>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {pred.pronostici?.map((p, i) => {
                   const isHit = pred.real_score ? p.hit : null;
-                  const pillBg = isHit === true ? 'rgba(0,255,136,0.15)' : isHit === false ? 'rgba(255,68,102,0.15)' : 'rgba(255,255,255,0.06)';
-                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(255,255,255,0.12)';
-                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
+                  const pillBg = isHit === true ? theme.hitBg : isHit === false ? theme.missBg : theme.surface05;
+                  const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : theme.surface15;
+                  const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.cyan;
                   const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
                     || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
                   return (
@@ -984,7 +985,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
-                      {quota && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
+                      {quota && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                     </span>
                   );
@@ -996,7 +997,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* DETTAGLIO ESPANSO (identico a prima) */}
         {isCardExpanded && (
-          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', animation: 'fadeIn 0.3s ease' }}>
+          <div style={{ marginTop: '10px', borderTop: `1px solid ${theme.surface05}`, paddingTop: '10px', animation: 'fadeIn 0.3s ease' }}>
 
             {/* Pronostici — sempre aperto, stile sobrio */}
             {(() => {
@@ -1005,9 +1006,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
               const renderPill = (p: typeof pred.pronostici[0], idx: number) => {
                 const isHit = pred.real_score ? p.hit : null;
-                const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(17, 56, 93, 0.45)';
-                const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : 'rgba(17, 56, 93, 0.7)';
-                const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.cyan;
+                const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : 'rgba(17, 56, 93, 0.45)';
+                const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : 'rgba(17, 56, 93, 0.7)';
+                const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.cyan;
                 const quota = p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
                   || (p.tipo === 'DOPPIA_CHANCE' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
                   || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
@@ -1023,7 +1024,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.pronostico}
                     </span>
                     <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
-                    {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
+                    {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                     {source && (
                       <span style={{
                         fontSize: '8px', fontWeight: '700', color: '#a78bfa',
@@ -1033,14 +1034,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </span>
                     )}
                     {isAdmin && p.edge != null && p.edge > 0 && (
-                      <span style={{ fontSize: '8px', color: '#888' }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
+                      <span style={{ fontSize: '8px', color: theme.textFaint }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
                         E:+{p.edge?.toFixed(1)}%
                       </span>
                     )}
                     {p.stake != null && p.stake > 0 && (
                       <span style={{
                         fontSize: '9px', fontWeight: '800', color: getStakeColor(p.stake),
-                        background: 'rgba(255,255,255,0.05)', borderRadius: '3px', padding: '1px 4px',
+                        background: theme.surface05, borderRadius: '3px', padding: '1px 4px',
                       }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
                         Stake:{p.stake}
                       </span>
@@ -1077,16 +1078,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Segno:</div>
                       {segnoPreds.length > 0 ? segnoPreds.map((p, i) => renderPill(p, i)) : (
-                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', padding: '4px 0' }}>—</div>
+                        <div style={{ fontSize: '10px', color: theme.surface15, padding: '4px 0' }}>—</div>
                       )}
                     </div>
                     {/* Separatore verticale */}
-                    <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch' }} />
+                    <div style={{ width: '1px', background: theme.surface05, alignSelf: 'stretch' }} />
                     {/* Colonna GOL */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Gol:</div>
                       {golPreds.length > 0 ? golPreds.map((p, i) => renderPill(p, i)) : (
-                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', padding: '4px 0' }}>—</div>
+                        <div style={{ fontSize: '10px', color: theme.surface15, padding: '4px 0' }}>—</div>
                       )}
                     </div>
                   </div>
@@ -1113,12 +1114,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <span>X: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
                     <span>2: <span style={{ color: theme.text, fontWeight: 600 }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
                     {pred.odds?.over_25 != null && <>
-                      <span style={{ color: 'rgba(255,255,255,0.12)' }}>│</span>
+                      <span style={{ color: theme.surface15 }}>│</span>
                       <span>O2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
                       <span>U2.5: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
                     </>}
                     {pred.odds?.gg != null && <>
-                      <span style={{ color: 'rgba(255,255,255,0.12)' }}>│</span>
+                      <span style={{ color: theme.surface15 }}>│</span>
                       <span>GG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
                       <span>NG: <span style={{ color: theme.text, fontWeight: 600 }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
                     </>}
@@ -1202,7 +1203,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     return (
                       <span key={i} style={{
                         fontSize: '13px',
-                        color: reHit ? theme.success : liveHit ? theme.success : 'rgba(255,255,255,0.6)',
+                        color: reHit ? theme.success : liveHit ? theme.success : theme.textDim,
                         fontWeight: 600,
                         animation: liveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
                       }}>
@@ -1261,7 +1262,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <div key={pct} style={{
                         position: 'absolute' as const, top: -1, left: `${pct}%`,
                         width: '1px', height: '10px',
-                        background: 'rgba(255,255,255,0.3)',
+                        background: theme.surface15,
                       }} />
                     ))}
                     <div style={{
@@ -1284,9 +1285,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     onClick={() => { setAnalysisTab(prev => ({ ...prev, [matchId]: 'free' })); trackTabClick('f'); }}
                     style={{
                       padding: '4px 14px', borderRadius: '12px',
-                      border: currentAnalysisTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : '1px solid rgba(255,255,255,0.15)',
+                      border: currentAnalysisTab === 'free' ? '1px solid rgba(6, 182, 212, 0.6)' : `1px solid ${theme.surface15}`,
                       cursor: 'pointer', fontSize: '10px', fontWeight: 600,
-                      background: currentAnalysisTab === 'free' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.06)',
+                      background: currentAnalysisTab === 'free' ? 'rgba(6, 182, 212, 0.25)' : theme.surface05,
                       color: currentAnalysisTab === 'free' ? theme.cyan : theme.textDim,
                     }}
                   >Analisi Free</button>
@@ -1299,10 +1300,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }}
                     style={{
                       padding: '4px 14px', borderRadius: '12px',
-                      border: currentAnalysisTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.6)' : '1px solid rgba(255,255,255,0.15)',
+                      border: currentAnalysisTab === 'premium' ? '1px solid rgba(168, 85, 247, 0.6)' : `1px solid ${theme.surface15}`,
                       cursor: 'pointer', fontSize: '10px', fontWeight: 600,
-                      background: currentAnalysisTab === 'premium' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.06)',
-                      color: currentAnalysisTab === 'premium' ? '#a855f7' : theme.textDim,
+                      background: currentAnalysisTab === 'premium' ? 'rgba(168, 85, 247, 0.25)' : theme.surface05,
+                      color: currentAnalysisTab === 'premium' ? theme.purple : theme.textDim,
                     }}
                   >{(isAdmin || isPremiumUser) ? 'Analisi AI Premium' : '🔒 Premium'}</button>
                 </div>
@@ -1312,7 +1313,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   <div style={{
                     fontSize: '11px', lineHeight: '1.7', color: theme.text,
                     padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
-                    background: 'rgba(255,255,255,0.03)', borderRadius: '4px',
+                    background: theme.surfaceSubtle, borderRadius: '4px',
                   }}>
                     {pred.analysis_free}
                   </div>
@@ -1330,7 +1331,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         🔒 Disponibile nella versione Premium
                       </div>
                     ) : isPremiumBusy ? (
-                      <div style={{ textAlign: 'center', padding: '12px', color: '#a855f7' }}>
+                      <div style={{ textAlign: 'center', padding: '12px', color: theme.purple }}>
                         🤖 Analisi in corso...
                       </div>
                     ) : isPremiumLoaded ? (
@@ -1373,7 +1374,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const renderMCBar = (label: string, values: Array<{ name: string; pct: number; color: string }>) => (
                 <div style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '11px', color: theme.textDim, marginBottom: '4px', fontWeight: 600 }}>{label}</div>
-                  <div style={{ display: 'flex', height: '22px', borderRadius: '4px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', height: '22px', borderRadius: '4px', overflow: 'hidden', background: theme.surface05 }}>
                     {values.map((v, i) => (
                       <div key={i} style={{
                         width: `${v.pct}%`,
@@ -1424,7 +1425,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         { name: 'Under', pct: sim.under_25_pct, color: '#9575cd' },
                       ])}
                       {renderMCBar('GG/NG', [
-                        { name: 'GG', pct: sim.gg_pct, color: '#4dd0e1' },
+                        { name: 'GG', pct: sim.gg_pct, color: theme.quotaText },
                         { name: 'NG', pct: sim.ng_pct, color: '#f06292' },
                       ])}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1449,9 +1450,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               return (
                                 <span key={i} style={{
                                   padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                                  background: highlighted ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255,255,255,0.06)',
+                                  background: highlighted ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : theme.surface05,
                                   color: highlighted ? theme.success : i === 0 ? theme.orange : theme.textDim,
-                                  border: highlighted ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : '1px solid rgba(255,255,255,0.08)',
+                                  border: highlighted ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : `1px solid ${theme.surface08}`,
                                   animation: isLiveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
                                 }}>
                                   {score} ({count}) {isHit ? '✅' : ''}
@@ -1470,7 +1471,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* Bottoni Commento + Dettaglio */}
             <div style={{
               display: 'flex', gap: '12px', paddingLeft: '8px', paddingTop: '8px', marginTop: '6px',
-              borderTop: '1px solid rgba(255,255,255,0.04)'
+              borderTop: `1px solid ${theme.surfaceSubtle}`
             }}>
               {hasComment && (
                 <div
@@ -1573,13 +1574,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                     width: isMobile ? '7px' : '14px',
                                     height: '5px',
                                     borderRadius: '1.5px',
-                                    background: active ? TICK_COLORS[i] : 'rgba(255,255,255,0.08)',
-                                    border: active ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                                    background: active ? TICK_COLORS[i] : theme.surface08,
+                                    border: active ? 'none' : `1px solid ${theme.surface05}`,
                                     boxSizing: 'border-box' as const,
                                   }} />
                                   <span style={{
                                     fontSize: '5px',
-                                    color: active ? TICK_COLORS[i] : 'rgba(255,255,255,0.2)',
+                                    color: active ? TICK_COLORS[i] : theme.surface15,
                                     marginTop: '1px',
                                     lineHeight: 1,
                                     fontWeight: active ? 600 : 400,
@@ -1820,7 +1821,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold' }}>{segnoTip.pronostico}</span>?</span>
                                   <span style={{ color, fontWeight: 'bold' }}>{val.toFixed(1)}</span>
                                 </div>
-                                <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div style={{ height: '4px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden' }}>
                                   <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginTop: '2px', opacity: 0.5 }}>
@@ -1840,7 +1841,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold' }}>{golTip.pronostico}</span>?</span>
                                   <span style={{ color, fontWeight: 'bold' }}>{val.toFixed(1)}</span>
                                 </div>
-                                <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div style={{ height: '4px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden' }}>
                                   <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginTop: '2px', opacity: 0.5 }}>
@@ -1899,7 +1900,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <div style={{ marginBottom: '8px', marginTop: '20px' }}>
                   <div style={{
                     height: '1px',
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 15%, rgba(255,255,255,0.3) 85%, transparent 100%)',
+                    background: `linear-gradient(90deg, transparent 0%, ${theme.surface15} 15%, ${theme.surface15} 85%, transparent 100%)`,
                     marginBottom: '20px',
                     marginTop: '0px',
                     marginLeft: isMobile ? '-10px' : '-14px',
@@ -1957,7 +1958,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* BARRA LATERALE */}
         <div style={{
           position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
-          background: bomb.real_score ? (bomb.hit ? '#00ff88' : '#ff4466') : `linear-gradient(180deg, ${theme.gold}, ${theme.danger})`
+          background: bomb.real_score ? (bomb.hit ? theme.hitText : theme.missText) : `linear-gradient(180deg, ${theme.gold}, ${theme.danger})`
         }} />
 
         {/* RIGA UNICA COMPATTA — click ovunque espande */}
@@ -1986,7 +1987,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* Risultato + Freccia — spinto a destra */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {bomb.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.hit ? '#00ff88' : '#ff4466' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: bomb.hit ? theme.hitText : theme.missText }}>
                 {bomb.real_score.replace(':', ' - ')}
               </span>
             ) : getMatchStatus(bomb) === 'live' ? (
@@ -2032,17 +2033,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {isTipsOpen && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
-              background: '#1a1a24', border: '1px solid rgba(255,215,0,0.45)',
+              background: theme.popoverBg, border: '1px solid rgba(255,215,0,0.45)',
               borderRadius: '8px', padding: '8px 10px',
-              boxShadow: '0 0 12px rgba(255,215,0,0.15), 0 6px 24px rgba(0,0,0,0.9)',
+              boxShadow: `0 0 12px rgba(255,215,0,0.15), 0 6px 24px ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.9)'}`,
               minWidth: '160px', whiteSpace: 'nowrap' as const
             }}>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {(() => {
                   const isHit = bomb.real_score ? bomb.hit : null;
-                  const pillBg = isHit === true ? 'rgba(0,255,136,0.15)' : isHit === false ? 'rgba(255,68,102,0.15)' : 'rgba(255,215,0,0.1)';
-                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : `${theme.gold}30`;
-                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.gold;
+                  const pillBg = isHit === true ? theme.hitBg : isHit === false ? theme.missBg : 'rgba(255,215,0,0.1)';
+                  const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : `${theme.gold}30`;
+                  const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.gold;
                   return (
                     <span style={{
                       background: pillBg, border: `1px solid ${pillBorder}`,
@@ -2051,7 +2052,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
-                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
+                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                     </span>
                   );
@@ -2072,9 +2073,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {(() => {
                   const isHit = bomb.real_score ? bomb.hit : null;
-                  const pillBg = isHit === true ? 'rgba(0,255,136,0.1)' : isHit === false ? 'rgba(255,68,102,0.1)' : 'rgba(255,215,0,0.08)';
-                  const pillBorder = isHit === true ? 'rgba(0,255,136,0.3)' : isHit === false ? 'rgba(255,68,102,0.3)' : `${theme.gold}30`;
-                  const nameColor = isHit === true ? '#00ff88' : isHit === false ? '#ff4466' : theme.gold;
+                  const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : 'rgba(255,215,0,0.08)';
+                  const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : `${theme.gold}30`;
+                  const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.gold;
                   return (
                     <div style={{
                       background: pillBg, border: `1px solid ${pillBorder}`,
@@ -2083,11 +2084,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }}>
                       <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{bomb.segno_bomba}</span>
                       <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
-                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                        <span style={{ color: theme.surface15 }}>★</span>
                         <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${bomb.confidence || 0}%`, color: theme.gold }}>★</span>
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(bomb.confidence) }}>{bomb.confidence.toFixed(0)}%</span>
-                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
+                      {bomb.odds?.[bomb.segno_bomba as keyof typeof bomb.odds] != null && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(bomb.odds[bomb.segno_bomba as keyof typeof bomb.odds]).toFixed(2)}</span>}
                       {isHit !== null && <span style={{ fontSize: '12px' }}>{isHit ? '✅' : '❌'}</span>}
                     </div>
                   );
@@ -2106,12 +2107,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <span>X: <span style={{ color: theme.text }}>{bomb.odds?.['X'] != null ? Number(bomb.odds['X']).toFixed(2) : '-'}</span></span>
                 <span>2: <span style={{ color: theme.text }}>{bomb.odds?.['2'] != null ? Number(bomb.odds['2']).toFixed(2) : '-'}</span></span>
                 {bomb.odds?.over_25 != null && <>
-                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                  <span style={{ color: theme.surface15 }}>│</span>
                   <span>O2.5: <span style={{ color: theme.text }}>{Number(bomb.odds.over_25).toFixed(2)}</span></span>
                   <span>U2.5: <span style={{ color: theme.text }}>{Number(bomb.odds.under_25).toFixed(2)}</span></span>
                 </>}
                 {bomb.odds?.gg != null && <>
-                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                  <span style={{ color: theme.surface15 }}>│</span>
                   <span>GG: <span style={{ color: theme.text }}>{Number(bomb.odds.gg).toFixed(2)}</span></span>
                   <span>NG: <span style={{ color: theme.text }}>{Number(bomb.odds.ng).toFixed(2)}</span></span>
                 </>}
@@ -2187,7 +2188,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     // Hit/Miss: controlla se il risultato reale è uno dei top-3
     const realScore = pred.real_score;
     const isHitExact = realScore ? top3.some(t => t.score === realScore) : null;
-    const barColor = realScore ? (isHitExact ? '#00ff88' : '#ff4466') : '#ff9800';
+    const barColor = realScore ? (isHitExact ? theme.hitText : theme.missText) : theme.warning;
 
     return (
       <div
@@ -2230,13 +2231,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* Badge RE */}
           <span style={{
             background: 'rgba(255,152,0,0.15)', border: '1px solid rgba(255,152,0,0.4)',
-            borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: '800', color: '#ff9800', flexShrink: 0
+            borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: '800', color: theme.warning, flexShrink: 0
           }}>RE</span>
 
           {/* Risultato + Freccia */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? '#00ff88' : '#ff4466' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? theme.hitText : theme.missText }}>
                 {pred.real_score.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (
@@ -2268,13 +2269,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '14px', width: '22px', textAlign: 'center' }}>{medals[i] || ''}</span>
                   <span style={{
-                    fontSize: '13px', fontWeight: '900', color: isThisHit ? '#00ff88' : '#fff',
+                    fontSize: '13px', fontWeight: '900', color: isThisHit ? theme.hitText : '#fff',
                     width: '36px', textAlign: 'center',
-                    background: isThisHit ? 'rgba(0,255,136,0.15)' : 'transparent',
+                    background: isThisHit ? theme.hitBg : 'transparent',
                     borderRadius: '4px', padding: '1px 0'
                   }}>{t.score}</span>
                   {/* Barra */}
-                  <div style={{ flex: 1, height: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ flex: 1, height: '16px', background: theme.surface05, borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
                     <div style={{
                       width: `${barWidth}%`, height: '100%',
                       background: isThisHit
@@ -2284,7 +2285,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }} />
                     <span style={{
                       position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-                      fontSize: '10px', fontWeight: '800', color: isThisHit ? '#00ff88' : '#ff9800'
+                      fontSize: '10px', fontWeight: '800', color: isThisHit ? theme.hitText : theme.warning
                     }}>{t.prob.toFixed(1)}%</span>
                   </div>
                   {isThisHit && <span style={{ fontSize: '12px' }}>✅</span>}
@@ -2298,7 +2299,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </span>
               {pred.exact_score_gap != null && (
                 <span style={{ fontSize: '10px', color: theme.textDim }}>
-                  Gap: <span style={{ fontWeight: '700', color: '#ff9800' }}>{pred.exact_score_gap.toFixed(1)}%</span>
+                  Gap: <span style={{ fontWeight: '700', color: theme.warning }}>{pred.exact_score_gap.toFixed(1)}%</span>
                 </span>
               )}
             </div>
@@ -2319,7 +2320,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
     // Hit/Miss: real_sign === 'X'
     const isHitXF = pred.real_score ? pred.real_sign === 'X' : null;
-    const barColor = pred.real_score ? (isHitXF ? '#00ff88' : '#ff4466') : theme.purple;
+    const barColor = pred.real_score ? (isHitXF ? theme.hitText : theme.missText) : theme.purple;
 
     return (
       <div
@@ -2363,7 +2364,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {/* Risultato + Freccia */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitXF ? '#00ff88' : '#ff4466' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitXF ? theme.hitText : theme.missText }}>
                 {pred.real_score.replace(':', ' - ')} {isHitXF ? '✅' : '❌'}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (
@@ -2409,16 +2410,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {isTipsOpen && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-75%)', zIndex: 1000,
-              background: '#1a1a24', border: '1px solid rgba(188,19,254,0.45)',
+              background: theme.popoverBg, border: '1px solid rgba(188,19,254,0.45)',
               borderRadius: '8px', padding: '8px 10px',
-              boxShadow: '0 0 12px rgba(188,19,254,0.15), 0 6px 24px rgba(0,0,0,0.9)',
+              boxShadow: `0 0 12px rgba(188,19,254,0.15), 0 6px 24px ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.9)'}`,
               minWidth: '160px', whiteSpace: 'nowrap' as const
             }}>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {(() => {
-                  const pillBg = isHitXF === true ? 'rgba(0,255,136,0.15)' : isHitXF === false ? 'rgba(255,68,102,0.15)' : 'rgba(188,19,254,0.1)';
-                  const pillBorder = isHitXF === true ? 'rgba(0,255,136,0.3)' : isHitXF === false ? 'rgba(255,68,102,0.3)' : 'rgba(188,19,254,0.3)';
-                  const nameColor = isHitXF === true ? '#00ff88' : isHitXF === false ? '#ff4466' : theme.purple;
+                  const pillBg = isHitXF === true ? theme.hitBg : isHitXF === false ? theme.missBg : 'rgba(188,19,254,0.1)';
+                  const pillBorder = isHitXF === true ? theme.hitBorder : isHitXF === false ? theme.missBorder : 'rgba(188,19,254,0.3)';
+                  const nameColor = isHitXF === true ? theme.hitText : isHitXF === false ? theme.missText : theme.purple;
                   return (
                     <span style={{
                       background: pillBg, border: `1px solid ${pillBorder}`,
@@ -2427,7 +2428,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>X</span>
-                      {quotaX != null && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quotaX).toFixed(2)}</span>}
+                      {quotaX != null && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quotaX).toFixed(2)}</span>}
                       {isHitXF !== null && <span>{isHitXF ? '✅' : '❌'}</span>}
                     </span>
                   );
@@ -2445,9 +2446,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pronostico</div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {(() => {
-                  const pillBg = isHitXF === true ? 'rgba(0,255,136,0.1)' : isHitXF === false ? 'rgba(255,68,102,0.1)' : 'rgba(188,19,254,0.08)';
-                  const pillBorder = isHitXF === true ? 'rgba(0,255,136,0.3)' : isHitXF === false ? 'rgba(255,68,102,0.3)' : 'rgba(188,19,254,0.3)';
-                  const nameColor = isHitXF === true ? '#00ff88' : isHitXF === false ? '#ff4466' : theme.purple;
+                  const pillBg = isHitXF === true ? theme.hitBgSoft : isHitXF === false ? theme.missBgSoft : 'rgba(188,19,254,0.08)';
+                  const pillBorder = isHitXF === true ? theme.hitBorder : isHitXF === false ? theme.missBorder : 'rgba(188,19,254,0.3)';
+                  const nameColor = isHitXF === true ? theme.hitText : isHitXF === false ? theme.missText : theme.purple;
                   return (
                     <div style={{
                       background: pillBg, border: `1px solid ${pillBorder}`,
@@ -2456,11 +2457,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }}>
                       <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>X</span>
                       <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
-                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
+                        <span style={{ color: theme.surface15 }}>★</span>
                         <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${conf}%`, color: theme.purple }}>★</span>
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
-                      {quotaX != null && <span style={{ fontSize: '11px', fontWeight: '700', color: '#4dd0e1' }}>@{Number(quotaX).toFixed(2)}</span>}
+                      {quotaX != null && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quotaX).toFixed(2)}</span>}
                       {isHitXF !== null && <span style={{ fontSize: '12px' }}>{isHitXF ? '✅' : '❌'}</span>}
                     </div>
                   );
@@ -2481,12 +2482,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <span>X: <span style={{ color: theme.purple, fontWeight: '700' }}>{pred.odds?.['X'] != null ? Number(pred.odds['X']).toFixed(2) : '-'}</span></span>
               <span>2: <span style={{ color: theme.text }}>{pred.odds?.['2'] != null ? Number(pred.odds['2']).toFixed(2) : '-'}</span></span>
               {pred.odds?.over_25 != null && <>
-                <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                <span style={{ color: theme.surface15 }}>│</span>
                 <span>O2.5: <span style={{ color: theme.text }}>{Number(pred.odds.over_25).toFixed(2)}</span></span>
                 <span>U2.5: <span style={{ color: theme.text }}>{Number(pred.odds.under_25).toFixed(2)}</span></span>
               </>}
               {pred.odds?.gg != null && <>
-                <span style={{ color: 'rgba(255,255,255,0.15)' }}>│</span>
+                <span style={{ color: theme.surface15 }}>│</span>
                 <span>GG: <span style={{ color: theme.text }}>{Number(pred.odds.gg).toFixed(2)}</span></span>
                 <span>NG: <span style={{ color: theme.text }}>{Number(pred.odds.ng).toFixed(2)}</span></span>
               </>}
@@ -2501,10 +2502,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: isMobile ? '#1a1d2e' : theme.bg,
-      backgroundImage: isMobile
-        ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
-        : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
+      backgroundColor: isMobile ? isLight ? '#f0f2f5' : '#1a1d2e' : theme.bg,
+      backgroundImage: isLight
+        ? 'none'
+        : isMobile
+          ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
+          : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
       zIndex: 9999,
       overflowY: 'auto',
       overflowX: 'hidden',
@@ -2547,7 +2550,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             position: 'sticky' as const,
             top: -16,
             zIndex: 100,
-            backgroundColor: '#1a1d2e',
+            backgroundColor: isLight ? '#f0f2f5' : '#1a1d2e',
             margin: '-15px -20px 0',
             padding: '14px 20px 10px',
           } : {})
@@ -2559,8 +2562,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <button
               onClick={onBack}
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: theme.surface05,
+                border: `1px solid ${theme.borderSubtle}`,
                 color: theme.textDim,
                 padding: '5px 10px',
                 borderRadius: '8px',
@@ -2585,8 +2588,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <button
               onClick={() => window.location.href = '/bankroll'}
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: theme.surface05,
+                border: `1px solid ${theme.borderSubtle}`,
                 color: theme.textDim,
                 padding: '5px 10px',
                 borderRadius: '8px',
@@ -2607,8 +2610,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <button
                 onClick={onBack}
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: theme.surface05,
+                  border: `1px solid ${theme.borderSubtle}`,
                   color: theme.textDim,
                   padding: '8px 16px',
                   borderRadius: '8px',
@@ -2618,15 +2621,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = theme.borderSubtle; }}
               >
                 ← Dashboard
               </button>
               <button
                 onClick={() => window.location.href = '/bankroll'}
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: theme.surface05,
+                  border: `1px solid ${theme.borderSubtle}`,
                   color: theme.textDim,
                   padding: '8px 16px',
                   borderRadius: '8px',
@@ -2636,7 +2639,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = theme.borderSubtle; }}
               >
                 Bankroll →
               </button>
@@ -2691,12 +2694,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           <button
             onClick={() => setDate(shiftDate(date, -1))}
             style={{
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              background: theme.surface05, border: `1px solid ${theme.borderSubtle}`,
               color: theme.text, padding: '8px 14px', borderRadius: '8px',
               cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = theme.cyan; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = theme.borderSubtle; }}
           >
             ◀
           </button>
@@ -2730,7 +2733,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <div style={{
                   position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
                   marginTop: '6px', zIndex: 200,
-                  background: '#1a1d2e', border: `1px solid ${theme.cyan}33`,
+                  background: isLight ? '#f0f2f5' : '#1a1d2e', border: `1px solid ${theme.cyan}33`,
                   borderRadius: '10px', padding: '6px 0',
                   boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
                   width: '180px', maxHeight: '340px', overflowY: 'auto',
@@ -2777,12 +2780,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           <button
             onClick={() => setDate(shiftDate(date, 1))}
             style={{
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              background: theme.surface05, border: `1px solid ${theme.borderSubtle}`,
               color: theme.text, padding: '8px 14px', borderRadius: '8px',
               cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = theme.cyan; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = theme.borderSubtle; }}
           >
             ▶
           </button>
@@ -2799,14 +2802,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         }}>
           {[
             { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🏆', color: theme.cyan },
-            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: '#ffd700' }
+            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                background: activeTab === tab.id ? `${tab.color}20` : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${activeTab === tab.id ? tab.color : 'rgba(255,255,255,0.08)'}`,
+                background: activeTab === tab.id ? `${tab.color}20` : theme.surfaceSubtle,
+                border: `1px solid ${activeTab === tab.id ? tab.color : theme.surface08}`,
                 color: activeTab === tab.id ? tab.color : theme.textDim,
                 padding: '8px 18px',
                 borderRadius: '8px',
@@ -2831,15 +2834,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             { id: 'live' as StatusFilter, label: 'LIVE', icon: '🔴', color: theme.danger },
             { id: 'da_giocare' as StatusFilter, label: 'Da giocare', icon: '⏳', color: theme.textDim },
             { id: 'finite' as StatusFilter, label: 'Finite', icon: '✅', color: theme.success },
-            { id: 'centrate' as StatusFilter, label: 'Centrate', icon: '✓', color: '#00ff88' },
-            { id: 'mancate' as StatusFilter, label: 'Mancate', icon: '✗', color: '#ff4466' },
+            { id: 'centrate' as StatusFilter, label: 'Centrate', icon: '✓', color: theme.hitText },
+            { id: 'mancate' as StatusFilter, label: 'Mancate', icon: '✗', color: theme.missText },
           ]).map(f => (
             <button
               key={f.id}
               onClick={() => setStatusFilter(f.id)}
               style={{
-                background: statusFilter === f.id ? `${f.color}20` : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${statusFilter === f.id ? f.color : 'rgba(255,255,255,0.06)'}`,
+                background: statusFilter === f.id ? `${f.color}20` : theme.surfaceSubtle,
+                border: `1px solid ${statusFilter === f.id ? f.color : theme.surface05}`,
                 color: statusFilter === f.id ? f.color : theme.textDim,
                 padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
                 fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
@@ -2850,7 +2853,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {filterCounts[f.id] > 0 && (
                 <span style={{
                   fontSize: '9px', fontWeight: '800',
-                  background: statusFilter === f.id ? `${f.color}30` : 'rgba(255,255,255,0.06)',
+                  background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
                   padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
                 }}>
                   {filterCounts[f.id]}
@@ -2912,7 +2915,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           if (esAll.length === 0 && xfAll.length === 0 && bombStats.finished === 0) return null;
           const pill = (label: string, hr: number | null, color: string, finished: number, threshold: number) => {
             if (finished === 0) return null;
-            const c = hr !== null ? getHRColor(hr, threshold) : '#ff4466';
+            const c = hr !== null ? getHRColor(hr, threshold) : theme.missText;
             return (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
@@ -2926,9 +2929,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           };
           return (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
-              {pill('RE', esHR, '#ff9800', esAll.length, 18)}
+              {pill('RE', esHR, theme.warning, esAll.length, 18)}
               {pill('XF', xfHR, '#bc13fe', xfAll.length, 32)}
-              {pill('Bombe', bHR, '#ffd700', bombStats.finished, 30)}
+              {pill('Bombe', bHR, theme.gold, bombStats.finished, 30)}
             </div>
           );
         })()}
@@ -2986,11 +2989,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           };
           const capsules = [
             capsuleData('Segno', t => t.tipo === 'SEGNO', theme.cyan),
-            capsuleData('O/U 1.5', t => t.tipo === 'GOL' && /^(over|under)\s+1\.5$/i.test(t.pronostico), '#4fc3f7'),
-            capsuleData('O/U 2.5', t => t.tipo === 'GOL' && /^(over|under)\s+2\.5$/i.test(t.pronostico), '#29b6f6'),
-            capsuleData('O/U 3.5', t => t.tipo === 'GOL' && /^(over|under)\s+3\.5$/i.test(t.pronostico), '#0288d1'),
+            capsuleData('O/U 1.5', t => t.tipo === 'GOL' && /^(over|under)\s+1\.5$/i.test(t.pronostico), isLight ? '#0284c7' : '#4fc3f7'),
+            capsuleData('O/U 2.5', t => t.tipo === 'GOL' && /^(over|under)\s+2\.5$/i.test(t.pronostico), isLight ? '#0369a1' : '#29b6f6'),
+            capsuleData('O/U 3.5', t => t.tipo === 'GOL' && /^(over|under)\s+3\.5$/i.test(t.pronostico), isLight ? '#075985' : '#0288d1'),
             capsuleData('GG/NG', t => t.tipo === 'GOL' && /^(goal|nogoal)$/i.test(t.pronostico), theme.success),
-            capsuleData('DC', t => t.tipo === 'DOPPIA_CHANCE', '#ab47bc'),
+            capsuleData('DC', t => t.tipo === 'DOPPIA_CHANCE', isLight ? '#9333ea' : '#ab47bc'),
           ];
           // Calcolo metriche finanziarie (flat stake = 1 unità)
           const verifiedWithQuota = allTips.filter(t => (t.hit === true || t.hit === false) && t._quota && t._quota > 1);
@@ -3009,7 +3012,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
               {capsules.map(c => {
                 if (c.finished === 0) return null;
-                const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : '#ff4466';
+                const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : theme.missText;
                 return (
                   <div key={c.label} style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
@@ -3025,51 +3028,51 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </div>
             {/* Contenitore Rendimento collassabile */}
             {totalBets > 0 && (() => {
-              const yieldColor = yieldPct !== null && yieldPct >= 0 ? '#69f0ae' : '#ff4466';
+              const yieldColor = yieldPct !== null && yieldPct >= 0 ? theme.financePositive : theme.missText;
               return (
                 <div style={{
-                  background: '#1a1d2e', border: '1px solid #ffffff15',
+                  background: isLight ? '#f0f2f5' : '#1a1d2e', border: '1px solid #ffffff15',
                   borderRadius: '12px', padding: '8px 14px', marginBottom: '16px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setFinanceOpen(!financeOpen)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '11px', color: '#aaa', fontWeight: '700' }}>Rendimento</span>
+                      <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Rendimento</span>
                       <span
-                        style={{ fontSize: '11px', color: '#666', background: '#ffffff10', borderRadius: '50%', width: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        style={{ fontSize: '11px', color: theme.textDisabled, background: theme.surfaceSubtle, borderRadius: '50%', width: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                         onClick={(e) => { e.stopPropagation(); setFinLegendOpen(!finLegendOpen); }}
                       >?</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', color: '#aaa' }}>Yield</span>
+                      <span style={{ fontSize: '11px', color: theme.textMuted }}>Yield</span>
                       <span style={{ fontSize: '13px', fontWeight: '900', color: yieldColor }}>
                         {yieldPct !== null ? `${yieldPct > 0 ? '+' : ''}${yieldPct}%` : '—'}
                       </span>
-                      <span style={{ fontSize: '12px', color: '#666' }}>{financeOpen ? '▲' : '▼'}</span>
+                      <span style={{ fontSize: '12px', color: theme.textDisabled }}>{financeOpen ? '▲' : '▼'}</span>
                     </div>
                   </div>
                   {finLegendOpen && (
-                    <div style={{ marginTop: '8px', padding: '8px 10px', background: '#ffffff08', borderRadius: '8px', fontSize: '10px', color: '#999', lineHeight: '1.6' }}>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Yield</span> — Se punti 1&euro; su ogni pronostico, quanto guadagni in media? +10% = guadagni 0.10&euro; per ogni euro puntato</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>P/L</span> — Il totale che hai in tasca alla fine. +3.2 = hai 3.20&euro; in pi&ugrave; rispetto a quando hai iniziato</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>ROI</span> — Stesso concetto del Yield: quanto ti rende ogni euro investito, in percentuale</div>
-                      <div><span style={{ color: '#4fc3f7', fontWeight: '700' }}>Q.Media</span> — A che livello di difficolt&agrave; giochiamo. Pi&ugrave; &egrave; alta, pi&ugrave; &egrave; rischioso ma pi&ugrave; si pu&ograve; vincere</div>
-                      <div><span style={{ color: '#69f0ae', fontWeight: '700' }}>Edge</span> — Il nostro vantaggio: se &egrave; positivo, il sistema trova opportunit&agrave; che i bookmaker sottovalutano</div>
+                    <div style={{ marginTop: '8px', padding: '8px 10px', background: theme.surfaceSubtle, borderRadius: '8px', fontSize: '10px', color: theme.textFaint, lineHeight: '1.6' }}>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield</span> — Se punti 1&euro; su ogni pronostico, quanto guadagni in media? +10% = guadagni 0.10&euro; per ogni euro puntato</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L</span> — Il totale che hai in tasca alla fine. +3.2 = hai 3.20&euro; in pi&ugrave; rispetto a quando hai iniziato</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>ROI</span> — Stesso concetto del Yield: quanto ti rende ogni euro investito, in percentuale</div>
+                      <div><span style={{ color: theme.quotaText, fontWeight: '700' }}>Q.Media</span> — A che livello di difficolt&agrave; giochiamo. Pi&ugrave; &egrave; alta, pi&ugrave; &egrave; rischioso ma pi&ugrave; si pu&ograve; vincere</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Edge</span> — Il nostro vantaggio: se &egrave; positivo, il sistema trova opportunit&agrave; che i bookmaker sottovalutano</div>
                     </div>
                   )}
                   {financeOpen && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
                       {[
-                        { label: 'P/L', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? '#69f0ae' : '#ff4466' },
-                        { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? '#69f0ae' : '#ff4466' },
-                        { label: 'Q.Media', value: avgQuota !== null ? `@${avgQuota}` : '—', color: '#4fc3f7' },
-                        { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? '#69f0ae' : '#ff4466' },
+                        { label: 'P/L', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
+                        { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? theme.financePositive : theme.missText },
+                        { label: 'Q.Media', value: avgQuota !== null ? `@${avgQuota}` : '—', color: theme.quotaText },
+                        { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? theme.financePositive : theme.missText },
                       ].map(item => (
                         <div key={item.label} style={{
                           display: 'flex', alignItems: 'center', gap: '5px',
                           background: `${item.color}10`, border: `1px solid ${item.color}25`,
                           borderRadius: '10px', padding: '4px 10px'
                         }}>
-                          <span style={{ fontSize: '9px', color: '#999', fontWeight: '700' }}>{item.label}</span>
+                          <span style={{ fontSize: '9px', color: theme.textFaint, fontWeight: '700' }}>{item.label}</span>
                           <span style={{ fontSize: '12px', fontWeight: '900', color: item.color }}>{item.value}</span>
                         </div>
                       ))}
@@ -3157,13 +3160,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const esHits = esWithScore.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
               const esMisses = esWithScore.length - esHits;
               const esHR = esWithScore.length > 0 ? Math.round((esHits / esWithScore.length) * 1000) / 10 : null;
-              const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
               return (
               <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
                 <h2
                   onClick={() => toggleSection2('sec_exact_score')}
                   style={{
-                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: '#ff9800',
+                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: theme.warning,
                     margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
                     cursor: 'pointer', userSelect: 'none' as const,
                     background: 'rgba(255,152,0,0.06)', border: '1px solid rgba(255,152,0,0.18)',
@@ -3173,22 +3176,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_exact_score') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
                   🎯 Risultato Esatto
                   <span style={{
-                    fontSize: '11px', background: 'rgba(255,152,0,0.15)', color: '#ff9800',
+                    fontSize: '11px', background: 'rgba(255,152,0,0.15)', color: theme.warning,
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
                   }}>
                     {filteredExactScore.length}
                   </span>
-                  {esLive > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {esLive} LIVE</span>}
+                  {esLive > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {esLive} LIVE</span>}
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
                     {esFinished > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {esFinished} {esFinished === 1 ? 'finita' : 'finite'}</span>{sep}</>}
                     {esToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {esToPlay} da giocare</span>{sep}</>}
                     {esWithScore.length > 0 && <>
-                      <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {esHits}</span>{sep}
-                      <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {esMisses}</span>{sep}
+                      <span style={{ color: theme.hitText, fontWeight: '700' }}>✓ {esHits}</span>{sep}
+                      <span style={{ color: theme.missText, fontWeight: '700' }}>✗ {esMisses}</span>{sep}
                       <span style={{
                         fontWeight: '800',
-                        color: (esHR ?? 0) >= 20 ? '#00ff88' : '#ff4466',
-                        background: (esHR ?? 0) >= 20 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        color: (esHR ?? 0) >= 20 ? theme.hitText : theme.missText,
+                        background: (esHR ?? 0) >= 20 ? theme.hitBg : theme.missBg,
                         padding: '1px 8px', borderRadius: '10px'
                       }}>{esHR}%</span>
                     </>}
@@ -3210,8 +3213,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
                     const hrHue = hitRate !== null ? Math.min(130, hitRate * 6.5) : 0;
                     const hrColor = hitRate !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
-                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
-                    const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+                    const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                     const statsEls = (
                       <>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
@@ -3221,7 +3224,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {sep}
                         <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
                         {sep}
-                        <span style={{ fontSize: '9px', color: misses > 0 ? '#ff4466' : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
+                        <span style={{ fontSize: '9px', color: misses > 0 ? theme.missText : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
                         {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRate}%</span></>}
                       </>
                     );
@@ -3243,11 +3246,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                 <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                 <span
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
-                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? '#ff9800' : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.warning : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                                 >{leagueName}</span>
-                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
+                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
-                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
                                                             {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
@@ -3276,7 +3279,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const xfHits = xfWithScore.filter(p => p.real_sign === 'X').length;
               const xfMisses = xfWithScore.length - xfHits;
               const xfHR = xfWithScore.length > 0 ? Math.round((xfHits / xfWithScore.length) * 1000) / 10 : null;
-              const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
               return (
               <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
                 <h2
@@ -3297,17 +3300,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     {filteredXFactor.length}
                   </span>
-                  {xfLive > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {xfLive} LIVE</span>}
+                  {xfLive > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {xfLive} LIVE</span>}
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
                     {xfFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {xfFinishedN} {xfFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
                     {xfToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {xfToPlay} da giocare</span>{sep}</>}
                     {xfWithScore.length > 0 && <>
-                      <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {xfHits}</span>{sep}
-                      <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {xfMisses}</span>{sep}
+                      <span style={{ color: theme.hitText, fontWeight: '700' }}>✓ {xfHits}</span>{sep}
+                      <span style={{ color: theme.missText, fontWeight: '700' }}>✗ {xfMisses}</span>{sep}
                       <span style={{
                         fontWeight: '800',
-                        color: (xfHR ?? 0) >= 25 ? '#00ff88' : '#ff4466',
-                        background: (xfHR ?? 0) >= 25 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        color: (xfHR ?? 0) >= 25 ? theme.hitText : theme.missText,
+                        background: (xfHR ?? 0) >= 25 ? theme.hitBg : theme.missBg,
                         padding: '1px 8px', borderRadius: '10px'
                       }}>{xfHR}%</span>
                     </>}
@@ -3329,8 +3332,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
                     const hrHue = hitRate !== null ? Math.min(130, hitRate * 4) : 0;
                     const hrColor = hitRate !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
-                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
-                    const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+                    const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                     const statsEls = (
                       <>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
@@ -3340,7 +3343,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {sep}
                         <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
                         {sep}
-                        <span style={{ fontSize: '9px', color: misses > 0 ? '#ff4466' : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
+                        <span style={{ fontSize: '9px', color: misses > 0 ? theme.missText : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
                         {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRate}%</span></>}
                       </>
                     );
@@ -3364,9 +3367,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.purple : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                                 >{leagueName}</span>
-                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
+                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
-                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
                                                             {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
@@ -3395,7 +3398,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const bmHits = bmWithScore.filter(b => b.hit === true).length;
               const bmMisses = bmWithScore.length - bmHits;
               const bmHR = bmWithScore.length > 0 ? Math.round((bmHits / bmWithScore.length) * 1000) / 10 : null;
-              const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
               return (
               <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
                 <h2
@@ -3416,17 +3419,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>
                     {filteredBombs.length}
                   </span>
-                  {bmLive > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {bmLive} LIVE</span>}
+                  {bmLive > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {bmLive} LIVE</span>}
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
                     {bmFinishedN > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {bmFinishedN} {bmFinishedN === 1 ? 'finita' : 'finite'}</span>{sep}</>}
                     {bmToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {bmToPlay} da giocare</span>{sep}</>}
                     {bmWithScore.length > 0 && <>
-                      <span style={{ color: '#00ff88', fontWeight: '700' }}>✓ {bmHits}</span>{sep}
-                      <span style={{ color: '#ff4466', fontWeight: '700' }}>✗ {bmMisses}</span>{sep}
+                      <span style={{ color: theme.hitText, fontWeight: '700' }}>✓ {bmHits}</span>{sep}
+                      <span style={{ color: theme.missText, fontWeight: '700' }}>✗ {bmMisses}</span>{sep}
                       <span style={{
                         fontWeight: '800',
-                        color: (bmHR ?? 0) >= 30 ? '#00ff88' : '#ff4466',
-                        background: (bmHR ?? 0) >= 30 ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,102,0.15)',
+                        color: (bmHR ?? 0) >= 30 ? theme.hitText : theme.missText,
+                        background: (bmHR ?? 0) >= 30 ? theme.hitBg : theme.missBg,
                         padding: '1px 8px', borderRadius: '10px'
                       }}>{bmHR}%</span>
                     </>}
@@ -3445,7 +3448,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const misses = lBombs.filter(b => b.hit === false).length;
                     const verifiedB = hits + misses;
                     const hitRateB = verifiedB > 0 ? Math.round((hits / verifiedB) * 1000) / 10 : null;
-                    const statusBg = finished === 0 ? 'rgba(255,255,255,0.05)' : finished === lBombs.length ? `${theme.success}30` : `${theme.warning}30`;
+                    const statusBg = finished === 0 ? theme.surface05 : finished === lBombs.length ? `${theme.success}30` : `${theme.warning}30`;
                     const statusColor = finished === 0 ? theme.textDim : finished === lBombs.length ? theme.success : theme.warning;
                     const missRate = verifiedB > 0 ? misses / verifiedB : 0;
                     const hitColor = hits === 0 ? theme.textDim : theme.success;
@@ -3453,8 +3456,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     // Colore progressivo hit rate: 0%=rosso, 50%=giallo-verde, 100%=verde
                     const hrHueB = hitRateB !== null ? Math.min(130, hitRateB * 1.3) : 0;
                     const hrColorB = hitRateB !== null ? `hsl(${Math.round(hrHueB)}, 85%, 48%)` : theme.textDim;
-                    const hrBgB = hitRateB !== null ? `hsla(${Math.round(hrHueB)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
-                    const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                    const hrBgB = hitRateB !== null ? `hsla(${Math.round(hrHueB)}, 85%, 48%, 0.15)` : theme.surface05;
+                    const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                     const statsEls = (
                       <>
                         <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
@@ -3488,10 +3491,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                                   style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                                 >{leagueName}</span>
-                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
+                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                               </div>
-                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
+                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
                             </div>
                             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                           </div>
@@ -3515,12 +3518,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {activeTab === 'alto_rendimento' && filteredAltoRendimento.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
                 <h2 style={{
-                  fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: '#ffd700',
+                  fontSize: isMobile ? '18px' : '22px', fontWeight: '800', color: theme.gold,
                   margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
                   💎 Alto Rendimento
                   <span style={{
-                    fontSize: '11px', background: 'rgba(255, 215, 0, 0.15)', color: '#ffd700',
+                    fontSize: '11px', background: 'rgba(255, 215, 0, 0.15)', color: theme.gold,
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
                   }}>
                     {filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
@@ -3537,20 +3540,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const misses = allP.filter(x => x.hit === false).length;
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
-                  const statusBg = finished === 0 ? 'rgba(255,255,255,0.05)' : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
+                  const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
                   const statusColor = finished === 0 ? theme.textDim : finished === preds.length ? theme.success : theme.warning;
                   const missRate = verifiedP > 0 ? misses / verifiedP : 0;
                   const hitColor = hits === 0 ? theme.textDim : theme.success;
                   const missColor = misses === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
                   const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
-                  const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                  const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
                   const reHits = preds.filter(p => {
                     if (!p.real_score) return false;
                     const ts = (p as any).simulation_data?.top_scores;
                     return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(p.real_score!));
                   }).length;
-                  const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                  const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
                       <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
@@ -3562,7 +3565,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {sep}
                       <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
-                      {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
+                      {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
                     </>
                   );
                   return (
@@ -3583,12 +3586,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             <img src={getLeagueLogoUrl(leagueName)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             <span
                               onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
-                              style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? '#ffd700' : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                              style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.gold : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                             >{leagueName}</span>
-                            {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
+                            {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                           </div>
-                          {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
+                          {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>
@@ -3632,7 +3635,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const misses = allP.filter(x => x.hit === false).length;
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
-                  const statusBg = finished === 0 ? 'rgba(255,255,255,0.05)' : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
+                  const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
                   const statusColor = finished === 0 ? theme.textDim : finished === preds.length ? theme.success : theme.warning;
                   const missRate = verifiedP > 0 ? misses / verifiedP : 0;
                   const hitColor = hits === 0 ? theme.textDim : theme.success;
@@ -3640,14 +3643,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   // Colore progressivo hit rate: 0%=rosso, 50%=giallo-verde, 100%=verde
                   const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
-                  const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : 'rgba(255,255,255,0.05)';
+                  const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
                   // Conteggio RE hits (top 4 Monte Carlo vs risultato reale)
                   const reHits = preds.filter(p => {
                     if (!p.real_score) return false;
                     const ts = (p as any).simulation_data?.top_scores;
                     return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(p.real_score!));
                   }).length;
-                  const sep = <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>;
+                  const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
                       <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
@@ -3659,7 +3662,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {sep}
                       <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
-                      {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: '#00ff88', background: 'rgba(0,255,136,0.15)', borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
+                      {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
                     </>
                   );
                   return (
@@ -3668,9 +3671,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                        background: 'rgba(255,255,255,0.03)', borderRadius: '8px',
+                        background: theme.surfaceSubtle, borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
-                        border: '1px solid rgba(255,255,255,0.06)'
+                        border: `1px solid ${theme.surface05}`
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >
@@ -3683,10 +3686,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
                               style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.cyan : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
                             >{leagueName}</span>
-                            {isMobile && live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
+                            {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                           </div>
-                          {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: '#ff1744', fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.3)', borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>│</span>{statsEls}</div>}
+                          {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
+                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>
@@ -3716,13 +3719,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }} onClick={() => setShowPwPrompt(false)}>
           <div style={{
-            background: '#1e2235', borderRadius: '16px', padding: '28px',
+            background: isLight ? '#ffffff' : '#1e2235', borderRadius: '16px', padding: '28px',
             border: '1px solid rgba(168,85,247,0.4)',
             boxShadow: '0 0 30px rgba(168,85,247,0.2)',
             minWidth: '280px', textAlign: 'center',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '28px', marginBottom: '12px' }}>🔐</div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '16px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: theme.text, marginBottom: '16px' }}>
               Inserisci codice di accesso
             </div>
             <input
@@ -3734,7 +3737,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               style={{
                 width: '100%', padding: '10px 14px', borderRadius: '8px',
                 border: pwError ? '1px solid #ef4444' : '1px solid rgba(168,85,247,0.4)',
-                background: 'rgba(255,255,255,0.05)', color: 'white',
+                background: theme.surface05, color: theme.text,
                 fontSize: '16px', textAlign: 'center', outline: 'none',
                 boxSizing: 'border-box' as const,
               }}
@@ -3750,7 +3753,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               style={{
                 marginTop: '16px', padding: '8px 28px', borderRadius: '12px',
                 border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
-                background: 'rgba(168,85,247,0.3)', color: '#a855f7',
+                background: 'rgba(168,85,247,0.3)', color: theme.purple,
               }}
             >
               Conferma

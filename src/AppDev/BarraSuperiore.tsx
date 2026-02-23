@@ -1,4 +1,6 @@
 import type { CSSProperties } from 'react';
+import { getTheme, getThemeMode } from './costanti';
+const theme = getTheme();
 
 interface League {
   id: string;
@@ -45,6 +47,7 @@ export default function BarraSuperiore({
   viewMode,
   onToggleViewMode
 }: BarraSuperioreProps) {
+  const isLight = getThemeMode() === 'light';
 
   return (
     <div style={{
@@ -59,7 +62,7 @@ export default function BarraSuperiore({
             style={{
               background: 'rgba(0, 240, 255, 0.1)',
               border: '1px solid rgba(0, 240, 255, 0.3)',
-              color: '#00f0ff',
+              color: theme.cyan,
               padding: '8px 12px',
               borderRadius: '8px',
               fontSize: '20px',
@@ -72,7 +75,7 @@ export default function BarraSuperiore({
           </button>
           <div style={{
             display: 'flex',
-            background: 'rgba(255,255,255,0.05)',
+            background: theme.surface05,
             borderRadius: '16px',
             border: '1px solid rgba(0, 240, 255, 0.2)',
             padding: '2px',
@@ -88,8 +91,8 @@ export default function BarraSuperiore({
                     padding: '5px 10px',
                     borderRadius: '14px',
                     border: 'none',
-                    background: isActive ? '#00f0ff' : 'transparent',
-                    color: isActive ? '#000' : 'rgba(255,255,255,0.5)',
+                    background: isActive ? theme.cyan : 'transparent',
+                    color: isActive ? (isLight ? '#fff' : '#000') : theme.textFaint,
                     fontWeight: isActive ? 800 : 600,
                     fontSize: '10px',
                     cursor: 'pointer',
@@ -112,7 +115,7 @@ export default function BarraSuperiore({
             style={{
               background: 'rgba(0, 240, 255, 0.1)',
               border: '1px solid rgba(0, 240, 255, 0.3)',
-              color: '#00f0ff',
+              color: theme.cyan,
               padding: '8px 16px',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -129,7 +132,7 @@ export default function BarraSuperiore({
           {/* TOGGLE CALENDARIO / OGGI */}
           <div style={{
             display: 'flex',
-            background: 'rgba(255,255,255,0.05)',
+            background: theme.surface05,
             borderRadius: '20px',
             border: '1px solid rgba(0, 240, 255, 0.2)',
             padding: '3px',
@@ -145,8 +148,8 @@ export default function BarraSuperiore({
                     padding: '6px 14px',
                     borderRadius: '16px',
                     border: 'none',
-                    background: isActive ? '#00f0ff' : 'transparent',
-                    color: isActive ? '#000' : 'rgba(255,255,255,0.5)',
+                    background: isActive ? theme.cyan : 'transparent',
+                    color: isActive ? (isLight ? '#fff' : '#000') : theme.textFaint,
                     fontWeight: isActive ? 800 : 600,
                     fontSize: '11px',
                     cursor: 'pointer',
@@ -190,11 +193,11 @@ export default function BarraSuperiore({
           zIndex: 5
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', pointerEvents: 'auto' }}>
-            <span style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <span style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: theme.text, textTransform: 'uppercase', letterSpacing: '1px' }}>
               Partite di Oggi
             </span>
             {!isMobile && (
-              <span style={{ fontSize: '11px', color: '#00f0ff', fontWeight: 'bold', opacity: 0.9, letterSpacing: '1px' }}>
+              <span style={{ fontSize: '11px', color: theme.cyan, fontWeight: 'bold', opacity: 0.9, letterSpacing: '1px' }}>
                 {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
             )}
@@ -250,7 +253,7 @@ export default function BarraSuperiore({
               {!isMobile && (
                 <span style={{
                   fontSize: '10px',
-                  color: '#00f0ff',
+                  color: theme.cyan,
                   fontWeight: 'bold',
                   opacity: 0.9,
                   letterSpacing: '2px',
@@ -282,8 +285,8 @@ export default function BarraSuperiore({
         )}
 
         {!isMobile && (
-          <div style={{ fontSize: '12px', color: '#8b9bb4' }}>
-            Crediti: <span style={{ color: '#05f9b6' }}>∞</span>
+          <div style={{ fontSize: '12px', color: theme.textDim }}>
+            Crediti: <span style={{ color: theme.success }}>∞</span>
           </div>
         )}
 
@@ -292,10 +295,10 @@ export default function BarraSuperiore({
             onClick={() => window.dispatchEvent(new Event('open-settings'))}
             style={{
               width: '34px', height: '34px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+              background: theme.surface08, border: `1px solid ${theme.surface15}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', fontSize: '18px', transition: 'all 0.2s',
-              color: '#8b9bb4',
+              color: theme.textDim,
               ...(isMobile ? { marginRight: '-15px' } : {})
             }}
             title="Impostazioni"

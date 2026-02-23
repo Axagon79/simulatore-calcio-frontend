@@ -42,9 +42,12 @@ import {
   LEAGUES_MAP,
   STEMMI_CAMPIONATI,
   STEMMI_COPPE,
-  theme,
-  SPEED_PRESETS
+  SPEED_PRESETS,
+  getTheme,
+  getThemeMode
 } from './AppDev/costanti';
+
+const theme = getTheme();
 
 // --- STILI (estratti) ---
 import { getStyles, getWidgetGlow } from './AppDev/stili';
@@ -59,6 +62,7 @@ import { useDatiCampionato } from './AppDev/hooks/useDatiCampionato';
 
 export default function AppDev() {
   const location = useLocation();
+  const isLight = getThemeMode() === 'light';
 
   // --- DATI CAMPIONATO (hook estratto) ---
   const {
@@ -1505,15 +1509,15 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             value={todayLeagueFilter}
             onChange={e => setTodayLeagueFilter(e.target.value)}
             style={{
-              background: '#1a1a24', color: '#fff',
+              background: theme.popoverBg, color: theme.text,
               border: '1px solid rgba(0,240,255,0.3)', borderRadius: '10px',
               padding: '8px 12px', fontSize: '12px', fontWeight: 700,
               cursor: 'pointer', minWidth: '160px'
             }}
           >
-            <option value="" style={{ background: '#1a1a24', color: '#fff' }}>Tutti i campionati</option>
+            <option value="" style={{ background: theme.popoverBg, color: theme.text }}>Tutti i campionati</option>
             {allLeagues.map(l => (
-              <option key={l.id} value={l.id} style={{ background: '#1a1a24', color: '#fff' }}>{l.name}</option>
+              <option key={l.id} value={l.id} style={{ background: theme.popoverBg, color: theme.text }}>{l.name}</option>
             ))}
           </select>
 
@@ -1526,9 +1530,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 onClick={() => setTodayTimeFilter(t)}
                 style={{
                   padding: '6px 12px', borderRadius: '16px',
-                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                  border: isActive ? 'none' : `1px solid ${theme.surface15}`,
                   background: isActive ? 'rgba(0,240,255,0.15)' : 'transparent',
-                  color: isActive ? '#00f0ff' : 'rgba(255,255,255,0.5)',
+                  color: isActive ? theme.cyan : theme.textFaint,
                   fontWeight: isActive ? 800 : 600, fontSize: '11px',
                   cursor: 'pointer', transition: 'all 0.2s'
                 }}
@@ -1558,7 +1562,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             LIVE
           </button>
 
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '11px', color: theme.textFaint, marginLeft: 'auto' }}>
             {totalFiltered} partite
           </span>
         </div>
@@ -1566,7 +1570,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         {/* LOADING / EMPTY / LISTA */}
         {todayLoading ? (
           <div style={{ textAlign: 'center' as const, padding: '40px', color: theme.textDim }}>
-            <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ display: 'inline-block', width: 24, height: 24, border: `3px solid ${theme.borderSubtle}`, borderTopColor: theme.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <div style={{ marginTop: 8 }}>Caricamento partite di oggi...</div>
           </div>
         ) : filteredData.length === 0 ? (
@@ -1578,7 +1582,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   onClick={() => { setTodayLeagueFilter(''); setTodayTimeFilter('tutti'); }}
                   style={{
                     background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
-                    color: '#00f0ff', padding: '6px 16px', borderRadius: '8px',
+                    color: theme.cyan, padding: '6px 16px', borderRadius: '8px',
                     cursor: 'pointer', fontSize: '12px'
                   }}
                 >
@@ -1602,13 +1606,13 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   style={{ width: '22px', height: '22px', objectFit: 'contain' }}
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: theme.text, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
                   {group.league_name}
                 </span>
                 <span style={{ fontSize: '10px', color: 'rgba(0,240,255,0.6)', fontWeight: 700 }}>
                   {group.country}
                 </span>
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: theme.textFaint, fontWeight: 600 }}>
                   {group.matches.length} partite
                 </span>
               </div>
@@ -1692,7 +1696,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       </Suspense>
       ) : isLoadingMatches ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>
-          <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: theme.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ display: 'inline-block', width: 24, height: 24, border: `3px solid ${theme.borderSubtle}`, borderTopColor: theme.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <div style={{ marginTop: 8 }}>Caricamento partite...</div>
         </div>
       ) : matches.length === 0 ? (
@@ -1999,7 +2003,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           </h2>
           
           <p style={{
-            color: '#888',
+            color: theme.textMuted,
             textAlign: 'center',
             marginBottom: '30px',
             fontSize: '14px',
@@ -2013,23 +2017,23 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             borderRadius: '12px',
             padding: '20px',
             marginBottom: '30px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: `1px solid ${theme.borderSubtle}`,
           }}>
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div style={{ fontSize: '11px', color: theme.textDisabled, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Settaggi Attuali
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#00f0ff' }}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: theme.cyan }}>
                   {configAlgo}
                 </div>
-                <div style={{ fontSize: '11px', color: '#888' }}>Algoritmo</div>
+                <div style={{ fontSize: '11px', color: theme.textMuted }}>Algoritmo</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#bc13fe' }}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: theme.purple }}>
                   {customCycles}
                 </div>
-                <div style={{ fontSize: '11px', color: '#888' }}>Cicli</div>
+                <div style={{ fontSize: '11px', color: theme.textMuted }}>Cicli</div>
               </div>
             </div>
           </div>
@@ -2044,7 +2048,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 background: 'linear-gradient(135deg, #00f0ff, #0080ff)',
                 border: 'none',
                 borderRadius: '12px',
-                color: '#000',
+                color: isLight ? theme.text : '#000',
                 fontSize: '14px',
                 fontWeight: '800',
                 cursor: 'pointer',
@@ -2060,10 +2064,10 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               style={{
                 flex: 1,
                 padding: '16px 24px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '2px solid rgba(255,255,255,0.2)',
+                background: theme.surface05,
+                border: `2px solid ${theme.surface15}`,
                 borderRadius: '12px',
-                color: '#fff',
+                color: theme.text,
                 fontSize: '14px',
                 fontWeight: '700',
                 cursor: 'pointer',
@@ -2082,9 +2086,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               marginTop: '15px',
               padding: '12px',
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: `1px solid ${theme.borderSubtle}`,
               borderRadius: '8px',
-              color: '#666',
+              color: theme.textDisabled,
               fontSize: '12px',
               cursor: 'pointer',
             }}
@@ -2120,7 +2124,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             margin: '0 0 30px 0',
             fontSize: '22px',
             fontWeight: '800',
-            color: '#fff',
+            color: theme.text,
             textAlign: 'center',
           }}>
             ⚙️ Modifica Settaggi
@@ -2131,7 +2135,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <label style={{
               display: 'block',
               fontSize: '11px',
-              color: '#888',
+              color: theme.textMuted,
               marginBottom: '10px',
               textTransform: 'uppercase',
               letterSpacing: '1px',
@@ -2149,12 +2153,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     padding: '12px 8px',
                     background: tempAlgo === algo 
                       ? 'linear-gradient(135deg, #bc13fe, #8b5cf6)' 
-                      : 'rgba(255,255,255,0.05)',
+                      : theme.surface05,
                     border: tempAlgo === algo 
                       ? 'none' 
-                      : '1px solid rgba(255,255,255,0.1)',
+                      : `1px solid ${theme.borderSubtle}`,
                     borderRadius: '10px',
-                    color: tempAlgo === algo ? '#fff' : '#888',
+                    color: tempAlgo === algo ? theme.text : theme.textMuted,
                     fontSize: '14px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -2168,7 +2172,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <div style={{ 
               marginTop: '8px', 
               fontSize: '11px', 
-              color: '#666',
+              color: theme.textDisabled,
               textAlign: 'center',
             }}>
               {tempAlgo === 1 && 'Statistica Pura'}
@@ -2185,7 +2189,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             <label style={{
               display: 'block',
               fontSize: '11px',
-              color: '#888',
+              color: theme.textMuted,
               marginBottom: '10px',
               textTransform: 'uppercase',
               letterSpacing: '1px',
@@ -2200,9 +2204,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 width: '100%',
                 padding: '14px 18px',
                 background: 'rgba(0,0,0,0.4)',
-                border: '2px solid rgba(255,255,255,0.1)',
+                border: `2px solid ${theme.borderSubtle}`,
                 borderRadius: '10px',
-                color: '#fff',
+                color: theme.text,
                 fontSize: '20px',
                 fontWeight: '700',
                 textAlign: 'center',
@@ -2223,12 +2227,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     padding: '6px 12px',
                     background: tempCycles === c 
                       ? 'rgba(0, 240, 255, 0.2)' 
-                      : 'rgba(255,255,255,0.05)',
+                      : theme.surface05,
                     border: tempCycles === c 
                       ? '1px solid rgba(0, 240, 255, 0.5)' 
-                      : '1px solid rgba(255,255,255,0.1)',
+                      : `1px solid ${theme.borderSubtle}`,
                     borderRadius: '6px',
-                    color: tempCycles === c ? '#00f0ff' : '#666',
+                    color: tempCycles === c ? theme.cyan : theme.textDisabled,
                     fontSize: '11px',
                     fontWeight: '600',
                     cursor: 'pointer',
@@ -2249,7 +2253,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               background: 'linear-gradient(135deg, #bc13fe, #8b5cf6)',
               border: 'none',
               borderRadius: '12px',
-              color: '#fff',
+              color: theme.text,
               fontSize: '15px',
               fontWeight: '800',
               cursor: 'pointer',
@@ -2266,9 +2270,9 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               width: '100%',
               padding: '12px',
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: `1px solid ${theme.borderSubtle}`,
               borderRadius: '8px',
-              color: '#666',
+              color: theme.textDisabled,
               fontSize: '12px',
               cursor: 'pointer',
             }}
@@ -2319,7 +2323,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               <div style={{
                 background: 'rgba(255, 68, 68, 0.1)', 
                 border: '1px solid #ff4444', 
-                color: '#ff4444', 
+                color: theme.danger, 
                 padding: '15px', 
                 borderRadius: '8px', 
                 margin: '20px', 
@@ -2338,7 +2342,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   style={{ 
                     background: 'transparent', 
                     border: 'none', 
-                    color: '#ff4444', 
+                    color: theme.danger, 
                     cursor: 'pointer', 
                     marginLeft: '10px',
                     fontSize: '16px'

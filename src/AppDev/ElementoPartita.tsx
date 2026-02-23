@@ -1,4 +1,6 @@
 import type { Match } from '../types';
+import { getTheme, getThemeMode } from './costanti';
+const appTheme = getTheme();
 
 interface Theme {
   cyan: string;
@@ -31,6 +33,7 @@ export default function ElementoPartita({
   onOpenCoachAI,
   leagueName
 }: ElementoPartitaProps) {
+  const isLight = getThemeMode() === 'light';
 
   const showLucifero = match.h2h_data?.lucifero_home != null;
 
@@ -60,7 +63,7 @@ export default function ElementoPartita({
         }
       }}
       style={{
-        background: 'rgba(255, 255, 255, 0.03)',
+        background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.03)',
         borderRadius: '20px',
         overflow: 'hidden',
         padding: isMobile ? '12px 10px' : '10.2px 15px',
@@ -69,7 +72,7 @@ export default function ElementoPartita({
         margin: isMobile ? '0 auto 5px auto' : '0 0 5px 0',
         marginBottom: '5px',
         cursor: 'pointer',
-        border: (isMobile && isExpanded) ? `1px solid ${theme.cyan}70` : '1px solid rgba(255, 255, 255, 0.05)',
+        border: (isMobile && isExpanded) ? `1px solid ${theme.cyan}70` : `1px solid ${isLight ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.15)'}`,
         boxShadow: (isMobile && isExpanded) ? `0 0 8px ${theme.cyan}40, 0 0 20px ${theme.cyan}20, inset 0 0 8px ${theme.cyan}08` : 'none',
         display: 'flex',
         flexDirection: isMobile && isExpanded ? 'column' : 'row',
@@ -78,10 +81,10 @@ export default function ElementoPartita({
         transition: 'all 0.3s ease'
       }}
       onMouseEnter={(e) => {
-        if (e.currentTarget) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+        if (e.currentTarget) e.currentTarget.style.background = isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.08)';
       }}
       onMouseLeave={(e) => {
-        if (e.currentTarget) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+        if (e.currentTarget) e.currentTarget.style.background = isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.03)';
       }}
     >
       {/* A. DATA E ORA (+ nuvoletta Coach AI centrata quando espanso) */}
@@ -97,24 +100,24 @@ export default function ElementoPartita({
           display: 'flex',
           alignItems: 'center',
           gap: '2px',
-          background: 'rgba(111, 149, 170, 0.13)',
+          background: isLight ? 'rgba(0, 100, 150, 0.08)' : 'rgba(111, 149, 170, 0.13)',
           padding: isMobile ? '4px 4px' : '5px 10px',
           borderRadius: '8px',
-          border: '1px solid rgba(0, 240, 255, 0.1)',
+          border: isLight ? '1px solid rgba(0, 100, 150, 0.15)' : '1px solid rgba(0, 240, 255, 0.1)',
         }}>
           <span style={{
             fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.5)',
+            color: appTheme.textFaint,
             fontWeight: 'bold'
           }}>
             {match.date_obj
               ? new Date(match.date_obj).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
               : '00/00'}
           </span>
-          <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
+          <span style={{ color: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)', fontSize: '12px' }}>|</span>
           <span style={{
             fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.5)',
+            color: appTheme.textFaint,
             fontWeight: 'bold'
           }}>
             {match.match_time || '--:--'}
@@ -221,7 +224,7 @@ export default function ElementoPartita({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                fontSize: '12px', fontWeight: 'bold', color: 'white', textAlign: 'right'
+                fontSize: '12px', fontWeight: 'bold', color: appTheme.text, textAlign: 'right'
               }}>
                 {match.home}
               </span>
@@ -234,7 +237,7 @@ export default function ElementoPartita({
             </div>
 
             <div style={{ width: '20px', textAlign: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>vs</span>
+              <span style={{ fontSize: '10px', color: appTheme.textFaint }}>vs</span>
             </div>
 
             <div style={{
@@ -256,7 +259,7 @@ export default function ElementoPartita({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                fontSize: '12px', fontWeight: 'bold', color: 'white', textAlign: 'left'
+                fontSize: '12px', fontWeight: 'bold', color: appTheme.text, textAlign: 'left'
               }}>
                 {match.away}
               </span>
@@ -278,7 +281,7 @@ export default function ElementoPartita({
           }}>
             <span style={{
               fontSize: '11px',
-              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : '#fff',
+              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : appTheme.text,
               fontWeight: 'bold',
               fontFamily: 'monospace',
               animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
@@ -320,7 +323,7 @@ export default function ElementoPartita({
                   <span style={{ fontSize: '10px', color: 'rgb(5, 249, 182)', marginRight: '6px', fontWeight: 'bold', width: '30px', textAlign: 'right' }}>
                     {Math.round((match.h2h_data?.lucifero_home / 25) * 100)}%
                   </span>
-                  <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                  <div style={{ width: '35px', height: '5px', background: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
                     <div style={{
                       width: `${Math.min((match.h2h_data?.lucifero_home / 25) * 100, 100)}%`,
                       height: '100%',
@@ -343,7 +346,7 @@ export default function ElementoPartita({
                 )}
 
                 <div style={{
-                  fontWeight: 'bold', fontSize: '15px', color: 'white',
+                  fontWeight: 'bold', fontSize: '15px', color: appTheme.text,
                   textAlign: 'right', width: '130px', whiteSpace: 'nowrap',
                   overflow: 'hidden', textOverflow: 'ellipsis'
                 }}>
@@ -364,7 +367,7 @@ export default function ElementoPartita({
               background: match.live_status === 'Live' && match.status !== 'Finished' ? 'rgba(239, 68, 68, 0.15)' : match.live_status === 'HT' && match.status !== 'Finished' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0, 240, 255, 0.1)',
               border: match.live_status === 'Live' && match.status !== 'Finished' ? '1px solid rgba(239, 68, 68, 0.5)' : match.live_status === 'HT' && match.status !== 'Finished' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(0, 240, 255, 0.3)',
               fontSize: '15px', fontWeight: 'bold',
-              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : '#fff',
+              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : appTheme.text,
               borderRadius: '8px',
               minWidth: '50px', textAlign: 'center', margin: '0 15px', fontFamily: 'monospace',
               display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2px 8px',
@@ -402,7 +405,7 @@ export default function ElementoPartita({
                 />
 
                 <div style={{
-                  fontWeight: 'bold', fontSize: '15px', color: 'white',
+                  fontWeight: 'bold', fontSize: '15px', color: appTheme.text,
                   textAlign: 'left', width: '130px', whiteSpace: 'nowrap',
                   overflow: 'hidden', textOverflow: 'ellipsis'
                 }}>
@@ -421,7 +424,7 @@ export default function ElementoPartita({
 
               {showLucifero && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: '35px', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                  <div style={{ width: '35px', height: '5px', background: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
                     <div style={{
                       width: `${Math.min((match.h2h_data?.lucifero_away / 25) * 100, 100)}%`,
                       height: '100%',
@@ -480,10 +483,10 @@ export default function ElementoPartita({
                   const isMatchResult = label === resultOutcome;
                   const isLowest = numVal === minOdd;
 
-                  let boxBg = 'rgba(255, 255, 255, 0.05)';
+                  let boxBg = appTheme.surface05;
                   let boxBorder = '1px solid transparent';
-                  let numColor = '#ddd';
-                  let labelColor = 'rgba(255,255,255,0.2)';
+                  let numColor = isLight ? '#374151' : '#ddd';
+                  let labelColor = appTheme.textDisabled;
 
                   if (isMatchResult) {
                     boxBg = 'rgba(0, 240, 255, 0.1)';
@@ -591,7 +594,7 @@ export default function ElementoPartita({
         <div style={{
           marginTop: '15px',
           paddingTop: '15px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+          borderTop: isLight ? '1px solid rgba(0, 0, 0, 0.1)' : '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           {/* SQUADRA CASA */}
           <div style={{ marginBottom: '12px' }}>
@@ -625,14 +628,14 @@ export default function ElementoPartita({
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
 
-              <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
+              <span style={{ fontSize: '15px', fontWeight: 'bold', color: appTheme.text }}>
                 {match.home}
               </span>
             </div>
 
             {showLucifero && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                <div style={{ flex: 1, height: '6px', background: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
                   <div style={{
                     width: `${Math.min((match.h2h_data?.lucifero_home / 25) * 100, 100)}%`,
                     height: '100%',
@@ -657,7 +660,7 @@ export default function ElementoPartita({
             borderRadius: '8px',
             fontSize: '14px',
             fontWeight: 'bold',
-            color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : '#fff',
+            color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : appTheme.text,
             margin: '10px 0',
             fontFamily: 'monospace',
             animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
@@ -709,14 +712,14 @@ export default function ElementoPartita({
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
 
-              <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
+              <span style={{ fontSize: '15px', fontWeight: 'bold', color: appTheme.text }}>
                 {match.away}
               </span>
             </div>
 
             {showLucifero && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+                <div style={{ flex: 1, height: '6px', background: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
                   <div style={{
                     width: `${Math.min((match.h2h_data?.lucifero_away / 25) * 100, 100)}%`,
                     height: '100%',
@@ -738,7 +741,7 @@ export default function ElementoPartita({
             gap: '8px',
             marginTop: '15px',
             paddingTop: '12px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+            borderTop: isLight ? '1px solid rgba(0, 0, 0, 0.05)' : '1px solid rgba(255, 255, 255, 0.05)'
           }}>
             {['1', 'X', '2'].map((label) => {
               const val = (odds as any)[label];
@@ -748,15 +751,15 @@ export default function ElementoPartita({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
                   padding: '8px',
                   borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                  border: isLight ? '1px solid rgba(0, 0, 0, 0.1)' : '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '10px', color: appTheme.textFaint, fontWeight: 'bold', marginBottom: '4px' }}>
                     {label}
                   </span>
-                  <span style={{ fontSize: '16px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '16px', color: appTheme.text, fontWeight: 'bold', fontFamily: 'monospace' }}>
                     {val}
                   </span>
                 </div>
@@ -777,7 +780,7 @@ export default function ElementoPartita({
               background: `linear-gradient(90deg, ${theme.cyan}, ${theme.purple})`,
               border: 'none',
               borderRadius: '10px',
-              color: 'white',
+              color: appTheme.text,
               fontWeight: 'bold',
               fontSize: '14px',
               cursor: 'pointer',

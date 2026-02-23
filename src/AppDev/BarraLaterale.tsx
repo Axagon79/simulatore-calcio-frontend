@@ -1,5 +1,7 @@
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import type { League, Match } from '../types';
+import { getTheme, getThemeMode } from './costanti';
+const appTheme = getTheme();
 
 interface Country {
   code: string;
@@ -91,6 +93,7 @@ export default function BarraLaterale({
   setViewMode,
   isAdmin
 }: BarraLateraleProps) {
+  const isLight = getThemeMode() === 'light';
 
   return (
     <div style={{
@@ -124,9 +127,9 @@ export default function BarraLaterale({
           }}
           style={{
             padding: '10px',
-            background: '#000',
-            color: 'white',
-            border: '1px solid #333',
+            background: appTheme.popoverBg,
+            color: appTheme.text,
+            border: `1px solid ${isLight ? '#ccc' : '#333'}`,
             borderRadius: '6px',
             width: '100%'
           }}
@@ -159,9 +162,9 @@ export default function BarraLaterale({
         }}
         style={{
           padding: '10px',
-          background: '#000',
-          color: 'white',
-          border: '1px solid #333',
+          background: appTheme.popoverBg,
+          color: appTheme.text,
+          border: `1px solid ${isLight ? '#ccc' : '#333'}`,
           borderRadius: '6px',
           width: '100%'
         }}
@@ -196,9 +199,9 @@ export default function BarraLaterale({
         }}
         style={{
           padding: '10px',
-          background: '#000',
-          color: 'white',
-          border: '1px solid #333',
+          background: appTheme.popoverBg,
+          color: appTheme.text,
+          border: `1px solid ${isLight ? '#ccc' : '#333'}`,
           borderRadius: '6px',
           width: '100%'
         }}
@@ -215,10 +218,10 @@ export default function BarraLaterale({
           style={{
             flex: 1,
             padding: '15px 4px',
-            background: 'rgba(5,249,182,0.08)',
-            border: '1px solid rgba(5,249,182,0.25)',
+            background: isLight ? 'rgba(5,249,182,0.15)' : 'rgba(5,249,182,0.08)',
+            border: isLight ? '1px solid rgba(5,249,182,0.7)' : '1px solid rgba(5,249,182,0.25)',
             borderRadius: '8px',
-            color: '#05f9b6',
+            color: appTheme.success,
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '700',
@@ -233,10 +236,10 @@ export default function BarraLaterale({
           style={{
             flex: 1,
             padding: '15px 4px',
-            background: 'rgba(255,215,0,0.08)',
-            border: '1px solid rgba(255,215,0,0.25)',
+            background: isLight ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.08)',
+            border: isLight ? '1px solid rgba(255,215,0,0.7)' : '1px solid rgba(255,215,0,0.25)',
             borderRadius: '8px',
-            color: '#ffd700',
+            color: appTheme.gold,
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '700',
@@ -256,10 +259,10 @@ export default function BarraLaterale({
             width: '100%',
             padding: '12px 4px',
             marginTop: '6px',
-            background: 'rgba(255, 107, 53, 0.08)',
-            border: '1px solid rgba(255, 107, 53, 0.25)',
+            background: isLight ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.08)',
+            border: isLight ? '1px solid rgba(255, 107, 53, 0.7)' : '1px solid rgba(255, 107, 53, 0.25)',
             borderRadius: '8px',
-            color: '#ff6b35',
+            color: appTheme.warning,
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '700',
@@ -280,10 +283,12 @@ export default function BarraLaterale({
         style={{
           width: '100%',
           padding: '14px 12px',
-          background: `linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))`,
-          border: 'revert',
+          background: isLight
+            ? `linear-gradient(135deg, rgba(188, 19, 254, 0.15), rgba(0, 180, 200, 0.12))`
+            : `linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))`,
+          border: isLight ? '1px solid rgba(188, 19, 254, 0.6)' : 'revert',
           borderRadius: '10px',
-          color: 'white',
+          color: appTheme.text,
           cursor: 'pointer',
           fontSize: '14px',
           fontWeight: '700',
@@ -369,7 +374,7 @@ export default function BarraLaterale({
           <div style={{marginTop:'20px', borderTop:'1px solid #333', paddingTop:'15px'}}>
               <label style={{
                   display:'block',
-                  color: '#ffd700',
+                  color: appTheme.gold,
                   fontSize:'11px',
                   fontWeight:'bold',
                   marginBottom:'8px'
@@ -381,7 +386,7 @@ export default function BarraLaterale({
               <div style={{
                   maxHeight: '180px',
                   overflowY: 'auto',
-                  background: '#0a0a0a',
+                  background: appTheme.popoverBg,
                   border: '1px solid rgba(255, 215, 0, 0.2)',
                   borderRadius: '6px',
                   padding: '8px'
@@ -391,7 +396,7 @@ export default function BarraLaterale({
                       if (configMode >= 1 && configMode <= 3) {
                           if (matches.length === 0) {
                               return (
-                                  <div style={{color: '#666', textAlign: 'center', padding: '20px', fontSize: '11px'}}>
+                                  <div style={{color: appTheme.textDisabled, textAlign: 'center', padding: '20px', fontSize: '11px'}}>
                                       Nessuna partita disponibile
                                   </div>
                               );
@@ -406,7 +411,7 @@ export default function BarraLaterale({
                                       borderRadius: '4px',
                                       marginBottom: '8px',
                                       fontSize: '11px',
-                                      color: '#ffd700',
+                                      color: appTheme.gold,
                                       fontWeight: 'bold',
                                       textAlign: 'center'
                                   }}>
@@ -420,11 +425,11 @@ export default function BarraLaterale({
                                           style={{
                                               padding: '6px',
                                               marginBottom: '4px',
-                                              background: 'rgba(255,255,255,0.03)',
+                                              background: appTheme.surfaceSubtle,
                                               borderLeft: '2px solid rgba(255, 215, 0, 0.3)',
                                               borderRadius: '3px',
                                               fontSize: '10px',
-                                              color: '#ddd'
+                                              color: appTheme.text
                                           }}
                                       >
                                           {match.home} vs {match.away}
@@ -442,7 +447,7 @@ export default function BarraLaterale({
 
                           if (matchesArray.length === 0) {
                               return (
-                                  <div style={{color: '#666', textAlign: 'center', padding: '20px', fontSize: '11px'}}>
+                                  <div style={{color: appTheme.textDisabled, textAlign: 'center', padding: '20px', fontSize: '11px'}}>
                                       Nessuna partita selezionata
                                   </div>
                               );
@@ -457,7 +462,7 @@ export default function BarraLaterale({
                                       borderRadius: '4px',
                                       marginBottom: '8px',
                                       fontSize: '11px',
-                                      color: '#ffd700',
+                                      color: appTheme.gold,
                                       fontWeight: 'bold',
                                       textAlign: 'center'
                                   }}>
@@ -471,11 +476,11 @@ export default function BarraLaterale({
                                           style={{
                                               padding: '6px',
                                               marginBottom: '4px',
-                                              background: 'rgba(255,255,255,0.03)',
+                                              background: appTheme.surfaceSubtle,
                                               borderLeft: '2px solid rgba(255, 215, 0, 0.3)',
                                               borderRadius: '3px',
                                               fontSize: '10px',
-                                              color: '#ddd',
+                                              color: appTheme.text,
                                               display: 'flex',
                                               alignItems: 'center',
                                               justifyContent: 'space-between'
@@ -497,7 +502,7 @@ export default function BarraLaterale({
                                               style={{
                                                   background: 'rgba(255, 0, 0, 0.2)',
                                                   border: '1px solid rgba(255, 0, 0, 0.4)',
-                                                  color: '#ff4444',
+                                                  color: appTheme.danger,
                                                   padding: '2px 6px',
                                                   borderRadius: '3px',
                                                   cursor: 'pointer',

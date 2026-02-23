@@ -134,6 +134,9 @@ function formatRoi(val: number | null) {
 
 function ProgressBar({ rate, height = 6, showLabel = false, arMode = false }: { rate: number; height?: number; showLabel?: boolean; arMode?: boolean }) {
   const color = rateColor(rate, arMode);
+  // Gradiente nella barra: dal colore "basso" al colore effettivo della rate
+  const colorStart = rateColor(Math.max(0, rate - 30), arMode);
+  const colorMid = rateColor(Math.max(0, rate - 15), arMode);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
       <div style={{
@@ -141,7 +144,7 @@ function ProgressBar({ rate, height = 6, showLabel = false, arMode = false }: { 
       }}>
         <div style={{
           width: `${rate}%`, height: '100%', borderRadius: height / 2,
-          background: `linear-gradient(90deg, ${color}88, ${color})`,
+          background: `linear-gradient(90deg, ${colorStart}, ${colorMid}, ${color})`,
           transition: 'width 0.6s ease',
         }} />
       </div>

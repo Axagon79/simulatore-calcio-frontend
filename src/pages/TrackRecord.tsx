@@ -31,6 +31,10 @@ interface TrackRecordResponse {
   success: boolean;
   periodo: { from: string; to: string };
   globale: HitRateData;
+  split_sezione: {
+    pronostici: HitRateData;
+    alto_rendimento: HitRateData;
+  };
   breakdown_mercato: Record<string, HitRateData>;
   breakdown_campionato: Record<string, HitRateData>;
   breakdown_confidence: Record<string, HitRateData>;
@@ -87,8 +91,6 @@ const MARKET_LABELS: Record<string, string> = {
   'DOPPIA_CHANCE': 'Doppia Chance',
   'OVER_UNDER': 'Over/Under',
   'GG_NG': 'Goal/NoGoal',
-  'X_FACTOR': 'X Factor',
-  'RISULTATO_ESATTO': 'Risultato Esatto',
 };
 
 export default function TrackRecord({ onBack }: TrackRecordProps) {
@@ -101,6 +103,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   const [availableLeagues, setAvailableLeagues] = useState<string[]>([]);
   const [availableMarkets, setAvailableMarkets] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<'dati' | 'analisi'>('dati');
+  const [filtroSezione, setFiltroSezione] = useState<'tutto' | 'pronostici' | 'alto_rendimento'>('tutto');
   const [quotaMin, setQuotaMin] = useState('');
   const [quotaMax, setQuotaMax] = useState('');
   const [selectedBand, setSelectedBand] = useState('');
@@ -178,6 +181,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
         if (filtroMarket) url += `&market=${encodeURIComponent(filtroMarket)}`;
         if (effectiveMin) url += `&min_quota=${effectiveMin}`;
         if (effectiveMax) url += `&max_quota=${effectiveMax}`;
+        if (filtroSezione !== 'tutto') url += `&sezione=${filtroSezione}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -206,7 +210,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
       }
     };
     fetchData();
-  }, [periodo, filtroLeague, filtroMarket, selectedBand, effectiveMin, effectiveMax, getDateRange]);
+  }, [periodo, filtroLeague, filtroMarket, filtroSezione, selectedBand, effectiveMin, effectiveMax, getDateRange]);
 
   // Stile container principale
   const containerStyle: React.CSSProperties = {
@@ -530,6 +534,28 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
 
       {/* Filtri */}
       <div style={{ ...cardStyle, display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+        {/* Sezione: Tutto / Pronostici / Alto Rendimento */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {([
+            { id: 'tutto' as const, label: 'Tutto' },
+            { id: 'pronostici' as const, label: 'Pronostici' },
+            { id: 'alto_rendimento' as const, label: 'Alto Rendimento' },
+          ]).map(s => (
+            <button
+              key={s.id}
+              onClick={() => setFiltroSezione(s.id)}
+              style={{
+                background: filtroSezione === s.id ? (s.id === 'alto_rendimento' ? 'rgba(255,170,0,0.3)' : 'rgba(0,200,255,0.3)') : 'rgba(255,255,255,0.08)',
+                border: filtroSezione === s.id ? (s.id === 'alto_rendimento' ? '1px solid rgba(255,170,0,0.6)' : '1px solid rgba(0,200,255,0.6)') : '1px solid rgba(255,255,255,0.15)',
+                color: '#fff', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '0.85em', fontWeight: filtroSezione === s.id ? 'bold' : 'normal'
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        {/* Separatore */}
+        <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.15)' }} />
         {/* Periodo */}
         <div style={{ display: 'flex', gap: '6px' }}>
           {(['7d', '30d', '90d', 'tutto'] as const).map(p => (
@@ -696,6 +722,30 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               </div>
             </div>
           </div>
+
+          {/* Split Pronostici vs Alto Rendimento */}
+          {data.split_sezione && filtroSezione === 'tutto' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '4px' }}>
+              <div style={{ ...cardStyle, background: 'rgba(0,200,255,0.08)', borderColor: 'rgba(0,200,255,0.25)', textAlign: 'center', marginBottom: 0 }}>
+                <div style={{ color: '#888', fontSize: '0.8em', marginBottom: '6px' }}>Pronostici (≤2.50)</div>
+                <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#00ccff' }}>
+                  {data.split_sezione.pronostici.hit_rate ?? '—'}%
+                </div>
+                <div style={{ color: '#666', fontSize: '0.8em' }}>
+                  {data.split_sezione.pronostici.hits}/{data.split_sezione.pronostici.total}
+                </div>
+              </div>
+              <div style={{ ...cardStyle, background: 'rgba(255,170,0,0.08)', borderColor: 'rgba(255,170,0,0.25)', textAlign: 'center', marginBottom: 0 }}>
+                <div style={{ color: '#888', fontSize: '0.8em', marginBottom: '6px' }}>Alto Rendimento (&gt;2.50)</div>
+                <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#ffaa00' }}>
+                  {data.split_sezione.alto_rendimento.hit_rate ?? '—'}%
+                </div>
+                <div style={{ color: '#666', fontSize: '0.8em' }}>
+                  {data.split_sezione.alto_rendimento.hits}/{data.split_sezione.alto_rendimento.total}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Breakdown per mercato */}
           <div style={cardStyle}>

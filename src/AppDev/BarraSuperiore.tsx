@@ -193,7 +193,7 @@ export default function BarraSuperiore({
           zIndex: 5
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', pointerEvents: 'auto' }}>
-            <span style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: theme.text, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <span style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: theme.text, textTransform: 'uppercase', letterSpacing: '1px', ...(isMobile ? { maxWidth: '140px', overflow: 'hidden' as const, textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } : {}) }}>
               Partite di Oggi
             </span>
             {!isMobile && (
@@ -243,7 +243,8 @@ export default function BarraSuperiore({
                 color: 'white',
                 lineHeight: '1.1',
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                ...(isMobile ? { maxWidth: '140px', overflow: 'hidden' as const, textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } : {})
               }}>
                 {selectedCup
                   ? (selectedCup === 'UCL' ? 'Champions' : 'Europa L.')

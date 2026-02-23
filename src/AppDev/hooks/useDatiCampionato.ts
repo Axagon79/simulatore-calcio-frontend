@@ -105,7 +105,7 @@ export function useDatiCampionato() {
     const fetchSidebarPredictions = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`${API_BASE}/simulation/daily-predictions?date=${today}`);
+        const response = await fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${today}`);
         const data = await response.json();
         if (data.success && data.predictions && data.predictions.length > 0) {
           const shuffled = [...data.predictions].sort(() => 0.5 - Math.random());

@@ -12,6 +12,7 @@ type SimMode = 'fast' | 'animated';
 type RadarFocus = 'all' | 'home' | 'away';
 
 interface Theme {
+  bg: string;
   cyan: string;
   purple: string;
   text: string;

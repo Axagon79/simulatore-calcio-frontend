@@ -3,6 +3,7 @@ import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
+type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng';
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode } from './AppDev/costanti';
@@ -312,12 +313,32 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     }
   };
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
+  const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
   const [financeOpen, setFinanceOpen] = useState(false);
   const [finLegendOpen, setFinLegendOpen] = useState(false);
-  // Reset filtro al cambio data
+  // Definizioni mercati (per capsule + filtraggio)
+  const MARKET_DEFS: { id: MarketFilter; label: string; filter: (t: any) => boolean; color: string }[] = [
+    { id: 'segno', label: '1X2', filter: t => t.tipo === 'SEGNO', color: theme.cyan },
+    { id: 'ou15', label: 'O/U 1.5', filter: t => t.tipo === 'GOL' && /^(over|under)\s+1\.5$/i.test(t.pronostico), color: isLight ? '#0284c7' : '#4fc3f7' },
+    { id: 'ou25', label: 'O/U 2.5', filter: t => t.tipo === 'GOL' && /^(over|under)\s+2\.5$/i.test(t.pronostico), color: isLight ? '#0369a1' : '#29b6f6' },
+    { id: 'ou35', label: 'O/U 3.5', filter: t => t.tipo === 'GOL' && /^(over|under)\s+3\.5$/i.test(t.pronostico), color: isLight ? '#075985' : '#0288d1' },
+    { id: 'ggng', label: 'GG/NG', filter: t => t.tipo === 'GOL' && /^(goal|nogoal)$/i.test(t.pronostico), color: theme.success },
+    { id: 'dc', label: 'DC', filter: t => t.tipo === 'DOPPIA_CHANCE', color: isLight ? '#9333ea' : '#ab47bc' },
+  ];
+
+  // Funzione filtraggio mercato su prediction
+  const predMatchesMarket = (p: Prediction): boolean => {
+    if (marketFilter === 'tutti') return true;
+    const mf = MARKET_DEFS.find(m => m.id === marketFilter);
+    if (!mf) return true;
+    return p.pronostici?.some(mf.filter) ?? false;
+  };
+
+  // Reset filtri al cambio data
   useEffect(() => {
     setStatusFilter('tutte');
+    setMarketFilter('tutti');
   }, [date]);
 
   useEffect(() => {
@@ -714,24 +735,31 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     setCollapsedSections(collapsed);
   }, [exactScorePredictions.length]);
 
-  // --- DATI FILTRATI ---
-  const filteredPredictions = statusFilter === 'tutte' ? normalPredictions : normalPredictions.filter(p => predMatchesFilter(p, statusFilter));
-  const filteredExactScore = statusFilter === 'tutte' ? exactScorePredictions : exactScorePredictions.filter(p => predMatchesFilter(p, statusFilter));
+  // --- DATI FILTRATI (status + mercato combinati) ---
+  const filteredPredictions = normalPredictions
+    .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
+    .filter(predMatchesMarket);
+  const filteredExactScore = exactScorePredictions
+    .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter));
   const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
     return acc;
   }, {});
-  const filteredAltoRendimento = statusFilter === 'tutte' ? altoRendimentoPreds : altoRendimentoPreds.filter(p => predMatchesFilter(p, statusFilter));
+  const filteredAltoRendimento = altoRendimentoPreds
+    .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
+    .filter(predMatchesMarket);
   const filteredAltoRendimentoByLeague = filteredAltoRendimento.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
     return acc;
   }, {});
 
-  // --- CONTEGGI FILTRI ---
+  // --- CONTEGGI FILTRI (rispettano market filter) ---
   const filterCounts = useMemo(() => {
     const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
+    const source = activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+    const marketFiltered = source.filter(predMatchesMarket);
     const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 're') => {
       counts.tutte++;
       const s = getMatchStatus(item);
@@ -753,13 +781,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         }
       }
     };
-    if (activeTab === 'pronostici') {
-      normalPredictions.forEach(p => countItem(p, 'normal'));
-    } else {
-      altoRendimentoPreds.forEach(p => countItem(p, 'normal'));
-    }
+    marketFiltered.forEach(p => countItem(p, 'normal'));
     return counts;
-  }, [predictions, activeTab]);
+  }, [predictions, activeTab, marketFilter]);
 
   // --- RENDER CARD PRONOSTICO ---
   const renderPredictionCard = (pred: Prediction) => {
@@ -2335,7 +2359,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); setMarketFilter('tutti'); }}
+              onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+              onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.background = theme.surfaceSubtle; }}
               style={{
                 background: activeTab === tab.id ? `${tab.color}20` : theme.surfaceSubtle,
                 border: `1px solid ${activeTab === tab.id ? tab.color : theme.surface08}`,
@@ -2345,7 +2371,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: activeTab === tab.id ? '700' : '500',
-                transition: 'all 0.2s'
+                transition: 'all 0.15s'
               }}
             >
               {tab.icon} {tab.label}
@@ -2369,13 +2395,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <button
               key={f.id}
               onClick={() => setStatusFilter(f.id)}
+              onMouseEnter={e => { if (statusFilter !== f.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+              onMouseLeave={e => { if (statusFilter !== f.id) e.currentTarget.style.background = theme.surfaceSubtle; }}
               style={{
                 background: statusFilter === f.id ? `${f.color}20` : theme.surfaceSubtle,
                 border: `1px solid ${statusFilter === f.id ? f.color : theme.surface05}`,
                 color: statusFilter === f.id ? f.color : theme.textDim,
                 padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
                 fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
-                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px'
               }}
             >
               {f.icon} {f.label}
@@ -2432,7 +2460,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             );
           })()}
         </div>
-        {/* Capsule HR% per tipo + Rendimento (soglie dinamiche da quote + mercato) */}
+        {/* Capsule filtro mercato + Rendimento */}
         {(activeTab === 'pronostici' || activeTab === 'alto_rendimento') && (() => {
           // Margini per sotto-mercato (dal documento soglie_minime_mercati_betting.md)
           const MARGINS: Record<string, number> = {
@@ -2440,7 +2468,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             'over_1.5': 4, 'under_1.5': 4, 'over_2.5': 3, 'under_2.5': 3,
             'over_3.5': 5, 'under_3.5': 3, 'goal': 5, 'nogoal': 4, 'dc': 4
           };
-          // Fallback senza quota (midpoint Hit Rate Minimo dal documento)
           const FALLBACKS: Record<string, number> = {
             '1': 67.5, 'X': 32.5, '2': 40,
             'over_1.5': 77.5, 'under_1.5': 35, 'over_2.5': 55, 'under_2.5': 56,
@@ -2462,8 +2489,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             if (q && q > 1) return (100 / q) + (MARGINS[sm] || 4);
             return FALLBACKS[sm] || 55;
           };
-          // FlatMap con quota + probabilita_stimata incluse
-          const sourcePreds = activeTab === 'alto_rendimento' ? filteredAltoRendimento : normalPredictions;
+          // FlatMap tutti i tips (NON filtrati per mercato, per conteggi capsule)
+          const sourcePreds = activeTab === 'alto_rendimento' ? altoRendimentoPreds : normalPredictions;
           const allTips = sourcePreds.flatMap(p =>
             (p.pronostici || []).map(t => ({
               ...t,
@@ -2474,24 +2501,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               _probStimata: t.probabilita_stimata || null
             }))
           );
-          // Calcolo per gruppo capsula
-          const capsuleData = (label: string, filter: (t: any) => boolean, color: string) => {
-            const tips = allTips.filter(filter);
+          // Calcolo per gruppo capsula (total + finished + hits + HR)
+          const capsuleData = (def: typeof MARKET_DEFS[0]) => {
+            const tips = allTips.filter(def.filter);
+            const total = tips.length;
             const verified = tips.filter(t => t.hit === true || t.hit === false);
             const hits = tips.filter(t => t.hit === true).length;
             const hr = verified.length > 0 ? Math.round((hits / verified.length) * 1000) / 10 : null;
             const thresholds = verified.map(t => getTipThreshold(t));
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
-            return { label, color, finished: verified.length, hits, hr, threshold: avgTh };
+            return { ...def, total, finished: verified.length, hits, hr, threshold: avgTh };
           };
-          const capsules = [
-            capsuleData('Segno', t => t.tipo === 'SEGNO', theme.cyan),
-            capsuleData('O/U 1.5', t => t.tipo === 'GOL' && /^(over|under)\s+1\.5$/i.test(t.pronostico), isLight ? '#0284c7' : '#4fc3f7'),
-            capsuleData('O/U 2.5', t => t.tipo === 'GOL' && /^(over|under)\s+2\.5$/i.test(t.pronostico), isLight ? '#0369a1' : '#29b6f6'),
-            capsuleData('O/U 3.5', t => t.tipo === 'GOL' && /^(over|under)\s+3\.5$/i.test(t.pronostico), isLight ? '#075985' : '#0288d1'),
-            capsuleData('GG/NG', t => t.tipo === 'GOL' && /^(goal|nogoal)$/i.test(t.pronostico), theme.success),
-            capsuleData('DC', t => t.tipo === 'DOPPIA_CHANCE', isLight ? '#9333ea' : '#ab47bc'),
-          ];
+          const capsules = MARKET_DEFS.map(def => capsuleData(def));
+          const totalAllTips = allTips.length;
           // Calcolo metriche finanziarie (flat stake = 1 unità)
           const verifiedWithQuota = allTips.filter(t => (t.hit === true || t.hit === false) && t._quota && t._quota > 1);
           const totalBets = verifiedWithQuota.length;
@@ -2503,23 +2525,55 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
           const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
 
-          if (!capsules.some(c => c.finished > 0)) return null;
+          if (totalAllTips === 0) return null;
           return (
             <>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
+            {/* Capsule filtro mercato — sempre visibili */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
+              {/* Pulsante Tutti */}
+              <button
+                onClick={() => setMarketFilter('tutti')}
+                onMouseEnter={e => { if (marketFilter !== 'tutti') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                onMouseLeave={e => { if (marketFilter !== 'tutti') e.currentTarget.style.background = marketFilter === 'tutti' ? '' : (isLight ? theme.surfaceSubtle : theme.surfaceSubtle); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  background: marketFilter === 'tutti' ? (isLight ? '#dbeafe' : `${theme.cyan}25`) : theme.surfaceSubtle,
+                  border: `1px solid ${marketFilter === 'tutti' ? theme.cyan : theme.surface05}`,
+                  color: marketFilter === 'tutti' ? theme.cyan : theme.textDim,
+                  borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                  fontSize: '10px', fontWeight: marketFilter === 'tutti' ? '800' : '600',
+                  transition: 'all 0.15s'
+                }}
+              >
+                Tutti <span style={{ fontSize: '9px', opacity: 0.7 }}>{totalAllTips}</span>
+              </button>
               {capsules.map(c => {
-                if (c.finished === 0) return null;
-                const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : theme.missText;
+                if (c.total === 0) return null;
+                const isActive = marketFilter === c.id;
+                const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : null;
                 return (
-                  <div key={c.label} style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    background: `${c.color}10`, border: `1px solid ${c.color}30`,
-                    borderRadius: '12px', padding: '4px 12px'
-                  }}>
-                    <span style={{ fontSize: '10px', color: c.color, fontWeight: '700' }}>{c.label}</span>
-                    <span style={{ fontSize: '12px', fontWeight: '900', color: clr }}>{c.hr ?? '—'}%</span>
-                    <span style={{ fontSize: '9px', opacity: 0.6, color: clr }}>{c.hits}/{c.finished}</span>
-                  </div>
+                  <button
+                    key={c.id}
+                    onClick={() => setMarketFilter(isActive ? 'tutti' : c.id)}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = isActive ? '' : (isLight ? theme.surfaceSubtle : theme.surfaceSubtle); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                      background: isActive ? `${c.color}${isLight ? '20' : '25'}` : theme.surfaceSubtle,
+                      border: `1px solid ${isActive ? c.color : theme.surface05}`,
+                      borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <span style={{ fontSize: '10px', color: isActive ? c.color : theme.textDim, fontWeight: '700' }}>{c.label}</span>
+                    <span style={{ fontSize: '9px', color: isActive ? c.color : theme.textFaint, fontWeight: '600' }}>{c.total}</span>
+                    {c.finished > 0 && clr && (
+                      <>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: clr }}>{c.hr}%</span>
+                        <span style={{ fontSize: '8px', opacity: 0.6, color: clr }}>{c.hits}/{c.finished}</span>
+                      </>
+                    )}
+                  </button>
                 );
               })}
             </div>
@@ -2527,11 +2581,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {totalBets > 0 && (() => {
               const yieldColor = yieldPct !== null && yieldPct >= 0 ? theme.financePositive : theme.missText;
               return (
-                <div style={{
-                  background: isLight ? '#f0f2f5' : '#1a1d2e', border: '1px solid #ffffff15',
-                  borderRadius: '12px', padding: '8px 14px', marginBottom: '16px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setFinanceOpen(!financeOpen)}>
+                <div
+                  style={{
+                    background: isLight ? '#eeeeee' : '#1a1d2e',
+                    border: isLight ? '1px solid #e0e2e6' : '1px solid #ffffff15',
+                    borderRadius: '12px', padding: '8px 14px', marginBottom: '16px',
+                    cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={isLight ? e => { e.currentTarget.style.background = '#c8cdcd'; } : undefined}
+                  onMouseLeave={isLight ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
+                  onClick={() => setFinanceOpen(!financeOpen)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Rendimento</span>
                       <span
@@ -2548,7 +2609,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   </div>
                   {finLegendOpen && (
-                    <div style={{ marginTop: '8px', padding: '8px 10px', background: theme.surfaceSubtle, borderRadius: '8px', fontSize: '10px', color: theme.textFaint, lineHeight: '1.6' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ marginTop: '8px', padding: '8px 10px', background: isLight ? '#fafafa' : theme.surfaceSubtle, border: isLight ? '1px solid #e5e7eb' : 'none', borderRadius: '8px', fontSize: '10px', color: isLight ? '#4b5563' : theme.textFaint, lineHeight: '1.6' }}>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield</span> — Se punti 1&euro; su ogni pronostico, quanto guadagni in media? +10% = guadagni 0.10&euro; per ogni euro puntato</div>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L</span> — Il totale che hai in tasca alla fine. +3.2 = hai 3.20&euro; in pi&ugrave; rispetto a quando hai iniziato</div>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>ROI</span> — Stesso concetto del Yield: quanto ti rende ogni euro investito, in percentuale</div>
@@ -2557,7 +2618,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   )}
                   {financeOpen && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
+                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
                       {[
                         { label: 'P/L', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
                         { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? theme.financePositive : theme.missText },

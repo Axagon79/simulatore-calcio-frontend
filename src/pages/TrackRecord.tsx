@@ -103,10 +103,18 @@ const QUOTA_BANDS = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function rateColor(rate: number) {
-  if (rate >= 65) return C.green;
-  if (rate >= 50) return C.amber;
-  return C.red;
+function rateColor(rate: number, arMode = false) {
+  // Gradiente continuo: da rosso (hue=0) a verde (hue=130)
+  // Pronostici: 30%=rosso, 80%=verde
+  // Alto Rendimento: 15%=rosso, 55%=verde
+  const minRate = arMode ? 15 : 30;
+  const maxRate = arMode ? 55 : 80;
+  const clamped = Math.max(minRate, Math.min(maxRate, rate));
+  const ratio = (clamped - minRate) / (maxRate - minRate); // 0..1
+  const hue = Math.round(ratio * 130); // 0=rosso, 130=verde
+  const sat = 70 + Math.round(ratio * 15); // 70-85%
+  const light = 45 + Math.round((1 - Math.abs(ratio - 0.5) * 2) * 10); // più chiaro al centro
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
 function profitColor(val: number) {
@@ -124,8 +132,8 @@ function formatRoi(val: number | null) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function ProgressBar({ rate, height = 6, showLabel = false }: { rate: number; height?: number; showLabel?: boolean }) {
-  const color = rateColor(rate);
+function ProgressBar({ rate, height = 6, showLabel = false, arMode = false }: { rate: number; height?: number; showLabel?: boolean; arMode?: boolean }) {
+  const color = rateColor(rate, arMode);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
       <div style={{
@@ -316,7 +324,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   const [availableMarkets, setAvailableMarkets] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<'dati' | 'analisi'>('dati');
   const [filtroSezione, setFiltroSezione] = useState<'pronostici' | 'alto_rendimento'>('pronostici');
-  const [chartMetric, setChartMetric] = useState<'hr' | 'yield' | 'pl' | 'centrati' | 'volume' | 'qmedia' | 'edge'>('hr');
+  const [chartMetric, setChartMetric] = useState<'hr' | 'yield' | 'pl' | 'centrati' | 'cumul' | 'qmedia' | 'edge'>('hr');
   const [quotaMin, setQuotaMin] = useState('');
   const [quotaMax, setQuotaMax] = useState('');
   const [selectedBand, setSelectedBand] = useState('');
@@ -780,7 +788,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               <KpiCard
                 label="Hit Rate"
                 value={`${data.globale.hit_rate ?? '—'}%`}
-                color={rateColor(data.globale.hit_rate ?? 0)}
+                color={rateColor(data.globale.hit_rate ?? 0, !isPronostici)}
               />
               {data.quota_stats && (
                 <>
@@ -810,7 +818,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                     {MARKET_LABELS[tipo] || tipo}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <ProgressBar rate={stats.hit_rate ?? 0} showLabel />
+                    <ProgressBar rate={stats.hit_rate ?? 0} showLabel arMode={!isPronostici} />
                   </div>
                   <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
                     {stats.hits}/{stats.total}
@@ -832,7 +840,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                       {league}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <ProgressBar rate={stats.hit_rate ?? 0} showLabel />
+                      <ProgressBar rate={stats.hit_rate ?? 0} showLabel arMode={!isPronostici} />
                     </div>
                     <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
                       {stats.hits}/{stats.total}
@@ -850,7 +858,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                 {Object.entries(data.breakdown_confidence).map(([band, stats]) => (
                   <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ minWidth: '50px', fontSize: '0.82em', color: C.textSec, fontFamily: 'monospace' }}>{band}</div>
-                    <div style={{ flex: 1 }}><ProgressBar rate={stats.hit_rate ?? 0} showLabel /></div>
+                    <div style={{ flex: 1 }}><ProgressBar rate={stats.hit_rate ?? 0} showLabel arMode={!isPronostici} /></div>
                     <div style={{ minWidth: '40px', textAlign: 'right', fontSize: '0.75em', color: C.textMuted }}>{stats.hits}/{stats.total}</div>
                   </div>
                 ))}
@@ -862,7 +870,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                 {Object.entries(data.breakdown_stelle).map(([band, stats]) => (
                   <div key={band} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ minWidth: '50px', fontSize: '0.82em', color: C.textSec, fontFamily: 'monospace' }}>{band}</div>
-                    <div style={{ flex: 1 }}><ProgressBar rate={stats.hit_rate ?? 0} showLabel /></div>
+                    <div style={{ flex: 1 }}><ProgressBar rate={stats.hit_rate ?? 0} showLabel arMode={!isPronostici} /></div>
                     <div style={{ minWidth: '40px', textAlign: 'right', fontSize: '0.75em', color: C.textMuted }}>{stats.hits}/{stats.total}</div>
                   </div>
                 ))}
@@ -931,7 +939,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                           {band}
                         </div>
                         <div style={{ flex: isMobile ? 1 : undefined, minWidth: isMobile ? '100%' : undefined, order: isMobile ? 3 : undefined }}>
-                          <ProgressBar rate={s.hit_rate ?? 0} showLabel />
+                          <ProgressBar rate={s.hit_rate ?? 0} showLabel arMode={!isPronostici} />
                         </div>
                         <div style={{ textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
                           {s.hits}/{s.total}
@@ -981,7 +989,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                             const r = d.hit_rate ?? 0;
                             return (
                               <td key={tipo} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}` }}>
-                                <span style={{ color: rateColor(r), fontWeight: 600 }}>{r}%</span>
+                                <span style={{ color: rateColor(r, !isPronostici), fontWeight: 600 }}>{r}%</span>
                                 <span style={{ color: C.textMuted, fontSize: '0.85em' }}> ({d.hits}/{d.total})</span>
                               </td>
                             );
@@ -1001,38 +1009,47 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               { id: 'yield' as const, label: 'Yield' },
               { id: 'pl' as const, label: 'P/L' },
               { id: 'centrati' as const, label: 'Centrati' },
-              { id: 'volume' as const, label: 'Volume' },
+              { id: 'cumul' as const, label: 'Cumulativo' },
               { id: 'qmedia' as const, label: 'Q.Media' },
               { id: 'edge' as const, label: 'Edge' },
             ];
 
+            // Calcola profitto cumulativo
+            let cumProfit = 0;
+            const cumulData = data.serie_temporale.map(d => {
+              const wq = d.profit;
+              cumProfit += wq;
+              return Math.round(cumProfit * 100) / 100;
+            });
+
             // Calcola valori per la metrica selezionata
-            const chartData = data.serie_temporale.map(d => {
+            const arMode = !isPronostici;
+            const chartData = data.serie_temporale.map((d, i) => {
               let val = 0;
               if (chartMetric === 'hr') val = d.hit_rate ?? 0;
               else if (chartMetric === 'yield') val = d.total > 0 ? Math.round((d.profit / d.total) * 1000) / 10 : 0;
               else if (chartMetric === 'pl') val = d.profit;
               else if (chartMetric === 'centrati') val = d.hits;
-              else if (chartMetric === 'volume') val = d.total;
+              else if (chartMetric === 'cumul') val = cumulData[i];
               else if (chartMetric === 'qmedia') val = d.avg_quota ?? 0;
               else if (chartMetric === 'edge') val = d.edge ?? 0;
               return { ...d, val };
             });
 
             // Metriche che possono essere negative (sopra/sotto zero)
-            const hasNegative = chartMetric === 'yield' || chartMetric === 'pl' || chartMetric === 'edge';
+            const hasNegative = chartMetric === 'yield' || chartMetric === 'pl' || chartMetric === 'edge' || chartMetric === 'cumul';
             // Per HR% coloriamo per soglia, per le altre verde/rosso in base al segno
             const useRateColor = chartMetric === 'hr';
             // Suffissi per le label
-            const suffix = chartMetric === 'hr' || chartMetric === 'yield' || chartMetric === 'edge' ? '%' : chartMetric === 'pl' ? 'u' : '';
-            const showSign = chartMetric === 'yield' || chartMetric === 'pl' || chartMetric === 'edge';
+            const suffix = chartMetric === 'hr' || chartMetric === 'yield' || chartMetric === 'edge' ? '%' : chartMetric === 'pl' || chartMetric === 'cumul' ? 'u' : '';
+            const showSign = chartMetric === 'yield' || chartMetric === 'pl' || chartMetric === 'edge' || chartMetric === 'cumul';
 
             const maxVal = Math.max(...chartData.map(d => Math.abs(d.val)), 0.1);
 
-            const formatVal = (v: number) => {
+            const formatVal = (v: number, dayTotal?: number) => {
               const sign = showSign && v > 0 ? '+' : '';
               if (chartMetric === 'qmedia') return v.toFixed(2);
-              if (chartMetric === 'centrati' || chartMetric === 'volume') return String(Math.round(v));
+              if (chartMetric === 'centrati') return `${Math.round(v)}/${dayTotal ?? '?'}`;
               return `${sign}${Math.round(v * 10) / 10}${suffix}`;
             };
 
@@ -1078,7 +1095,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                             <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px', height: '100%', justifyContent: 'center' }}>
                               <div style={{ height: '55px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <div style={{ fontSize: '0.55em', color, marginBottom: '2px' }}>
-                                  {isPositive ? formatVal(day.val) : ''}
+                                  {isPositive ? formatVal(day.val, day.total) : ''}
                                 </div>
                                 {isPositive && <div style={{
                                   width: '100%', maxWidth: '18px', height: `${barH}px`,
@@ -1094,7 +1111,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                                   borderRadius: '0 0 3px 3px',
                                 }} />}
                                 <div style={{ fontSize: '0.55em', color, marginTop: '2px' }}>
-                                  {!isPositive ? formatVal(day.val) : ''}
+                                  {!isPositive ? formatVal(day.val, day.total) : ''}
                                 </div>
                               </div>
                               <div style={{ fontSize: '0.5em', color: C.textMuted, whiteSpace: 'nowrap' }}>
@@ -1109,11 +1126,11 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                     /* ── Grafico barre classiche (solo positive) ── */
                     <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', minHeight: '110px', padding: '8px 0' }}>
                       {chartData.map(day => {
-                        const color = useRateColor ? rateColor(day.val) : accent;
+                        const color = useRateColor ? rateColor(day.val, arMode) : accent;
                         const barH = maxVal > 0 ? Math.max((day.val / maxVal) * 90, 4) : 4;
                         return (
                           <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '24px' }}>
-                            <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{formatVal(day.val)}</div>
+                            <div style={{ fontSize: '0.6em', color: C.textMuted, marginBottom: '3px' }}>{formatVal(day.val, day.total)}</div>
                             <div style={{
                               width: '100%', maxWidth: '20px',
                               height: `${barH}px`,
@@ -1164,7 +1181,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                           const r = d.hit_rate ?? 0;
                           return (
                             <td key={lg} style={{ textAlign: 'center', padding: '7px 6px', borderBottom: `1px solid ${C.divider}` }}>
-                              <span style={{ color: rateColor(r), fontWeight: 600 }}>{r}%</span>
+                              <span style={{ color: rateColor(r, !isPronostici), fontWeight: 600 }}>{r}%</span>
                               <span style={{ color: C.textMuted, fontSize: '0.85em' }}> ({d.hits}/{d.total})</span>
                             </td>
                           );

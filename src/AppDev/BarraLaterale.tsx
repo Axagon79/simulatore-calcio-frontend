@@ -91,7 +91,7 @@ export default function BarraLaterale({
   stemmiCampionati,
   getWidgetGlow,
   setViewMode,
-  isAdmin
+  isAdmin: _isAdmin
 }: BarraLateraleProps) {
   const isLight = getThemeMode() === 'light';
 

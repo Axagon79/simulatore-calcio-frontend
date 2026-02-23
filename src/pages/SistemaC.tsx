@@ -549,10 +549,10 @@ export default function SistemaC() {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: isMobile ? '#1a1d2e' : theme.bg,
+      background: 'transparent',
       backgroundImage: isMobile
-        ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
-        : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
+        ? 'radial-gradient(circle at 50% 0%, rgba(42,45,74,0.3) 0%, transparent 70%)'
+        : 'radial-gradient(circle at 50% 0%, rgba(26,29,46,0.3) 0%, transparent 70%)',
       color: theme.text,
       fontFamily: theme.font,
       overflowY: 'auto',

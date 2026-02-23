@@ -26,7 +26,7 @@ const cupTheme = {
   }
 };
 
-const baseBg = appTheme.bg;
+const baseBg = 'transparent';
 const textDim = appTheme.textDim;
 
 // Funzione per costruire URL stemma squadra

@@ -333,7 +333,7 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
 
   if (!user) {
     return (
-      <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'transparent', minHeight: '100vh', fontFamily: theme.font, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', maxWidth: '400px', padding: '20px' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>💰</div>
           <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', marginBottom: '8px' }}>Money Tracker</h1>
@@ -357,7 +357,7 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
   // ============================================
 
   return (
-    <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
+    <div style={{ background: 'transparent', minHeight: '100vh', fontFamily: theme.font }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: isMobile ? '10px' : '20px' }}>
 
         {/* HEADER */}

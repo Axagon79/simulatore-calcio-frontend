@@ -381,7 +381,7 @@ export default function StepSystem({ onBack }: StepSystemProps) {
 
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'transparent', color: theme.text, fontFamily: theme.font, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <h2 style={{ marginBottom: '16px' }}>Step System</h2>
         <p style={{ color: theme.textDim, marginBottom: '24px' }}>Accedi per utilizzare lo Step System</p>
         <button onClick={() => setShowAuthModal(true)} style={{ ...btnStyle, background: 'rgba(0,240,255,0.15)', color: theme.cyan }}>
@@ -395,7 +395,7 @@ export default function StepSystem({ onBack }: StepSystemProps) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'transparent', color: theme.text, fontFamily: theme.font, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         Caricamento...
       </div>
     );
@@ -410,7 +410,7 @@ export default function StepSystem({ onBack }: StepSystemProps) {
   const progressPct = currentSession ? Math.max(0, Math.min(100, ((currentSession.current_balance - currentSession.budget) / (currentSession.target_multiplier * currentSession.budget)) * 100)) : 0;
 
   return (
-    <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font }}>
+    <div style={{ minHeight: '100vh', background: 'transparent', color: theme.text, fontFamily: theme.font }}>
     <div style={{ padding: '16px', maxWidth: '900px', margin: '0 auto' }}>
 
       {/* HEADER — sticky su mobile */}

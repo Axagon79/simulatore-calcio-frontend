@@ -657,9 +657,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: getThemeMode() === 'light'
-        ? `linear-gradient(160deg, #f0f2f5 0%, #e8ebf0 40%, #f5f6f8 100%)`
-        : `linear-gradient(160deg, ${C.bg} 0%, #0c1425 40%, #0a0f1f 100%)`,
+      background: 'transparent',
       color: C.text,
       padding: isMobile ? '16px' : '28px 32px',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",

@@ -79,13 +79,13 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
   useEffect(() => { fetchData(BASE_FROM); }, []);
 
   if (loading) return (
-    <div style={{ background: theme.bg, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: theme.font }}>
+    <div style={{ background: 'transparent', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: theme.font }}>
       <div style={{ color: theme.cyan, fontSize: '18px' }}>Caricamento statistiche...</div>
     </div>
   );
 
   if (error || !data) return (
-    <div style={{ background: theme.bg, minHeight: '100vh', padding: '40px', fontFamily: theme.font }}>
+    <div style={{ background: 'transparent', minHeight: '100vh', padding: '40px', fontFamily: theme.font }}>
       <div style={{ color: theme.danger, fontSize: '16px', textAlign: 'center' }}>{error || 'Nessun dato disponibile. Esegui prima il backfill.'}</div>
       {onBack && <button onClick={onBack} style={{ marginTop: '20px', background: theme.cyan, color: '#000', border: 'none', padding: '8px 20px', borderRadius: '8px', cursor: 'pointer', display: 'block', margin: '20px auto' }}>Torna indietro</button>}
     </div>
@@ -128,8 +128,8 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
 
   return (
     <div style={isMobile
-      ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: theme.bg, overflowY: 'auto', overflowX: 'hidden', fontFamily: theme.font }
-      : { background: theme.bg, minHeight: '100vh', fontFamily: theme.font }
+      ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'transparent', overflowY: 'auto', overflowX: 'hidden', fontFamily: theme.font }
+      : { background: 'transparent', minHeight: '100vh', fontFamily: theme.font }
     }>
       {/* Header sticky su mobile */}
       <div style={isMobile

@@ -10,7 +10,7 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 export default function MoneyManagement({ onBack }: { onBack?: () => void }) {
   return (
-    <div style={{ background: theme.bg, minHeight: '100vh', fontFamily: theme.font }}>
+    <div style={{ background: 'transparent', minHeight: '100vh', fontFamily: theme.font }}>
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ color: theme.text, fontSize: '22px', fontWeight: '900', margin: 0 }}>Money Management</h1>

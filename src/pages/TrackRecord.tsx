@@ -459,6 +459,25 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
         </div>
       </div>
 
+      {/* ─── Nota trasparenza ────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.02))',
+        border: `1px solid rgba(245, 158, 11, 0.15)`,
+        borderRadius: '12px', padding: '14px 18px', marginBottom: '20px',
+        lineHeight: 1.6, fontSize: '0.82em',
+      }}>
+        <div style={{ fontWeight: 600, color: C.amber, marginBottom: '6px', fontSize: '0.95em' }}>
+          Progetto in fase di sviluppo
+        </div>
+        <div style={{ color: C.textSec }}>
+          Questo progetto <strong style={{ color: C.text }}>non {'\u00E8'} ancora un prodotto finito</strong> {'\u2014'} {'\u00E8'} un sistema in costruzione.
+          Gli algoritmi, i modelli e le strategie sono in fase di calibrazione attiva e vengono aggiornati costantemente.
+          I numeri che vedi qui sono <strong style={{ color: C.text }}>reali e completi</strong>: crediamo nella totale trasparenza,
+          anche quando i risultati non riflettono ancora il potenziale del sistema a regime.
+          Ogni giorno il motore impara, si adatta e migliora {'\u2014'} i risultati di oggi non rappresentano quelli di domani.
+        </div>
+      </div>
+
       {/* ─── Hero Cards: Pronostici / Alto Rendimento ────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
         {/* Card Pronostici */}

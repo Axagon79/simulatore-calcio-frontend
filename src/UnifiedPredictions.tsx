@@ -2534,7 +2534,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <button
                 onClick={() => setMarketFilter('tutti')}
                 onMouseEnter={e => { if (marketFilter !== 'tutti') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
-                onMouseLeave={e => { if (marketFilter !== 'tutti') e.currentTarget.style.background = marketFilter === 'tutti' ? '' : (isLight ? theme.surfaceSubtle : theme.surfaceSubtle); }}
+                onMouseLeave={e => { if (marketFilter !== 'tutti') e.currentTarget.style.background = theme.surfaceSubtle; }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '4px',
                   background: marketFilter === 'tutti' ? (isLight ? '#dbeafe' : `${theme.cyan}25`) : theme.surfaceSubtle,

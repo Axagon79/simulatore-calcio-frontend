@@ -330,15 +330,15 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
         {/* BARRA AZIONI RAPIDE */}
         <div style={{
-          background: theme.surfaceSubtle,
-          border: `1px solid ${theme.cyan}1a`,
+          background: isLight ? 'rgba(255,255,255,0.85)' : '#1e2337',
+          border: `1px solid ${theme.borderSubtle}`,
           borderRadius: '12px', padding: isMobile ? '10px' : '14px', marginBottom: '30px'
         }}>
           <div style={{ display: 'flex', gap: '10px' }}>
           {[
-            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: `${theme.cyan}0f`, borderColor: `${theme.cyan}33`, onClick: () => { if (onGoToToday) onGoToToday(); } },
-            { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: `${theme.success}0f`, borderColor: `${theme.success}30`, onClick: () => { window.location.href = '/track-record'; } },
-            { label: 'Coach AI', icon: '\uD83E\uDD16', color: theme.purple, bg: `${theme.purple}0f`, borderColor: `${theme.purple}33`, onClick: () => setCoachOpen(true) }
+            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: `${theme.cyan}20`, borderColor: `${theme.cyan}44`, onClick: () => { if (onGoToToday) onGoToToday(); } },
+            { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: `${theme.success}20`, borderColor: `${theme.success}40`, onClick: () => { window.location.href = '/track-record'; } },
+            { label: 'Coach AI', icon: '\uD83E\uDD16', color: theme.purple, bg: `${theme.purple}20`, borderColor: `${theme.purple}44`, onClick: () => setCoachOpen(true) }
           ].map(btn => (
             <button
               key={btn.label}
@@ -785,7 +785,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>⚙️</div>
+              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px', ...(isLight ? { filter: 'brightness(0.6)' } : {})}}>⚙️</div>
               <div style={{
                 fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '800',

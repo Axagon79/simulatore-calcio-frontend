@@ -2791,9 +2791,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div
                           style={{
                             padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: isLight ? '#eef7ff' : 'rgba(255,152,0,0.04)', borderRadius: '8px',
+                            background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
                             cursor: 'pointer', userSelect: 'none' as const,
-                            border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,152,0,0.12)'
+                            border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)'
                           }}
                           onClick={() => toggleLeague(key)}
                         >
@@ -2890,9 +2890,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                        background: isLight ? '#eef7ff' : 'rgba(255, 215, 0, 0.04)', borderRadius: '8px',
+                        background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
-                        border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255, 215, 0, 0.12)'
+                        border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)'
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >
@@ -2988,9 +2988,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                        background: isLight ? '#eef7ff' : theme.surfaceSubtle, borderRadius: '8px',
+                        background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
                         cursor: 'pointer', userSelect: 'none' as const,
-                        border: isLight ? '1px solid #e0e2e6' : `1px solid ${theme.surface05}`
+                        border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)'
                       }}
                       onClick={() => toggleLeague(leagueName)}
                     >

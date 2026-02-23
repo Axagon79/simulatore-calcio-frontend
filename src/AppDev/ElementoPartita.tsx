@@ -63,7 +63,7 @@ export default function ElementoPartita({
         }
       }}
       style={{
-        background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.03)',
+        background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(25, 28, 45, 0.85)',
         borderRadius: '20px',
         overflow: 'hidden',
         padding: isMobile ? '12px 10px' : '10.2px 15px',

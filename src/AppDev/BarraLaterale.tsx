@@ -101,9 +101,38 @@ export default function BarraLaterale({
       ...(isMobile && mobileMenuOpen ? styles.sidebarMobileOpen : {})
     }}>
 
+      {/* --- RIGA DASHBOARD + CHIUDI (solo mobile) --- */}
+      {isMobile && (
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginTop: '-8px', marginBottom: '-4px', padding: '0 2px 6px',
+          borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`
+        }}>
+          <button
+            onClick={() => { setMobileMenuOpen(false); window.location.href = '/'; }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
+              color: isLight ? '#0077cc' : appTheme.cyan,
+              fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px'
+            }}
+          >
+            ← Dashboard
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+              color: appTheme.textDim, fontSize: '16px', lineHeight: 1
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* --- INIZIO BLOCCO SELEZIONE NAZIONE/CAMPIONATO --- */}
 
-      <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold' }}>NAZIONE</div>
+      <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', ...(isMobile ? { marginBottom: '-5px' } : {}) }}>NAZIONE</div>
 
       {/* 1. Controllo Caricamento Nazioni */}
       {isLoadingNations ? (
@@ -143,7 +172,7 @@ export default function BarraLaterale({
         </select>
       )}
 
-      <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>
+      <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px', ...(isMobile ? { marginBottom: '-5px' } : {}) }}>
         CAMPIONATO
       </div>
 
@@ -178,7 +207,7 @@ export default function BarraLaterale({
       </select>
 
       {/* --- SELEZIONE COPPE EUROPEE --- */}
-      <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px' }}>
+      <div style={{ fontSize: '12px', color: theme.textDim, fontWeight: 'bold', marginTop: '15px', ...(isMobile ? { marginBottom: '-5px' } : {}) }}>
         COPPE
       </div>
 
@@ -251,7 +280,7 @@ export default function BarraLaterale({
         </button>
       </div>
 
-      {/* --- BOTTONE SISTEMA C (solo admin) --- */}
+      {/* --- BOTTONE SISTEMA C (disabilitato, non più usato come sistema finale)
       {isAdmin && (
         <button
           onClick={() => { setMobileMenuOpen(false); window.location.href = '/sistema-c'; }}
@@ -273,6 +302,7 @@ export default function BarraLaterale({
           🎲 Sistema C (MC)
         </button>
       )}
+      --- */}
 
       {/* --- FINE BLOCCO SELEZIONE --- */}
 
@@ -318,7 +348,7 @@ export default function BarraLaterale({
             if (setViewMode) setViewMode('calendar');
           }}
           style={{
-          marginTop:isMobile ? '10px': '5px',
+          marginTop: '5px',
           padding: '10px',
           background: 'rgba(0, 240, 255, 0.05)',
           border: `1px solid ${selectedCup ? '#0066cc' : theme.cyan}`,
@@ -526,7 +556,7 @@ export default function BarraLaterale({
 
       {/* Widget Pronostici del Giorno */}
       {sidebarPredictions.length > 0 && (
-        <div style={{ marginTop: '15px' }}>
+        <div style={{ marginTop: isMobile ? '5px' : '15px' }}>
           {sidebarPredictions.map((pred, idx) => {
             const mainPronostico = pred.pronostici?.[0];
             const stars = mainPronostico?.stars || 0;

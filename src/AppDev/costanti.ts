@@ -96,7 +96,7 @@ export type ThemeMode = 'dark' | 'light';
 
 export const themeDark = {
   bg: '#05070a',
-  panel: 'rgba(18, 20, 35, 0.85)',
+  panel: 'rgba(25, 28, 45, 0.85)',
   panelSolid: '#0d0f1a',
   panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
   cyan: '#00f0ff',
@@ -118,11 +118,11 @@ export const themeDark = {
   // Dashboard/card
   cardBg: 'rgba(20, 22, 35, 0.6)',
   cardHoverBg: 'rgba(30, 35, 50, 0.8)',
-  borderSubtle: 'rgba(255,255,255,0.1)',
-  surfaceSubtle: 'rgba(255,255,255,0.03)',
+  borderSubtle: 'rgba(255,255,255,0.2)',
+  surfaceSubtle: '#1e2337',
   // Superfici graduali
-  surface05: 'rgba(255,255,255,0.05)',
-  surface08: 'rgba(255,255,255,0.08)',
+  surface05: 'rgba(255,255,255,0.12)',
+  surface08: 'rgba(255,255,255,0.15)',
   surface15: 'rgba(255,255,255,0.15)',
   // Hit/Miss (pronostici)
   hitText: '#00ff88',
@@ -174,7 +174,7 @@ export const themeLight = {
   cardBg: 'rgba(255, 255, 255, 0.85)',
   cardHoverBg: 'rgba(235, 238, 248, 0.95)',
   borderSubtle: 'rgba(0,0,0,0.1)',
-  surfaceSubtle: 'rgba(0,0,0,0.02)',
+  surfaceSubtle: 'rgba(255,255,255,0.85)',
   // Superfici graduali
   surface05: 'rgba(0,0,0,0.04)',
   surface08: 'rgba(0,0,0,0.07)',

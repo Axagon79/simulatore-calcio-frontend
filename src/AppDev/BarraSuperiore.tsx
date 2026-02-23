@@ -299,7 +299,8 @@ export default function BarraSuperiore({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', fontSize: '18px', transition: 'all 0.2s',
               color: theme.textDim,
-              ...(isMobile ? { marginRight: '-15px' } : {})
+              ...(isMobile ? { marginRight: '-15px' } : {}),
+              ...(isLight ? { filter: 'brightness(0.5)' } : {})
             }}
             title="Impostazioni"
           >⚙️</button>

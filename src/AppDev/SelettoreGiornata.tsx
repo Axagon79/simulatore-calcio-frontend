@@ -1,3 +1,5 @@
+import { getThemeMode } from './costanti';
+
 interface RoundInfo {
   name: string;
   label: string;
@@ -23,6 +25,7 @@ export default function SelettoreGiornata({
   isMobile,
   selectedCup
 }: SelettoreGiornataProps) {
+  const isLight = getThemeMode() === 'light';
 
   // Non mostrare se c'è una coppa selezionata
   if (selectedCup) return null;
@@ -71,19 +74,23 @@ export default function SelettoreGiornata({
               alignItems: 'center',
               justifyContent: 'center',
               background: isSelected
-                ? 'rgb(0, 240, 255)'
-                : 'rgba(18, 20, 35, 0.9)',
+                ? (isLight ? '#0077cc' : 'rgb(0, 240, 255)')
+                : (isLight ? '#e2e8f0' : 'rgba(18, 20, 35, 0.9)'),
               borderRadius: '20px',
               border: isSelected
                 ? 'none'
-                : `1px solid ${isHovered ? 'rgb(0, 240, 255)' : 'rgba(0, 240, 255, 0.3)'}`,
+                : `1px solid ${isHovered
+                    ? (isLight ? '#0077cc' : 'rgb(0, 240, 255)')
+                    : (isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0, 240, 255, 0.3)')}`,
               cursor: 'pointer',
               fontWeight: '900',
               fontSize: isMobile ? '11px' : '15px',
-              color: isSelected ? 'rgb(0, 0, 0)' : 'rgb(0, 240, 255)',
+              color: isSelected
+                ? (isLight ? '#fff' : 'rgb(0, 0, 0)')
+                : (isLight ? '#0077cc' : 'rgb(0, 240, 255)'),
               boxShadow: isSelected
-                ? '0 0 15px rgba(0, 240, 255, 0.6)'
-                : (isHovered ? '0 0 10px rgba(0, 240, 255, 0.4)' : 'none'),
+                ? (isLight ? '0 0 12px rgba(0,119,204,0.4)' : '0 0 15px rgba(0, 240, 255, 0.6)')
+                : (isHovered ? (isLight ? '0 0 8px rgba(0,119,204,0.25)' : '0 0 10px rgba(0, 240, 255, 0.4)') : 'none'),
               transition: 'all 0.3s ease',
               outline: 'none',
               transform: isHovered ? 'scale(1.08)' : 'scale(1)',

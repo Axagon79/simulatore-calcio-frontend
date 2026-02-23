@@ -27,7 +27,8 @@ export const getStyles = (isMobile: boolean): Record<string, React.CSSProperties
     },
     topBar: {
       height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0 25px', borderBottom: border, backdropFilter: 'blur(10px)', zIndex: 20
+      padding: '0 25px', borderBottom: border, backdropFilter: 'blur(10px)', zIndex: 20,
+      background: isLight ? 'rgba(215, 220, 235, 0.7)' : 'transparent'
     },
     logo: {
       fontSize: '22px', fontWeight: '900',
@@ -42,7 +43,7 @@ export const getStyles = (isMobile: boolean): Record<string, React.CSSProperties
     sidebar: {
       width: '280px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px',
       borderRight: border,
-      background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.3)',
+      background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.3)',
       overflowY: 'auto', transition: 'transform 0.3s ease'
     },
     sidebarMobile: {

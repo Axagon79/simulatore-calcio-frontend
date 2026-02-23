@@ -19,11 +19,11 @@ export const getStyles = (isMobile: boolean): Record<string, React.CSSProperties
 
   return {
     wrapper: {
-      width: '100vw', minHeight: '100vh', backgroundColor: bg,
+      width: '100vw', minHeight: '100vh', backgroundColor: 'transparent',
       color: t.text, fontFamily: t.font,
       backgroundImage: isLight
-        ? `radial-gradient(circle at 50% 10%, ${isMobile ? '#d8dce8' : '#dde1ed'} 0%, ${bg} 60%)`
-        : `radial-gradient(circle at 50% 10%, ${isMobile ? '#2a2d4a' : '#1a1c4b'} 0%, ${bg} 60%)`,
+        ? `radial-gradient(circle at 50% 10%, rgba(216,220,232,0.3) 0%, transparent 60%)`
+        : `radial-gradient(circle at 50% 10%, rgba(26,28,75,0.3) 0%, transparent 60%)`,
       display: 'flex', flexDirection: 'column', overflow: 'hidden'
     },
     topBar: {

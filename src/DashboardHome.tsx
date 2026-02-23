@@ -199,10 +199,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
   return (
     <div style={{ 
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-        backgroundColor: isMobile ? mobileTheme.bg : theme.bg,
-        backgroundImage: isMobile
-          ? `radial-gradient(circle at 50% 0%, ${isLight ? '#f5f6fa' : '#2a2d4a'} 0%, ${mobileTheme.bg} 70%)`
-          : `radial-gradient(circle at 50% 0%, ${isLight ? '#e0e3eb' : '#1a1d2e'} 0%, ${theme.bg} 70%)`,
+        backgroundColor: 'transparent',
+        backgroundImage: isLight
+          ? `radial-gradient(circle at 50% 0%, rgba(224,227,235,0.3) 0%, transparent 70%)`
+          : isMobile
+            ? `radial-gradient(circle at 50% 0%, rgba(42,45,74,0.3) 0%, transparent 70%)`
+            : `radial-gradient(circle at 50% 0%, rgba(26,29,46,0.3) 0%, transparent 70%)`,
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
@@ -221,7 +223,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           position: 'sticky', top: 0, zIndex: 100,
           background: mobileTheme.bg,
           margin: '0 -20px 20px',
-          padding: '20px 20px 12px',
+          padding: '10px 20px 12px',
           boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.08)' : '0 2px 12px rgba(0,0,0,0.6)'
         } : {}}>
 
@@ -283,7 +285,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           </div>
 
           {/* HEADER RESPONSIVO */}
-          <div style={{textAlign: 'center', ...(isMobile ? {} : { marginTop: '40px', marginBottom: '50px' })}}>
+          <div style={{textAlign: 'center', ...(isMobile ? { marginTop: '-5px' } : { marginTop: '40px', marginBottom: '50px' })}}>
             <h1 style={{
                 fontSize: 'clamp(32px, 6vw, 64px)',
                 fontWeight: '900', margin: '0 0 10px 0',
@@ -296,7 +298,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             <p style={{
                color: isLight ? '#475569' : '#b0bec5',
                fontSize: 'clamp(15px, 3.2vw, 20px)',
-               margin: '30px 0 -10px 0',
+               margin: isMobile ? '0px 0 -10px 0' :'30px 0 -10px 0',
                fontFamily: "'Georgia', 'Times New Roman', serif",
                fontStyle: 'italic',
                letterSpacing: '0.5px',

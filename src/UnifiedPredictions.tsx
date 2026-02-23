@@ -2055,12 +2055,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: isMobile ? isLight ? '#f0f2f5' : '#1a1d2e' : theme.bg,
+      backgroundColor: 'transparent',
       backgroundImage: isLight
         ? 'none'
         : isMobile
-          ? 'radial-gradient(circle at 50% 0%, #2a2d4a 0%, #1a1d2e 70%)'
-          : 'radial-gradient(circle at 50% 0%, #1a1d2e 0%, #05070a 70%)',
+          ? 'radial-gradient(circle at 50% 0%, rgba(42,45,74,0.3) 0%, transparent 70%)'
+          : 'radial-gradient(circle at 50% 0%, rgba(26,29,46,0.3) 0%, transparent 70%)',
       zIndex: 9999,
       overflowY: 'auto',
       overflowX: 'hidden',

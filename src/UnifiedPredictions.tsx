@@ -877,7 +877,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
 
           {/* Risultato + Freccia — spinto a destra */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <div style={{ marginLeft: 'auto', marginRight: isMobile ? '-6px' : undefined, display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
             {pred.real_score ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {pred.real_score.replace(':', ' - ')}
@@ -903,7 +903,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* Badge "Tip" — ABSOLUTE, sganciato dal flex */}
         <div
           style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '65px' : '100px',
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '75px' : '100px',
             zIndex: 5
           }}
           onClick={(e) => e.stopPropagation()}

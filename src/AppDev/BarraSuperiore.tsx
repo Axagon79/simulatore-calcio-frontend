@@ -206,23 +206,25 @@ export default function BarraSuperiore({
       ) : (league || selectedCup) && (
         <div style={{
           position: isMobile ? 'relative' : 'absolute',
-          left: isMobile ? '30px' : '280px',
+          left: isMobile ? '0' : '280px',
           right: '0',
           display: 'flex',
           justifyContent: 'center',
           pointerEvents: 'none',
           height: '100%',
           alignItems: 'center',
-          zIndex: 5
+          zIndex: 5,
+          ...(isMobile ? { flex: 1, overflow: 'hidden' as const, minWidth: 0 } : {})
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: isMobile ? '10px' : '25px',
-            padding: isMobile ? '5px 15px' : '5px 120px',
+            padding: isMobile ? '5px 8px' : '5px 120px',
             background: 'transparent',
             pointerEvents: 'auto',
-            animation: 'fadeIn 0.5s ease'
+            animation: 'fadeIn 0.5s ease',
+            ...(isMobile ? { overflow: 'hidden' as const, maxWidth: '100%' } : {})
           }}>
             <img
               src={selectedCup ? stemmiCoppe[selectedCup] : stemmiCampionati[league]}
@@ -236,7 +238,7 @@ export default function BarraSuperiore({
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', ...(isMobile ? { overflow: 'hidden' as const, minWidth: 0, flex: 1 } : {}) }}>
               <span style={{
                 fontSize: isMobile ? '12px' : '15px',
                 fontWeight: '900',
@@ -244,7 +246,7 @@ export default function BarraSuperiore({
                 lineHeight: '1.1',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
-                ...(isMobile ? { maxWidth: '140px', overflow: 'hidden' as const, textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } : {})
+                ...(isMobile ? { overflow: 'hidden' as const, textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } : {})
               }}>
                 {selectedCup
                   ? (selectedCup === 'UCL' ? 'Champions' : 'Europa L.')

@@ -241,7 +241,7 @@ export default function BarraLaterale({
       </select>
 
       {/* --- MINI-BOTTONI BANKROLL / MONEY MANAGEMENT --- */}
-      <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+      <div style={{ display: 'flex', gap: '6px', marginTop: isMobile ? '10px' : '5px' }}>
         <button
           onClick={() => { setMobileMenuOpen(false); window.location.href = '/bankroll'; }}
           style={{
@@ -556,7 +556,7 @@ export default function BarraLaterale({
 
       {/* Widget Pronostici del Giorno */}
       {sidebarPredictions.length > 0 && (
-        <div style={{ marginTop: isMobile ? '5px' : '15px' }}>
+        <div style={{ marginTop: '5px' }}>
           {sidebarPredictions.map((pred, idx) => {
             const mainPronostico = pred.pronostici?.[0];
             const stars = mainPronostico?.stars || 0;

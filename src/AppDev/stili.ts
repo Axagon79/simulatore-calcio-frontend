@@ -44,7 +44,7 @@ export const getStyles = (isMobile: boolean): Record<string, React.CSSProperties
     sidebar: {
       width: '280px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px',
       borderRight: border,
-      background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.3)',
+      background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
       overflowY: 'auto', transition: 'transform 0.3s ease'
     },
     sidebarMobile: {

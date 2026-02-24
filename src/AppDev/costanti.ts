@@ -96,7 +96,7 @@ export type ThemeMode = 'dark' | 'light';
 
 export const themeDark = {
   bg: '#05070a',
-  panel: 'rgba(25, 28, 45, 0.85)',
+  panel: 'rgba(25, 28, 45, 0.95)',
   panelSolid: '#0d0f1a',
   panelBorder: '1px solid rgba(0, 240, 255, 0.2)',
   cyan: '#00f0ff',

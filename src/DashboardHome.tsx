@@ -382,8 +382,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
         {/* GRIGLIA RESPONSIVA */}
         <div style={{
-            display: 'grid', 
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', 
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '20px'
         }}>
             {/* CARD CAMPIONATI PRINCIPALI */}
@@ -877,7 +877,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
               gap: isMobile ? '15px' : '10px',
               overflowY: 'auto',
-              flex: 1
+              flex: 1,
+              paddingTop: '5px'
             }}>
               {otherLeagues.map(league => (
                 <div

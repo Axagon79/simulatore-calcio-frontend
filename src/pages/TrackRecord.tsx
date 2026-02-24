@@ -66,6 +66,7 @@ const MARKET_LABELS: Record<string, string> = {
   'DOPPIA_CHANCE': 'Doppia Chance',
   'OVER_UNDER': 'Over/Under',
   'GG_NG': 'GG/NG',
+  'MULTI_GOAL': 'Multi-goal',
 };
 
 const COLORS_DARK = {

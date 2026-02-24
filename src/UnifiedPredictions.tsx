@@ -666,6 +666,50 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return isLight ? '#047857' : '#00c853';
   };
 
+  // --- CALCOLO HIT DA LIVE SCORE (quando real_score non è ancora disponibile) ---
+  const calculateHitFromScore = (score: string, pronostico: string, tipo: string): boolean | null => {
+    if (!score) return null;
+    const parts = score.split(':');
+    if (parts.length !== 2) return null;
+    const home = parseInt(parts[0]), away = parseInt(parts[1]);
+    if (isNaN(home) || isNaN(away)) return null;
+    const total = home + away;
+    if (tipo === 'SEGNO') {
+      const sign = home > away ? '1' : home === away ? 'X' : '2';
+      return pronostico === sign;
+    }
+    if (tipo === 'DOPPIA_CHANCE') {
+      const sign = home > away ? '1' : home === away ? 'X' : '2';
+      if (pronostico === '1X') return sign === '1' || sign === 'X';
+      if (pronostico === 'X2') return sign === 'X' || sign === '2';
+      if (pronostico === '12') return sign === '1' || sign === '2';
+      return null;
+    }
+    if (tipo === 'GOL') {
+      const p = pronostico.toLowerCase();
+      if (p.startsWith('over')) { const thr = parseFloat(pronostico.split(' ')[1]); return total > thr; }
+      if (p.startsWith('under')) { const thr = parseFloat(pronostico.split(' ')[1]); return total < thr; }
+      if (p === 'gg') return home > 0 && away > 0;
+      if (p === 'ng') return home === 0 || away === 0;
+      const mg = pronostico.match(/multigol\s*(\d+)-(\d+)/i);
+      if (mg) return total >= parseInt(mg[1]) && total <= parseInt(mg[2]);
+      return null;
+    }
+    return null;
+  };
+
+  const getEffectiveScore = (pred: { real_score?: string | null; live_score?: string | null; live_status?: string | null }): string | null => {
+    if (pred.real_score) return pred.real_score;
+    if (pred.live_score && pred.live_status === 'Finished') return pred.live_score;
+    return null;
+  };
+
+  const getEffectiveHit = (pred: { real_score?: string | null; live_score?: string | null; live_status?: string | null }, p: { hit?: boolean | null; pronostico: string; tipo: string }): boolean | null => {
+    if (pred.real_score) return p.hit ?? null;
+    if (pred.live_score && pred.live_status === 'Finished') return calculateHitFromScore(pred.live_score, p.pronostico, p.tipo);
+    return null;
+  };
+
   // --- HELPERS STATUS FILTRO ---
   const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null }): 'finished' | 'live' | 'to_play' => {
     if (item.real_score != null) return 'finished';
@@ -688,8 +732,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     if (filter === 'live') return status === 'live';
     if (filter === 'da_giocare') return status === 'to_play';
     if (filter === 'finite') return status === 'finished';
-    if (filter === 'centrate') return pred.pronostici?.some(p => p.hit === true) ?? false;
-    if (filter === 'mancate') return pred.pronostici?.some(p => p.hit === false) ?? false;
+    if (filter === 'centrate') return pred.pronostici?.some(p => getEffectiveHit(pred, p) === true) ?? false;
+    if (filter === 'mancate') return pred.pronostici?.some(p => getEffectiveHit(pred, p) === false) ?? false;
     return true;
   };
 
@@ -770,15 +814,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       else {
         counts.finite++;
         if (mode === 're') {
-          if (item.real_score) {
-            const hit = ((item as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(item.real_score!));
+          const es = getEffectiveScore(item);
+          if (es) {
+            const hit = ((item as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
             if (hit) counts.centrate++;
             else counts.mancate++;
           }
         } else {
           item.pronostici?.forEach(p => {
-            if (p.hit === true) counts.centrate++;
-            if (p.hit === false) counts.mancate++;
+            const h = getEffectiveHit(item, p);
+            if (h === true) counts.centrate++;
+            if (h === false) counts.mancate++;
           });
         }
       }
@@ -799,7 +845,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       : (pred.comment?.segno || pred.comment?.gol || pred.comment?.doppia_chance || pred.comment?.gol_extra);
     const hasDetail = !!(pred.segno_dettaglio || pred.gol_dettaglio || (pred.streak_home && pred.streak_away));
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
-    const barColor = pred.real_score ? (pred.hit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
+    const effScore = getEffectiveScore(pred);
+    const effPredHit = effScore ? (pred.real_score ? pred.hit : pred.pronostici?.some(p => calculateHitFromScore(pred.live_score!, p.pronostico, p.tipo) === true)) : null;
+    const barColor = effScore ? (effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
@@ -880,16 +928,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
           {/* Risultato + Freccia — spinto a destra */}
           <div style={{ marginLeft: 'auto', marginRight: isMobile ? '-6px' : undefined, display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
-            {pred.real_score ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.hit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                {pred.real_score.replace(':', ' - ')}
-                {((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(pred.real_score!)) &&
+            {effScore ? (
+              <span style={{ fontSize: '13px', fontWeight: '900', color: effPredHit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                {effScore.replace(':', ' - ')}
+                {((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(effScore!)) &&
                   <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
-            ) : getMatchStatus(pred) === 'live' ? (
+            ) : (pred.live_score && ['Live', 'HT'].includes(pred.live_status || '')) ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score || '– : –'}
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score.replace(':', ' - ')}
                 </span>
                 {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
                   {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
@@ -937,7 +985,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             }}>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {pred.pronostici?.map((p, i) => {
-                  const isHit = pred.real_score ? p.hit : null;
+                  const isHit = getEffectiveHit(pred, p);
                   const pillBg = isHit === true ? theme.hitBg : isHit === false ? theme.missBg : theme.surface05;
                   const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : theme.surface15;
                   const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.cyan;
@@ -971,7 +1019,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const golPreds = pred.pronostici?.filter(p => p.tipo === 'GOL') || [];
 
               const renderPill = (p: typeof pred.pronostici[0], idx: number) => {
-                const isHit = pred.real_score ? p.hit : null;
+                const isHit = getEffectiveHit(pred, p);
                 const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : (isLight ? '#e0f2fe' : 'rgba(17, 56, 93, 0.45)');
                 const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : (isLight ? '#7dd3fc' : 'rgba(17, 56, 93, 0.7)');
                 const nameColor = isHit === true ? theme.hitText : isHit === false ? theme.missText : theme.cyan;
@@ -1013,7 +1061,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </span>
                     )}
                     {isHit !== null && <span style={{ fontSize: '11px', marginLeft: 'auto' }}>{isHit ? '✅' : '❌'}</span>}
-                    {!pred.real_score && quota && (
+                    {!effScore && quota && (
                       <span
                         onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota), confidence: p.confidence, probabilitaStimata: (p as any).probabilita_stimata, systemStake: p.stake}); }}
                         style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: isHit !== null ? '4px' : 'auto', opacity: 0.7, transition: 'opacity 0.2s' }}
@@ -1165,7 +1213,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
             {/* Top Score — risultati più probabili dalla simulazione */}
             {(pred as any).simulation_data?.top_scores && (() => {
-              const isLive = !pred.real_score && getMatchStatus(pred) === 'live';
+              const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
               return (
                 <div style={{
                   marginTop: '0', marginBottom: '8px', marginLeft: '8px',
@@ -1178,8 +1226,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
                   {((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3).map(([score, count], i, arr) => {
                     const normS = normalizeScore(score);
-                    const reHit = pred.real_score && normS === normalizeScore(pred.real_score);
-                    const liveHit = isLive && pred.live_score && normS === normalizeScore(pred.live_score);
+                    const es = getEffectiveScore(pred);
+                    const reHit = es && normS === normalizeScore(es);
+                    const liveHit = !es && isLive && pred.live_score && normS === normalizeScore(pred.live_score);
                     return (
                       <span key={i} style={{
                         fontSize: '13px',
@@ -1358,7 +1407,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const sim = (pred as any).simulation_data;
               const mcKey = `${cardKey}-montecarlo`;
               const isMCOpen = expandedSections.has(mcKey);
-              const isLive = !pred.real_score && getMatchStatus(pred) === 'live';
+              const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
               const renderMCBar = (label: string, values: Array<{ name: string; pct: number; color: string }>) => (
                 <div style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '11px', color: theme.textDim, marginBottom: '4px', fontWeight: 600 }}>{label}</div>
@@ -1432,8 +1481,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {[...(sim.top_scores || [])].slice(0, 4).map(([score, count]: [string, number], i: number) => {
                               const normS = normalizeScore(score);
-                              const isHit = pred.real_score && normS === normalizeScore(pred.real_score);
-                              const isLiveHit = !pred.real_score && isLive && pred.live_score && normS === normalizeScore(pred.live_score);
+                              const es = getEffectiveScore(pred);
+                              const isHit = es && normS === normalizeScore(es);
+                              const isLiveHit = !es && isLive && pred.live_score && normS === normalizeScore(pred.live_score);
                               const highlighted = isHit || isLiveHit;
                               return (
                                 <span key={i} style={{
@@ -1929,7 +1979,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const conf = pred.confidence_segno || 0;
 
     // Hit/Miss: controlla se il risultato reale è uno dei top-3
-    const realScore = pred.real_score;
+    const realScore = getEffectiveScore(pred);
     const isHitExact = realScore ? top3.some(t => t.score === realScore) : null;
     const barColor = realScore ? (isHitExact ? theme.hitText : theme.missText) : theme.warning;
 
@@ -1979,14 +2029,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
           {/* Risultato + Freccia */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {pred.real_score ? (
+            {realScore ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? theme.hitText : theme.missText }}>
-                {pred.real_score.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
+                {realScore.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
               </span>
-            ) : getMatchStatus(pred) === 'live' ? (
+            ) : (pred.live_score && ['Live', 'HT'].includes(pred.live_status || '')) ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score || '– : –'}
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score.replace(':', ' - ')}
                 </span>
                 {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
                   {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
@@ -2417,15 +2467,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 || (t.tipo === 'SEGNO' && p.odds ? (p.odds as any)[t.pronostico] : null)
                 || (t.tipo === 'GOL' && p.odds ? getGolQuota(t.pronostico, p.odds) : null)
                 || null,
-              _probStimata: t.probabilita_stimata || null
+              _probStimata: t.probabilita_stimata || null,
+              _effHit: getEffectiveHit(p, t)
             }))
           );
           // Calcolo per gruppo capsula (total + finished + hits + HR)
           const capsuleData = (def: typeof MARKET_DEFS[0]) => {
             const tips = allTips.filter(def.filter);
             const total = tips.length;
-            const verified = tips.filter(t => t.hit === true || t.hit === false);
-            const hits = tips.filter(t => t.hit === true).length;
+            const verified = tips.filter(t => t._effHit === true || t._effHit === false);
+            const hits = tips.filter(t => t._effHit === true).length;
             const hr = verified.length > 0 ? Math.round((hits / verified.length) * 1000) / 10 : null;
             const thresholds = verified.map(t => getTipThreshold(t));
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
@@ -2476,8 +2527,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => !!p.real_score);
-                        const matchHits = matchesFinished.filter(p => p.hit === true).length;
+                        const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => !!getEffectiveScore(p));
+                        const matchHits = matchesFinished.filter(p => p.real_score ? p.hit === true : p.pronostici?.some(pr => calculateHitFromScore(p.live_score!, pr.pronostico, pr.tipo) === true)).length;
                         const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;
                         return (
@@ -2817,8 +2868,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                     const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                     const toPlay = preds.length - finished - live;
-                    const withScore = preds.filter(p => !!p.real_score);
-                    const hits = withScore.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
+                    const withScore = preds.filter(p => !!getEffectiveScore(p));
+                    const hits = withScore.filter(p => { const es = getEffectiveScore(p); return (p.exact_score_top3 || []).some(t => t.score === es); }).length;
                     const misses = withScore.length - hits;
                     const verified = hits + misses;
                     const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
@@ -2892,9 +2943,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
-                  const allP = preds.flatMap(p => p.pronostici || []);
-                  const hits = allP.filter(x => x.hit === true).length;
-                  const misses = allP.filter(x => x.hit === false).length;
+                  const hits = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
+                  const misses = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
                   const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
@@ -2906,9 +2956,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
                   const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
                   const reHits = preds.filter(p => {
-                    if (!p.real_score) return false;
+                    const es = getEffectiveScore(p);
+                    if (!es) return false;
                     const ts = (p as any).simulation_data?.top_scores;
-                    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(p.real_score!));
+                    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
                   }).length;
                   const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
@@ -2974,9 +3025,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
                   // Conteggio per singolo pronostico
-                  const allP = preds.flatMap(p => p.pronostici || []);
-                  const hits = allP.filter(x => x.hit === true).length;
-                  const misses = allP.filter(x => x.hit === false).length;
+                  const hits = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
+                  const misses = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
                   const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
@@ -2990,9 +3040,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
                   // Conteggio RE hits (top 4 Monte Carlo vs risultato reale)
                   const reHits = preds.filter(p => {
-                    if (!p.real_score) return false;
+                    const es = getEffectiveScore(p);
+                    if (!es) return false;
                     const ts = (p as any).simulation_data?.top_scores;
-                    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(p.real_score!));
+                    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
                   }).length;
                   const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (

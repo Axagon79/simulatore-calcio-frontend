@@ -29,6 +29,10 @@ const cupTheme = {
 const baseBg = 'transparent';
 const textDim = appTheme.textDim;
 
+// In light mode UCL: capsule data/risultato con sfondo blu scuro per far risaltare il giallo oro
+const getCapsuleBg = (cupId: string, baseBgColor: string) => isLight && cupId === 'UCL' ? '#224480' : baseBgColor;
+const getCapsuleBorder = (cupId: string, baseBorder: string) => isLight && cupId === 'UCL' ? '1px solid #325490' : baseBorder;
+
 // Funzione per costruire URL stemma squadra
 const getStemmaUrl = (cupId: 'UCL' | 'UEL', mongoId: string) => {
   const folder = cupId === 'UCL' ? 'Champions_League' : 'Europa_League';
@@ -427,11 +431,11 @@ if (viewState === 'analysis' && selectedMatch) {
                         flexShrink: 0
                     }}>
                         <div style={{
-                        background: `${theme.primary}20`,
-                        padding: isMobile ? '4px 2px' : '6px 10px', // RIDOTTO PADDING
+                        background: getCapsuleBg(cupId, `${theme.primary}20`),
+                        padding: isMobile ? '4px 2px' : '6px 10px',
                         borderRadius: '8px',
-                        border: `1px solid ${theme.primary}40`,
-                        fontSize: isMobile ? '10px' : '11px',       // FONT PIU PICCOLO
+                        border: getCapsuleBorder(cupId, `1px solid ${theme.primary}40`),
+                        fontSize: isMobile ? '10px' : '11px',
                         color: theme.secondary,
                         fontWeight: 'bold',
                         textAlign: 'center',
@@ -487,15 +491,18 @@ if (viewState === 'analysis' && selectedMatch) {
                         
                         {/* CENTRO (Risultato/VS) - LARGHEZZA FISSA E IMMUTABILE */}
                         <div style={{
-                            width: '46px',        // LARGHEZZA FISSA: Non si muove mai
-                            flexShrink: 0,        // Non si schiaccia mai
+                            width: '46px',
+                            flexShrink: 0,
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
                             fontSize: '11px',
                             fontWeight: 'bold',
                             color: theme.secondary,
-                            textAlign: 'center'
+                            textAlign: 'center',
+                            background: getCapsuleBg(cupId, 'transparent'),
+                            borderRadius: '6px',
+                            padding: '2px 0'
                         }}>
                             {match.status === 'finished' && match.result?.home_score !== undefined
                             ? `${match.result.home_score}-${match.result.away_score}`
@@ -579,8 +586,8 @@ if (viewState === 'analysis' && selectedMatch) {
                           )}
                         </div>
                         <div style={{
-                          background: `${theme.primary}30`,
-                          border: `1px solid ${theme.primary}`,
+                          background: getCapsuleBg(cupId, `${theme.primary}30`),
+                          border: getCapsuleBorder(cupId, `1px solid ${theme.primary}`),
                           padding: '6px 12px',
                           borderRadius: '8px',
                           fontSize: '14px',
@@ -962,11 +969,11 @@ if (viewState === 'analysis' && selectedMatch) {
                         flexShrink: 0
                     }}>
                         <div style={{
-                        background: `${theme.primary}20`,
-                        padding: isMobile ? '4px 2px' : '6px 10px', // RIDOTTO PADDING
+                        background: getCapsuleBg(cupId, `${theme.primary}20`),
+                        padding: isMobile ? '4px 2px' : '6px 10px',
                         borderRadius: '8px',
-                        border: `1px solid ${theme.primary}40`,
-                        fontSize: isMobile ? '10px' : '11px',       // FONT PIU PICCOLO
+                        border: getCapsuleBorder(cupId, `1px solid ${theme.primary}40`),
+                        fontSize: isMobile ? '10px' : '11px',
                         color: theme.secondary,
                         fontWeight: 'bold',
                         textAlign: 'center',
@@ -1022,15 +1029,18 @@ if (viewState === 'analysis' && selectedMatch) {
                         
                         {/* CENTRO (Risultato/VS) - LARGHEZZA FISSA E IMMUTABILE */}
                         <div style={{
-                            width: '46px',        // LARGHEZZA FISSA: Non si muove mai
-                            flexShrink: 0,        // Non si schiaccia mai
+                            width: '46px',
+                            flexShrink: 0,
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
                             fontSize: '11px',
                             fontWeight: 'bold',
                             color: theme.secondary,
-                            textAlign: 'center'
+                            textAlign: 'center',
+                            background: getCapsuleBg(cupId, 'transparent'),
+                            borderRadius: '6px',
+                            padding: '2px 0'
                         }}>
                             {match.status === 'finished' && match.result?.home_score !== undefined
                             ? `${match.result.home_score}-${match.result.away_score}`
@@ -1114,8 +1124,8 @@ if (viewState === 'analysis' && selectedMatch) {
                               )}
                             </div>
                             <div style={{
-                            background: `${theme.primary}30`,
-                            border: `1px solid ${theme.primary}`,
+                            background: getCapsuleBg(cupId, `${theme.primary}30`),
+                            border: getCapsuleBorder(cupId, `1px solid ${theme.primary}`),
                             padding: '6px 12px',
                             borderRadius: '8px',
                             fontSize: '14px',

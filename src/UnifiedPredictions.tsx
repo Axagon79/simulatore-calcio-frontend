@@ -3080,7 +3080,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                           </div>
                           {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
+                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '5px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>

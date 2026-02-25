@@ -349,6 +349,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     { id: 'mg',   label: 'MG',   color: isLight ? '#b45309' : '#f59e0b', match: s => s.includes('_mg') },
     { id: 'c96',  label: 'C96',  color: isLight ? '#047857' : '#10b981', match: s => s.includes('combo96') },
     { id: 'xd',   label: 'XD',   color: isLight ? '#4338ca' : '#6366f1', match: s => s.includes('xdraw') },
+    { id: 'hw',   label: 'HW',   color: isLight ? '#15803d' : '#22c55e', match: s => s.includes('_hw') },
   ];
 
   // Funzione filtraggio source su prediction

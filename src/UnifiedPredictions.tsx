@@ -387,11 +387,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     fetchData();
   }, [date]);
 
-  // --- POLLING LIVE SCORES (solo data di oggi) ---
+  // --- POLLING LIVE SCORES (per la data visualizzata) ---
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    if (date !== today) return;
-
     const mergeLive = <T extends { home: string; away: string }>(items: T[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number }>): T[] =>
       items.map(item => {
         const live = scores.find(s => s.home === item.home && s.away === item.away);
@@ -400,12 +397,11 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 
     const pollLive = async () => {
       try {
-        const res = await fetch(`${API_BASE}/live-scores?date=${today}`);
+        const res = await fetch(`${API_BASE}/live-scores?date=${date}`);
         const data = await res.json();
         if (data.success && data.scores?.length > 0) {
           const scores = data.scores;
           setPredictions(prev => mergeLive(prev, scores));
-
         }
       } catch { /* silenzioso */ }
     };
@@ -691,7 +687,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (p.startsWith('under')) { const thr = parseFloat(pronostico.split(' ')[1]); return total < thr; }
       if (p === 'gg') return home > 0 && away > 0;
       if (p === 'ng') return home === 0 || away === 0;
-      const mg = pronostico.match(/multigol\s*(\d+)-(\d+)/i);
+      const mg = pronostico.match(/^MG\s+(\d+)-(\d+)/i);
       if (mg) return total >= parseInt(mg[1]) && total <= parseInt(mg[2]);
       return null;
     }
@@ -934,12 +930,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 {((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(effScore!)) &&
                   <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
-            ) : (pred.live_score && ['Live', 'HT'].includes(pred.live_status || '')) ? (
+            ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score.replace(':', ' - ')}
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score ? pred.live_score.replace(':', ' - ') : '– : –'}
                 </span>
-                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                {pred.live_score && (!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
                   {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
                 </span>}
               </span>
@@ -2033,12 +2029,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? theme.hitText : theme.missText }}>
                 {realScore.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
               </span>
-            ) : (pred.live_score && ['Live', 'HT'].includes(pred.live_status || '')) ? (
+            ) : getMatchStatus(pred) === 'live' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status === 'Live' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score.replace(':', ' - ')}
+                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
+                  {pred.live_score ? pred.live_score.replace(':', ' - ') : '– : –'}
                 </span>
-                {(!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
+                {pred.live_score && (!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
                   {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
                 </span>}
               </span>

@@ -45,6 +45,7 @@ interface TrackRecordResponse {
     alto_rendimento: SectionData;
   };
   breakdown_mercato: Record<string, HitRateData>;
+  breakdown_source: Record<string, QuotaBandData>;
   breakdown_campionato: Record<string, HitRateData>;
   breakdown_confidence: Record<string, HitRateData>;
   breakdown_stelle: Record<string, HitRateData>;
@@ -1045,6 +1046,38 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               ))}
             </div>
           </div>
+
+          {/* ─── Per Algoritmo (source) ──────────────────────────────────── */}
+          {data.breakdown_source && Object.keys(data.breakdown_source).length > 0 && (
+            <div style={card}>
+              <div style={sectionTitle}>Per Algoritmo</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {Object.entries(data.breakdown_source)
+                  .sort(([, a], [, b]) => b.total - a.total)
+                  .map(([src, stats]) => (
+                    <div key={src} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ minWidth: isMobile ? '70px' : '100px', fontSize: '0.85em', color: C.textSec, fontWeight: 600 }}>
+                        {src}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <ProgressBar rate={stats.hit_rate ?? 0} showLabel arMode={!isPronostici} />
+                      </div>
+                      <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
+                        {stats.hits}/{stats.total}
+                      </div>
+                      <div style={{ minWidth: '60px', textAlign: 'right', fontSize: '0.78em', fontWeight: 600, color: profitColor(stats.profit) }}>
+                        {stats.profit > 0 ? '+' : ''}{stats.profit}u
+                      </div>
+                      {stats.roi != null && (
+                        <div style={{ minWidth: '50px', textAlign: 'right', fontSize: '0.75em', color: profitColor(stats.roi) }}>
+                          {stats.roi > 0 ? '+' : ''}{stats.roi}%
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* ─── Per Campionato ───────────────────────────────────────────── */}
           <div style={card}>

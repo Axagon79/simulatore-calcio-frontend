@@ -314,9 +314,11 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   };
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
+  const [sourceFilter, setSourceFilter] = useState<string>('tutti');
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
   const [financeOpen, setFinanceOpen] = useState(false);
   const [marketsOpen, setMarketsOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const [finLegendOpen, setFinLegendOpen] = useState(false);
   // Definizioni mercati (per capsule + filtraggio)
   const MARKET_DEFS: { id: MarketFilter; label: string; filter: (t: any) => boolean; color: string }[] = [
@@ -337,10 +339,31 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     return p.pronostici?.some(mf.filter) ?? false;
   };
 
+  // Definizioni gruppi source (per capsule origine)
+  const SOURCE_DEFS: { id: string; label: string; color: string; match: (s: string) => boolean }[] = [
+    { id: 'A',    label: 'A',    color: isLight ? '#c2410c' : '#f97316', match: s => s === 'A' },
+    { id: 'C',    label: 'C',    color: isLight ? '#0e7490' : '#06b6d4', match: s => s === 'C' },
+    { id: 'S',    label: 'S',    color: isLight ? '#7e22ce' : '#a855f7', match: s => s === 'S' },
+    { id: 'A+S',  label: 'A+S',  color: isLight ? '#be185d' : '#ec4899', match: s => s === 'A+S' },
+    { id: 'flip', label: 'Flip', color: isLight ? '#b91c1c' : '#ef4444', match: s => s.includes('flip') },
+    { id: 'mg',   label: 'MG',   color: isLight ? '#b45309' : '#f59e0b', match: s => s.includes('_mg') },
+    { id: 'c96',  label: 'C96',  color: isLight ? '#047857' : '#10b981', match: s => s.includes('combo96') },
+    { id: 'xd',   label: 'XD',   color: isLight ? '#4338ca' : '#6366f1', match: s => s.includes('xdraw') },
+  ];
+
+  // Funzione filtraggio source su prediction
+  const predMatchesSource = (p: Prediction): boolean => {
+    if (sourceFilter === 'tutti') return true;
+    const sg = SOURCE_DEFS.find(s => s.id === sourceFilter);
+    if (!sg) return true;
+    return p.pronostici?.some((t: any) => sg.match(t.source || '')) ?? false;
+  };
+
   // Reset filtri al cambio data
   useEffect(() => {
     setStatusFilter('tutte');
     setMarketFilter('tutti');
+    setSourceFilter('tutti');
   }, [date]);
 
   useEffect(() => {
@@ -780,7 +803,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   // --- DATI FILTRATI (status + mercato combinati) ---
   const filteredPredictions = normalPredictions
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
-    .filter(predMatchesMarket);
+    .filter(predMatchesMarket)
+    .filter(predMatchesSource);
   const filteredExactScore = exactScorePredictions
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter));
   const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
@@ -790,7 +814,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   }, {});
   const filteredAltoRendimento = altoRendimentoPreds
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
-    .filter(predMatchesMarket);
+    .filter(predMatchesMarket)
+    .filter(predMatchesSource);
   const filteredAltoRendimentoByLeague = filteredAltoRendimento.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
@@ -801,7 +826,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const filterCounts = useMemo(() => {
     const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
     const source = activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-    const marketFiltered = source.filter(predMatchesMarket);
+    const marketFiltered = source.filter(predMatchesMarket).filter(predMatchesSource);
     const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 're') => {
       counts.tutte++;
       const s = getMatchStatus(item);
@@ -827,7 +852,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     };
     marketFiltered.forEach(p => countItem(p, 'normal'));
     return counts;
-  }, [predictions, activeTab, marketFilter]);
+  }, [predictions, activeTab, marketFilter, sourceFilter]);
 
   // --- RENDER CARD PRONOSTICO ---
   const renderPredictionCard = (pred: Prediction) => {
@@ -2454,9 +2479,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             if (q && q > 1) return (100 / q) + (MARGINS[sm] || 4);
             return FALLBACKS[sm] || 55;
           };
-          // FlatMap tutti i tips (NON filtrati per mercato, per conteggi capsule)
+          // FlatMap tutti i tips — filtrati per source (per rendimento dinamico)
           const sourcePreds = activeTab === 'alto_rendimento' ? altoRendimentoPreds : normalPredictions;
-          const allTips = sourcePreds.flatMap(p =>
+          const sourceFilteredPreds = sourcePreds.filter(predMatchesSource);
+          const allTips = sourceFilteredPreds.flatMap(p =>
             (p.pronostici || []).map(t => ({
               ...t,
               _quota: t.quota
@@ -2480,8 +2506,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           };
           const capsules = MARKET_DEFS.map(def => capsuleData(def));
           const totalAllTips = allTips.length;
+          // Tips filtrati per mercato selezionato (per metriche finanziarie dinamiche)
+          const marketFilteredTips = marketFilter === 'tutti' ? allTips : (() => {
+            const mf = MARKET_DEFS.find(m => m.id === marketFilter);
+            return mf ? allTips.filter(mf.filter) : allTips;
+          })();
           // Calcolo metriche finanziarie (flat stake = 1 unità)
-          const verifiedWithQuota = allTips.filter(t => (t.hit === true || t.hit === false) && t._quota && t._quota > 1);
+          const verifiedWithQuota = marketFilteredTips.filter(t => (t.hit === true || t.hit === false) && t._quota && t._quota > 1);
           const totalBets = verifiedWithQuota.length;
           const totalProfit = verifiedWithQuota.reduce((sum, t) => sum + (t.hit ? (t._quota - 1) : -1), 0);
           const yieldPct = totalBets > 0 ? Math.round((totalProfit / totalBets) * 1000) / 10 : null;
@@ -2523,7 +2554,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => !!getEffectiveScore(p));
+                        const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
                         const matchHits = matchesFinished.filter(p => p.real_score ? p.hit === true : p.pronostici?.some(pr => calculateHitFromScore(p.live_score!, pr.pronostico, pr.tipo) === true)).length;
                         const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;
@@ -2593,6 +2624,80 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           <span style={{ fontSize: '12px', fontWeight: '900', color: item.color }}>{item.value}</span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {/* Contenitore Origine collassabile */}
+            {(() => {
+              const basePreds = (activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds)
+                .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
+                .filter(predMatchesMarket);
+              const sourceCounts = SOURCE_DEFS.map(g => {
+                const total = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || ''))).length;
+                return { ...g, total };
+              }).filter(g => g.total > 0);
+              if (sourceCounts.length <= 1) return null;
+              const totalAll = basePreds.length;
+              return (
+                <div
+                  style={{
+                    background: isLight ? '#eeeeee' : '#1a1d2e',
+                    border: isLight ? '1px solid #e0e2e6' : '1px solid #ffffff15',
+                    borderRadius: '12px', padding: '8px 14px', marginBottom: '8px',
+                    cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={isLight && !isMobile ? e => { e.currentTarget.style.background = '#c8cdcd'; } : undefined}
+                  onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
+                  onClick={isMobile ? () => setSourceOpen(!sourceOpen) : undefined}
+                >
+                  <div
+                    onClick={!isMobile ? () => setSourceOpen(!sourceOpen) : undefined}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Filtra per Algoritmo</span>
+                    <span style={{ fontSize: '12px', color: theme.textDisabled }}>{sourceOpen ? '▲' : '▼'}</span>
+                  </div>
+                  {sourceOpen && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' as const }}>
+                      <button
+                        onClick={() => setSourceFilter('tutti')}
+                        onMouseEnter={e => { if (sourceFilter !== 'tutti') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                        onMouseLeave={e => { if (sourceFilter !== 'tutti') e.currentTarget.style.background = theme.surfaceSubtle; }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          background: sourceFilter === 'tutti' ? (isLight ? '#dbeafe' : `${theme.cyan}25`) : theme.surfaceSubtle,
+                          border: `1px solid ${sourceFilter === 'tutti' ? theme.cyan : theme.surface05}`,
+                          color: sourceFilter === 'tutti' ? theme.cyan : theme.textDim,
+                          borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                          fontSize: '10px', fontWeight: sourceFilter === 'tutti' ? '800' : '600',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Tutti <span style={{ fontSize: '9px', opacity: 0.7 }}>{totalAll}</span>
+                      </button>
+                      {sourceCounts.map(g => {
+                        const isActive = sourceFilter === g.id;
+                        return (
+                          <button
+                            key={g.id}
+                            onClick={() => setSourceFilter(isActive ? 'tutti' : g.id)}
+                            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = theme.surfaceSubtle; }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '5px',
+                              background: isActive ? `${g.color}${isLight ? '20' : '25'}` : theme.surfaceSubtle,
+                              border: `1px solid ${isActive ? g.color : theme.surface05}`,
+                              borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textDim, fontWeight: '700' }}>{g.label}</span>
+                            <span style={{ fontSize: '9px', color: isActive ? g.color : theme.textFaint, fontWeight: '600' }}>{g.total}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

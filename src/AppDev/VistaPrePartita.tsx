@@ -122,6 +122,71 @@ export default function VistaPrePartita({
       return () => { cancelled = true; };
     }, [selectedMatch?.home, selectedMatch?.away, league]);
 
+    // --- CLASSIFICA: State + Fetch ---
+    interface StandingsRow {
+      rank: number; team: string; transfermarkt_id: number | string;
+      points: number; played: number;
+      wins?: number; draws?: number; losses?: number;
+      goals_for?: number; goals_against?: number; goal_diff?: number;
+    }
+    const [standingsData, setStandingsData] = useState<{table: StandingsRow[], table_home: StandingsRow[], table_away: StandingsRow[], leagueName: string} | null>(null);
+    const [standingsTab, setStandingsTab] = useState<'total' | 'home' | 'away'>('total');
+    const [standingsOpen, setStandingsOpen] = useState(false);
+
+    useEffect(() => {
+      if (!league) { setStandingsData(null); return; }
+      let cancelled = false;
+      const url = `${API_BASE}/standings/${encodeURIComponent(league)}`;
+      console.log('[STANDINGS] Fetch:', url, 'league:', league);
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          console.log('[STANDINGS] Response:', data.success, 'table:', data.table?.length);
+          if (!cancelled && data.success) {
+            setStandingsData({ table: data.table || [], table_home: data.table_home || [], table_away: data.table_away || [], leagueName: data.league || league });
+          }
+        })
+        .catch((err) => { console.error('[STANDINGS] Error:', err); if (!cancelled) setStandingsData(null); });
+      return () => { cancelled = true; };
+    }, [league]);
+
+    // Zone colorate per posizione in classifica
+    const ZONE_DEFS: Record<string, {pos: number[], col: string}[]> = {
+      "Serie A": [{pos:[1,2,3,4],col:"#2563eb"},{pos:[5],col:"#f97316"},{pos:[6,7],col:"#22c55e"},{pos:[18,19,20],col:"#ef4444"}],
+      "Serie B": [{pos:[1,2],col:"#22c55e"},{pos:[3,4,5,6,7,8],col:"#84cc16"},{pos:[17,18],col:"#fbbf24"},{pos:[19,20],col:"#ef4444"}],
+      "Serie C - Girone A": [{pos:[1],col:"#22c55e"},{pos:[2,3,4,5],col:"#84cc16"},{pos:[17,18],col:"#fbbf24"},{pos:[19,20],col:"#ef4444"}],
+      "Serie C - Girone B": [{pos:[1],col:"#22c55e"},{pos:[2,3,4,5],col:"#84cc16"},{pos:[17,18],col:"#fbbf24"},{pos:[19,20],col:"#ef4444"}],
+      "Serie C - Girone C": [{pos:[1],col:"#22c55e"},{pos:[2,3,4,5],col:"#84cc16"},{pos:[17,18],col:"#fbbf24"},{pos:[19,20],col:"#ef4444"}],
+      "Premier League": [{pos:[1,2,3,4],col:"#2563eb"},{pos:[5],col:"#f97316"},{pos:[6,7],col:"#22c55e"},{pos:[18,19,20],col:"#ef4444"}],
+      "La Liga": [{pos:[1,2,3,4],col:"#2563eb"},{pos:[5],col:"#f97316"},{pos:[6],col:"#22c55e"},{pos:[18,19,20],col:"#ef4444"}],
+      "Bundesliga": [{pos:[1,2,3,4],col:"#2563eb"},{pos:[5],col:"#f97316"},{pos:[6],col:"#22c55e"},{pos:[16],col:"#fbbf24"},{pos:[17,18],col:"#ef4444"}],
+      "Ligue 1": [{pos:[1,2,3],col:"#2563eb"},{pos:[4],col:"#f97316"},{pos:[5],col:"#22c55e"},{pos:[16],col:"#fbbf24"},{pos:[17,18],col:"#ef4444"}],
+      "Eredivisie": [{pos:[1,2],col:"#2563eb"},{pos:[3],col:"#f97316"},{pos:[4,5,6,7,8],col:"#84cc16"},{pos:[16],col:"#fbbf24"},{pos:[17,18],col:"#ef4444"}],
+      "Liga Portugal": [{pos:[1,2],col:"#2563eb"},{pos:[3],col:"#f97316"},{pos:[4],col:"#22c55e"},{pos:[16,17,18],col:"#ef4444"}],
+      "Championship": [{pos:[1,2],col:"#22c55e"},{pos:[3,4,5,6],col:"#84cc16"},{pos:[22,23,24],col:"#ef4444"}],
+      "LaLiga 2": [{pos:[1,2],col:"#22c55e"},{pos:[3,4,5,6],col:"#84cc16"},{pos:[19,20],col:"#fbbf24"},{pos:[21,22],col:"#ef4444"}],
+      "2. Bundesliga": [{pos:[1,2],col:"#22c55e"},{pos:[3],col:"#84cc16"},{pos:[16],col:"#fbbf24"},{pos:[17,18],col:"#ef4444"}],
+      "Ligue 2": [{pos:[1,2],col:"#22c55e"},{pos:[3],col:"#84cc16"},{pos:[16],col:"#fbbf24"},{pos:[17,18],col:"#ef4444"}],
+      "Scottish Premiership": [{pos:[1],col:"#2563eb"},{pos:[2,3],col:"#22c55e"},{pos:[12],col:"#ef4444"}],
+      "Allsvenskan": [{pos:[1],col:"#2563eb"},{pos:[2],col:"#f97316"},{pos:[3],col:"#22c55e"},{pos:[14],col:"#fbbf24"},{pos:[15,16],col:"#ef4444"}],
+      "Eliteserien": [{pos:[1],col:"#2563eb"},{pos:[2],col:"#f97316"},{pos:[3],col:"#22c55e"},{pos:[14],col:"#fbbf24"},{pos:[15,16],col:"#ef4444"}],
+      "Superligaen": [{pos:[1,2],col:"#2563eb"},{pos:[3],col:"#22c55e"},{pos:[10,11,12],col:"#ef4444"}],
+      "Jupiler Pro League": [{pos:[1],col:"#2563eb"},{pos:[2,3,4],col:"#84cc16"},{pos:[15,16],col:"#ef4444"}],
+      "Süper Lig": [{pos:[1,2],col:"#2563eb"},{pos:[3],col:"#f97316"},{pos:[4],col:"#22c55e"},{pos:[16],col:"#fbbf24"},{pos:[17,18],col:"#ef4444"}],
+      "League of Ireland Premier Division": [{pos:[1],col:"#2563eb"},{pos:[2],col:"#f97316"},{pos:[3],col:"#22c55e"},{pos:[9],col:"#fbbf24"},{pos:[10],col:"#ef4444"}],
+      "Brasileirão Serie A": [{pos:[1,2,3,4],col:"#2563eb"},{pos:[5,6],col:"#f97316"},{pos:[17,18,19,20],col:"#ef4444"}],
+      "Primera División": [{pos:[1,2,3,4],col:"#2563eb"},{pos:[5,6],col:"#f97316"},{pos:[28,29,30],col:"#ef4444"}],
+      "Major League Soccer": [{pos:[1,2,3,4,5,6,7,8,9],col:"#84cc16"}],
+      "J1 League": [{pos:[1,2,3],col:"#2563eb"},{pos:[18],col:"#fbbf24"},{pos:[19,20],col:"#ef4444"}],
+    };
+
+    const getZoneColor = (rank: number, leagueName?: string): string | null => {
+      const zones = ZONE_DEFS[leagueName || league];
+      if (!zones) return null;
+      for (const z of zones) { if (z.pos.includes(rank)) return z.col; }
+      return null;
+    };
+
     // --- GAUGE: Fetch daily_predictions + Calcoli ---
     interface PredictionForGauge {
       segno_dettaglio: Record<string, number>;
@@ -499,7 +564,20 @@ export default function VistaPrePartita({
     };
 
     const getTrendColor = (valore: number) => {
-      // SCALA 10 LIVELLI - COLORI SOLIDI E VIVIDI
+      if (isLight) {
+        // LIGHT MODE - colori scuri/saturi per contrasto su sfondo bianco
+        if (valore >= 90) return 'rgba(0, 140, 60, 1)';    // Verde scuro
+        if (valore >= 80) return 'rgba(0, 150, 0, 1)';     // Verde medio
+        if (valore >= 70) return 'rgba(80, 150, 0, 1)';    // Verde oliva
+        if (valore >= 60) return 'rgba(120, 140, 0, 1)';   // Lime scuro
+        if (valore >= 50) return 'rgba(180, 160, 0, 1)';   // Giallo scuro
+        if (valore >= 40) return 'rgba(200, 140, 0, 1)';   // Arancio
+        if (valore >= 30) return 'rgba(210, 100, 0, 1)';   // Arancione
+        if (valore >= 20) return 'rgba(200, 50, 0, 1)';    // Rosso arancio
+        if (valore >= 10) return 'rgba(200, 20, 0, 1)';    // Rosso vivo
+        return 'rgba(190, 0, 0, 1)';                       // Rosso scuro
+      }
+      // DARK MODE - colori vividi originali
       if (valore >= 90) return 'rgba(0, 255, 100, 1)';   // Verde Smeraldo
       if (valore >= 80) return 'rgba(0, 255, 0, 1)';     // Verde Puro
       if (valore >= 70) return 'rgba(150, 255, 0, 1)';   // Verde Prato
@@ -511,6 +589,11 @@ export default function VistaPrePartita({
       if (valore >= 10) return 'rgba(255, 30, 0, 1)';    // Rosso Vivo
       return 'rgba(255, 0, 0, 1)';                       // Rosso Assoluto
     };
+
+    // Gradiente barre progresso (usato in più sezioni)
+    const fullScaleGradient = isLight
+      ? `linear-gradient(90deg, rgba(190,0,0,1) 0%, rgba(200,20,0,1) 11%, rgba(200,50,0,1) 22%, rgba(210,100,0,1) 33%, rgba(200,140,0,1) 44%, rgba(180,160,0,1) 55%, rgba(120,140,0,1) 66%, rgba(80,150,0,1) 77%, rgba(0,150,0,1) 88%, rgba(0,140,60,1) 100%)`
+      : `linear-gradient(90deg, rgba(255,0,0,1) 0%, rgba(255,30,0,1) 11%, rgba(255,80,0,1) 22%, rgba(255,140,0,1) 33%, rgba(255,200,0,1) 44%, rgba(255,255,0,1) 55%, rgba(210,255,0,1) 66%, rgba(150,255,0,1) 77%, rgba(0,255,0,1) 88%, rgba(0,255,100,1) 100%)`;
 
     // --- 2. HELPER GRAFICI ---
 
@@ -1127,6 +1210,158 @@ export default function VistaPrePartita({
               </div>
             </div>
 
+            {/* A1. CLASSIFICA */}
+            {standingsData && standingsData.table.length > 0 && (() => {
+              const activeTable = standingsTab === 'home' ? standingsData.table_home
+                : standingsTab === 'away' ? standingsData.table_away
+                : standingsData.table;
+              const showTable = activeTable.length > 0 ? activeTable : standingsData.table;
+              const hasStats = showTable.some(r => r.wins !== undefined);
+              const homeName = selectedMatch?.home || '';
+              const awayName = selectedMatch?.away || '';
+              // home_tm_id/away_tm_id = transfermarkt ID reale (home_id/away_id sono ID diversi)
+              const homeTmId = (selectedMatch as any)?.home_tm_id;
+              const awayTmId = (selectedMatch as any)?.away_tm_id;
+              // Matching: transfermarkt_id (100%) → nome esatto → normalizzato → substring
+              const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              const matchTeam = (r: StandingsRow, name: string, tmId: string | number | undefined) => {
+                if (tmId !== undefined && tmId !== null && String(r.transfermarkt_id) === String(tmId)) return true;
+                if (r.team === name) return true;
+                const rn = norm(r.team), nn = norm(name);
+                if (rn && nn && rn === nn) return true;
+                if (rn.length > 3 && nn.length > 3 && (rn.includes(nn) || nn.includes(rn))) return true;
+                return false;
+              };
+              const isHome = (r: StandingsRow) => matchTeam(r, homeName, homeTmId);
+              const isAway = (r: StandingsRow) => matchTeam(r, awayName, awayTmId);
+              const isHl = (r: StandingsRow) => isHome(r) || isAway(r);
+              const hlHomeBg = isLight ? 'rgba(37, 99, 235, 0.10)' : 'rgba(0, 255, 255, 0.10)';
+              const hlAwayBg = isLight ? 'rgba(168, 85, 247, 0.10)' : 'rgba(168, 85, 247, 0.12)';
+              const hlBorder = isLight ? 'rgba(37, 99, 235, 0.25)' : 'rgba(0, 255, 255, 0.25)';
+
+              const homeRow = standingsData.table.find(r => isHome(r));
+              const awayRow = standingsData.table.find(r => isAway(r));
+              console.log('[STANDINGS] Matching → home:', homeName, 'tm_id:', homeTmId, '→', homeRow?.team || 'NOT FOUND', '| away:', awayName, 'tm_id:', awayTmId, '→', awayRow?.team || 'NOT FOUND');
+              if (!homeRow || !awayRow) console.log('[STANDINGS] Teams in table:', standingsData.table.map(r => `${r.team}(${r.transfermarkt_id})`).join(', '));
+
+              // Stile colonne: # 6% | Squadra 30% | G V P S GF GS DR Pts = 8% ciascuno (64%)
+              const colW = { rank: '6%', team: '30%', stat: '8%', pts: '8%' };
+              const cellBase: React.CSSProperties = { textAlign: 'center', padding: '3px 2px' };
+
+              const renderRow = (r: StandingsRow) => {
+                const zoneCol = getZoneColor(r.rank, standingsData.leagueName);
+                const hl = isHl(r);
+                const bg = isHome(r) ? hlHomeBg : isAway(r) ? hlAwayBg : 'transparent';
+                return (
+                  <tr key={`${r.rank}-${r.team}`} style={{
+                    background: hl ? bg : 'transparent',
+                    borderLeft: hl ? `2px solid ${hlBorder}` : '2px solid transparent',
+                  }}>
+                    <td style={{ ...cellBase, textAlign: 'center', padding: '2px 4px' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 20, height: 20, borderRadius: 4, fontSize: 10, fontWeight: 700,
+                        background: zoneCol ? `${zoneCol}20` : 'transparent',
+                        color: zoneCol || theme.textDim,
+                        border: zoneCol ? `1px solid ${zoneCol}50` : 'none',
+                      }}>{r.rank}</span>
+                    </td>
+                    <td style={{
+                      fontWeight: hl ? 700 : 400,
+                      color: hl ? theme.text : theme.textDim,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      padding: '3px 6px',
+                    }}>{r.team}</td>
+                    {hasStats ? <>
+                      <td style={cellBase}>{r.played}</td>
+                      <td style={cellBase}>{r.wins ?? '-'}</td>
+                      <td style={cellBase}>{r.draws ?? '-'}</td>
+                      <td style={cellBase}>{r.losses ?? '-'}</td>
+                      <td style={cellBase}>{r.goals_for ?? '-'}</td>
+                      <td style={cellBase}>{r.goals_against ?? '-'}</td>
+                      <td style={cellBase}>{r.goal_diff !== undefined ? (r.goal_diff > 0 ? `+${r.goal_diff}` : r.goal_diff) : '-'}</td>
+                    </> : <td style={cellBase}>{r.played}</td>}
+                    <td style={{ ...cellBase, fontWeight: 700 }}>{r.points}</td>
+                  </tr>
+                );
+              };
+
+              return (
+                <div style={{ ...styles.card, ...(!isMobile ? { marginTop: -5 } : {}) }}>
+                  <div
+                    onClick={() => setStandingsOpen(!standingsOpen)}
+                    style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: standingsOpen ? 8 : 4 }}
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 'bold' }}>CLASSIFICA {standingsData.leagueName}</span>
+                    <span style={{ fontSize: 10, color: theme.textDim }}>{standingsOpen ? '▲' : '▼'}</span>
+                  </div>
+
+                  {standingsOpen && (
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                      {(['total', 'home', 'away'] as const).map(tab => (
+                        <button key={tab} onClick={() => setStandingsTab(tab)} style={{
+                          flex: 1, padding: '3px 0', fontSize: 10, fontWeight: 600,
+                          border: 'none', borderRadius: 4, cursor: 'pointer',
+                          background: standingsTab === tab ? theme.cyan : (isLight ? '#e5e7eb' : '#222'),
+                          color: standingsTab === tab ? '#000' : theme.textDim,
+                        }}>
+                          {tab === 'total' ? 'Totale' : tab === 'home' ? 'Casa' : 'Trasferta'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{
+                    overflowX: 'auto',
+                    ...(standingsOpen ? {
+                      maxHeight: 370, overflowY: 'auto',
+                      background: isLight ? '#f8f9fb' : 'rgba(0,0,0,0.25)',
+                      borderRadius: 6, padding: '0 2px',
+                    } : {}),
+                  }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, lineHeight: '22px', tableLayout: 'fixed' }}>
+                        <colgroup>
+                          <col style={{ width: colW.rank }} />
+                          <col style={{ width: colW.team }} />
+                          {hasStats ? <>
+                            <col style={{ width: colW.stat }} />
+                            <col style={{ width: colW.stat }} />
+                            <col style={{ width: colW.stat }} />
+                            <col style={{ width: colW.stat }} />
+                            <col style={{ width: colW.stat }} />
+                            <col style={{ width: colW.stat }} />
+                            <col style={{ width: colW.stat }} />
+                          </> : <col style={{ width: colW.stat }} />}
+                          <col style={{ width: colW.pts }} />
+                        </colgroup>
+                        <thead>
+                          <tr style={{ color: isLight ? '#475569' : '#8b95a8', borderBottom: `1px solid ${isLight ? '#d1d5db' : '#2a2f42'}`, position: 'sticky', top: 0, zIndex: 2, background: isLight ? '#eef1f5' : '#161928', fontSize: 10 }}>
+                            <th style={{ textAlign: 'right', paddingRight: 8, fontWeight: 600 }}>#</th>
+                            <th style={{ textAlign: 'left', fontWeight: 600, paddingLeft: 6 }}>Squadra</th>
+                            {hasStats ? <>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>G</th>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>V</th>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>P</th>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>S</th>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>GF</th>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>GS</th>
+                              <th style={{ textAlign: 'center', fontWeight: 600 }}>DR</th>
+                            </> : <th style={{ textAlign: 'center', fontWeight: 600 }}>G</th>}
+                            <th style={{ textAlign: 'center', fontWeight: 700 }}>Pts</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {standingsOpen
+                            ? showTable.map(r => renderRow(r))
+                            : <>{homeRow && renderRow(homeRow)}{awayRow && renderRow(awayRow)}</>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                </div>
+              );
+            })()}
+
             {/* A2. TREND INERZIA */}
             <div className="card-trend" style={styles.card}>
               <div className="header-container">
@@ -1138,21 +1373,7 @@ export default function VistaPrePartita({
 
                 {/* --- LOGICA VISIVA AVANZATA --- */}
                 {(() => {
-                  // 1. Definisco il Gradiente completo (10 Colori)
-                  const fullScaleGradient = `linear-gradient(90deg, 
-                                rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
-                                rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
-                                rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
-                                rgba(255, 140, 0, 1) 33%,   /* Arancione */
-                                rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
-                                rgba(255, 255, 0, 1) 55%,   /* Giallo */
-                                rgba(210, 255, 0, 1) 66%,   /* Lime */
-                                rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
-                                rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
-                                rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
-                            )`;
-
-                  // 2. Preparo i colori per CASA
+                  // Preparo i colori per CASA
                   const valHome = Number(homeAvg);
                   const colHome = getTrendColor(valHome);
                   const shadHome = colHome.replace(', 1)', ', 0.2)');
@@ -1275,21 +1496,7 @@ export default function VistaPrePartita({
 
                 {/* --- LOGICA VISIVA AVANZATA --- */}
                 {(() => {
-                  // 1. Definisco il Gradiente completo (10 Colori)
-                  const fullScaleGradient = `linear-gradient(90deg, 
-                                rgba(255, 0, 0, 1) 0%,      /* Rosso Assoluto */
-                                rgba(255, 30, 0, 1) 11%,    /* Rosso Vivo */
-                                rgba(255, 80, 0, 1) 22%,    /* Arancio Scuro */
-                                rgba(255, 140, 0, 1) 33%,   /* Arancione */
-                                rgba(255, 200, 0, 1) 44%,   /* Arancio Chiaro */
-                                rgba(255, 255, 0, 1) 55%,   /* Giallo */
-                                rgba(210, 255, 0, 1) 66%,   /* Lime */
-                                rgba(150, 255, 0, 1) 77%,   /* Verde Prato */
-                                rgba(0, 255, 0, 1) 88%,     /* Verde Puro */
-                                rgba(0, 255, 100, 1) 100%   /* Verde Smeraldo */
-                            )`;
-
-                  // 2. Calcolo Percentuali (Score 0-10 -> 0-100%)
+                  // Calcolo Percentuali (Score 0-10 -> 0-100%)
                   const scoreHome = (selectedMatch?.h2h_data?.home_score || 0) * 10;
                   const scoreAway = (selectedMatch?.h2h_data?.away_score || 0) * 10;
 
@@ -1401,11 +1608,6 @@ export default function VistaPrePartita({
               <div style={{ fontSize: '9px', color: isLight ? '#6b7280' : '#888', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>🏟️ Fattore Stadio</div>
               <div className="content-container">
                 {(() => {
-                  const fullScaleGradient = `linear-gradient(90deg,
-                                rgba(255, 0, 0, 1) 0%, rgba(255, 30, 0, 1) 11%, rgba(255, 80, 0, 1) 22%,
-                                rgba(255, 140, 0, 1) 33%, rgba(255, 200, 0, 1) 44%, rgba(255, 255, 0, 1) 55%,
-                                rgba(210, 255, 0, 1) 66%, rgba(150, 255, 0, 1) 77%, rgba(0, 255, 0, 1) 88%,
-                                rgba(0, 255, 100, 1) 100%)`;
                   const colHome = getTrendColor(homeFieldFactor);
                   const shadHome = colHome.replace(', 1)', ', 0.2)');
                   const colAway = getTrendColor(awayFieldFactor);
@@ -1438,11 +1640,6 @@ export default function VistaPrePartita({
               <div style={{ fontSize: '9px', color: isLight ? '#6b7280' : '#888', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>🧠 Stabilità</div>
               <div className="content-container">
                 {(() => {
-                  const fullScaleGradient = `linear-gradient(90deg,
-                              rgba(255, 0, 0, 1) 0%, rgba(255, 30, 0, 1) 11%, rgba(255, 80, 0, 1) 22%,
-                              rgba(255, 140, 0, 1) 33%, rgba(255, 200, 0, 1) 44%, rgba(255, 255, 0, 1) 55%,
-                              rgba(210, 255, 0, 1) 66%, rgba(150, 255, 0, 1) 77%, rgba(0, 255, 0, 1) 88%,
-                              rgba(0, 255, 100, 1) 100%)`;
                   const valHome = Number(homeAff || 0);
                   const valAway = Number(awayAff || 0);
                   const colHome = getTrendColor(valHome);
@@ -1480,11 +1677,6 @@ export default function VistaPrePartita({
                   const valAway = Number(selectedMatch?.h2h_data?.lucifero_away || 0);
                   const pctHome = Math.min((valHome / 25) * 100, 100);
                   const pctAway = Math.min((valAway / 25) * 100, 100);
-                  const fullScaleGradient = `linear-gradient(90deg,
-                                rgba(255, 0, 0, 1) 0%, rgba(255, 30, 0, 1) 11%, rgba(255, 80, 0, 1) 22%,
-                                rgba(255, 140, 0, 1) 33%, rgba(255, 200, 0, 1) 44%, rgba(255, 255, 0, 1) 55%,
-                                rgba(210, 255, 0, 1) 66%, rgba(150, 255, 0, 1) 77%, rgba(0, 255, 0, 1) 88%,
-                                rgba(0, 255, 100, 1) 100%)`;
                   const colHome = getTrendColor(pctHome);
                   const colAway = getTrendColor(pctAway);
                   const shadowHome = colHome.replace(', 1)', ', 0.2)');
@@ -1738,14 +1930,14 @@ export default function VistaPrePartita({
                 <div className="protocol-label">PROTOCOLLO OPERATIVO</div>
                 <div className="protocol-value">
                   {!selectedMatch?.h2h_data?.is_linear ? (
-                    <span style={{ color: '#ffcc00' }}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
+                    <span style={{ color: isLight ? '#b8860b' : '#ffcc00' }}>⚠️ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
                   ) : selectedMatch?.h2h_data?.classification === 'NON_BVS' ? (
                     <span style={{ color: '#ff4444' }}>⛔ B.T.R.:&nbsp;&nbsp; {selectedMatch?.h2h_data?.tip_market}</span>
                   ) : (
                     <span style={{
                       background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0
-                        ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.8), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))'
-                        : 'linear-gradient(270deg, rgba(217, 255, 0, 0.8), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
+                        ? (isLight ? 'linear-gradient(90deg, rgba(0,120,50,0.9), rgba(0,140,60,1), rgba(40,130,0,1), rgb(0,110,30))' : 'linear-gradient(90deg, rgba(200, 255, 0, 0.8), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))')
+                        : (isLight ? 'linear-gradient(270deg, rgba(180,100,0,0.9), rgba(200,60,0,1), rgba(190,30,0,1), rgb(170,0,0))' : 'linear-gradient(270deg, rgba(217, 255, 0, 0.8), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))'),
                       WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                       filter: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0 ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.4))' : 'drop-shadow(0 0 5px rgba(255, 68, 68, 0.4))',
                       display: 'inline-block'
@@ -1761,8 +1953,8 @@ export default function VistaPrePartita({
                   <div className="rating-title-row">
                     <span className="rating-title">RATING DI COERENZA</span>
                     <span className="rating-value" style={{
-                      color: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? 'rgba(0, 255, 136, 1)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? 'rgba(255, 68, 68, 1)' : 'white',
-                      textShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? '0 0 10px rgba(0, 255, 136, 0.5)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '0 0 10px rgba(255, 68, 68, 0.5)' : 'none'
+                      color: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? (isLight ? 'rgba(0, 140, 60, 1)' : 'rgba(0, 255, 136, 1)') : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? (isLight ? 'rgba(200, 40, 40, 1)' : 'rgba(255, 68, 68, 1)') : (isLight ? '#333' : 'white'),
+                      textShadow: isLight ? 'none' : (Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? '0 0 10px rgba(0, 255, 136, 0.5)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '0 0 10px rgba(255, 68, 68, 0.5)' : 'none')
                     }}>{Number(selectedMatch?.h2h_data?.bvs_match_index || 0).toFixed(2)}</span>
                   </div>
                   <div className="rating-bar-container">
@@ -1772,8 +1964,8 @@ export default function VistaPrePartita({
                       right: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '53.85%' : 'auto',
                       width: `${(Math.abs(Number(selectedMatch?.h2h_data?.bvs_match_index || 0)) / 13) * 100}%`,
                       background: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) >= 0
-                        ? 'linear-gradient(90deg, rgba(200, 255, 0, 0.4), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))'
-                        : 'linear-gradient(270deg, rgba(217, 255, 0, 0.4), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))',
+                        ? (isLight ? 'linear-gradient(90deg, rgba(0,140,60,0.6), rgba(0,160,70,0.8), rgba(40,150,0,0.9), rgb(0,130,50))' : 'linear-gradient(90deg, rgba(200, 255, 0, 0.4), rgba(255, 255, 0, 1), rgba(173, 255, 47, 1), rgb(51, 255, 0))')
+                        : (isLight ? 'linear-gradient(270deg, rgba(200,100,0,0.6), rgba(210,60,0,0.8), rgba(200,30,0,0.9), rgb(180,0,0))' : 'linear-gradient(270deg, rgba(217, 255, 0, 0.4), rgba(255, 165, 0, 1), rgba(255, 69, 0, 1), rgb(241, 0, 0))'),
                       boxShadow: Number(selectedMatch?.h2h_data?.bvs_match_index || 0) > 0 ? '0 0 10px rgba(51, 255, 0, 0.6)' : Number(selectedMatch?.h2h_data?.bvs_match_index || 0) < 0 ? '0 0 10px rgba(241, 0, 0, 0.6)' : 'none'
                     }} />
                   </div>

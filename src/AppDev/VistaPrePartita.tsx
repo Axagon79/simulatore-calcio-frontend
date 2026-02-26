@@ -132,16 +132,16 @@ export default function VistaPrePartita({
     const [standingsData, setStandingsData] = useState<{table: StandingsRow[], table_home: StandingsRow[], table_away: StandingsRow[], leagueName: string} | null>(null);
     const [standingsTab, setStandingsTab] = useState<'total' | 'home' | 'away'>('total');
     const [standingsOpen, setStandingsOpen] = useState(false);
+    const [hoveredStRow, setHoveredStRow] = useState<string | null>(null);
+    const [hoveredStTab, setHoveredStTab] = useState<string | null>(null);
 
     useEffect(() => {
       if (!league) { setStandingsData(null); return; }
       let cancelled = false;
       const url = `${API_BASE}/standings/${encodeURIComponent(league)}`;
-      console.log('[STANDINGS] Fetch:', url, 'league:', league);
       fetch(url)
         .then(r => r.json())
         .then(data => {
-          console.log('[STANDINGS] Response:', data.success, 'table:', data.table?.length);
           if (!cancelled && data.success) {
             setStandingsData({ table: data.table || [], table_home: data.table_home || [], table_away: data.table_away || [], leagueName: data.league || league });
           }
@@ -1241,22 +1241,28 @@ export default function VistaPrePartita({
 
               const homeRow = standingsData.table.find(r => isHome(r));
               const awayRow = standingsData.table.find(r => isAway(r));
-              console.log('[STANDINGS] Matching → home:', homeName, 'tm_id:', homeTmId, '→', homeRow?.team || 'NOT FOUND', '| away:', awayName, 'tm_id:', awayTmId, '→', awayRow?.team || 'NOT FOUND');
-              if (!homeRow || !awayRow) console.log('[STANDINGS] Teams in table:', standingsData.table.map(r => `${r.team}(${r.transfermarkt_id})`).join(', '));
 
               // Stile colonne: # 6% | Squadra 30% | G V P S GF GS DR Pts = 8% ciascuno (64%)
               const colW = { rank: '6%', team: '30%', stat: '8%', pts: '8%' };
-              const cellBase: React.CSSProperties = { textAlign: 'center', padding: '3px 2px' };
+              const cellBase: React.CSSProperties = { textAlign: 'center', padding: '3px 2px', borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.04)'}` };
 
               const renderRow = (r: StandingsRow) => {
                 const zoneCol = getZoneColor(r.rank, standingsData.leagueName);
                 const hl = isHl(r);
                 const bg = isHome(r) ? hlHomeBg : isAway(r) ? hlAwayBg : 'transparent';
+                const rowKey = `${r.rank}-${r.team}`;
+                const hovered = !isMobile && hoveredStRow === rowKey;
+                const hoverBg = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)';
                 return (
-                  <tr key={`${r.rank}-${r.team}`} style={{
-                    background: hl ? bg : 'transparent',
+                  <tr key={rowKey} style={{
+                    background: hl ? bg : hovered ? hoverBg : 'transparent',
                     borderLeft: hl ? `2px solid ${hlBorder}` : '2px solid transparent',
-                  }}>
+                    cursor: !isMobile ? 'pointer' : undefined,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={!isMobile ? () => setHoveredStRow(rowKey) : undefined}
+                  onMouseLeave={!isMobile ? () => setHoveredStRow(null) : undefined}
+                  >
                     <td style={{ ...cellBase, textAlign: 'center', padding: '2px 4px' }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -1271,6 +1277,7 @@ export default function VistaPrePartita({
                       color: hl ? theme.text : theme.textDim,
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       padding: '3px 6px',
+                      borderBottom: cellBase.borderBottom,
                     }}>{r.team}</td>
                     {hasStats ? <>
                       <td style={cellBase}>{r.played}</td>
@@ -1281,7 +1288,7 @@ export default function VistaPrePartita({
                       <td style={cellBase}>{r.goals_against ?? '-'}</td>
                       <td style={cellBase}>{r.goal_diff !== undefined ? (r.goal_diff > 0 ? `+${r.goal_diff}` : r.goal_diff) : '-'}</td>
                     </> : <td style={cellBase}>{r.played}</td>}
-                    <td style={{ ...cellBase, fontWeight: 700 }}>{r.points}</td>
+                    <td style={{ ...cellBase, fontWeight: 700, background: isLight ? 'rgba(250,204,21,0.18)' : 'rgba(96,165,250,0.10)' }}>{r.points}</td>
                   </tr>
                 );
               };
@@ -1298,28 +1305,38 @@ export default function VistaPrePartita({
 
                   {standingsOpen && (
                     <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-                      {(['total', 'home', 'away'] as const).map(tab => (
-                        <button key={tab} onClick={() => setStandingsTab(tab)} style={{
-                          flex: 1, padding: '3px 0', fontSize: 10, fontWeight: 600,
-                          border: 'none', borderRadius: 4, cursor: 'pointer',
-                          background: standingsTab === tab ? theme.cyan : (isLight ? '#e5e7eb' : '#222'),
-                          color: standingsTab === tab ? '#000' : theme.textDim,
-                        }}>
-                          {tab === 'total' ? 'Totale' : tab === 'home' ? 'Casa' : 'Trasferta'}
-                        </button>
-                      ))}
+                      {(['total', 'home', 'away'] as const).map(tab => {
+                        const active = standingsTab === tab;
+                        const hov = hoveredStTab === tab && !active;
+                        return (
+                          <button key={tab} onClick={() => setStandingsTab(tab)}
+                            onMouseEnter={!isMobile ? () => setHoveredStTab(tab) : undefined}
+                            onMouseLeave={!isMobile ? () => setHoveredStTab(null) : undefined}
+                            style={{
+                              flex: 1, padding: '4px 0', fontSize: 10, fontWeight: 600,
+                              border: `1px solid ${active ? (isLight ? '#0891b2' : theme.cyan) : isLight ? '#c0c8d4' : '#3b4560'}`,
+                              borderRadius: 5, cursor: 'pointer',
+                              background: active ? theme.cyan : hov ? (isLight ? '#dbeafe' : '#2a3348') : (isLight ? '#e5e7eb' : '#222'),
+                              color: active ? '#000' : theme.textDim,
+                              transition: 'background 0.15s, border-color 0.15s',
+                            }}>
+                            {tab === 'total' ? 'Totale' : tab === 'home' ? 'Casa' : 'Trasferta'}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
 
                   <div style={{
                     overflowX: 'auto',
+                    border: `1px solid ${isLight ? '#d5dbe3' : '#2a2f42'}`,
+                    borderRadius: 8,
                     ...(standingsOpen ? {
                       maxHeight: 370, overflowY: 'auto',
                       background: isLight ? '#f8f9fb' : 'rgba(0,0,0,0.25)',
-                      borderRadius: 6, padding: '0 2px',
                     } : {}),
                   }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, lineHeight: '22px', tableLayout: 'fixed' }}>
+                      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0', fontSize: 11, lineHeight: '22px', tableLayout: 'fixed' }}>
                         <colgroup>
                           <col style={{ width: colW.rank }} />
                           <col style={{ width: colW.team }} />
@@ -1335,20 +1352,28 @@ export default function VistaPrePartita({
                           <col style={{ width: colW.pts }} />
                         </colgroup>
                         <thead>
-                          <tr style={{ color: isLight ? '#475569' : '#8b95a8', borderBottom: `1px solid ${isLight ? '#d1d5db' : '#2a2f42'}`, position: 'sticky', top: 0, zIndex: 2, background: isLight ? '#eef1f5' : '#161928', fontSize: 10 }}>
-                            <th style={{ textAlign: 'right', paddingRight: 8, fontWeight: 600 }}>#</th>
-                            <th style={{ textAlign: 'left', fontWeight: 600, paddingLeft: 6 }}>Squadra</th>
-                            {hasStats ? <>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>G</th>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>V</th>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>P</th>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>S</th>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>GF</th>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>GS</th>
-                              <th style={{ textAlign: 'center', fontWeight: 600 }}>DR</th>
-                            </> : <th style={{ textAlign: 'center', fontWeight: 600 }}>G</th>}
-                            <th style={{ textAlign: 'center', fontWeight: 700 }}>Pts</th>
-                          </tr>
+                          {(() => {
+                            const hdrBorder = `1.5px solid ${isLight ? '#b8c4d0' : '#3b4560'}`;
+                            const hdrBorderBottom = `2.5px solid ${isLight ? '#b8c4d0' : '#3b4560'}`;
+                            const hdrBg = isLight ? '#eef1f5' : '#161928';
+                            const hdrBase: React.CSSProperties = { textAlign: 'center', fontWeight: 600, background: hdrBg, borderTop: hdrBorder, borderBottom: hdrBorderBottom };
+                            return (
+                              <tr style={{ color: isLight ? '#475569' : '#8b95a8', position: 'sticky', top: 0, zIndex: 2, fontSize: 10, background: hdrBg }}>
+                                <th style={{ ...hdrBase, textAlign: 'right', paddingRight: 8, borderLeft: hdrBorder, borderTopLeftRadius: 6, borderBottomLeftRadius: 6 }}>#</th>
+                                <th style={{ ...hdrBase, textAlign: 'left', paddingLeft: 6 }}>Squadra</th>
+                                {hasStats ? <>
+                                  <th style={hdrBase}>G</th>
+                                  <th style={hdrBase}>V</th>
+                                  <th style={hdrBase}>P</th>
+                                  <th style={hdrBase}>S</th>
+                                  <th style={hdrBase}>GF</th>
+                                  <th style={hdrBase}>GS</th>
+                                  <th style={hdrBase}>DR</th>
+                                </> : <th style={hdrBase}>G</th>}
+                                <th style={{ ...hdrBase, fontWeight: 700, borderRight: hdrBorder, borderTopRightRadius: 6, borderBottomRightRadius: 6, background: isLight ? 'rgba(250,204,21,0.22)' : 'rgba(96,165,250,0.12)' }}>Pts</th>
+                              </tr>
+                            );
+                          })()}
                         </thead>
                         <tbody>
                           {standingsOpen

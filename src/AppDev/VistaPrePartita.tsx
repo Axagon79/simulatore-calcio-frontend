@@ -1297,10 +1297,17 @@ export default function VistaPrePartita({
                 <div style={{ ...styles.card, ...(!isMobile ? { marginTop: -5 } : {}) }}>
                   <div
                     onClick={() => setStandingsOpen(!standingsOpen)}
-                    style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: standingsOpen ? 8 : 4 }}
+                    style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: standingsOpen ? 8 : 4, paddingBottom: 3, borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}` }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 'bold' }}>CLASSIFICA {standingsData.leagueName}</span>
-                    <span style={{ fontSize: 10, color: theme.textDim }}>{standingsOpen ? '▲' : '▼'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 'bold', flexShrink: 0, position: 'relative', top: -9 }}>CLASSIFICA {standingsData.leagueName}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', position: 'relative', top: -9 }}>
+                      <img src={getStemmaLeagueUrl((selectedMatch as any)?.home_mongo_id)} alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: isLight ? '#1e293b' : '#e2e8f0', background: isLight ? 'rgba(37,99,235,0.10)' : 'rgba(0,255,255,0.10)', padding: '1px 6px', borderRadius: 4 }}>{homeName.toUpperCase()}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#1e293b' : '#e2e8f0', margin: '0 2px' }}>-</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: isLight ? '#1e293b' : '#e2e8f0', background: isLight ? 'rgba(168,85,247,0.10)' : 'rgba(168,85,247,0.12)', padding: '1px 6px', borderRadius: 4 }}>{awayName.toUpperCase()}</span>
+                      <img src={getStemmaLeagueUrl((selectedMatch as any)?.away_mongo_id)} alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    </span>
+                    <span style={{ fontSize: 10, color: theme.textDim, flexShrink: 0, position: 'relative', top: -9 }}>{standingsOpen ? '▲' : '▼'}</span>
                   </div>
 
                   {standingsOpen && (

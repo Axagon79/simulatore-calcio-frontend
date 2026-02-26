@@ -257,6 +257,14 @@ export default function BarraLaterale({
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             transition: 'all 0.2s'
           }}
+          onMouseEnter={!isMobile ? (e) => {
+            e.currentTarget.style.background = isLight ? 'rgba(5,249,182,0.28)' : 'rgba(5,249,182,0.18)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          } : undefined}
+          onMouseLeave={!isMobile ? (e) => {
+            e.currentTarget.style.background = isLight ? 'rgba(5,249,182,0.15)' : 'rgba(5,249,182,0.08)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          } : undefined}
         >
           📊 Bankroll
         </button>
@@ -275,6 +283,14 @@ export default function BarraLaterale({
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             transition: 'all 0.2s'
           }}
+          onMouseEnter={!isMobile ? (e) => {
+            e.currentTarget.style.background = isLight ? 'rgba(255,215,0,0.28)' : 'rgba(255,215,0,0.18)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          } : undefined}
+          onMouseLeave={!isMobile ? (e) => {
+            e.currentTarget.style.background = isLight ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.08)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          } : undefined}
         >
           💰 MM
         </button>
@@ -330,6 +346,20 @@ export default function BarraLaterale({
           transition: 'all 0.2s',
           boxShadow: '0 2px 8px rgba(188, 19, 254, 0.3)'
         }}
+        onMouseEnter={!isMobile ? (e) => {
+          e.currentTarget.style.background = isLight
+            ? 'linear-gradient(135deg, rgba(188, 19, 254, 0.25), rgba(0, 180, 200, 0.20))'
+            : 'linear-gradient(135deg, rgba(188, 19, 254, 0.35), rgba(0, 255, 255, 0.18))';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.boxShadow = isLight ? '0 4px 12px rgba(188, 19, 254, 0.25)' : '0 4px 12px rgba(188, 19, 254, 0.4)';
+        } : undefined}
+        onMouseLeave={!isMobile ? (e) => {
+          e.currentTarget.style.background = isLight
+            ? 'linear-gradient(135deg, rgba(188, 19, 254, 0.15), rgba(0, 180, 200, 0.12))'
+            : 'linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))';
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(188, 19, 254, 0.3)';
+        } : undefined}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           🏆 <span style={{ marginLeft: '4px' }}>Best Picks</span>
@@ -357,8 +387,17 @@ export default function BarraLaterale({
           alignItems: 'center',
           gap: '12px',
           cursor: 'pointer',
-          transition: 'background 0.2s'
-        }}>
+          transition: 'all 0.2s'
+        }}
+        onMouseEnter={!isMobile ? (e) => {
+          e.currentTarget.style.background = isLight ? 'rgba(0, 120, 200, 0.10)' : 'rgba(0, 240, 255, 0.12)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        } : undefined}
+        onMouseLeave={!isMobile ? (e) => {
+          e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        } : undefined}
+        >
           {/* STEMMA */}
           <img
             src={selectedCup ? stemmiCoppe[selectedCup] : stemmiCampionati[league]}
@@ -578,8 +617,17 @@ export default function BarraLaterale({
                   marginTop: idx > 0 ? '4px' : '0',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={!isMobile ? (e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = isLight ? '0 2px 8px rgba(0,0,0,0.10)' : '0 2px 8px rgba(0,240,255,0.10)';
+                } : undefined}
+                onMouseLeave={!isMobile ? (e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                } : undefined}
               >
                 <div style={getWidgetGlow(glowColor)} />
                 <div style={{ flex: 1, minWidth: 0 }}>

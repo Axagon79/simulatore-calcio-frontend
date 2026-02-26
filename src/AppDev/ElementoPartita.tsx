@@ -80,12 +80,16 @@ export default function ElementoPartita({
         justifyContent: 'space-between',
         transition: 'all 0.3s ease'
       }}
-      onMouseEnter={(e) => {
-        if (e.currentTarget) e.currentTarget.style.background = isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.08)';
-      }}
-      onMouseLeave={(e) => {
-        if (e.currentTarget) e.currentTarget.style.background = isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.03)';
-      }}
+      onMouseEnter={!isMobile ? (e) => {
+        e.currentTarget.style.background = isLight ? 'rgba(220, 235, 250, 0.95)' : 'rgba(40, 44, 65, 0.95)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+        e.currentTarget.style.boxShadow = isLight ? '0 2px 8px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,240,255,0.08)';
+      } : undefined}
+      onMouseLeave={!isMobile ? (e) => {
+        e.currentTarget.style.background = isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(25, 28, 45, 0.85)';
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      } : undefined}
     >
       {/* A. DATA E ORA (+ nuvoletta Coach AI centrata quando espanso) */}
       <div style={{
@@ -489,15 +493,15 @@ export default function ElementoPartita({
                   let labelColor = appTheme.textDisabled;
 
                   if (isMatchResult) {
-                    boxBg = 'rgba(0, 240, 255, 0.1)';
-                    boxBorder = '1px solid rgba(43, 255, 0, 0.22)';
-                    numColor = 'rgba(51, 255, 0, 0.53)';
-                    labelColor = 'rgb(0, 240, 255)';
+                    boxBg = isLight ? 'rgba(34, 197, 94, 0.12)' : 'rgba(0, 240, 255, 0.1)';
+                    boxBorder = isLight ? '1px solid rgba(34, 197, 94, 0.30)' : '1px solid rgba(43, 255, 0, 0.22)';
+                    numColor = isLight ? '#15803d' : 'rgba(51, 255, 0, 0.53)';
+                    labelColor = isLight ? '#0891b2' : 'rgb(0, 240, 255)';
                   } else if (isLowest) {
-                    boxBg = 'rgba(251, 255, 0, 0.1)';
-                    boxBorder = '1px solid rgba(255, 230, 0, 0.18)';
-                    numColor = 'rgba(238, 255, 0, 0.43)';
-                    labelColor = 'rgba(255, 230, 0, 0.36)';
+                    boxBg = isLight ? 'rgba(245, 158, 11, 0.12)' : 'rgba(251, 255, 0, 0.1)';
+                    boxBorder = isLight ? '1px solid rgba(245, 158, 11, 0.30)' : '1px solid rgba(255, 230, 0, 0.18)';
+                    numColor = isLight ? '#92400e' : 'rgba(238, 255, 0, 0.43)';
+                    labelColor = isLight ? '#b45309' : 'rgba(255, 230, 0, 0.36)';
                   }
 
                   return (
@@ -513,7 +517,7 @@ export default function ElementoPartita({
                       borderRadius: '8px',
                       border: boxBorder,
                       transition: 'all 0.2s',
-                      boxShadow: isLowest && !isMatchResult ? '0 0 5px rgba(0, 255, 127, 0.1)' : 'none'
+                      boxShadow: isLowest && !isMatchResult ? (isLight ? '0 0 5px rgba(245, 158, 11, 0.15)' : '0 0 5px rgba(0, 255, 127, 0.1)') : 'none'
                     }}>
                       <span style={{
                         fontSize: '8px',

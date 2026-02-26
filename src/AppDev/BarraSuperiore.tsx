@@ -113,8 +113,8 @@ export default function BarraSuperiore({
           <button
             onClick={onDashboard}
             style={{
-              background: 'rgba(0, 240, 255, 0.1)',
-              border: '1px solid rgba(0, 240, 255, 0.3)',
+              background: isLight ? 'rgba(0, 120, 200, 0.08)' : 'rgba(0, 240, 255, 0.1)',
+              border: isLight ? '1px solid rgba(0, 120, 200, 0.25)' : '1px solid rgba(0, 240, 255, 0.3)',
               color: theme.cyan,
               padding: '8px 16px',
               borderRadius: '8px',
@@ -123,7 +123,18 @@ export default function BarraSuperiore({
               fontSize: '12px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              transition: 'all 0.2s',
+              position: 'relative' as const,
+              left: '-60px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = isLight ? 'rgba(0, 120, 200, 0.16)' : 'rgba(0, 240, 255, 0.18)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = isLight ? 'rgba(0, 120, 200, 0.08)' : 'rgba(0, 240, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
             <span>&#x27F5;</span> DASHBOARD
@@ -155,6 +166,24 @@ export default function BarraSuperiore({
                     cursor: 'pointer',
                     transition: 'all 0.25s ease',
                     letterSpacing: '0.5px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    if (isActive) {
+                      e.currentTarget.style.filter = 'brightness(1.15)';
+                    } else {
+                      e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)';
+                      e.currentTarget.style.color = isLight ? '#1a1a2e' : '#e2e8f0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    if (isActive) {
+                      e.currentTarget.style.filter = 'none';
+                    } else {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = theme.textFaint;
+                    }
                   }}
                 >
                   {mode === 'calendar' ? 'Calendario' : 'Oggi'}
@@ -305,6 +334,14 @@ export default function BarraSuperiore({
               ...(isMobile ? { marginRight: '-15px' } : {}),
               ...(isLight ? { filter: 'brightness(0.5)' } : {})
             }}
+            onMouseEnter={!isMobile ? (e) => {
+              e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            } : undefined}
+            onMouseLeave={!isMobile ? (e) => {
+              e.currentTarget.style.background = theme.surface08;
+              e.currentTarget.style.transform = 'scale(1)';
+            } : undefined}
             title="Impostazioni"
           >⚙️</button>
         )}

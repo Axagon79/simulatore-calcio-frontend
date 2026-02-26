@@ -73,7 +73,7 @@ const MARKET_LABELS: Record<string, string> = {
 const COLORS_DARK = {
   bg: '#060a14',
   cardBg: 'rgba(15, 23, 42, 0.55)',
-  cardBorder: 'rgba(148, 163, 184, 0.07)',
+  cardBorder: 'rgba(255, 255, 255, 0.18)',
   cyan: '#06b6d4',
   cyanDim: 'rgba(6, 182, 212, 0.12)',
   cyanBorder: 'rgba(6, 182, 212, 0.25)',
@@ -97,7 +97,7 @@ const COLORS_DARK = {
 const COLORS_LIGHT = {
   bg: '#f0f2f5',
   cardBg: 'rgba(255, 255, 255, 0.85)',
-  cardBorder: 'rgba(0, 0, 0, 0.08)',
+  cardBorder: 'rgba(0, 0, 0, 0.30)',
   cyan: '#0077cc',
   cyanDim: 'rgba(0, 119, 204, 0.08)',
   cyanBorder: 'rgba(0, 119, 204, 0.2)',
@@ -553,6 +553,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isMobile = window.innerWidth < 768;
+  const isLight = getThemeMode() === 'light';
 
   const getDateRange = useCallback(() => {
     const to = new Date().toISOString().split('T')[0];
@@ -720,16 +721,18 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
           onClick={() => setFiltroSezione('pronostici')}
           style={{
             background: isPronostici
-              ? `linear-gradient(135deg, ${C.cyanDim}, rgba(6, 182, 212, 0.04))`
+              ? (isLight
+                ? 'linear-gradient(135deg, rgba(0, 119, 204, 0.35), rgba(0, 119, 204, 0.20))'
+                : 'linear-gradient(135deg, rgba(6, 182, 212, 0.38), rgba(6, 182, 212, 0.22))')
               : C.cardBg,
-            border: isPronostici ? `1.5px solid ${C.cyanBorder}` : `1px solid ${C.cardBorder}`,
+            border: isPronostici ? `2px solid ${C.cyanBorder}` : `2px solid ${isLight ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.20)'}`,
             borderRadius: '14px',
             padding: isMobile ? '16px 12px' : '20px',
             cursor: 'pointer',
             textAlign: 'left',
             transition: 'all 0.25s ease',
             transform: isPronostici ? 'scale(1.01)' : 'scale(1)',
-            opacity: isPronostici ? 1 : 0.6,
+            opacity: 1,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -741,19 +744,19 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               boxShadow: `0 0 8px ${C.cyan}`,
             }} />}
           </div>
-          <div style={{ fontSize: '0.68em', color: C.textMuted, lineHeight: 1.4, marginBottom: '10px' }}>
+          <div style={{ fontSize: '0.68em', color: C.textSec, lineHeight: 1.4, marginBottom: '10px' }}>
             Quote {'\u2264'} 2.50, rischio pi{'\u00F9'} contenuto
           </div>
           {proData && proData.total > 0 ? (
             <>
-              <div style={{ fontSize: isMobile ? '2em' : '2.4em', fontWeight: 800, color: isPronostici ? rateColor(proData.hit_rate ?? 0) : C.textMuted, lineHeight: 1, letterSpacing: '-0.03em' }}>
+              <div style={{ fontSize: isMobile ? '2em' : '2.4em', fontWeight: 800, color: isPronostici ? rateColor(proData.hit_rate ?? 0) : C.textSec, lineHeight: 1, letterSpacing: '-0.03em' }}>
                 {proData.hit_rate ?? '—'}<span style={{ fontSize: '0.5em', opacity: 0.7 }}>%</span>
               </div>
-              <div style={{ fontSize: '0.72em', color: C.textMuted, marginTop: '4px' }}>
+              <div style={{ fontSize: '0.72em', color: C.textSec, marginTop: '4px' }}>
                 {proData.hits}/{proData.total} centrati
               </div>
               {proData.roi != null && (
-                <div style={{ fontSize: '0.72em', color: isPronostici ? profitColor(proData.profit) : C.textMuted, marginTop: '2px' }}>
+                <div style={{ fontSize: '0.72em', color: isPronostici ? profitColor(proData.profit) : C.textSec, marginTop: '2px' }}>
                   ROI {formatRoi(proData.roi)} &middot; {formatProfit(proData.profit)}
                 </div>
               )}
@@ -768,16 +771,18 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
           onClick={() => setFiltroSezione('alto_rendimento')}
           style={{
             background: !isPronostici
-              ? `linear-gradient(135deg, ${C.amberDim}, rgba(245, 158, 11, 0.03))`
+              ? (isLight
+                ? 'linear-gradient(135deg, rgba(217, 119, 6, 0.35), rgba(217, 119, 6, 0.20))'
+                : 'linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(245, 158, 11, 0.20))')
               : C.cardBg,
-            border: !isPronostici ? `1.5px solid ${C.amberBorder}` : `1px solid ${C.cardBorder}`,
+            border: !isPronostici ? `2px solid ${C.amberBorder}` : `2px solid ${isLight ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.20)'}`,
             borderRadius: '14px',
             padding: isMobile ? '16px 12px' : '20px',
             cursor: 'pointer',
             textAlign: 'left',
             transition: 'all 0.25s ease',
             transform: !isPronostici ? 'scale(1.01)' : 'scale(1)',
-            opacity: !isPronostici ? 1 : 0.6,
+            opacity: 1,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -789,21 +794,21 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
               boxShadow: `0 0 8px ${C.amber}`,
             }} />}
           </div>
-          <div style={{ fontSize: '0.68em', color: C.textMuted, lineHeight: 1.4, marginBottom: '10px' }}>
+          <div style={{ fontSize: '0.68em', color: C.textSec, lineHeight: 1.4, marginBottom: '10px' }}>
             Quote &gt; 2.50, rischio maggiore ma profitto pi{'\u00F9'} alto
           </div>
           {arData && arData.total > 0 ? (
             <>
               {/* Hero: Yield (non HR%) */}
-              <div style={{ fontSize: isMobile ? '2em' : '2.4em', fontWeight: 800, color: !isPronostici ? profitColor(arData.roi ?? 0) : C.textMuted, lineHeight: 1, letterSpacing: '-0.03em' }}>
+              <div style={{ fontSize: isMobile ? '2em' : '2.4em', fontWeight: 800, color: !isPronostici ? profitColor(arData.roi ?? 0) : C.textSec, lineHeight: 1, letterSpacing: '-0.03em' }}>
                 {arData.roi != null ? (
                   <>{arData.roi > 0 ? '+' : ''}{arData.roi}<span style={{ fontSize: '0.5em', opacity: 0.7 }}>%</span></>
                 ) : '—'}
               </div>
-              <div style={{ fontSize: '0.72em', color: C.textMuted, marginTop: '4px' }}>
+              <div style={{ fontSize: '0.72em', color: C.textSec, marginTop: '4px' }}>
                 Yield &middot; {formatProfit(arData.profit)}
               </div>
-              <div style={{ fontSize: '0.72em', color: !isPronostici ? (C.textSec) : C.textMuted, marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72em', color: C.textSec, marginTop: '2px' }}>
                 HR {arData.hit_rate ?? '—'}% &middot; {arData.hits}/{arData.total}
               </div>
             </>
@@ -814,7 +819,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
       </div>
 
       {/* ─── Tab Dati / Analisi ──────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '2px', marginBottom: '16px', background: C.barBg, borderRadius: '10px', padding: '3px' }}>
+      <div style={{ display: 'flex', gap: '2px', marginBottom: '16px', background: isLight ? '#eedcaa' : '#3a3218', borderRadius: '10px', padding: '3px', border: `1.5px solid ${isLight ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.18)'}` }}>
         {([
           { id: 'dati' as const, label: 'Statistiche' },
           { id: 'analisi' as const, label: 'Insights' },
@@ -824,14 +829,15 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             onClick={() => setActiveView(tab.id)}
             style={{
               flex: 1,
-              background: activeView === tab.id ? C.surfaceHover : 'transparent',
+              background: activeView === tab.id ? (isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.20)') : 'transparent',
               border: 'none',
-              color: activeView === tab.id ? C.text : C.textMuted,
+              color: activeView === tab.id ? C.text : C.text,
               borderRadius: '8px',
               padding: '9px 16px',
               cursor: 'pointer',
               fontSize: '0.85em',
-              fontWeight: activeView === tab.id ? 600 : 400,
+              fontWeight: activeView === tab.id ? 700 : 500,
+              opacity: activeView === tab.id ? 1 : 0.6,
               transition: 'all 0.2s ease',
             }}
           >

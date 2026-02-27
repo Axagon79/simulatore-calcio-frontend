@@ -7,6 +7,13 @@ import {
   HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType,
   LevelFormat, PageBreak
 } from 'docx';
+import {
+  commentoGlobale, commentoPerTipo, commentoCategorie,
+  commentoGiorni, commentoSettimane, commentoCorrelazioni, commentoFeatures,
+  commentoCluster, commentoCampionati,
+  commentoMeleMarcePrincipale, commentoDecisionTree, commentoErroriAltaConf, commentoErroriInspiegabili,
+  commentoFiltriSim, commentoRaccomandazioni, commentoSintesi, notaStatistica,
+} from './commentiReport';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type R = any;
@@ -91,6 +98,8 @@ export async function generateReport(data: R): Promise<Blob> {
   sections.push(h1('1. Performance Globale'));
   sections.push(infoBox(`HR: ${fmtHr(perf.hr || 0)}  |  P/L: ${fmtPl(perf.pl || 0)}  |  ROI: ${fmtRoi(perf.roi || 0)}${perf.z_score ? `  |  z-score: ${perf.z_score.toFixed(2)}` : ''}`, COLORS.lightGreen));
   sections.push(spacer());
+  { const txt = commentoGlobale(data); if (txt) sections.push(p(txt)); }
+  sections.push(spacer());
 
   // 1.1 Per tipo
   if (data.per_tipo?.length) {
@@ -98,6 +107,7 @@ export async function generateReport(data: R): Promise<Blob> {
     const cw = [2000, 1600, 1600, 2000, 1826];
     sections.push(makeTable(['Tipo', 'N', 'Hit Rate', 'P/L', 'ROI'], cw,
       data.per_tipo.map((t: R) => [t.tipo, String(t.n), fmtHr(t.hr), fmtPl(t.pl), fmtRoi(t.roi)])));
+    { const txt = commentoPerTipo(data); if (txt) sections.push(p(txt)); }
     sections.push(spacer());
   }
 
@@ -108,6 +118,7 @@ export async function generateReport(data: R): Promise<Blob> {
     sections.push(makeTable(['Categoria', 'N', 'Hit Rate', 'P/L', 'ROI'], cw,
       data.per_categoria.map((cat: R) => [cat.categoria, String(cat.n), fmtHr(cat.hr), fmtPl(cat.pl), fmtRoi(cat.roi)]),
       data.per_categoria.map((cat: R) => cat.categoria === 'Pronostici' ? COLORS.lightGreen : COLORS.lightBlue)));
+    { const txt = commentoCategorie(data); if (txt) sections.push(p(txt)); }
     sections.push(spacer());
   }
 
@@ -128,12 +139,14 @@ export async function generateReport(data: R): Promise<Blob> {
   if (data.chi_squared?.p_value != null) {
     sections.push(infoBox(`Chi-squared p-value: ${data.chi_squared.p_value.toFixed(4)}${data.chi_squared.p_value > 0.05 ? ' — Distribuzione uniforme (nessun giorno statisticamente diverso)' : ' — Differenza significativa tra giorni'}`));
   }
+  { const txt = commentoGiorni(data); if (txt) sections.push(p(txt)); }
 
   if (data.settimane?.length) {
     sections.push(h2('2.2 Andamento Settimanale'));
     const cw = [3000, 1500, 1800, 2726];
     sections.push(makeTable(['Settimana', 'N', 'HR', 'P/L'], cw,
       data.settimane.map((s: R) => [s.nome || s.periodo, String(s.n), fmtHr(s.hr), fmtPl(s.pl)])));
+    { const txt = commentoSettimane(data); if (txt) sections.push(p(txt)); }
   }
 
   sections.push(pageBreak());
@@ -147,6 +160,7 @@ export async function generateReport(data: R): Promise<Blob> {
       const cw = [3000, 2013, 2013, 2000];
       sections.push(makeTable(['Feature', 'Pearson', 'Spearman', ''], cw,
         data.top_correlazioni.map((r: R) => [r.feature, r.pearson.toFixed(4), r.spearman.toFixed(4), ''])));
+      { const txt = commentoCorrelazioni(data); if (txt) sections.push(p(txt)); }
       sections.push(spacer());
     }
 
@@ -155,6 +169,7 @@ export async function generateReport(data: R): Promise<Blob> {
       const cw = [3000, 2013, 2013, 2000];
       sections.push(makeTable(['Feature', 'Importanza (RF)', 'Importanza (XGB)', ''], cw,
         data.top_features.map((r: R) => [r.feature, r.importance_rf.toFixed(4), r.importance_xgb.toFixed(4), ''])));
+      { const txt = commentoFeatures(data); if (txt) sections.push(p(txt)); }
     }
     sections.push(pageBreak());
   }
@@ -166,6 +181,7 @@ export async function generateReport(data: R): Promise<Blob> {
     sections.push(makeTable(['Cluster', 'N', 'Hit Rate', 'Quota Media', 'ROI', ''], cw,
       data.cluster.map((cl: R) => [String(cl.id), String(cl.n), fmtHr(cl.hr), cl.quota_media.toFixed(3), fmtRoi(cl.roi), '']),
       data.cluster.map((cl: R) => cl.hr < 50 ? COLORS.lightRed : cl.hr >= 70 ? COLORS.lightGreen : undefined)));
+    { const txt = commentoCluster(data); if (txt) sections.push(p(txt)); }
     sections.push(spacer());
   }
 
@@ -180,6 +196,7 @@ export async function generateReport(data: R): Promise<Blob> {
         return [l.league, String(l.n), fmtHr(l.hr), fmtRoi(l.roi), stato];
       }),
       sorted.map((l: R) => l.hr >= 55 && l.roi >= 0 ? COLORS.lightGreen : l.hr < 45 ? COLORS.lightRed : undefined)));
+    { const txt = commentoCampionati(data); if (txt) sections.push(p(txt)); }
     sections.push(pageBreak());
   }
 
@@ -193,6 +210,7 @@ export async function generateReport(data: R): Promise<Blob> {
       sections.push(makeTable(['Combinazione', 'N', 'HR', 'Delta', 'Azione'], cw,
         data.combo_tossiche.slice(0, 10).map((ct: R) => [ct.combo, String(ct.n), fmtHr(ct.hr), `${ct.delta?.toFixed(1) ?? ct.hr_diff?.toFixed(1) ?? '?'}pp`, ct.hr < 35 ? 'SCARTA' : 'Dimezza']),
         data.combo_tossiche.slice(0, 10).map((ct: R) => ct.hr < 35 ? COLORS.lightRed : COLORS.lightGray)));
+      { const txt = commentoMeleMarcePrincipale(data); if (txt) sections.push(p(txt)); }
       sections.push(spacer());
     }
 
@@ -201,6 +219,7 @@ export async function generateReport(data: R): Promise<Blob> {
       const cw = [1500, 5026, 2500];
       const rules = data.regole_dt.map((r: R) => typeof r === 'string' ? ['-', r, 'LOSS'] : [r.id || '-', r.condizione || r, r.esito || 'LOSS']);
       sections.push(makeTable(['ID', 'Condizione', 'Esito'], cw, rules, rules.map(() => COLORS.lightRed)));
+      { const txt = commentoDecisionTree(data); if (txt) sections.push(p(txt)); }
       sections.push(spacer());
     }
 
@@ -216,6 +235,7 @@ export async function generateReport(data: R): Promise<Blob> {
           features.map(f => [f, String(ea.profilo_win[f] ?? '?'), String(ea.profilo_loss[f] ?? '?')]),
           features.map((_f, i) => i % 2 === 0 ? COLORS.lightGray : undefined)));
       }
+      { const txt = commentoErroriAltaConf(data); if (txt) sections.push(p(txt)); }
       sections.push(spacer());
     }
 
@@ -228,6 +248,7 @@ export async function generateReport(data: R): Promise<Blob> {
         sections.push(p('Per campionato:', { bold: true }));
         ei.per_campionato.slice(0, 5).forEach((l: R) => sections.push(p(`  ${l.league}: ${l.n}`)));
       }
+      { const txt = commentoErroriInspiegabili(data); if (txt) sections.push(p(txt)); }
     }
     sections.push(pageBreak());
   }
@@ -239,6 +260,7 @@ export async function generateReport(data: R): Promise<Blob> {
     sections.push(makeTable(['Filtro', 'Eliminati', 'HR Prima', 'HR Dopo', 'Delta HR', 'Delta P/L'], cw,
       data.filtri_sim.map((f: R) => [f.filtro, String(f.eliminati), fmtHr(f.hr_prima), fmtHr(f.hr_dopo), `${f.hr_delta >= 0 ? '+' : ''}${f.hr_delta.toFixed(1)}pp`, fmtPl(f.pl_delta)]),
       data.filtri_sim.map(() => COLORS.lightGray)));
+    { const txt = commentoFiltriSim(data); if (txt) sections.push(p(txt)); }
     sections.push(spacer());
   }
 
@@ -249,11 +271,14 @@ export async function generateReport(data: R): Promise<Blob> {
     sections.push(makeTable(['#', 'Trigger', 'Azione', 'Priorita', 'Razionale'], cw,
       data.filtri_raccomandati.map((f: R) => [f.id || '-', f.trigger, f.azione, f.priorita, f.razionale || '']),
       data.filtri_raccomandati.map((f: R) => f.priorita === 'ALTA' ? COLORS.lightRed : COLORS.lightGray)));
+    { const txt = commentoRaccomandazioni(data); if (txt) sections.push(p(txt)); }
     sections.push(pageBreak());
   }
 
   // --- SEZ 9: SINTESI ---
   sections.push(h1('9. Sintesi e Conclusioni'));
+  { const txt = commentoSintesi(data); if (txt) sections.push(p(txt)); }
+  sections.push(spacer());
 
   if (data.sintesi?.length) {
     const cw = [3500, 5526];
@@ -274,6 +299,7 @@ export async function generateReport(data: R): Promise<Blob> {
     sections.push(infoBox(btText));
   }
 
+  { const txt = notaStatistica(data); if (txt) sections.push(infoBox(txt, COLORS.lightGray)); }
   sections.push(spacer());
   sections.push(p(`Puppals Analytics — ${data.mese === 'globale' ? 'Report Globale' : data.mese}`, { italics: true, color: '999999', size: 18 }));
 

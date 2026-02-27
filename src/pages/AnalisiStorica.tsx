@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getTheme, getThemeMode } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
+import {
+  commentoGlobale, commentoPerTipo, commentoCategorie,
+  commentoGiorni, commentoSettimane, commentoCorrelazioni, commentoFeatures,
+  commentoCluster, commentoCampionati,
+  commentoMeleMarcePrincipale, commentoDecisionTree, commentoErroriAltaConf, commentoErroriInspiegabili,
+  commentoFiltriSim, commentoRaccomandazioni, commentoSintesi, notaStatistica,
+} from '../utils/commentiReport';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -138,6 +145,15 @@ function Card({ children }: { children: React.ReactNode }) {
   return <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: '16px', padding: '20px' }}>{children}</div>;
 }
 
+function CommentBox({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <div style={{ background: C.infoBg, borderLeft: `4px solid ${C.accent}`, padding: '12px 16px', margin: '12px 0 4px', borderRadius: '0 8px 8px 0' }}>
+      <p style={{ margin: 0, fontSize: '13px', color: C.text, lineHeight: 1.7, opacity: 0.9 }}>{text}</p>
+    </div>
+  );
+}
+
 const thStyle = (align: string = 'right') => ({ padding: '10px 12px', textAlign: align as 'left' | 'right', color: C.textDim, fontWeight: '600' as const, fontSize: '11px', textTransform: 'uppercase' as const, borderBottom: `1px solid ${C.cardBorder}` });
 const tdStyle = (align: string = 'right') => ({ padding: '10px 12px', textAlign: align as 'left' | 'right' });
 
@@ -153,6 +169,29 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
   const [error, setError] = useState('');
   const [isMobile] = useState(window.innerWidth < 768);
   const [downloading, setDownloading] = useState(false);
+
+  const commenti = useMemo(() => {
+    if (!report) return null;
+    return {
+      globale: commentoGlobale(report),
+      perTipo: commentoPerTipo(report),
+      categorie: commentoCategorie(report),
+      giorni: commentoGiorni(report),
+      settimane: commentoSettimane(report),
+      correlazioni: commentoCorrelazioni(report),
+      features: commentoFeatures(report),
+      cluster: commentoCluster(report),
+      campionati: commentoCampionati(report),
+      meleMarcePrincipale: commentoMeleMarcePrincipale(report),
+      decisionTree: commentoDecisionTree(report),
+      erroriAltaConf: commentoErroriAltaConf(report),
+      erroriInspiegabili: commentoErroriInspiegabili(report),
+      filtriSim: commentoFiltriSim(report),
+      raccomandazioni: commentoRaccomandazioni(report),
+      sintesi: commentoSintesi(report),
+      nota: notaStatistica(report),
+    };
+  }, [report]);
 
   useEffect(() => {
     const admin = checkAdmin();
@@ -279,6 +318,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
               {report.performance.z_score > 2.58 && <span style={{ marginLeft: '8px', color: C.success }}>Statisticamente significativo (99%)</span>}
             </InfoBox>
           )}
+          {commenti && <CommentBox text={commenti.globale} />}
 
           {/* 1.1 Per tipo */}
           {report.per_tipo && report.per_tipo.length > 0 && (
@@ -300,6 +340,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   ))}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.perTipo} />}
             </Card>
           )}
 
@@ -321,6 +362,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   </div>
                 ))}
               </div>
+              {commenti && <CommentBox text={commenti.categorie} />}
             </Card>
           )}
 
@@ -345,6 +387,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   {report.chi_squared.p_value > 0.05 && <span> — Distribuzione uniforme (nessun giorno statisticamente diverso)</span>}
                 </InfoBox>
               )}
+              {commenti && <CommentBox text={commenti.giorni} />}
             </Card>
           )}
 
@@ -368,6 +411,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   ))}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.settimane} />}
             </Card>
           )}
 
@@ -389,6 +433,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   ))}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.correlazioni} />}
             </Card>
           )}
 
@@ -410,6 +455,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   ))}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.features} />}
             </Card>
           )}
 
@@ -427,6 +473,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   </div>
                 ))}
               </div>
+              {commenti && <CommentBox text={commenti.cluster} />}
             </Card>
           )}
 
@@ -454,6 +501,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   })}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.campionati} />}
             </Card>
           )}
 
@@ -477,6 +525,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   ))}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.meleMarcePrincipale} />}
             </Card>
           )}
 
@@ -504,6 +553,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   })}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.decisionTree} />}
             </Card>
           )}
 
@@ -526,6 +576,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                 ))}
               </div>
               <InfoBox>Soglia confidenza: {report.errori_alta_conf.soglia ?? 65} — Totale: {report.errori_alta_conf.totale} pronostici ad alta confidenza</InfoBox>
+              {commenti && <CommentBox text={commenti.erroriAltaConf} />}
             </Card>
           )}
 
@@ -560,6 +611,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   </div>
                 )}
               </div>
+              {commenti && <CommentBox text={commenti.erroriInspiegabili} />}
             </Card>
           )}
 
@@ -584,6 +636,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   ))}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.filtriSim} />}
             </Card>
           )}
 
@@ -619,6 +672,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   })}
                 </tbody>
               </table>
+              {commenti && <CommentBox text={commenti.raccomandazioni} />}
             </Card>
           )}
 
@@ -626,6 +680,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
           {report.sintesi && report.sintesi.length > 0 && (
             <Card>
               <SectionTitle num={9}>Sintesi e Conclusioni</SectionTitle>
+              {commenti && <CommentBox text={commenti.sintesi} />}
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead><tr style={{ background: C.headerBg }}>
                   {['Metrica', 'Valore'].map(h => <th key={h} style={thStyle('left')}>{h}</th>)}
@@ -657,6 +712,7 @@ export default function AnalisiStorica({ onBack }: AnalisiStoricaProps) {
                   </InfoBox>
                 )}
               </div>
+              {commenti && <CommentBox text={commenti.nota} />}
             </Card>
           )}
 

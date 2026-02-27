@@ -2636,11 +2636,28 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
                 .filter(predMatchesMarket);
               const sourceCounts = SOURCE_DEFS.map(g => {
-                const total = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || ''))).length;
-                return { ...g, total };
+                const matchingPreds = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || '')));
+                const total = matchingPreds.length;
+                let hits = 0, finished = 0;
+                matchingPreds.forEach(p => {
+                  p.pronostici?.filter((t: any) => g.match(t.source || '')).forEach((t: any) => {
+                    const h = getEffectiveHit(p, t);
+                    if (h !== null) { finished++; if (h) hits++; }
+                  });
+                });
+                const hr = finished > 0 ? Math.round((hits / finished) * 100) : null;
+                return { ...g, total, hits, finished, hr };
               }).filter(g => g.total > 0);
               if (sourceCounts.length <= 1) return null;
               const totalAll = basePreds.length;
+              let allHits = 0, allFinished = 0;
+              basePreds.forEach(p => {
+                p.pronostici?.forEach((t: any) => {
+                  const h = getEffectiveHit(p, t);
+                  if (h !== null) { allFinished++; if (h) allHits++; }
+                });
+              });
+              const allHr = allFinished > 0 ? Math.round((allHits / allFinished) * 100) : null;
               return (
                 <div
                   style={{
@@ -2677,6 +2694,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         }}
                       >
                         Tutti <span style={{ fontSize: '9px', opacity: 0.7 }}>{totalAll}</span>
+                        {allHr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: allHr >= 50 ? theme.hitText : theme.missText }}>{allHr}%</span>}
                       </button>
                       {sourceCounts.map(g => {
                         const isActive = sourceFilter === g.id;
@@ -2696,6 +2714,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           >
                             <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textDim, fontWeight: '700' }}>{g.label}</span>
                             <span style={{ fontSize: '9px', color: isActive ? g.color : theme.textFaint, fontWeight: '600' }}>{g.total}</span>
+                            {g.hr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: g.hr >= 50 ? theme.hitText : theme.missText }}>{g.hr}%</span>}
                           </button>
                         );
                       })}

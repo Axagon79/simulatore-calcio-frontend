@@ -49,8 +49,8 @@ function h2(text: string) {
   return new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text, font: 'Arial', size: 28, bold: true, color: COLORS.accent })], spacing: { before: 280, after: 120 } });
 }
 
-function p(text: string, opts: { bold?: boolean; italic?: boolean; color?: string; size?: number } = {}) {
-  return new Paragraph({ spacing: { before: 60, after: 60 }, children: [new TextRun({ text, font: 'Arial', size: opts.size || 20, bold: opts.bold, italic: opts.italic, color: opts.color || '000000' })] });
+function p(text: string, opts: { bold?: boolean; italics?: boolean; color?: string; size?: number } = {}) {
+  return new Paragraph({ spacing: { before: 60, after: 60 }, children: [new TextRun({ text, font: 'Arial', size: opts.size || 20, bold: opts.bold, italics: opts.italics, color: opts.color || '000000' })] });
 }
 
 function infoBox(text: string, bg: string = COLORS.lightBlue) {
@@ -275,7 +275,7 @@ export async function generateReport(data: R): Promise<Blob> {
   }
 
   sections.push(spacer());
-  sections.push(p(`Puppals Analytics — ${data.mese === 'globale' ? 'Report Globale' : data.mese}`, { italic: true, color: '999999', size: 18 }));
+  sections.push(p(`Puppals Analytics — ${data.mese === 'globale' ? 'Report Globale' : data.mese}`, { italics: true, color: '999999', size: 18 }));
 
   // --- BUILD DOCUMENT ---
   const doc = new Document({

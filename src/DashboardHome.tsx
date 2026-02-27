@@ -12,6 +12,7 @@ const API_BASE = isLocal
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode, getMobileTheme } from './AppDev/costanti';
+import { checkAdmin } from './permissions';
 import StemmaImg from './components/StemmaImg';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -338,7 +339,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           {[
             { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: `${theme.cyan}20`, borderColor: `${theme.cyan}44`, onClick: () => { if (onGoToToday) onGoToToday(); } },
             { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: `${theme.success}20`, borderColor: `${theme.success}40`, onClick: () => { window.location.href = '/track-record'; } },
-            { label: 'Coach AI', icon: '\uD83E\uDD16', color: theme.purple, bg: `${theme.purple}20`, borderColor: `${theme.purple}44`, onClick: () => setCoachOpen(true) }
+            { label: 'Coach AI', icon: '\uD83E\uDD16', color: theme.purple, bg: `${theme.purple}20`, borderColor: `${theme.purple}44`, onClick: () => setCoachOpen(true) },
+            ...(checkAdmin() ? [{ label: 'Analisi', icon: '\uD83D\uDCC8', color: theme.warning, bg: `${theme.warning}20`, borderColor: `${theme.warning}44`, onClick: () => { window.location.href = '/analisi-storica'; } }] : [])
           ].map(btn => (
             <button
               key={btn.label}

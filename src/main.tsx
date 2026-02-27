@@ -19,6 +19,7 @@ import UnifiedPredictions from './UnifiedPredictions';
 import MoneyTracker from './pages/MoneyTracker';
 import StepSystem from './pages/StepSystem';
 import Settings from './pages/Settings';
+import AnalisiStorica from './pages/AnalisiStorica';
 
 function AppRoot() {
   const [showSettings, setShowSettings] = useState(() => {
@@ -53,6 +54,7 @@ function AppRoot() {
           <Route path="/step-system" element={<StepSystem onBack={() => window.history.back()} />} />
           <Route path="/sistema-c" element={<SistemaC />} />
           <Route path="/best-picks" element={<UnifiedPredictions onBack={() => window.history.back()} />} />
+          <Route path="/analisi-storica" element={<AnalisiStorica onBack={() => window.history.back()} />} />
           <Route path="/*" element={<AppDev />} />
         </Routes>
       </BrowserRouter>

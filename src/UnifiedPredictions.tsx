@@ -868,7 +868,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const hasDetail = !!(pred.segno_dettaglio || pred.gol_dettaglio || (pred.streak_home && pred.streak_away));
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
     const effScore = getEffectiveScore(pred);
-    const effPredHit = effScore ? (pred.real_score ? pred.hit : pred.pronostici?.some(p => calculateHitFromScore(pred.live_score!, p.pronostico, p.tipo) === true)) : null;
+    const effPredHit = effScore ? pred.pronostici?.some(p => {
+      if (pred.real_score) return p.hit === true;
+      return calculateHitFromScore(pred.live_score!, p.pronostico, p.tipo) === true;
+    }) ?? null : null;
     const barColor = effScore ? (effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
@@ -888,7 +891,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         const resp = await fetch(`${API_BASE}/chat/match-analysis-premium`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, isAdmin: 'true' }),
+          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, isAdmin: 'true', section: activeTab === 'alto_rendimento' ? 'Alto Rendimento' : 'Pronostici' }),
         });
         const data = await resp.json();
         if (data.success) {
@@ -2556,7 +2559,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
                         const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
-                        const matchHits = matchesFinished.filter(p => p.real_score ? p.hit === true : p.pronostici?.some(pr => calculateHitFromScore(p.live_score!, pr.pronostico, pr.tipo) === true)).length;
+                        const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
+                          if (p.real_score) return pr.hit === true;
+                          return calculateHitFromScore(p.live_score!, pr.pronostico, pr.tipo) === true;
+                        })).length;
                         const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;
                         return (

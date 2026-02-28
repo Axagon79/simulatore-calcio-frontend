@@ -350,6 +350,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     { id: 'c96',  label: 'C96',  color: isLight ? '#047857' : '#10b981', match: s => s.includes('combo96') },
     { id: 'xd',   label: 'XD',   color: isLight ? '#4338ca' : '#6366f1', match: s => s.includes('xdraw') },
     { id: 'hw',   label: 'HW',   color: isLight ? '#15803d' : '#22c55e', match: s => s.includes('_hw') },
+    { id: 's8f',  label: 'S8F',  color: isLight ? '#9333ea' : '#c084fc', match: s => s.includes('_screm') },
   ];
 
   // Funzione filtraggio source su prediction
@@ -1066,10 +1067,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                     {source && (
                       <span style={{
-                        fontSize: '8px', fontWeight: '700', color: '#a78bfa',
-                        background: 'rgba(167,139,250,0.12)', borderRadius: '3px', padding: '1px 4px',
+                        fontSize: '8px', fontWeight: '700',
+                        color: source.includes('_screm') ? (isLight ? '#9333ea' : '#c084fc') : '#a78bfa',
+                        background: source.includes('_screm') ? 'rgba(192,132,252,0.12)' : 'rgba(167,139,250,0.12)',
+                        borderRadius: '3px', padding: '1px 4px',
                       }}>
-                        {source}
+                        {source.includes('_screm') ? 'S8F' : source}
                       </span>
                     )}
                     {isAdmin && p.edge != null && p.edge > 0 && (

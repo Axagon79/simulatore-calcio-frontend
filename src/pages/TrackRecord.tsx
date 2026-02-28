@@ -1054,11 +1054,28 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
           </div>
 
           {/* ─── Per Algoritmo (source) ──────────────────────────────────── */}
-          {data.breakdown_source && Object.keys(data.breakdown_source).length > 0 && (
+          {data.breakdown_source && Object.keys(data.breakdown_source).length > 0 && (() => {
+            // Raggruppa source _screm sotto S8F
+            const merged: Record<string, typeof data.breakdown_source[string]> = {};
+            for (const [src, stats] of Object.entries(data.breakdown_source)) {
+              const key = src.includes('_screm') ? 'S8F' : src;
+              if (!merged[key]) {
+                merged[key] = { ...stats };
+              } else {
+                const m = merged[key];
+                m.hits += stats.hits;
+                m.total += stats.total;
+                m.profit = Math.round((m.profit + stats.profit) * 100) / 100;
+                m.hit_rate = m.total > 0 ? Math.round((m.hits / m.total) * 1000) / 10 : 0;
+                const totalWithQuota = m.total;
+                m.roi = totalWithQuota > 0 ? Math.round((m.profit / totalWithQuota) * 1000) / 10 : null;
+              }
+            }
+            return (
             <div style={card}>
               <div style={sectionTitle}>Per Algoritmo</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {Object.entries(data.breakdown_source)
+                {Object.entries(merged)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .map(([src, stats]) => (
                     <div key={src} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1083,7 +1100,8 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                   ))}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* ─── Per Campionato ───────────────────────────────────────────── */}
           <div style={card}>

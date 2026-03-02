@@ -2553,26 +2553,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           if (totalAllTips === 0) return null;
           return (
             <>
-            {/* Capsula Filtri & Statistiche — contenitore collassabile */}
-            <div style={{
-              background: isLight ? '#eeeeee' : '#1a1d2e',
-              border: isLight ? '1px solid #e0e2e6' : '1px solid #2d3045',
-              borderRadius: '12px', marginBottom: '8px',
-              overflow: 'hidden', transition: 'all 0.2s ease'
-            }}>
-              <div
-                onClick={() => setFiltersStatsOpen(!filtersStatsOpen)}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '8px 14px', cursor: 'pointer', userSelect: 'none' as const
-                }}
-              >
-                <span style={{ fontSize: '16px', color: theme.textMuted, fontWeight: '700' }}>Filtri & Statistiche</span>
-                <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: filtersStatsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▼</span>
-              </div>
-              {filtersStatsOpen && (
-                <div style={{ padding: '0 8px 8px' }}>
-            {/* Contenitore Rendimento collassabile */}
+            {/* Contenitore Rendimento — sempre visibile sopra Filtri & Statistiche */}
             {(() => {
               const yieldColor = yieldPct !== null && yieldPct >= 0 ? theme.financePositive : theme.missText;
               return (
@@ -2684,6 +2665,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </div>
               );
             })()}
+            {/* Capsula Filtri & Statistiche — contenitore collassabile */}
+            <div style={{
+              background: isLight ? '#eeeeee' : '#1a1d2e',
+              border: isLight ? '1px solid #e0e2e6' : '1px solid #2d3045',
+              borderRadius: '12px', marginBottom: '8px',
+              overflow: 'hidden', transition: 'all 0.2s ease'
+            }}>
+              <div
+                onClick={() => setFiltersStatsOpen(!filtersStatsOpen)}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 14px', cursor: 'pointer', userSelect: 'none' as const
+                }}
+              >
+                <span style={{ fontSize: '16px', color: theme.textMuted, fontWeight: '700' }}>Filtri & Statistiche</span>
+                <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: filtersStatsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▼</span>
+              </div>
+              {filtersStatsOpen && (
+                <div style={{ padding: '0 8px 8px' }}>
             {/* Contenitore Origine collassabile */}
             {(() => {
               const basePreds = (activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds)
@@ -2728,24 +2728,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                   >
                     <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Filtra per Algoritmo</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
-                      {sourceCounts.filter(g => g.finished > 0 && g.hr !== null).map(g => {
-                        const hrColor = g.hr! >= 50 ? theme.hitText : theme.missText;
-                        return (
-                          <div key={g.id} style={{
-                            display: 'flex', alignItems: 'center', gap: '3px',
-                            background: `${hrColor}${isLight ? '55' : '15'}`,
-                            border: `1px solid ${hrColor}${isLight ? '70' : '30'}`,
-                            borderRadius: '10px', padding: '2px 6px'
-                          }}>
-                            <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : hrColor, fontWeight: '700' }}>{g.label}</span>
-                            <span style={{ fontSize: '9px', color: theme.textFaint, fontWeight: '600' }}>{g.total}</span>
-                            <span style={{ fontSize: '10px', fontWeight: '900', color: hrColor }}>{g.hr}%</span>
-                          </div>
-                        );
-                      })}
-                      <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: sourceOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '6px' }}>▼</span>
-                    </div>
+                    <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: sourceOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: 'auto' }}>▼</span>
                   </div>
                   {sourceOpen && (
                     <>
@@ -2821,24 +2804,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Mercati</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
-                  {capsules.filter(c => c.finished > 0 && c.hr !== null).map(c => {
-                    const clr = getHRColor(c.hr!, c.threshold);
-                    return (
-                      <div key={c.id} style={{
-                        display: 'flex', alignItems: 'center', gap: '3px',
-                        background: `${clr}${isLight ? '55' : '15'}`,
-                        border: `1px solid ${clr}${isLight ? '70' : '30'}`,
-                        borderRadius: '10px', padding: '2px 6px'
-                      }}>
-                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : clr, fontWeight: '700' }}>{c.label}</span>
-                        <span style={{ fontSize: '9px', color: theme.textFaint, fontWeight: '600' }}>{c.total}</span>
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: clr }}>{c.hr}%</span>
-                      </div>
-                    );
-                  })}
-                  <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: marketsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '6px' }}>▼</span>
-                </div>
+                <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: marketsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: 'auto' }}>▼</span>
               </div>
               {marketsOpen && (
                 <>

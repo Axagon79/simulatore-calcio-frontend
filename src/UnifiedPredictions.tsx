@@ -315,11 +315,13 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
   const [sourceFilter, setSourceFilter] = useState<string>('tutti');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
   const [financeOpen, setFinanceOpen] = useState(false);
   const [marketsOpen, setMarketsOpen] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [finLegendOpen, setFinLegendOpen] = useState(false);
+  const [filtersStatsOpen, setFiltersStatsOpen] = useState(false);
   // Definizioni mercati (per capsule + filtraggio)
   const MARKET_DEFS: { id: MarketFilter; label: string; filter: (t: any) => boolean; color: string }[] = [
     { id: 'segno', label: '1X2', filter: t => t.tipo === 'SEGNO', color: theme.cyan },
@@ -2152,6 +2154,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        @keyframes pulse-dot { 0%, 100% { opacity: 0.5; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
+        .capsula-main-cyan::before, .capsula-main-gold::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 12px;
+          padding: 1px;
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+          pointer-events: none;
+        }
+        .capsula-main-cyan::before {
+          background: linear-gradient(135deg, rgba(0,188,212,0.8) 0%, rgba(0,188,212,0.35) 8%, transparent 14%);
+        }
+        .capsula-main-gold::before {
+          background: linear-gradient(135deg, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.35) 8%, transparent 14%);
+        }
         .analysis-tab-free, .analysis-tab-premium {
           transition: all 0.25s ease;
         }
@@ -2532,6 +2553,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           if (totalAllTips === 0) return null;
           return (
             <>
+            {/* Capsula Filtri & Statistiche — contenitore collassabile */}
+            <div style={{
+              background: isLight ? '#eeeeee' : '#1a1d2e',
+              border: isLight ? '1px solid #e0e2e6' : '1px solid #2d3045',
+              borderRadius: '12px', marginBottom: '8px',
+              overflow: 'hidden', transition: 'all 0.2s ease'
+            }}>
+              <div
+                onClick={() => setFiltersStatsOpen(!filtersStatsOpen)}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 14px', cursor: 'pointer', userSelect: 'none' as const
+                }}
+              >
+                <span style={{ fontSize: '16px', color: theme.textMuted, fontWeight: '700' }}>Filtri & Statistiche</span>
+                <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: filtersStatsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▼</span>
+              </div>
+              {filtersStatsOpen && (
+                <div style={{ padding: '0 8px 8px' }}>
             {/* Contenitore Rendimento collassabile */}
             {(() => {
               const yieldColor = yieldPct !== null && yieldPct >= 0 ? theme.financePositive : theme.missText;
@@ -2547,7 +2587,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
                   onClick={() => { if (financeOpen || finLegendOpen) { setFinanceOpen(false); setFinLegendOpen(false); } else { setFinanceOpen(true); } }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Rendimento</span>
                       <span
@@ -2555,7 +2595,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         onClick={(e) => { e.stopPropagation(); setFinLegendOpen(!finLegendOpen); }}
                       >?</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                       {(() => {
                         const verified = filterCounts.centrate + filterCounts.mancate;
                         const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
@@ -2573,22 +2613,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             {hr !== null && (
                               <div style={{
                                 background: `${hrColor}${isLight ? '55' : '15'}`, border: `1px solid ${hrColor}${isLight ? '70' : '30'}`,
-                                borderRadius: '10px', padding: isMobile ? '3px 6px' : '3px 8px',
-                                display: 'flex', alignItems: 'center', gap: '4px'
+                                borderRadius: '10px', padding: '2px 6px',
+                                display: 'flex', alignItems: 'center', gap: '3px'
                               }}>
                                 <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : hrColor, fontWeight: '700' }}>HR</span>
-                                <span style={{ fontSize: '11px', fontWeight: '900', color: hrColor }}>{hr}%</span>
+                                <span style={{ fontSize: '10px', fontWeight: '900', color: hrColor }}>{hr}%</span>
                                 <span style={{ fontSize: '8px', opacity: 0.6, color: hrColor }}>{filterCounts.centrate}/{verified}</span>
                               </div>
                             )}
                             {matchHR !== null && (
                               <div style={{
                                 background: `${matchHRColor}${isLight ? '55' : '15'}`, border: `1px solid ${matchHRColor}${isLight ? '70' : '30'}`,
-                                borderRadius: '10px', padding: isMobile ? '3px 6px' : '3px 8px',
-                                display: 'flex', alignItems: 'center', gap: '4px'
+                                borderRadius: '10px', padding: '2px 6px',
+                                display: 'flex', alignItems: 'center', gap: '3px'
                               }}>
                                 <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : matchHRColor, fontWeight: '700' }}>Partite</span>
-                                <span style={{ fontSize: '11px', fontWeight: '900', color: matchHRColor }}>{matchHR}%</span>
+                                <span style={{ fontSize: '10px', fontWeight: '900', color: matchHRColor }}>{matchHR}%</span>
                                 <span style={{ fontSize: '8px', opacity: 0.6, color: matchHRColor }}>{matchHits}/{matchesFinished.length}</span>
                               </div>
                             )}
@@ -2597,17 +2637,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       })()}
                       <div style={{
                         background: `${yieldColor}${isLight ? '55' : '15'}`, border: `1px solid ${yieldColor}${isLight ? '70' : '30'}`,
-                        borderRadius: '10px', padding: isMobile ? '3px 6px' : '3px 8px',
-                        display: 'flex', alignItems: 'center', gap: '4px'
+                        borderRadius: '10px', padding: '2px 6px',
+                        display: 'flex', alignItems: 'center', gap: '3px'
                       }}>
                         <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700' }}>Yield</span>
-                        <span style={{ fontSize: '11px', fontWeight: '900', color: yieldColor }}>
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: yieldColor }}>
                           {yieldPct !== null ? `${yieldPct > 0 ? '+' : ''}${yieldPct}%` : '—'}
                         </span>
                       </div>
-                      <span style={{ fontSize: '12px', color: theme.textDisabled }}>{financeOpen ? '▲' : '▼'}</span>
                     </div>
+                    <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: financeOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '30px' }}>▼</span>
                   </div>
+                  {(finLegendOpen || financeOpen) && (
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 2px' }}>
+                      <div style={{ width: '90%', height: '1px', background: isLight ? '#d0d3d8' : '#ffffff12' }} />
+                    </div>
+                  )}
                   {finLegendOpen && (
                     <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ marginTop: '8px', padding: '8px 10px', background: isLight ? '#fafafa' : theme.surfaceSubtle, border: isLight ? '1px solid #e5e7eb' : 'none', borderRadius: '8px', fontSize: '10px', color: isLight ? '#4b5563' : theme.textFaint, lineHeight: '1.6' }}>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield</span> — Se punti 1&euro; su ogni pronostico, quanto guadagni in media? +10% = guadagni 0.10&euro; per ogni euro puntato</div>
@@ -2628,10 +2673,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <div key={item.label} style={{
                           display: 'flex', alignItems: 'center', gap: '5px',
                           background: `${item.color}${isLight ? '55' : '15'}`, border: `1px solid ${item.color}${isLight ? '70' : '30'}`,
-                          borderRadius: '10px', padding: '4px 10px'
+                          borderRadius: '12px', padding: '4px 12px'
                         }}>
-                          <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textFaint, fontWeight: '700' }}>{item.label}</span>
-                          <span style={{ fontSize: '12px', fontWeight: '900', color: item.color }}>{item.value}</span>
+                          <span style={{ fontSize: '10px', color: isLight ? '#1a1a1a' : theme.textFaint, fontWeight: '700' }}>{item.label}</span>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: item.color }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -2657,7 +2702,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const hr = finished > 0 ? Math.round((hits / finished) * 100) : null;
                 return { ...g, total, hits, finished, hr };
               }).filter(g => g.total > 0);
-              if (sourceCounts.length <= 1) return null;
               const totalAll = basePreds.length;
               let allHits = 0, allFinished = 0;
               basePreds.forEach(p => {
@@ -2684,9 +2728,35 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                   >
                     <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Filtra per Algoritmo</span>
-                    <span style={{ fontSize: '12px', color: theme.textDisabled }}>{sourceOpen ? '▲' : '▼'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
+                      {sourceCounts.filter(g => g.finished > 0 && g.hr !== null).map(g => {
+                        const hrColor = g.hr! >= 50 ? theme.hitText : theme.missText;
+                        return (
+                          <div key={g.id} style={{
+                            display: 'flex', alignItems: 'center', gap: '3px',
+                            background: `${hrColor}${isLight ? '55' : '15'}`,
+                            border: `1px solid ${hrColor}${isLight ? '70' : '30'}`,
+                            borderRadius: '10px', padding: '2px 6px'
+                          }}>
+                            <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : hrColor, fontWeight: '700' }}>{g.label}</span>
+                            <span style={{ fontSize: '9px', color: theme.textFaint, fontWeight: '600' }}>{g.total}</span>
+                            <span style={{ fontSize: '10px', fontWeight: '900', color: hrColor }}>{g.hr}%</span>
+                          </div>
+                        );
+                      })}
+                      <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: sourceOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '6px' }}>▼</span>
+                    </div>
                   </div>
                   {sourceOpen && (
+                    <>
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 2px' }}>
+                      <div style={{ width: '90%', height: '1px', background: isLight ? '#d0d3d8' : '#ffffff12' }} />
+                    </div>
+                    {sourceCounts.length === 0 && totalAll === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '8px 0', fontSize: '11px', color: theme.textDisabled, fontStyle: 'italic' }}>
+                        Nessun dato per questo filtro
+                      </div>
+                    ) : (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' as const }}>
                       <button
                         onClick={() => setSourceFilter('tutti')}
@@ -2728,6 +2798,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         );
                       })}
                     </div>
+                    )}
+                    </>
                   )}
                 </div>
               );
@@ -2749,9 +2821,30 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Mercati</span>
-                <span style={{ fontSize: '12px', color: theme.textDisabled }}>{marketsOpen ? '▲' : '▼'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
+                  {capsules.filter(c => c.finished > 0 && c.hr !== null).map(c => {
+                    const clr = getHRColor(c.hr!, c.threshold);
+                    return (
+                      <div key={c.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '3px',
+                        background: `${clr}${isLight ? '55' : '15'}`,
+                        border: `1px solid ${clr}${isLight ? '70' : '30'}`,
+                        borderRadius: '10px', padding: '2px 6px'
+                      }}>
+                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : clr, fontWeight: '700' }}>{c.label}</span>
+                        <span style={{ fontSize: '9px', color: theme.textFaint, fontWeight: '600' }}>{c.total}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: clr }}>{c.hr}%</span>
+                      </div>
+                    );
+                  })}
+                  <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: marketsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '6px' }}>▼</span>
+                </div>
               </div>
               {marketsOpen && (
+                <>
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 2px' }}>
+                  <div style={{ width: '90%', height: '1px', background: isLight ? '#d0d3d8' : '#ffffff12' }} />
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' as const }}>
                   {/* Pulsante Tutti */}
                   <button
@@ -2800,81 +2893,170 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     );
                   })}
                 </div>
+                </>
+              )}
+            </div>
+                </div>
               )}
             </div>
             </>
           );
         })()}
 
-        {/* SECTION TITLE — centrato sopra i filtri */}
-        {activeTab === 'pronostici' && filteredPredictions.length > 0 && (
-          <div style={{ textAlign: 'left', margin: '0 0 10px 0' }}>
-            <span style={{ fontSize: isMobile ? '17px' : '21px', fontWeight: '800', color: theme.cyan }}>
-              🔮 Pronostici
-            </span>
-            <span style={{
-              fontSize: '12px', background: `${theme.cyan}22`, color: theme.cyan,
-              padding: '2px 12px', borderRadius: '20px', fontWeight: '700',
-              marginLeft: '10px', verticalAlign: 'middle'
-            }}>
-              {filteredPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
-            </span>
-          </div>
-        )}
-        {activeTab === 'alto_rendimento' && filteredAltoRendimento.length > 0 && (
-          <div style={{ textAlign: 'left', margin: '0 0 10px 0' }}>
-            <span style={{ fontSize: isMobile ? '17px' : '21px', fontWeight: '800', color: theme.gold }}>
-              💎 Alto Rendimento
-            </span>
-            <span style={{
-              fontSize: '12px', background: 'rgba(255, 215, 0, 0.15)', color: theme.gold,
-              padding: '2px 12px', borderRadius: '20px', fontWeight: '700',
-              marginLeft: '10px', verticalAlign: 'middle'
-            }}>
-              {filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
-            </span>
-          </div>
-        )}
-
-        {/* STATUS FILTERS — riga unica */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '20px',
-          flexWrap: 'wrap' as const
+        {/* CAPSULA FILTRI — collassabile, con titolo dentro */}
+        <div className={activeTab === 'pronostici' ? 'capsula-main-cyan' : 'capsula-main-gold'} style={{
+          position: 'relative',
+          background: activeTab === 'pronostici'
+            ? (isLight
+              ? `linear-gradient(135deg, rgba(0,188,212,0.50) 0%, rgba(0,188,212,0.28) 8%, transparent 14%), linear-gradient(315deg, #eeeeee 0%, #eeeeee 50%, rgba(0,188,212,0.12) 85%, #eeeeee 100%)`
+              : `linear-gradient(135deg, rgba(0,188,212,0.45) 0%, rgba(0,188,212,0.22) 8%, transparent 14%), linear-gradient(315deg, #1a1d2e 0%, #1a1d2e 50%, rgba(0,188,212,0.08) 85%, #1a1d2e 100%)`)
+            : (isLight
+              ? `linear-gradient(135deg, rgba(255,215,0,0.50) 0%, rgba(255,215,0,0.28) 8%, transparent 14%), linear-gradient(315deg, #eeeeee 0%, #eeeeee 50%, rgba(255,215,0,0.12) 85%, #eeeeee 100%)`
+              : `linear-gradient(135deg, rgba(255,215,0,0.45) 0%, rgba(255,215,0,0.22) 8%, transparent 14%), linear-gradient(315deg, #1a1d2e 0%, #1a1d2e 50%, rgba(255,215,0,0.08) 85%, #1a1d2e 100%)`),
+          border: isLight ? '1px solid #e0e2e6' : '1px solid #2d3045',
+          borderRadius: '12px', marginBottom: '8px',
+          overflow: 'hidden', transition: 'all 0.2s ease'
         }}>
-          {([
-            { id: 'tutte' as StatusFilter, label: 'Tutte', icon: '📋', color: theme.purple },
-            { id: 'live' as StatusFilter, label: 'LIVE', icon: '🔴', color: theme.danger },
-            { id: 'da_giocare' as StatusFilter, label: 'Da giocare', icon: '⏳', color: theme.textDim },
-            { id: 'finite' as StatusFilter, label: 'Finite', icon: '✅', color: theme.success },
-            { id: 'centrate' as StatusFilter, label: 'Centrate', icon: '✓', color: theme.hitText },
-            { id: 'mancate' as StatusFilter, label: 'Mancate', icon: '✗', color: theme.missText },
-          ]).map(f => (
-            <button
-              key={f.id}
-              onClick={() => setStatusFilter(f.id)}
-              onMouseEnter={e => { if (statusFilter !== f.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
-              onMouseLeave={e => { if (statusFilter !== f.id) e.currentTarget.style.background = theme.surfaceSubtle; }}
-              style={{
-                background: statusFilter === f.id ? `${f.color}20` : theme.surfaceSubtle,
-                border: `1px solid ${statusFilter === f.id ? f.color : theme.surface05}`,
-                color: statusFilter === f.id ? f.color : theme.textDim,
-                padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
-                fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
-                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px'
-              }}
-            >
-              {f.icon} {f.label}
-              {filterCounts[f.id] > 0 && (
-                <span style={{
-                  fontSize: '9px', fontWeight: '800',
-                  background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
-                  padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
-                }}>
-                  {filterCounts[f.id]}
-                </span>
+          {/* Header capsula — titolo + badge + freccia, cliccabile */}
+          <div
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '8px 14px', cursor: 'pointer',
+              userSelect: 'none' as const
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {activeTab === 'pronostici' ? (
+                <>
+                  <span style={{
+                    width: '7px', height: '7px', borderRadius: '50%', display: 'inline-block',
+                    background: theme.cyan, marginRight: '8px',
+                    animation: 'pulse-dot 2s ease-in-out infinite',
+                    boxShadow: `0 0 4px ${theme.cyan}`
+                  }} />
+                  <span style={{ fontSize: '16px', fontWeight: '700', color: theme.cyan }}>
+                    Pronostici
+                  </span>
+                  <span style={{
+                    fontSize: '11px', background: `${theme.cyan}22`, color: theme.cyan,
+                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700',
+                    marginLeft: '8px'
+                  }}>
+                    {filteredPredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{
+                    width: '7px', height: '7px', borderRadius: '50%', display: 'inline-block',
+                    background: theme.gold, marginRight: '8px',
+                    animation: 'pulse-dot 2s ease-in-out infinite',
+                    boxShadow: `0 0 4px ${theme.gold}`
+                  }} />
+                  <span style={{ fontSize: '16px', fontWeight: '700', color: theme.gold }}>
+                    Alto Rendimento
+                  </span>
+                  <span style={{
+                    fontSize: '11px', background: 'rgba(255, 215, 0, 0.15)', color: theme.gold,
+                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700',
+                    marginLeft: '8px'
+                  }}>
+                    {filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
+                  </span>
+                </>
               )}
-            </button>
-          ))}
+            </div>
+            <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: filtersOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▼</span>
+          </div>
+
+          {/* Contenuto filtri — collassabile */}
+          {filtersOpen && (
+            <div style={{
+              display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: '10px',
+              padding: isMobile ? '0 10px 12px' : '0 16px 14px',
+              flexWrap: 'wrap' as const
+            }}>
+              {/* Gruppo PARTITE */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '9px', fontWeight: '600', color: theme.textDim, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Partite</span>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
+                  {([
+                    { id: 'tutte' as StatusFilter, label: 'Tutte', icon: '📋', color: theme.purple },
+                    { id: 'live' as StatusFilter, label: 'LIVE', icon: '🔴', color: theme.danger },
+                    { id: 'da_giocare' as StatusFilter, label: 'Da giocare', icon: '⏳', color: theme.textDim },
+                    { id: 'finite' as StatusFilter, label: 'Finite', icon: '✅', color: theme.success },
+                  ]).map(f => (
+                    <button
+                      key={f.id}
+                      onClick={(e) => { e.stopPropagation(); setStatusFilter(f.id); }}
+                      onMouseEnter={e => { if (statusFilter !== f.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                      onMouseLeave={e => { if (statusFilter !== f.id) e.currentTarget.style.background = isLight ? '#ffffff' : theme.surfaceSubtle; }}
+                      style={{
+                        background: statusFilter === f.id ? `${f.color}20` : (isLight ? '#ffffff' : theme.surfaceSubtle),
+                        border: `1px solid ${statusFilter === f.id ? f.color : (isLight ? '#cbd5e1' : theme.surface05)}`,
+                        color: statusFilter === f.id ? f.color : theme.textDim,
+                        padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                        fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
+                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      {f.icon} {f.label}
+                      {filterCounts[f.id] > 0 && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: '800',
+                          background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
+                          padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
+                        }}>
+                          {filterCounts[f.id]}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Separatore verticale (solo desktop) */}
+              {!isMobile && <div style={{ width: '1px', height: '32px', background: isLight ? '#cbd5e1' : theme.surface15, alignSelf: 'flex-end', marginBottom: '2px' }} />}
+
+              {/* Gruppo PRONOSTICI */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '9px', fontWeight: '600', color: theme.textDim, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Pronostici</span>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  {([
+                    { id: 'centrate' as StatusFilter, label: 'Centrati', icon: '✓', color: theme.hitText },
+                    { id: 'mancate' as StatusFilter, label: 'Mancati', icon: '✗', color: theme.missText },
+                  ]).map(f => (
+                    <button
+                      key={f.id}
+                      onClick={(e) => { e.stopPropagation(); setStatusFilter(f.id); }}
+                      onMouseEnter={e => { if (statusFilter !== f.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                      onMouseLeave={e => { if (statusFilter !== f.id) e.currentTarget.style.background = isLight ? '#ffffff' : theme.surfaceSubtle; }}
+                      style={{
+                        background: statusFilter === f.id ? `${f.color}20` : (isLight ? '#ffffff' : theme.surfaceSubtle),
+                        border: `1px solid ${statusFilter === f.id ? f.color : (isLight ? '#cbd5e1' : theme.surface05)}`,
+                        color: statusFilter === f.id ? f.color : theme.textDim,
+                        padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                        fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
+                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      {f.icon} {f.label}
+                      {filterCounts[f.id] > 0 && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: '800',
+                          background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
+                          padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
+                        }}>
+                          {filterCounts[f.id]}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         </>)}
 

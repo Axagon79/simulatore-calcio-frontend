@@ -173,6 +173,8 @@ interface Prediction {
   analysis_alerts?: Array<{ id: string; severity: number; text: string }>;
   analysis_score?: number;
   analysis_premium?: string;
+  analysis_deepdive?: string;
+  analysis_deepdive_ts?: string;
 }
 
 // --- HELPERS ---
@@ -279,7 +281,9 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const isAdmin = checkAdmin();
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
-  const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium'>>({});
+  const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
+  const [deepdiveAnalysis, setDeepdiveAnalysis] = useState<Record<string, string>>({});
+  const [deepdiveLoading, setDeepdiveLoading] = useState<Record<string, boolean>>({});
 
   // --- Premium Unlock (sequenza segreta P-F-P-F-P-F-P-P-P-P-P, max 2s tra click) ---
   const UNLOCK_SEQ = 'pfpfpfppppp';
@@ -883,6 +887,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const currentAnalysisTab = analysisTab[matchId];
     const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;
     const isPremiumBusy = !!premiumLoading[matchId];
+    const isDeepDiveLoaded = !!deepdiveAnalysis[matchId] || !!pred.analysis_deepdive;
+    const isDeepDiveBusy = !!deepdiveLoading[matchId];
     const hasAnalysis = !!pred.analysis_free && pred.analysis_score !== undefined;
     const analysisScore = pred.analysis_score ?? 0;
     const analysisScoreColor = analysisScore >= 70 ? theme.success : analysisScore >= 40 ? '#facc15' : theme.danger;
@@ -904,6 +910,30 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         console.error('Premium analysis error:', err);
       } finally {
         setPremiumLoading(prev => ({ ...prev, [matchId]: false }));
+      }
+    };
+
+    const fetchDeepDive = async (forceRefresh = false) => {
+      if (isDeepDiveBusy) return;
+      if (isDeepDiveLoaded && !forceRefresh) return;
+      setDeepdiveLoading(prev => ({ ...prev, [matchId]: true }));
+      try {
+        const resp = await fetch(`${API_BASE}/chat/match-deepdive`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, league: pred.league || '', isAdmin: 'true', forceRefresh }),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: data.analysis }));
+        } else {
+          setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: `\u26a0\ufe0f ${data.error || 'Errore durante la ricerca web. Riprova tra qualche minuto.'}` }));
+        }
+      } catch (err) {
+        console.error('DeepDive analysis error:', err);
+        setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: '\u26a0\ufe0f Connessione fallita. Verifica la connessione e riprova.' }));
+      } finally {
+        setDeepdiveLoading(prev => ({ ...prev, [matchId]: false }));
       }
     };
 
@@ -1177,7 +1207,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: '1px', textShadow: '0 0 8px rgba(0, 240, 255, 0.3)' }}>
                       Analisi Match
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
                     <span
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1235,6 +1265,34 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           : (currentAnalysisTab === 'premium' ? '0 0 12px rgba(168,85,247,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(168,85,247,0.15), inset 0 1px 0 rgba(255,255,255,0.05)'),
                       }}
                     >{(isAdmin || isPremiumUser) ? '🤖 Premium' : '🔒 Premium'}</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnalysisTab(prev => {
+                          const next = { ...prev };
+                          if (next[matchId] === 'deepdive') delete next[matchId];
+                          else next[matchId] = 'deepdive';
+                          return next;
+                        });
+                        if ((isAdmin || isPremiumUser) && !isDeepDiveBusy) fetchDeepDive();
+                      }}
+                      className={`analysis-tab-deepdive${currentAnalysisTab === 'deepdive' ? ' active' : ''}`}
+                      style={{
+                        cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                        padding: '6px 20px', borderRadius: '16px', whiteSpace: 'nowrap' as const,
+                        background: currentAnalysisTab === 'deepdive'
+                          ? (isLight ? '#d1fae5' : 'rgba(16,185,129,0.4)')
+                          : (isLight ? '#ecfdf5' : 'rgba(16,185,129,0.15)'),
+                        color: currentAnalysisTab === 'deepdive'
+                          ? (isLight ? '#059669' : '#fff')
+                          : (isLight ? '#059669' : 'rgba(110,231,183,0.9)'),
+                        border: currentAnalysisTab === 'deepdive'
+                          ? (isLight ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(16,185,129,0.7)')
+                          : (isLight ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(16,185,129,0.3)'),
+                        boxShadow: isLight ? 'none'
+                          : (currentAnalysisTab === 'deepdive' ? '0 0 12px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 0 6px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05)'),
+                      }}
+                    >{(isAdmin || isPremiumUser) ? '🔎 Scout' : '🔒 Scout'}</span>
                     </div>
                   </div>
                 )}
@@ -1373,6 +1431,24 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       color: currentAnalysisTab === 'premium' ? (isLight ? '#7c3aed' : theme.purple) : theme.textDim,
                     }}
                   >{(isAdmin || isPremiumUser) ? 'Analisi AI Premium' : '🔒 Premium'}</button>
+                  <button
+                    className={`analysis-tab-deepdive${currentAnalysisTab === 'deepdive' ? ' active' : ''}`}
+                    onClick={() => {
+                      setAnalysisTab(prev => ({ ...prev, [matchId]: 'deepdive' }));
+                      if ((isAdmin || isPremiumUser) && !isDeepDiveBusy) fetchDeepDive();
+                    }}
+                    style={{
+                      padding: '4px 14px', borderRadius: '12px',
+                      border: currentAnalysisTab === 'deepdive'
+                        ? (isLight ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(16,185,129,0.6)')
+                        : `1px solid ${theme.surface15}`,
+                      cursor: 'pointer', fontSize: '10px', fontWeight: 600,
+                      background: currentAnalysisTab === 'deepdive'
+                        ? (isLight ? '#d1fae5' : 'rgba(16,185,129,0.25)')
+                        : theme.surface05,
+                      color: currentAnalysisTab === 'deepdive' ? (isLight ? '#059669' : '#6ee7b7') : theme.textDim,
+                    }}
+                  >{(isAdmin || isPremiumUser) ? '🔎 Scout Web' : '🔒 Scout'}</button>
                 </div>
 
                 {/* Contenuto */}
@@ -1406,6 +1482,47 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
                         Premi il tab Premium per generare l'analisi
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {currentAnalysisTab === 'deepdive' && (
+                  <div style={{
+                    fontSize: '11px', lineHeight: '1.7', color: theme.text,
+                    padding: '8px 10px',
+                    background: isLight ? 'rgba(16,185,129,0.04)' : 'rgba(16,185,129,0.06)',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(16,185,129,0.1)',
+                  }}>
+                    {(!isAdmin && !isPremiumUser) ? (
+                      <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim }}>
+                        🔒 Disponibile nella versione Premium
+                      </div>
+                    ) : isDeepDiveBusy ? (
+                      <div style={{ textAlign: 'center', padding: '16px', color: isLight ? '#059669' : '#6ee7b7' }}>
+                        <div>🔎 Ricerca web in corso...</div>
+                        <div style={{ fontSize: '10px', color: theme.textDim, marginTop: '4px' }}>
+                          Potrebbero servire 15-30 secondi
+                        </div>
+                      </div>
+                    ) : isDeepDiveLoaded ? (
+                      <div>
+                        <div style={{ whiteSpace: 'pre-wrap' as const }}>{deepdiveAnalysis[matchId] || pred.analysis_deepdive}</div>
+                        <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}
+                            style={{
+                              cursor: 'pointer', fontSize: '10px', color: theme.textDim,
+                              padding: '2px 8px', borderRadius: '8px',
+                              border: `1px solid ${theme.surface15}`,
+                            }}
+                          >🔄 Aggiorna</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
+                        🔎 Avvio ricerca web...
                       </div>
                     )}
                   </div>

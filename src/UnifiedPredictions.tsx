@@ -1448,7 +1448,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         : theme.surface05,
                       color: currentAnalysisTab === 'deepdive' ? (isLight ? '#059669' : '#6ee7b7') : theme.textDim,
                     }}
-                  >{(isAdmin || isPremiumUser) ? '🔎 Scout Web' : '🔒 Scout'}</button>
+                  >{(isAdmin || isPremiumUser) ? '🔎 Scout' : '🔒 Scout'}</button>
                 </div>
 
                 {/* Contenuto */}
@@ -2290,7 +2290,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         .capsula-main-gold::before {
           background: linear-gradient(135deg, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.35) 8%, transparent 14%);
         }
-        .analysis-tab-free, .analysis-tab-premium {
+        .analysis-tab-free, .analysis-tab-premium, .analysis-tab-deepdive {
           transition: all 0.25s ease;
         }
         .analysis-tab-free:hover {
@@ -2310,6 +2310,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         .analysis-tab-premium.active {
           border: 1px solid rgba(168, 85, 247, 0.6) !important;
           box-shadow: 0 0 8px rgba(168, 85, 247, 0.4), 0 0 16px rgba(168, 85, 247, 0.15);
+        }
+        .analysis-tab-deepdive:hover {
+          background: rgba(16, 185, 129, 0.35) !important;
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.2);
+          transform: scale(1.04);
+        }
+        .analysis-tab-deepdive.active {
+          border: 1px solid rgba(16, 185, 129, 0.6) !important;
+          box-shadow: 0 0 8px rgba(16, 185, 129, 0.4), 0 0 16px rgba(16, 185, 129, 0.15);
         }
       `}</style>
 

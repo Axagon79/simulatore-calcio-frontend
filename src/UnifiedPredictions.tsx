@@ -1512,7 +1512,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     ) : isDeepDiveLoaded ? (
                       <div>
                         <div style={{ whiteSpace: 'pre-wrap' as const }}>{(() => {
-                          const raw = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
+                          const raw: any = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
                           return typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
                         })()}</div>
                         <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>

@@ -925,7 +925,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         });
         const data = await resp.json();
         if (data.success) {
-          setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: data.analysis }));
+          // Normalizza: Mistral può salvare {type,text} invece di stringa
+          const text = typeof data.analysis === 'string' ? data.analysis
+            : data.analysis?.text || data.analysis?.content || JSON.stringify(data.analysis);
+          setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: text }));
         } else {
           setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: `\u26a0\ufe0f ${data.error || 'Errore durante la ricerca web. Riprova tra qualche minuto.'}` }));
         }
@@ -1508,7 +1511,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </div>
                     ) : isDeepDiveLoaded ? (
                       <div>
-                        <div style={{ whiteSpace: 'pre-wrap' as const }}>{deepdiveAnalysis[matchId] || pred.analysis_deepdive}</div>
+                        <div style={{ whiteSpace: 'pre-wrap' as const }}>{(() => {
+                          const raw = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
+                          return typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
+                        })()}</div>
                         <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
                           <span
                             onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}

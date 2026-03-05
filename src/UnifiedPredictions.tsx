@@ -878,6 +878,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return counts;
   }, [predictions, activeTab, marketFilter, sourceFilter]);
 
+  // Set partite con RE (per icona 💎 admin)
+  const reMatchKeys = useMemo(() => new Set(rePredictions.map(p => `${p.home}|${p.away}`)), [rePredictions]);
+
   // --- RENDER CARD PRONOSTICO ---
   const renderPredictionCard = (pred: Prediction) => {
     const cardKey = `pred-${pred.home}-${pred.away}`;
@@ -891,6 +894,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const hasDetail = !!(pred.segno_dettaglio || pred.gol_dettaglio || (pred.streak_home && pred.streak_away));
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
     const effScore = getEffectiveScore(pred);
+    const reScoresForCard = new Set(
+      isAdmin ? (rePredictions.find(rp => rp.home === pred.home && rp.away === pred.away)?._rePreds || []).map((pr: any) => normalizeScore(pr.pronostico)) : []
+    );
     const effPredHit = effScore ? pred.pronostici?.some(p => {
       if (pred.real_score) return p.hit === true;
       return calculateHitFromScore(pred.live_score!, p.pronostico, p.tipo) === true;
@@ -1336,14 +1342,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const es = getEffectiveScore(pred);
                     const reHit = es && normS === normalizeScore(es);
                     const liveHit = !es && isLive && pred.live_score && normS === normalizeScore(pred.live_score);
+                    const isRePick = reScoresForCard.has(normS);
                     return (
                       <span key={i} style={{
                         fontSize: '13px',
-                        color: reHit ? theme.success : liveHit ? theme.success : theme.textDim,
+                        color: reHit ? theme.success : liveHit ? theme.success : isRePick ? theme.warning : theme.textDim,
                         fontWeight: 600,
                         animation: liveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
+                        ...(isRePick ? {
+                          background: 'rgba(255,152,0,0.12)',
+                          border: '1px solid rgba(255,152,0,0.35)',
+                          borderRadius: '5px',
+                          padding: '2px 7px',
+                        } : {}),
                       }}>
-                        {score} ({count}){reHit ? ' ✅' : ''}{i < arr.length - 1 ? '  ·' : ''}
+                        {isRePick && '💎 '}{score} ({count}){reHit ? ' ✅' : ''}{i < arr.length - 1 ? '  ·' : ''}
                       </span>
                     );
                   })}
@@ -1654,15 +1667,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               const isHit = es && normS === normalizeScore(es);
                               const isLiveHit = !es && isLive && pred.live_score && normS === normalizeScore(pred.live_score);
                               const highlighted = isHit || isLiveHit;
+                              const isRePick = reScoresForCard.has(normS);
                               return (
                                 <span key={i} style={{
                                   padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                                  background: highlighted ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : theme.surface05,
-                                  color: highlighted ? theme.success : i === 0 ? theme.orange : theme.textDim,
-                                  border: highlighted ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : `1px solid ${theme.surface08}`,
+                                  background: isRePick ? 'rgba(255,152,0,0.18)' : highlighted ? 'rgba(5, 249, 182, 0.2)' : i === 0 ? 'rgba(255, 107, 53, 0.2)' : theme.surface05,
+                                  color: isRePick ? theme.warning : highlighted ? theme.success : i === 0 ? theme.orange : theme.textDim,
+                                  border: isRePick ? '1px solid rgba(255,152,0,0.5)' : highlighted ? '1px solid rgba(5, 249, 182, 0.4)' : i === 0 ? '1px solid rgba(255, 107, 53, 0.3)' : `1px solid ${theme.surface08}`,
                                   animation: isLiveHit ? 'pulse 1.5s ease-in-out infinite' : undefined,
                                 }}>
-                                  {score} ({count}) {isHit ? '✅' : ''}
+                                  {isRePick && '💎 '}{score} ({count}) {isHit ? '✅' : ''}
                                 </span>
                               );
                             })}
@@ -2707,6 +2721,110 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           if (totalAllTips === 0) return null;
           return (
             <>
+            {/* ==================== RISULTATO ESATTO MC — ADMIN ONLY, PRIMO POSTO ==================== */}
+            {activeTab === 'alto_rendimento' && isAdmin && rePredictions.length > 0 && (() => {
+              const reHitsCount = rePredictions.reduce((s, p) => {
+                const es = getEffectiveScore(p);
+                if (!es) return s;
+                return s + (p._rePreds || []).filter((pr: any) => normalizeScore(pr.pronostico) === normalizeScore(es)).length;
+              }, 0);
+              const reMissCount = rePredictions.reduce((s, p) => {
+                const es = getEffectiveScore(p);
+                if (!es) return s;
+                return s + (p._rePreds || []).filter((pr: any) => normalizeScore(pr.pronostico) !== normalizeScore(es)).length;
+              }, 0);
+              const reFinished = reHitsCount + reMissCount;
+              const reHr = reFinished > 0 ? Math.round((reHitsCount / reFinished) * 1000) / 10 : null;
+              return (
+                <div style={{ marginBottom: '10px', width: '100%' }}>
+                  <div
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      marginBottom: collapsedSections.has('sec_re_mc') ? '0' : '8px',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      background: isLight ? '#eef7ff' : '#1e2337',
+                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                    }}
+                    onClick={() => setCollapsedSections(prev => {
+                      const next = new Set(prev);
+                      next.has('sec_re_mc') ? next.delete('sec_re_mc') : next.add('sec_re_mc');
+                      return next;
+                    })}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px' }}>💎</span>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>Risultato Esatto MC</span>
+                      <span style={{
+                        fontSize: '10px', background: `${theme.warning}20`, color: theme.warning,
+                        padding: '2px 8px', borderRadius: '10px', fontWeight: '700'
+                      }}>{rePredictions.reduce((s, p) => s + (p._rePreds || []).length, 0)}</span>
+                      {reFinished > 0 && <>
+                        <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>
+                        <span style={{ fontSize: '10px', color: theme.success, fontWeight: '700' }}>✓ {reHitsCount}</span>
+                        <span style={{ fontSize: '10px', color: theme.danger, fontWeight: '700' }}>✗ {reMissCount}</span>
+                        <span style={{
+                          fontSize: '10px', fontWeight: '800',
+                          color: reHr! >= 25 ? theme.success : theme.danger,
+                          background: reHr! >= 25 ? `${theme.success}20` : `${theme.danger}20`,
+                          padding: '1px 6px', borderRadius: '4px',
+                        }}>{reHr}%</span>
+                      </>}
+                    </div>
+                    <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_re_mc') ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                  </div>
+                  {!collapsedSections.has('sec_re_mc') && (
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '4px' }}>
+                      {rePredictions.map((pred) => {
+                        const es = getEffectiveScore(pred);
+                        const isLive = getMatchStatus(pred) === 'live';
+                        return (pred._rePreds || []).map((pr: any, i: number) => {
+                          const isHit = es ? normalizeScore(pr.pronostico) === normalizeScore(es) : null;
+                          const barColor = isHit === true ? theme.success : isHit === false ? theme.danger : theme.warning;
+                          return (
+                            <div key={`re_${pred.home}_${pred.away}_${i}`} style={{
+                              display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px',
+                              padding: isMobile ? '8px 8px 8px 12px' : '8px 14px 8px 16px',
+                              background: theme.surface05,
+                              borderRadius: '8px',
+                              borderLeft: `3px solid ${barColor}`,
+                            }}>
+                              <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{pred.match_time}</span>
+                              <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+                                <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
+                                <span style={{ fontSize: '9px', color: theme.textDim, flexShrink: 0 }}>vs</span>
+                                <span style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
+                                <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              </div>
+                              <span style={{
+                                fontSize: '13px', fontWeight: '900', flexShrink: 0,
+                                color: isHit === true ? theme.success : isHit === false ? theme.danger : theme.text,
+                              }}>
+                                {pr.pronostico}
+                              </span>
+                              {es ? (
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: isHit ? theme.hitText : theme.missText, flexShrink: 0 }}>
+                                  {isHit ? '✓' : '✗'} <span style={{ fontWeight: '600', color: theme.textMuted }}>({es})</span>
+                                </span>
+                              ) : isLive && pred.live_score ? (
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: theme.liveText, flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }}>
+                                  {pred.live_score}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '11px', color: theme.textDim, flexShrink: 0 }}>– : –</span>
+                              )}
+                            </div>
+                          );
+                        });
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Contenitore Rendimento — sempre visibile sopra Filtri & Statistiche */}
             {(() => {
               const yieldColor = yieldPct !== null && yieldPct >= 0 ? theme.financePositive : theme.missText;
@@ -3304,7 +3422,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}
                 >
                   <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_exact_score') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                  🎯 Risultato Esatto
+                  💎 Risultato Esatto
                   <span style={{
                     fontSize: '11px', background: 'rgba(255,152,0,0.15)', color: theme.warning,
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
@@ -3402,7 +3520,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
 
 
-            {/* SEZIONE PRONOSTICI (raggruppati per lega) */}
             {/* ==================== ALTO RENDIMENTO: Pronostici quota > 2.50 ==================== */}
             {activeTab === 'alto_rendimento' && filteredAltoRendimento.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
@@ -3483,53 +3600,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 })}
               </div>
             )}
-
-            {/* ==================== RISULTATO ESATTO MC — ADMIN ONLY ==================== */}
-            {activeTab === 'alto_rendimento' && isAdmin && rePredictions.length > 0 && (() => {
-              const reHitsCount = rePredictions.reduce((s, p) => {
-                const es = getEffectiveScore(p);
-                if (!es) return s;
-                return s + (p._rePreds || []).filter((pr: any) => normalizeScore(pr.pronostico) === normalizeScore(es)).length;
-              }, 0);
-              const reMissCount = rePredictions.reduce((s, p) => {
-                const es = getEffectiveScore(p);
-                if (!es) return s;
-                return s + (p._rePreds || []).filter((pr: any) => normalizeScore(pr.pronostico) !== normalizeScore(es)).length;
-              }, 0);
-              const reFinished = reHitsCount + reMissCount;
-              const reHr = reFinished > 0 ? Math.round((reHitsCount / reFinished) * 1000) / 10 : null;
-              return (
-                <div style={{ margin: '10px 0', padding: '8px 12px', borderLeft: `2px solid ${theme.textMuted}40`, opacity: 0.85 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '9px', fontWeight: '700', color: theme.textMuted }}>🎯 RE MC</span>
-                    {reFinished > 0 && <>
-                      <span style={{ fontSize: '9px', color: theme.success, fontWeight: '700' }}>✓{reHitsCount}</span>
-                      <span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700' }}>✗{reMissCount}</span>
-                      <span style={{ fontSize: '9px', fontWeight: '800', color: reHr! >= 25 ? theme.success : theme.danger }}>{reHr}%</span>
-                    </>}
-                  </div>
-                  {rePredictions.map((pred) => {
-                    const es = getEffectiveScore(pred);
-                    const isLive = getMatchStatus(pred) === 'live';
-                    return (
-                      <div key={`re_${pred.home}_${pred.away}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0', fontSize: '10px' }}>
-                        <span style={{ color: theme.textDim, minWidth: isMobile ? undefined : '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{pred.home} - {pred.away}</span>
-                        {(pred._rePreds || []).map((pr: any, i: number) => {
-                          const isHit = es ? normalizeScore(pr.pronostico) === normalizeScore(es) : null;
-                          return (
-                            <span key={i} style={{ fontWeight: '800', color: isHit === true ? theme.success : isHit === false ? theme.danger : theme.text }}>
-                              {pr.pronostico}{isHit === true ? ' ✓' : isHit === false ? ' ✗' : ''}
-                            </span>
-                          );
-                        })}
-                        {es && <span style={{ color: theme.textMuted, fontSize: '9px' }}>({es})</span>}
-                        {isLive && pred.live_score && <span style={{ color: theme.liveText, fontSize: '9px', fontWeight: '700' }}>{pred.live_score}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
 
             {/* ==================== PRONOSTICI: quota <= 2.50 ==================== */}
             {activeTab === 'pronostici' && filteredPredictions.length > 0 && (

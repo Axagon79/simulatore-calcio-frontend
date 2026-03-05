@@ -774,10 +774,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
   // --- PARTIZIONAMENTO: Pronostici (<=2.50) vs Alto Rendimento (>2.50) ---
-  const allNormalPreds = useMemo(() => predictions.filter(p =>
-    !p.is_exact_score &&
-    !p.pronostici?.some((pr: any) => pr.tipo === 'RISULTATO_ESATTO')
-  ), [predictions]);
+  const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score).map(p => {
+    const normalProns = p.pronostici?.filter((pr: any) => pr.tipo !== 'RISULTATO_ESATTO');
+    return normalProns && normalProns.length > 0 ? { ...p, pronostici: normalProns } : null;
+  }).filter(Boolean) as typeof predictions, [predictions]);
 
   const normalPredictions = useMemo(() => {
     return allNormalPreds
@@ -3486,7 +3486,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
             {/* ==================== RISULTATO ESATTO MC — ADMIN ONLY ==================== */}
             {activeTab === 'alto_rendimento' && isAdmin && rePredictions.length > 0 && (() => {
-              const reTotal = rePredictions.reduce((s, p) => s + (p._rePreds?.length || 0), 0);
               const reHitsCount = rePredictions.reduce((s, p) => {
                 const es = getEffectiveScore(p);
                 if (!es) return s;
@@ -3500,71 +3499,31 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const reFinished = reHitsCount + reMissCount;
               const reHr = reFinished > 0 ? Math.round((reHitsCount / reFinished) * 1000) / 10 : null;
               return (
-                <div style={{
-                  margin: '16px 0', padding: '12px',
-                  background: isLight ? 'linear-gradient(135deg, #fff8e1, #fff3e0)' : 'linear-gradient(135deg, rgba(255,183,77,0.08), rgba(255,152,0,0.05))',
-                  border: isLight ? '1px solid #ffe0b2' : '1px solid rgba(255,183,77,0.25)',
-                  borderRadius: '10px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '14px' }}>🎯</span>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: isLight ? '#e65100' : '#ffb74d' }}>Risultato Esatto MC</span>
-                    <span style={{ fontSize: '9px', color: theme.textMuted, fontWeight: '600', background: theme.surface08, padding: '2px 6px', borderRadius: '8px' }}>ADMIN</span>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      {reFinished > 0 && (
-                        <>
-                          <span style={{ fontSize: '9px', color: theme.success, fontWeight: '700' }}>✓{reHitsCount}</span>
-                          <span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700' }}>✗{reMissCount}</span>
-                          <span style={{ fontSize: '10px', fontWeight: '800', color: reHr! >= 25 ? theme.success : theme.danger, background: `${reHr! >= 25 ? theme.success : theme.danger}15`, padding: '1px 6px', borderRadius: '8px' }}>{reHr}%</span>
-                        </>
-                      )}
-                      <span style={{ fontSize: '9px', color: theme.textDim }}>{reTotal} tip{reTotal !== 1 ? 's' : ''}</span>
-                    </div>
+                <div style={{ margin: '10px 0', padding: '8px 12px', borderLeft: `2px solid ${theme.textMuted}40`, opacity: 0.85 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: '700', color: theme.textMuted }}>🎯 RE MC</span>
+                    {reFinished > 0 && <>
+                      <span style={{ fontSize: '9px', color: theme.success, fontWeight: '700' }}>✓{reHitsCount}</span>
+                      <span style={{ fontSize: '9px', color: theme.danger, fontWeight: '700' }}>✗{reMissCount}</span>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: reHr! >= 25 ? theme.success : theme.danger }}>{reHr}%</span>
+                    </>}
                   </div>
                   {rePredictions.map((pred) => {
                     const es = getEffectiveScore(pred);
                     const isLive = getMatchStatus(pred) === 'live';
                     return (
-                      <div key={`re_${pred.home}_${pred.away}`} style={{
-                        padding: '8px 10px', marginBottom: '6px',
-                        background: isLight ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.2)',
-                        borderRadius: '8px',
-                        border: isLight ? '1px solid #f0f0f0' : '1px solid rgba(255,255,255,0.06)',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '700', color: theme.text }}>{pred.home} - {pred.away}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            {isLive && pred.live_score && <span style={{ fontSize: '10px', color: theme.liveText, fontWeight: '800' }}>{pred.live_score}</span>}
-                            {es && <span style={{ fontSize: '10px', color: theme.textMuted }}>{es}</span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
-                          {(pred._rePreds || []).map((pr: any, i: number) => {
-                            const isHit = es ? normalizeScore(pr.pronostico) === normalizeScore(es) : null;
-                            const liveHit = !es && isLive && pred.live_score ? normalizeScore(pr.pronostico) === normalizeScore(pred.live_score) : false;
-                            return (
-                              <div key={i} style={{
-                                padding: '4px 10px', borderRadius: '6px',
-                                background: isHit === true ? `${theme.success}25` : isHit === false ? `${theme.danger}15` : liveHit ? `${theme.success}15` : isLight ? '#f5f5f5' : 'rgba(255,255,255,0.06)',
-                                border: `1px solid ${isHit === true ? theme.success : isHit === false ? `${theme.danger}50` : liveHit ? `${theme.success}40` : 'transparent'}`,
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                              }}>
-                                <span style={{ fontSize: '12px', fontWeight: '800', color: isHit === true ? theme.success : isHit === false ? theme.danger : theme.text }}>
-                                  {pr.pronostico}
-                                </span>
-                                <span style={{ fontSize: '8px', color: theme.textMuted }}>
-                                  Pos{pr.mc_position} ({pr.mc_count}x)
-                                </span>
-                                {isHit === true && <span style={{ fontSize: '10px' }}>✓</span>}
-                                {isHit === false && <span style={{ fontSize: '10px', color: theme.danger }}>✗</span>}
-                                {liveHit && <span style={{ fontSize: '10px', color: theme.success, opacity: 0.7 }}>~✓</span>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div style={{ fontSize: '8px', color: theme.textMuted, marginTop: '3px' }}>
-                          somma top4: {(pred._rePreds || [])[0]?.mc_sum || '?'}
-                        </div>
+                      <div key={`re_${pred.home}_${pred.away}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0', fontSize: '10px' }}>
+                        <span style={{ color: theme.textDim, minWidth: isMobile ? undefined : '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{pred.home} - {pred.away}</span>
+                        {(pred._rePreds || []).map((pr: any, i: number) => {
+                          const isHit = es ? normalizeScore(pr.pronostico) === normalizeScore(es) : null;
+                          return (
+                            <span key={i} style={{ fontWeight: '800', color: isHit === true ? theme.success : isHit === false ? theme.danger : theme.text }}>
+                              {pr.pronostico}{isHit === true ? ' ✓' : isHit === false ? ' ✗' : ''}
+                            </span>
+                          );
+                        })}
+                        {es && <span style={{ color: theme.textMuted, fontSize: '9px' }}>({es})</span>}
+                        {isLive && pred.live_score && <span style={{ color: theme.liveText, fontSize: '9px', fontWeight: '700' }}>{pred.live_score}</span>}
                       </div>
                     );
                   })}

@@ -795,7 +795,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
             }} />}
           </div>
           <div style={{ fontSize: '0.68em', color: C.textSec, lineHeight: 1.4, marginBottom: '10px' }}>
-            Quote &gt; 2.50, rischio maggiore ma profitto pi{'\u00F9'} alto
+            Quote &gt; 2.50 (DC {'\u2265'} 2.00), rischio maggiore ma profitto pi{'\u00F9'} alto
           </div>
           {arData && arData.total > 0 ? (
             <>

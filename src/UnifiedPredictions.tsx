@@ -780,7 +780,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       .map(p => {
         const lowQuota = p.pronostici?.filter(pr => {
           const q = getPronosticoQuota(pr, p);
-          return !q || q <= 2.50;
+          const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
+          return !q || q < soglia;
         }) || [];
         return lowQuota.length > 0 ? { ...p, pronostici: lowQuota } : null;
       })
@@ -792,7 +793,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       .map(p => {
         const highQuota = p.pronostici?.filter(pr => {
           const q = getPronosticoQuota(pr, p);
-          return q != null && q > 2.50;
+          const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
+          return q != null && q >= soglia;
         }) || [];
         return highQuota.length > 0 ? { ...p, pronostici: highQuota } : null;
       })

@@ -895,7 +895,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
     const effScore = getEffectiveScore(pred);
     const reScoresForCard = new Set(
-      isAdmin ? (rePredictions.find(rp => rp.home === pred.home && rp.away === pred.away)?._rePreds || []).map((pr: any) => normalizeScore(pr.pronostico)) : []
+      (rePredictions.find(rp => rp.home === pred.home && rp.away === pred.away)?._rePreds || []).map((pr: any) => normalizeScore(pr.pronostico))
     );
     const effPredHit = effScore ? pred.pronostici?.some(p => {
       if (pred.real_score) return p.hit === true;
@@ -1009,8 +1009,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
 
-          {/* Risultato + Freccia — spinto a destra */}
+          {/* Diamante RE + Risultato + Freccia — spinto a destra */}
           <div style={{ marginLeft: 'auto', marginRight: isMobile ? '-6px' : undefined, display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
+            {/* 💎 RE badge: pre-match = diamante, hit = diamante+check, miss = sparisce */}
+            {reMatchKeys.has(`${pred.home}|${pred.away}`) && (() => {
+              const reHit = effScore && (pred.pronostici || []).some((pr: any) => pr.tipo === 'RISULTATO_ESATTO' && normalizeScore(pr.pronostico) === normalizeScore(effScore));
+              const reMiss = effScore && !reHit;
+              if (reMiss) return null; // miss: diamante sparisce
+              return reHit
+                ? <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>💎✓RE</span>
+                : <span style={{ fontSize: isMobile ? '10px' : '11px', lineHeight: 1 }}>💎</span>;
+            })()}
             {effScore ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: effPredHit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {effScore.replace(':', ' - ')}
@@ -2721,109 +2730,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           if (totalAllTips === 0) return null;
           return (
             <>
-            {/* ==================== RISULTATO ESATTO MC — ADMIN ONLY, PRIMO POSTO ==================== */}
-            {activeTab === 'alto_rendimento' && isAdmin && rePredictions.length > 0 && (() => {
-              const reHitsCount = rePredictions.reduce((s, p) => {
-                const es = getEffectiveScore(p);
-                if (!es) return s;
-                return s + (p._rePreds || []).filter((pr: any) => normalizeScore(pr.pronostico) === normalizeScore(es)).length;
-              }, 0);
-              const reMissCount = rePredictions.reduce((s, p) => {
-                const es = getEffectiveScore(p);
-                if (!es) return s;
-                return s + (p._rePreds || []).filter((pr: any) => normalizeScore(pr.pronostico) !== normalizeScore(es)).length;
-              }, 0);
-              const reFinished = reHitsCount + reMissCount;
-              const reHr = reFinished > 0 ? Math.round((reHitsCount / reFinished) * 1000) / 10 : null;
-              return (
-                <div style={{ marginBottom: '10px', width: '100%' }}>
-                  <div
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '8px 12px',
-                      marginBottom: collapsedSections.has('sec_re_mc') ? '0' : '8px',
-                      cursor: 'pointer', userSelect: 'none' as const,
-                      background: isLight ? '#eef7ff' : '#1e2337',
-                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '8px',
-                    }}
-                    onClick={() => setCollapsedSections(prev => {
-                      const next = new Set(prev);
-                      next.has('sec_re_mc') ? next.delete('sec_re_mc') : next.add('sec_re_mc');
-                      return next;
-                    })}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px' }}>💎</span>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text }}>Risultato Esatto MC</span>
-                      <span style={{
-                        fontSize: '10px', background: `${theme.warning}20`, color: theme.warning,
-                        padding: '2px 8px', borderRadius: '10px', fontWeight: '700'
-                      }}>{rePredictions.reduce((s, p) => s + (p._rePreds || []).length, 0)}</span>
-                      {reFinished > 0 && <>
-                        <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>
-                        <span style={{ fontSize: '10px', color: theme.success, fontWeight: '700' }}>✓ {reHitsCount}</span>
-                        <span style={{ fontSize: '10px', color: theme.danger, fontWeight: '700' }}>✗ {reMissCount}</span>
-                        <span style={{
-                          fontSize: '10px', fontWeight: '800',
-                          color: reHr! >= 25 ? theme.success : theme.danger,
-                          background: reHr! >= 25 ? `${theme.success}20` : `${theme.danger}20`,
-                          padding: '1px 6px', borderRadius: '4px',
-                        }}>{reHr}%</span>
-                      </>}
-                    </div>
-                    <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_re_mc') ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
-                  </div>
-                  {!collapsedSections.has('sec_re_mc') && (
-                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '4px' }}>
-                      {rePredictions.map((pred) => {
-                        const es = getEffectiveScore(pred);
-                        const isLive = getMatchStatus(pred) === 'live';
-                        return (pred._rePreds || []).map((pr: any, i: number) => {
-                          const isHit = es ? normalizeScore(pr.pronostico) === normalizeScore(es) : null;
-                          const barColor = isHit === true ? theme.success : isHit === false ? theme.danger : theme.warning;
-                          return (
-                            <div key={`re_${pred.home}_${pred.away}_${i}`} style={{
-                              display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px',
-                              padding: isMobile ? '8px 8px 8px 12px' : '8px 14px 8px 16px',
-                              background: theme.surface05,
-                              borderRadius: '8px',
-                              borderLeft: `3px solid ${barColor}`,
-                            }}>
-                              <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{pred.match_time}</span>
-                              <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-                                <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
-                                <span style={{ fontSize: '9px', color: theme.textDim, flexShrink: 0 }}>vs</span>
-                                <span style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
-                                <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              </div>
-                              <span style={{
-                                fontSize: '13px', fontWeight: '900', flexShrink: 0,
-                                color: isHit === true ? theme.success : isHit === false ? theme.danger : theme.text,
-                              }}>
-                                {pr.pronostico}
-                              </span>
-                              {es ? (
-                                <span style={{ fontSize: '11px', fontWeight: '800', color: isHit ? theme.hitText : theme.missText, flexShrink: 0 }}>
-                                  {isHit ? '✓' : '✗'} <span style={{ fontWeight: '600', color: theme.textMuted }}>({es})</span>
-                                </span>
-                              ) : isLive && pred.live_score ? (
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: theme.liveText, flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }}>
-                                  {pred.live_score}
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '11px', color: theme.textDim, flexShrink: 0 }}>– : –</span>
-                              )}
-                            </div>
-                          );
-                        });
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Box RE MC admin-only rimosso — RE ora è pronostico ufficiale in Alto Rendimento */}
 
             {/* Contenitore Rendimento — sempre visibile sopra Filtri & Statistiche */}
             {(() => {
@@ -3546,6 +3453,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const ts = (p as any).simulation_data?.top_scores;
                     return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
                   }).length;
+                  const reCount = preds.filter(p => reMatchKeys.has(`${p.home}|${p.away}`)).length;
                   const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
@@ -3558,6 +3466,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {sep}
                       <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      {reCount > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.warning }}>💎 {reCount}</span></>}
                       {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
                     </>
                   );
@@ -3630,6 +3539,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     const ts = (p as any).simulation_data?.top_scores;
                     return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
                   }).length;
+                  // Conteggio partite con RE prediction (per diamante)
+                  const reCount = preds.filter(p => reMatchKeys.has(`${p.home}|${p.away}`)).length;
                   const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
@@ -3642,6 +3553,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {sep}
                       <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {misses}{!isMobile && ` ${misses === 1 ? 'mancato' : 'mancati'}`}</span>
                       {verifiedP > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      {reCount > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.warning }}>💎 {reCount}</span></>}
                       {reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {reHits}</span></>}
                     </>
                   );

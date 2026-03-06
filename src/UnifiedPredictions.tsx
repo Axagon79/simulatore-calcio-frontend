@@ -3,7 +3,7 @@ import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
-type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg';
+type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're';
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode } from './AppDev/costanti';
@@ -336,6 +336,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     { id: 'ggng', label: 'GG/NG', filter: t => t.tipo === 'GOL' && /^(goal|nogoal)$/i.test(t.pronostico), color: theme.success },
     { id: 'dc', label: 'DC', filter: t => t.tipo === 'DOPPIA_CHANCE', color: isLight ? '#9333ea' : '#ab47bc' },
     { id: 'mg', label: 'MG', filter: t => t.tipo === 'GOL' && /^mg\s/i.test(t.pronostico), color: isLight ? '#b45309' : '#f59e0b' },
+    { id: 're', label: 'RE', filter: t => t.tipo === 'RISULTATO_ESATTO', color: isLight ? '#0891b2' : '#22d3ee' },
   ];
 
   // Funzione filtraggio mercato su prediction
@@ -713,6 +714,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (pronostico === '12') return sign === '1' || sign === '2';
       return null;
     }
+    if (tipo === 'RISULTATO_ESATTO') {
+      const normalized = pronostico.replace('-', ':');
+      return `${home}:${away}` === normalized;
+    }
     if (tipo === 'GOL') {
       const p = pronostico.toLowerCase();
       if (p.startsWith('over')) { const thr = parseFloat(pronostico.split(' ')[1]); return total > thr; }
@@ -775,8 +780,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
   // --- PARTIZIONAMENTO: Pronostici (<=2.50) vs Alto Rendimento (>2.50) ---
   const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score).map(p => {
-    const normalProns = p.pronostici?.filter((pr: any) => pr.tipo !== 'RISULTATO_ESATTO');
-    return normalProns && normalProns.length > 0 ? { ...p, pronostici: normalProns } : null;
+    return p.pronostici && p.pronostici.length > 0 ? p : null;
   }).filter(Boolean) as typeof predictions, [predictions]);
 
   const normalPredictions = useMemo(() => {
@@ -1108,7 +1112,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* Pronostici — sempre aperto, stile sobrio */}
             {(() => {
               const segnoPreds = pred.pronostici?.filter(p => p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE') || [];
-              const golPreds = pred.pronostici?.filter(p => p.tipo === 'GOL') || [];
+              const golPreds = pred.pronostici?.filter(p => p.tipo === 'GOL' || p.tipo === 'RISULTATO_ESATTO') || [];
 
               const renderPill = (p: typeof pred.pronostici[0], idx: number) => {
                 const isHit = getEffectiveHit(pred, p);
@@ -1127,7 +1131,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     ...(isMobile ? { flexWrap: 'wrap' as const } : {})
                   }}>
                     <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>
-                      {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.pronostico}
+                      {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
                     </span>
                     <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                     {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}

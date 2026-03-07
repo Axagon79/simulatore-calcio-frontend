@@ -753,7 +753,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       const now = new Date();
       if (kickoff <= now) {
         const hoursElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60 * 60);
-        return hoursElapsed > 3 ? 'finished' : 'live';
+        return hoursElapsed > (130 / 60) ? 'finished' : 'live';
       }
     }
     return 'to_play';

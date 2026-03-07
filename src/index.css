@@ -5,7 +5,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: transparent;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -30,9 +30,19 @@ body {
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden !important;
-  background: url('/bg-stadium.png') center center / cover no-repeat fixed;
   position: relative;
   z-index: 0;
+}
+
+/* Dark mode: sfondo nero + immagine in screen blend = solo linee verdi visibili */
+body[data-theme="dark"] {
+  background: url('/bg-stadium-dark.png') center center / cover no-repeat fixed;
+  background-color: #000;
+}
+
+/* Light mode: immagine normale + overlay bianco */
+body[data-theme="light"] {
+  background: url('/bg-stadium.png') center center / cover no-repeat fixed;
 }
 
 /* Overlay sfondo per tema — usa ::before per non coprire il contenuto */
@@ -44,9 +54,8 @@ body::before {
   pointer-events: none;
 }
 
-/* Dark mode: overlay scuro semi-trasparente */
 body[data-theme="dark"]::before {
-  background: rgba(18, 20, 30, 0.85);
+  background: none;
 }
 
 /* Light mode: overlay bianco forte */

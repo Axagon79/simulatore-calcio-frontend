@@ -202,11 +202,6 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
     <div style={{ 
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
         backgroundColor: 'transparent',
-        backgroundImage: isLight
-          ? `radial-gradient(circle at 50% 0%, rgba(224,227,235,0.3) 0%, transparent 70%)`
-          : isMobile
-            ? `radial-gradient(circle at 50% 0%, rgba(42,45,74,0.3) 0%, transparent 70%)`
-            : `radial-gradient(circle at 50% 0%, rgba(26,29,46,0.3) 0%, transparent 70%)`,
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
@@ -227,7 +222,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           alignItems: isMobile ? 'stretch' : 'center',
           justifyContent: isMobile ? 'center' : 'space-between',
           padding: isMobile ? '0' : '0 40px',
-          borderBottom: `1px solid ${theme.borderSubtle}`,
+          borderBottom: isMobile ? 'none' : `1px solid ${theme.borderSubtle}`,
           backdropFilter: 'blur(10px)',
           background: isLight ? 'rgba(215, 220, 235, 0.85)' : 'rgba(5,7,10,0.85)',
           margin: isMobile ? '0 -20px' : '0 -20px',
@@ -334,37 +329,21 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           )}
         </div>
 
-        {/* ===== TAGLINE ===== */}
-        <div style={{ textAlign: 'center', padding: isMobile ? '16px 0 8px' : '20px 0 8px' }}>
-          <p style={{
-            color: isLight ? '#475569' : '#b0bec5',
-            fontSize: 'clamp(14px, 2.5vw, 18px)',
-            margin: '0',
+        {/* ===== TAGLINE (riga sottile) ===== */}
+        <div style={{
+          textAlign: 'center',
+          padding: isMobile ? '8px 0 10px' : '10px 0 14px',
+        }}>
+          <span style={{
+            color: isLight ? '#4a6078' : '#a8b8cc',
+            fontSize: isMobile ? '10.5px' : '12px',
             fontFamily: "'Georgia', 'Times New Roman', serif",
             fontStyle: 'italic',
-            letterSpacing: '0.5px',
-            lineHeight: '1.6',
-            opacity: 0.85,
+            letterSpacing: isMobile ? '0.3px' : '0.8px',
+            whiteSpace: 'nowrap' as const,
           }}>
-            <span style={{ position: 'relative', display: 'inline', padding: '0 4px' }}>
-              <span style={{
-                position: 'absolute', inset: '-2px -4px',
-                background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-1&color=${isLight ? 'd4a017' : 'daa520'})`,
-                backgroundSize: '100% 100%',
-                opacity: isLight ? 0.45 : 0.35, zIndex: -1,
-              }} />
-              <span style={{ position: 'relative' }}>Ogni partita ha una storia.</span>
-            </span><br />
-            <span style={{ position: 'relative', display: 'inline', padding: '0 4px' }}>
-              <span style={{
-                position: 'absolute', inset: '-2px -4px',
-                background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-2&color=${isLight ? 'd4a017' : 'daa520'})`,
-                backgroundSize: '100% 100%',
-                opacity: isLight ? 0.45 : 0.35, zIndex: -1,
-              }} />
-              <span style={{ position: 'relative' }}>Noi la scriviamo prima che accada.</span>
-            </span>
-          </p>
+            Ogni partita ha una storia — noi la scriviamo prima che accada
+          </span>
         </div>
 
         {/* BARRA AZIONI RAPIDE */}

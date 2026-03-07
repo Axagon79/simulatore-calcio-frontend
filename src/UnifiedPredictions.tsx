@@ -277,8 +277,6 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-  const toggleSection2 = (id: string) => setCollapsedSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const isAdmin = checkAdmin();
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
@@ -837,12 +835,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }));
   }, [predictions]);
 
-  // Auto-collapse sezioni High Risk se >=5 elementi
-  useEffect(() => {
-    const collapsed = new Set<string>();
-    if (exactScorePredictions.length >= 5) collapsed.add('sec_exact_score');
-    setCollapsedSections(collapsed);
-  }, [exactScorePredictions.length]);
 
   // --- DATI FILTRATI (status + mercato combinati) ---
   const filteredPredictions = normalPredictions
@@ -2175,139 +2167,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
               </div>
             )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-
-  // --- RENDER CARD RISULTATO ESATTO ---
-  const renderExactScoreCard = (pred: Prediction) => {
-    const cardKey = `es-${pred.home}-${pred.away}`;
-    const isCardExpanded = expandedCards.has(cardKey);
-    const top3 = pred.exact_score_top3 || [];
-    const maxProb = top3.length > 0 ? top3[0].prob : 1;
-    const conf = pred.confidence_segno || 0;
-
-    // Hit/Miss: controlla se il risultato reale è uno dei top-3
-    const realScore = getEffectiveScore(pred);
-    const isHitExact = realScore ? top3.some(t => t.score === realScore) : null;
-    const barColor = realScore ? (isHitExact ? theme.hitText : theme.missText) : theme.warning;
-
-    return (
-      <div
-        key={cardKey}
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,152,0,0.06), rgba(255,87,34,0.04))',
-          border: '1px solid rgba(255,152,0,0.25)',
-          borderRadius: '10px',
-          padding: isMobile ? '6px 10px' : '8px 14px',
-          marginBottom: '4px',
-          position: 'relative'
-        }}
-      >
-        {/* BARRA LATERALE arancione */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
-          background: barColor, borderRadius: '3px 0 0 3px'
-        }} />
-
-        {/* RIGA COMPATTA */}
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
-          onClick={() => setExpandedCards(prev => {
-            const next = new Set(prev);
-            next.has(cardKey) ? next.delete(cardKey) : next.add(cardKey);
-            return next;
-          })}
-        >
-          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
-
-          {/* Squadre */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-            <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.home}</span>
-            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pred.away}</span>
-            <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-          </div>
-
-          {/* Badge RE */}
-          <span style={{
-            background: 'rgba(255,152,0,0.15)', border: '1px solid rgba(255,152,0,0.4)',
-            borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: '800', color: theme.warning, flexShrink: 0
-          }}>RE</span>
-
-          {/* Risultato + Freccia */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {realScore ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: isHitExact ? theme.hitText : theme.missText }}>
-                {realScore.replace(':', ' - ')} {isHitExact ? '✅' : '❌'}
-              </span>
-            ) : getMatchStatus(pred) === 'live' ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score ? pred.live_score.replace(':', ' - ') : '– : –'}
-                </span>
-                {pred.live_score && (!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
-                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
-                </span>}
-              </span>
-            ) : (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
-            )}
-            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </div>
-        </div>
-
-        {/* DETTAGLIO ESPANSO */}
-        {isCardExpanded && (
-          <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,152,0,0.15)', paddingTop: '10px', paddingLeft: '8px', animation: 'fadeIn 0.3s ease' }}>
-            {/* Top 3 con barre */}
-            <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top 3 Risultati</div>
-            {top3.map((t, i) => {
-              const medals = ['🥇', '🥈', '🥉'];
-              const isThisHit = realScore === t.score;
-              const barWidth = maxProb > 0 ? (t.prob / maxProb) * 100 : 0;
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '14px', width: '22px', textAlign: 'center' }}>{medals[i] || ''}</span>
-                  <span style={{
-                    fontSize: '13px', fontWeight: '900', color: isThisHit ? theme.hitText : '#fff',
-                    width: '36px', textAlign: 'center',
-                    background: isThisHit ? theme.hitBg : 'transparent',
-                    borderRadius: '4px', padding: '1px 0'
-                  }}>{t.score}</span>
-                  {/* Barra */}
-                  <div style={{ flex: 1, height: '16px', background: theme.surface05, borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                    <div style={{
-                      width: `${barWidth}%`, height: '100%',
-                      background: isThisHit
-                        ? 'linear-gradient(90deg, rgba(0,255,136,0.4), rgba(0,255,136,0.6))'
-                        : `linear-gradient(90deg, rgba(255,152,0,0.3), rgba(255,87,34,0.5))`,
-                      borderRadius: '4px', transition: 'width 0.5s ease'
-                    }} />
-                    <span style={{
-                      position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-                      fontSize: '10px', fontWeight: '800', color: isThisHit ? theme.hitText : theme.warning
-                    }}>{t.prob.toFixed(1)}%</span>
-                  </div>
-                  {isThisHit && <span style={{ fontSize: '12px' }}>✅</span>}
-                </div>
-              );
-            })}
-            {/* Confidence + gap */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px', paddingTop: '6px', borderTop: '1px solid rgba(255,152,0,0.1)' }}>
-              <span style={{ fontSize: '10px', color: theme.textDim }}>
-                Confidence: <span style={{ fontWeight: '700', color: getConfidenceColor(conf) }}>{conf.toFixed(0)}%</span>
-              </span>
-              {pred.exact_score_gap != null && (
-                <span style={{ fontSize: '10px', color: theme.textDim }}>
-                  Gap: <span style={{ fontWeight: '700', color: theme.warning }}>{pred.exact_score_gap.toFixed(1)}%</span>
-                </span>
-              )}
-            </div>
           </div>
         )}
       </div>

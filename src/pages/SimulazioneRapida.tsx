@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { ArrowLeft, ChevronDown, ChevronRight, Zap } from 'lucide-react';
 import { getTheme, getThemeMode, getMobileTheme, API_BASE, STEMMI_CAMPIONATI, LEAGUES_MAP, SPEED_PRESETS } from '../AppDev/costanti';
-import StemmaImg from '../components/StemmaImg';
+
 import type { Match, TodayLeagueGroup } from '../types';
 
 const theme = getTheme();
@@ -39,7 +39,7 @@ interface SimulazioneRapidaProps {
 }
 
 export default function SimulazioneRapida({ onBack }: SimulazioneRapidaProps) {
-  const navigate = useNavigate();
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [dayOffset, setDayOffset] = useState(0);
   const [leagues, setLeagues] = useState<TodayLeagueGroup[]>([]);

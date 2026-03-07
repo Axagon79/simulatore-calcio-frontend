@@ -320,7 +320,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
   const [sourceFilter, setSourceFilter] = useState<string>('tutti');
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
   const [financeOpen, setFinanceOpen] = useState(false);
   const [marketsOpen, setMarketsOpen] = useState(false);
@@ -924,7 +924,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const barColor = effScore ? (effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
-    const isTipsOpen = !expandedSections.has(tipsKey);
+    const isTipsOpen = expandedSections.has(tipsKey);
     const matchId = `${pred.home}-${pred.away}-${pred.date}`;
     const currentAnalysisTab = analysisTab[matchId];
     const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;

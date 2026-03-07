@@ -787,6 +787,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return allNormalPreds
       .map(p => {
         const lowQuota = p.pronostici?.filter(pr => {
+          if (pr.tipo === 'RISULTATO_ESATTO') return false;
           const q = getPronosticoQuota(pr, p);
           const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
           return !q || q < soglia;

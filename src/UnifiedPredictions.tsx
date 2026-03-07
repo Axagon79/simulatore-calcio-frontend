@@ -731,15 +731,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return null;
   };
 
-  const getEffectiveScore = (pred: { real_score?: string | null; live_score?: string | null; live_status?: string | null }): string | null => {
+  const isMatchOver = (pred: { date: string; match_time: string; live_status?: string | null }): boolean => {
+    if (pred.live_status === 'Finished') return true;
+    if (pred.date && pred.match_time) {
+      const kickoff = new Date(`${pred.date}T${pred.match_time}:00`);
+      const minutesElapsed = (Date.now() - kickoff.getTime()) / (1000 * 60);
+      if (minutesElapsed > 130) return true;
+    }
+    return false;
+  };
+
+  const getEffectiveScore = (pred: { date: string; match_time: string; real_score?: string | null; live_score?: string | null; live_status?: string | null }): string | null => {
     if (pred.real_score) return pred.real_score;
-    if (pred.live_score && pred.live_status === 'Finished') return pred.live_score;
+    if (pred.live_score && isMatchOver(pred)) return pred.live_score;
     return null;
   };
 
-  const getEffectiveHit = (pred: { real_score?: string | null; live_score?: string | null; live_status?: string | null }, p: { hit?: boolean | null; pronostico: string; tipo: string }): boolean | null => {
+  const getEffectiveHit = (pred: { date: string; match_time: string; real_score?: string | null; live_score?: string | null; live_status?: string | null }, p: { hit?: boolean | null; pronostico: string; tipo: string }): boolean | null => {
     if (pred.real_score) return p.hit ?? null;
-    if (pred.live_score && pred.live_status === 'Finished') return calculateHitFromScore(pred.live_score, p.pronostico, p.tipo);
+    if (pred.live_score && isMatchOver(pred)) return calculateHitFromScore(pred.live_score, p.pronostico, p.tipo);
     return null;
   };
 

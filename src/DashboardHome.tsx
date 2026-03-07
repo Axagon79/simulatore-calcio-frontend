@@ -14,6 +14,7 @@ const API_BASE = isLocal
 import { getTheme, getThemeMode, getMobileTheme } from './AppDev/costanti';
 import { checkAdmin } from './permissions';
 import StemmaImg from './components/StemmaImg';
+import TopbarPronostici from './components/TopbarPronostici';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 const mobileTheme = getMobileTheme();
@@ -209,7 +210,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
-        padding: isMobile ? '0 20px 20px' : '20px',
+        padding: isMobile ? '0 20px 20px' : '0 20px 20px',
         display: 'flex', flexDirection: 'column', alignItems: 'center'
     }}>
       
@@ -219,30 +220,55 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
       {/* BOX CENTRALE CHE CONTIENE TUTTO */}
       <div style={{width: '100%', maxWidth: '1200px', paddingBottom: '40px'}}>
 
-        {/* HEADER STICKY SU MOBILE (auth + titolo + sottotitolo) */}
-        <div style={isMobile ? {
+        {/* ===== TOPBAR STICKY ===== */}
+        <div style={{
           position: 'sticky', top: 0, zIndex: 100,
-          background: mobileTheme.bg,
-          margin: '0 -20px 20px',
-          padding: '10px 20px 12px',
-          boxShadow: isLight ? '0 2px 12px rgba(0,0,0,0.08)' : '0 2px 12px rgba(0,0,0,0.6)'
-        } : {}}>
-
-          {/* BOTTONE AUTH */}
+          display: 'flex', flexDirection: isMobile ? 'column' : 'row' as const,
+          alignItems: isMobile ? 'stretch' : 'center',
+          justifyContent: isMobile ? 'center' : 'space-between',
+          padding: isMobile ? '0' : '0 40px',
+          borderBottom: `1px solid ${theme.borderSubtle}`,
+          backdropFilter: 'blur(10px)',
+          background: isLight ? 'rgba(215, 220, 235, 0.85)' : 'rgba(5,7,10,0.85)',
+          margin: isMobile ? '0 -20px' : '0 -20px',
+          width: isMobile ? 'calc(100% + 40px)' : '100vw',
+          marginLeft: isMobile ? '-20px' : 'calc(-50vw + 50%)',
+          fontFamily: '"Inter", "Segoe UI", sans-serif'
+        }}>
+          {/* RIGA 1: Logo + Auth (mobile) / Logo + Pronostici + Auth (desktop) */}
           <div style={{
-            ...(isMobile
-              ? { display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }
-              : { position: 'fixed', top: 16, right: 70, zIndex: 10001 }),
-            fontFamily: '"Inter", "Segoe UI", sans-serif'
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            height: isMobile ? '46px' : '60px',
+            padding: isMobile ? '0 16px' : '0',
+            width: '100%',
           }}>
+            {/* SINISTRA: Logo */}
+            <div style={{
+              fontSize: isMobile ? '16px' : '20px', fontWeight: 900,
+              background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              letterSpacing: '1.5px', flexShrink: 0
+            }}>
+              AI SIMULATOR
+            </div>
+
+            {/* CENTRO: Pronostici (solo desktop) */}
+            {!isMobile && (
+              <div style={{ flex: 1, margin: '0 20px' }}>
+                <TopbarPronostici isMobile={false} />
+              </div>
+            )}
+
+          {/* DESTRA: Auth + Settings */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <>
                 <div style={{
-                  width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: '50%',
+                  width: 32, height: 32, borderRadius: '50%',
                   background: `linear-gradient(135deg, ${theme.cyan}40, ${theme.purple}40)`,
                   border: `2px solid ${theme.cyan}60`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isMobile ? '12px' : '14px', fontWeight: '800', color: theme.cyan,
+                  fontSize: '13px', fontWeight: '800', color: theme.cyan,
                   overflow: 'hidden'
                 }}>
                   {user.photoURL ? (
@@ -252,7 +278,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   )}
                 </div>
                 {!isMobile && (
-                  <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {user.displayName || user.email}
                   </span>
                 )}
@@ -260,73 +286,85 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   onClick={() => logout()}
                   style={{
                     background: `${theme.danger}18`, border: `1px solid ${theme.danger}40`,
-                    color: theme.danger, padding: isMobile ? '4px 8px' : '5px 12px',
+                    color: theme.danger, padding: '4px 10px',
                     borderRadius: '8px', cursor: 'pointer',
-                    fontSize: isMobile ? '10px' : '11px', fontWeight: '700'
+                    fontSize: '11px', fontWeight: '700', fontFamily: 'inherit'
                   }}
                 >
                   Esci
                 </button>
-              </div>
+              </>
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
                 style={{
-                  background: `linear-gradient(135deg, ${theme.cyan}15, ${theme.cyan}30)`,
-                  border: `1px solid ${theme.cyan}40`,
-                  color: theme.cyan, padding: isMobile ? '6px 14px' : '8px 20px',
-                  borderRadius: '10px', cursor: 'pointer',
-                  fontSize: isMobile ? '12px' : '13px', fontWeight: '700',
-                  backdropFilter: 'blur(8px)'
+                  background: 'none', border: `1px solid ${theme.borderSubtle}`,
+                  color: theme.textDim, padding: '6px 14px',
+                  borderRadius: '8px', cursor: 'pointer',
+                  fontSize: '12px', fontWeight: '600', fontFamily: 'inherit',
+                  transition: 'all 0.2s'
                 }}
               >
                 Accedi
               </button>
             )}
+            <button
+              onClick={() => window.dispatchEvent(new Event('open-settings'))}
+              style={{
+                width: 34, height: 34, borderRadius: '50%',
+                background: theme.surface08, border: `1px solid ${theme.surface15}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', fontSize: '18px', color: theme.textDim,
+                transition: 'all 0.2s', fontFamily: 'inherit'
+              }}
+              title="Impostazioni"
+            >⚙️</button>
+          </div>
           </div>
 
-          {/* HEADER RESPONSIVO */}
-          <div style={{textAlign: 'center', ...(isMobile ? { marginTop: '-5px' } : { marginTop: '40px', marginBottom: '50px' })}}>
-            <h1 style={{
-                fontSize: 'clamp(32px, 6vw, 64px)',
-                fontWeight: '900', margin: '0 0 10px 0',
-                textShadow: `0 0 40px ${theme.purple}`,
-                letterSpacing: isMobile ? '1px' : '-1px',
-                color: theme.text,
-                fontFamily: "'Russo One', sans-serif"
+          {/* RIGA 2: Pronostici (solo mobile) */}
+          {isMobile && (
+            <div style={{
+              height: '32px',
+              padding: '0 12px',
+              display: 'flex', alignItems: 'center',
             }}>
-                <span style={{color: theme.cyan}}>AI</span> SIMULATOR
-            </h1>
-            <p style={{
-               color: isLight ? '#475569' : '#b0bec5',
-               fontSize: 'clamp(15px, 3.2vw, 20px)',
-               margin: isMobile ? '-5px 0 -10px 0' :'30px 0 -10px 0',
-               fontFamily: "'Georgia', 'Times New Roman', serif",
-               fontStyle: 'italic',
-               letterSpacing: '0.5px',
-               lineHeight: '1.8',
-               opacity: 0.9,
-            }}>
-              <span style={{ position: 'relative', display: 'inline', padding: '0 6px' }}>
-                <span style={{
-                  position: 'absolute', inset: '-2px -6px',
-                  background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-1&color=${isLight ? 'd4a017' : 'daa520'})`,
-                  backgroundSize: '100% 100%',
-                  opacity: 0.45, zIndex: -1,
-                }} />
-                <span style={{ position: 'relative' }}>Ogni partita ha una storia.</span>
-              </span><br />
-              <span style={{ position: 'relative', display: 'inline', padding: '0 6px' }}>
-                <span style={{
-                  position: 'absolute', inset: '-2px -6px',
-                  background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-2&color=${isLight ? 'd4a017' : 'daa520'})`,
-                  backgroundSize: '100% 100%',
-                  opacity: 0.45, zIndex: -1,
-                }} />
-                <span style={{ position: 'relative' }}>Noi la scriviamo prima che accada.</span>
-              </span>
-            </p>
-          </div>
+              <TopbarPronostici isMobile={true} />
+            </div>
+          )}
+        </div>
+
+        {/* ===== TAGLINE ===== */}
+        <div style={{ textAlign: 'center', padding: isMobile ? '16px 0 8px' : '20px 0 8px' }}>
+          <p style={{
+            color: isLight ? '#475569' : '#b0bec5',
+            fontSize: 'clamp(14px, 2.5vw, 18px)',
+            margin: '0',
+            fontFamily: "'Georgia', 'Times New Roman', serif",
+            fontStyle: 'italic',
+            letterSpacing: '0.5px',
+            lineHeight: '1.6',
+            opacity: 0.85,
+          }}>
+            <span style={{ position: 'relative', display: 'inline', padding: '0 4px' }}>
+              <span style={{
+                position: 'absolute', inset: '-2px -4px',
+                background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-1&color=${isLight ? 'd4a017' : 'daa520'})`,
+                backgroundSize: '100% 100%',
+                opacity: isLight ? 0.45 : 0.35, zIndex: -1,
+              }} />
+              <span style={{ position: 'relative' }}>Ogni partita ha una storia.</span>
+            </span><br />
+            <span style={{ position: 'relative', display: 'inline', padding: '0 4px' }}>
+              <span style={{
+                position: 'absolute', inset: '-2px -4px',
+                background: `url(//s2.svgbox.net/pen-brushes.svg?ic=brush-2&color=${isLight ? 'd4a017' : 'daa520'})`,
+                backgroundSize: '100% 100%',
+                opacity: isLight ? 0.45 : 0.35, zIndex: -1,
+              }} />
+              <span style={{ position: 'relative' }}>Noi la scriviamo prima che accada.</span>
+            </span>
+          </p>
         </div>
 
         {/* BARRA AZIONI RAPIDE */}

@@ -924,7 +924,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const barColor = effScore ? (effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
-    const isTipsOpen = expandedSections.has(tipsKey);
+    const isTipsOpen = !expandedSections.has(tipsKey);
     const matchId = `${pred.home}-${pred.away}-${pred.date}`;
     const currentAnalysisTab = analysisTab[matchId];
     const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;

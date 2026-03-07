@@ -746,15 +746,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   // --- HELPERS STATUS FILTRO ---
   const getMatchStatus = (item: { date: string; match_time: string; real_score?: string | null; live_status?: string | null }): 'finished' | 'live' | 'to_play' => {
     if (item.real_score != null) return 'finished';
-    if (item.live_status === 'Live' || item.live_status === 'HT') return 'live';
-    if (item.live_status === 'Finished') return 'finished';
     if (item.date && item.match_time) {
       const kickoff = new Date(`${item.date}T${item.match_time}:00`);
       const now = new Date();
       if (kickoff <= now) {
-        const hoursElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60 * 60);
-        return hoursElapsed > (130 / 60) ? 'finished' : 'live';
+        const minutesElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60);
+        if (minutesElapsed > 130) return 'finished';
       }
+    }
+    if (item.live_status === 'Finished') return 'finished';
+    if (item.live_status === 'Live' || item.live_status === 'HT') return 'live';
+    if (item.date && item.match_time) {
+      const kickoff = new Date(`${item.date}T${item.match_time}:00`);
+      if (kickoff <= new Date()) return 'live';
     }
     return 'to_play';
   };

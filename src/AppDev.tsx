@@ -147,6 +147,69 @@ export default function AppDev() {
     }
   }, [savedNav]);
 
+  // --- QUICKSIM: ref e stato per avvio automatico ---
+  const quickSimPending = useRef<{ algo: number; cycles: number } | null>(null);
+  const [quickSimLoading, setQuickSimLoading] = useState(() => !!sessionStorage.getItem('quicksim_data'));
+
+  // --- QUICKSIM: avvia simulazione quando selectedMatch è pronto ---
+  useEffect(() => {
+    if (quickSimPending.current && selectedMatch && viewState === 'pre-match') {
+      const { algo, cycles } = quickSimPending.current;
+      quickSimPending.current = null;
+      setTimeout(() => {
+        setQuickSimLoading(false);
+        startSimulation(algo, cycles);
+      }, 200);
+    }
+  }, [selectedMatch, viewState]);
+
+  // --- ARRIVO DA SIMULAZIONE RAPIDA ---
+  useEffect(() => {
+    const raw = sessionStorage.getItem('quicksim_data');
+    if (!raw) return;
+    sessionStorage.removeItem('quicksim_data');
+
+    try {
+      const data = JSON.parse(raw);
+      if (!data.match || !data.leagueId) return;
+
+      const leagueInfo = LEAGUES_MAP.find(l => l.id === data.leagueId);
+      if (leagueInfo) {
+        initFromDashboard(leagueInfo.country, leagueInfo.id);
+      }
+
+      // Setta league e activeLeague direttamente
+      setLeague(data.leagueId);
+      setActiveLeague(data.leagueId);
+
+      // Imposta configurazione simulazione
+      if (data.algo !== undefined) setConfigAlgo(data.algo);
+      if (data.cycles !== undefined) setCustomCycles(data.cycles);
+      if (data.mode === 'fast') {
+        setSimMode('fast');
+        setIsFlashActive(true);
+      } else {
+        setSimMode('animated');
+        setIsFlashActive(false);
+      }
+
+      // Arricchisci il match con league per il fallback in startSimulation
+      const enrichedMatch = { ...data.match, league: data.leagueId };
+
+      // Setta il flag per avvio automatico dopo prepareSimulation
+      const algo = data.algo ?? configAlgo;
+      const cycles = data.cycles ?? customCycles;
+      quickSimPending.current = { algo, cycles };
+
+      setTimeout(() => {
+        prepareSimulation(enrichedMatch);
+        window.scrollTo(0, 0);
+      }, 500);
+    } catch (err) {
+      console.error('🔍 QUICKSIM: ERRORE', err);
+    }
+  }, []);
+
   const handleAskAI = (matchData: any) => {
     // Prepariamo un riassunto tecnico per l'IA
     const promptTecnico = `
@@ -1948,6 +2011,25 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   // --- BLOCCO 2: SITO PRINCIPALE ---
   return (
     <div style={styles.wrapper}>
+      {/* QUICKSIM LOADING OVERLAY */}
+      {quickSimLoading && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: theme.bg, zIndex: 99999,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '16px',
+        }}>
+          <div style={{
+            width: 36, height: 36,
+            border: `3px solid ${theme.panelBorder}`,
+            borderTopColor: theme.cyan, borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <div style={{ color: theme.textDim, fontSize: '14px', fontWeight: 700 }}>
+            Avvio simulazione...
+          </div>
+        </div>
+      )}
       <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
       @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }

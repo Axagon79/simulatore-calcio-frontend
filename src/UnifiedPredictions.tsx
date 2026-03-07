@@ -2396,8 +2396,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             top: -16,
             zIndex: 100,
             backgroundColor: isLight ? '#f0f2f5' : '#1a1d2e',
-            margin: '-15px -20px 0',
-            padding: '14px 20px 10px',
+            margin: '-15px -15px 0',
+            padding: '14px 15px 10px',
+            borderBottom: isLight ? '2px solid rgba(0,120,212,0.35)' : '2px solid rgba(0,240,255,0.25)',
+            borderRadius: '0 0 12px 12px',
           } : {})
         }}>
 
@@ -2505,18 +2507,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* HEADER — subtitle only (title moved to nav row) */}
         <div style={{ textAlign: 'center', marginBottom: isMobile ? '6px' : '10px' }}>
-          {activeTab === 'alto_rendimento' ? (
-            <p style={{
-              color: '#ffb74d', fontSize: isMobile ? '12px' : '14px', fontWeight: '600', margin: 0, marginTop: '8px',
-              ...(isMobile ? {} : {
-                background: 'rgba(255,152,0,0.06)', border: '1px solid rgba(255,152,0,0.15)',
-                borderRadius: '20px', padding: '5px 16px'
-              }),
-              display: 'inline-block'
-            }}>
-              <span style={{ fontSize: isMobile ? '13px' : '16px', filter: 'saturate(3) brightness(1.3)' }}>💎</span> <span style={{ textDecoration: 'underline', textDecorationColor: 'rgba(230,81,0,0.6)', textUnderlineOffset: '3px' }}>{isMobile ? 'Quote alte' : 'Pronostici ad alto rendimento'}</span> — <span style={{ textDecoration: 'underline', textDecorationColor: 'rgba(230,81,0,0.6)', textUnderlineOffset: '3px' }}>{isMobile ? 'value picks selezionati' : 'value picks con quota elevata'}</span>
-            </p>
-          ) : (
+          {activeTab === 'alto_rendimento' ? null : (
             !isMobile && (
               <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
                 Mixture of Experts — i migliori pronostici da 3 sistemi AI
@@ -2530,7 +2521,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* NAVIGAZIONE DATA */}
         <div style={{
           display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '10px' : '15px',
-          marginTop: isMobile ? (activeTab === 'alto_rendimento' ? '5px' : '15px') : undefined,
+          marginTop: isMobile ? '15px' : undefined,
           marginBottom: isMobile ? '10px' : '25px'
         }}>
           <button
@@ -3181,7 +3172,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {/* Gruppo PARTITE */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontSize: '9px', fontWeight: '600', color: theme.textDim, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Partite</span>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' as const, justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: isMobile ? '3px' : '5px', flexWrap: 'nowrap' as const, justifyContent: 'center' }}>
                   {([
                     { id: 'tutte' as StatusFilter, label: 'Tutte', icon: '📋', color: theme.purple },
                     { id: 'live' as StatusFilter, label: 'LIVE', icon: '🔴', color: theme.danger },
@@ -3197,17 +3188,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         background: statusFilter === f.id ? `${f.color}20` : (isLight ? '#ffffff' : theme.surfaceSubtle),
                         border: `1px solid ${statusFilter === f.id ? f.color : (isLight ? '#cbd5e1' : theme.surface05)}`,
                         color: statusFilter === f.id ? f.color : theme.textDim,
-                        padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
-                        fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
-                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px'
+                        padding: isMobile ? '4px 8px' : '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                        fontSize: isMobile ? '10.5px' : '11px', fontWeight: statusFilter === f.id ? '700' : '500',
+                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '3px'
                       }}
                     >
                       {f.icon} {f.label}
                       {filterCounts[f.id] > 0 && (
                         <span style={{
-                          fontSize: '9px', fontWeight: '800',
+                          fontSize: isMobile ? '8px' : '9px', fontWeight: '800',
                           background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
-                          padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
+                          padding: '1px 5px', borderRadius: '10px', marginLeft: '1px'
                         }}>
                           {filterCounts[f.id]}
                         </span>
@@ -3237,17 +3228,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         background: statusFilter === f.id ? `${f.color}20` : (isLight ? '#ffffff' : theme.surfaceSubtle),
                         border: `1px solid ${statusFilter === f.id ? f.color : (isLight ? '#cbd5e1' : theme.surface05)}`,
                         color: statusFilter === f.id ? f.color : theme.textDim,
-                        padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
-                        fontSize: '11px', fontWeight: statusFilter === f.id ? '700' : '500',
-                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px'
+                        padding: isMobile ? '4px 8px' : '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                        fontSize: isMobile ? '10.5px' : '11px', fontWeight: statusFilter === f.id ? '700' : '500',
+                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '3px'
                       }}
                     >
                       {f.icon} {f.label}
                       {filterCounts[f.id] > 0 && (
                         <span style={{
-                          fontSize: '9px', fontWeight: '800',
+                          fontSize: isMobile ? '8px' : '9px', fontWeight: '800',
                           background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
-                          padding: '1px 6px', borderRadius: '10px', marginLeft: '2px'
+                          padding: '1px 5px', borderRadius: '10px', marginLeft: '1px'
                         }}>
                           {filterCounts[f.id]}
                         </span>
@@ -3327,123 +3318,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* ==================== HIGH RISK: RE ==================== */}
 
             {/* SEZIONE RISULTATO ESATTO */}
-            {false && activeTab === 'alto_rendimento' && filteredExactScore.length > 0 && (() => {
-              const esFinished = filteredExactScore.filter(p => getMatchStatus(p) === 'finished').length;
-              const esLive = filteredExactScore.filter(p => getMatchStatus(p) === 'live').length;
-              const esToPlay = filteredExactScore.length - esFinished - esLive;
-              const esWithScore = filteredExactScore.filter(p => !!p.real_score);
-              const esHits = esWithScore.filter(p => (p.exact_score_top3 || []).some(t => t.score === p.real_score)).length;
-              const esMisses = esWithScore.length - esHits;
-              const esHR = esWithScore.length > 0 ? Math.round((esHits / esWithScore.length) * 1000) / 10 : null;
-              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
-              return (
-              <div style={{ marginBottom: '30px', animation: 'fadeIn 0.4s ease' }}>
-                <h2
-                  onClick={() => toggleSection2('sec_exact_score')}
-                  style={{
-                    fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: theme.warning,
-                    margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px',
-                    cursor: 'pointer', userSelect: 'none' as const,
-                    background: 'rgba(255,152,0,0.06)', border: '1px solid rgba(255,152,0,0.18)',
-                    borderRadius: '10px', padding: '10px 14px', flexWrap: 'wrap' as const
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: theme.textDim, transition: 'transform 0.2s', transform: collapsedSections.has('sec_exact_score') ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                  💎 Risultato Esatto
-                  <span style={{
-                    fontSize: '11px', background: 'rgba(255,152,0,0.15)', color: theme.warning,
-                    padding: '2px 10px', borderRadius: '20px', fontWeight: '700'
-                  }}>
-                    {filteredExactScore.length}
-                  </span>
-                  {esLive > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {esLive} LIVE</span>}
-                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px' }}>
-                    {esFinished > 0 && <><span style={{ color: theme.success, fontWeight: '600' }}>✅ {esFinished} {esFinished === 1 ? 'finita' : 'finite'}</span>{sep}</>}
-                    {esToPlay > 0 && <><span style={{ color: theme.textDim, fontWeight: '600' }}>⏳ {esToPlay} da giocare</span>{sep}</>}
-                    {esWithScore.length > 0 && <>
-                      <span style={{ color: theme.hitText, fontWeight: '700' }}>✓ {esHits}</span>{sep}
-                      <span style={{ color: theme.missText, fontWeight: '700' }}>✗ {esMisses}</span>{sep}
-                      <span style={{
-                        fontWeight: '800',
-                        color: (esHR ?? 0) >= 20 ? theme.hitText : theme.missText,
-                        background: (esHR ?? 0) >= 20 ? theme.hitBg : theme.missBg,
-                        padding: '1px 8px', borderRadius: '10px'
-                      }}>{esHR}%</span>
-                    </>}
-                  </span>
-                </h2>
-                {!collapsedSections.has('sec_exact_score') && (() => {
-                  const grouped: Record<string, Prediction[]> = {};
-                  filteredExactScore.forEach(p => { (grouped[p.league] = grouped[p.league] || []).push(p); });
-                  return Object.entries(grouped).map(([leagueName, preds]) => {
-                    const key = `es-${leagueName}`;
-                    const isCollapsed = !collapsedLeagues.has(key);
-                    const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
-                    const live = preds.filter(p => getMatchStatus(p) === 'live').length;
-                    const toPlay = preds.length - finished - live;
-                    const withScore = preds.filter(p => !!getEffectiveScore(p));
-                    const hits = withScore.filter(p => { const es = getEffectiveScore(p); return (p.exact_score_top3 || []).some(t => t.score === es); }).length;
-                    const misses = withScore.length - hits;
-                    const verified = hits + misses;
-                    const hitRate = verified > 0 ? Math.round((hits / verified) * 1000) / 10 : null;
-                    const hrHue = hitRate !== null ? Math.min(130, hitRate * 6.5) : 0;
-                    const hrColor = hitRate !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
-                    const hrBg = hitRate !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
-                    const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
-                    const statsEls = (
-                      <>
-                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
-                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '700', background: 'rgba(255,152,0,0.1)', padding: '1px 6px', borderRadius: '4px' }}>⚽ {preds.length}</span>
-                        {finished > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {finished} {finished === 1 ? 'finita' : 'finite'}</span></>}
-                                                {toPlay > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {toPlay} da giocare</span></>}
-                        {sep}
-                        <span style={{ fontSize: '9px', color: hits > 0 ? theme.success : theme.textDim, fontWeight: '700' }}>✓ {hits}</span>
-                        {sep}
-                        <span style={{ fontSize: '9px', color: misses > 0 ? theme.missText : theme.textDim, fontWeight: '700' }}>✗ {misses}</span>
-                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRate}%</span></>}
-                      </>
-                    );
-                    return (
-                      <div key={key} style={{ marginBottom: '16px' }}>
-                        <div
-                          style={{
-                            padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
-                            background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
-                            cursor: 'pointer', userSelect: 'none' as const,
-                            border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)'
-                          }}
-                          onClick={() => toggleLeague(key)}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
-                                <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[leagueName] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <StemmaImg src={getLeagueLogoUrl(leagueName)} size={18} />
-                                <span
-                                  onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(leagueName); } : undefined}
-                                  style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.warning : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
-                                >{leagueName}</span>
-                                {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
-                              </div>
-                              {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                                                            {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}>{sep}{statsEls}</div>}
-                            </div>
-                            <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
-                          </div>
-                          {isMobile && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
-                              {statsEls}
-                            </div>
-                          )}
-                        </div>
-                        {!isCollapsed && preds.map(p => renderExactScoreCard(p))}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-              );
-            })()}
 
 
 
@@ -3513,12 +3387,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             {isMobile && live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}
                           </div>
                           {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{live > 0 && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {live} LIVE</span>}</div>}
-                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '8px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
+                          {!isMobile && <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '5px' }}><span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>{statsEls}</div>}
                         </div>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>
                       {isMobile && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', flexWrap: 'wrap' as const }}>
                           {statsEls}
                         </div>
                       )}
@@ -3606,7 +3480,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                       </div>
                       {isMobile && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', flexWrap: 'wrap' as const }}>
                           {statsEls}
                         </div>
                       )}

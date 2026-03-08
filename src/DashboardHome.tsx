@@ -11,13 +11,12 @@ const API_BASE = isLocal
   : 'https://api-6b34yfzjia-uc.a.run.app';
 
 // --- TEMA (centralizzato) ---
-import { getTheme, getThemeMode, getMobileTheme } from './AppDev/costanti';
+import { getTheme, getThemeMode } from './AppDev/costanti';
 import { checkAdmin } from './permissions';
 import StemmaImg from './components/StemmaImg';
 import TopbarPronostici from './components/TopbarPronostici';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
-const mobileTheme = getMobileTheme();
 
 // --- URL BASE STEMMI ---
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';

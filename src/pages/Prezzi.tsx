@@ -78,15 +78,16 @@ export default function Prezzi({ onBack }: PrezziProps) {
         height: '56px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', cursor: 'pointer' }}>
-          <img src="/logo-virgo.png" alt="" style={{
-            width: '28px', height: '28px', objectFit: 'contain',
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
+          <img src="/logo-virgo.png" alt="Logo" style={{
+            width: 32, height: 32, objectFit: 'contain',
             filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
           }} />
           <span style={{
-            fontSize: '15px', fontWeight: '600',
+            fontSize: '15px', fontWeight: 600,
             color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
             letterSpacing: '0.05em',
+            fontFamily: '"Inter", system-ui, sans-serif',
           }}>AI Simulator</span>
         </a>
         <button onClick={onBack} style={{

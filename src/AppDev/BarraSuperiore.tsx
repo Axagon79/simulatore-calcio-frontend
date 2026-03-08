@@ -109,36 +109,26 @@ export default function BarraSuperiore({
 
       {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (Desktop) */}
       {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingLeft: '60px', zIndex: 10 }}>
-          <button
-            onClick={onDashboard}
-            style={{
-              background: isLight ? 'rgba(0, 120, 200, 0.08)' : 'rgba(0, 240, 255, 0.1)',
-              border: isLight ? '1px solid rgba(0, 120, 200, 0.25)' : '1px solid rgba(0, 240, 255, 0.3)',
-              color: theme.cyan,
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-              position: 'relative' as const,
-              left: '-60px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = isLight ? 'rgba(0, 120, 200, 0.16)' : 'rgba(0, 240, 255, 0.18)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = isLight ? 'rgba(0, 120, 200, 0.08)' : 'rgba(0, 240, 255, 0.1)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <span>&#x27F5;</span> DASHBOARD
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '36px', paddingLeft: '6px', zIndex: 10 }}>
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
+            <img
+              src="/logo-virgo.png"
+              alt="Logo"
+              style={{
+                width: 32,
+                height: 32,
+                objectFit: 'contain' as const,
+                filter: isLight ? 'none' : 'invert(1)',
+                opacity: isLight ? 1 : 0.85,
+              }}
+            />
+            <span style={{
+              fontSize: '15px', fontWeight: 600,
+              color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+              letterSpacing: '0.05em',
+              fontFamily: '"Inter", system-ui, sans-serif',
+            }}>AI Simulator</span>
+          </a>
 
           {/* TOGGLE CALENDARIO / OGGI */}
           <div style={{
@@ -147,7 +137,8 @@ export default function BarraSuperiore({
             borderRadius: '20px',
             border: '1px solid rgba(0, 240, 255, 0.2)',
             padding: '3px',
-            gap: '2px'
+            gap: '2px',
+            marginLeft: '120px',
           }}>
             {(['calendar', 'today'] as const).map(mode => {
               const isActive = viewMode === mode;
@@ -186,24 +177,10 @@ export default function BarraSuperiore({
                     }
                   }}
                 >
-                  {mode === 'calendar' ? 'Calendario' : 'Oggi'}
+                  {mode === 'calendar' ? 'Cal.' : 'Oggi'}
                 </button>
               );
             })}
-          </div>
-
-          <div style={{ ...styles.logo, display: 'flex', alignItems: 'center', marginLeft: '60px' }}>
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/1165/1165187.png"
-              alt="Logo"
-              style={{
-                height: '28px',
-                width: 'auto',
-                marginRight: '15px',
-                filter: 'drop-shadow(0 0 5px #00f0ff) brightness(1.5) contrast(1.1)'
-              }}
-            />
-            AI SIMULATOR PRO
           </div>
         </div>
       )}

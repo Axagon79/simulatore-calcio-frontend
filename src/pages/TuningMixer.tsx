@@ -591,7 +591,10 @@ const TuningMixer: React.FC = () => {
       {/* === HEADER === */}
       <header style={styles.header}>
         <div style={styles.headerLeft}>
-          <button style={styles.backBtn} onClick={() => navigate('/')}>← Dashboard</button>
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
+            <img src="/logo-virgo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain' as const, filter: 'invert(1)', opacity: 0.85 }} />
+            <span style={{ fontSize: '15px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.05em', fontFamily: '"Inter", system-ui, sans-serif' }}>AI Simulator</span>
+          </a>
           <div style={styles.logo}>
             <span style={{ fontSize: 28 }}>🎛️</span>
             <div>

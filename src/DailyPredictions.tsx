@@ -1257,17 +1257,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         senza_segnare: 'Senza segnare', gol_subiti: 'Gol subiti',
                       };
                       const STREAK_CURVES: Record<string, Record<string, number>> = {
-                        vittorie: {'3': 2, '4': 3, '5': 0, '6': -1, '7': -3, '8': -6, '9': -10},
-                        sconfitte: {'4': -1, '5': -2, '6': -5},
-                        imbattibilita: {'5': 2, '6': 2, '7': 2, '8': 0, '9': 0, '10': 0, '11': -3},
-                        pareggi: {'3': -1, '4': 0, '5': 1, '6': -3},
-                        senza_vittorie: {'3': -1, '4': -2, '5': 0, '6': 1, '7': 2},
-                        over25: {'3': 3, '4': 3, '5': 0, '6': -1, '7': -4},
-                        under25: {'3': 3, '4': 3, '5': 0, '6': -1, '7': -4},
-                        gg: {'3': 2, '4': 2, '5': 0, '6': -3},
-                        clean_sheet: {'3': 2, '4': 3, '5': 0, '6': -1, '7': -4},
-                        senza_segnare: {'2': 1, '3': 2, '4': 0, '5': -1, '6': -3},
-                        gol_subiti: {'3': 2, '4': 3, '5': 2, '6': 1, '7': -2},
+                        vittorie: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -3, '9': -5},
+                        sconfitte: {'2': -1, '3': -2, '4': -3, '5': 0, '6': 1, '7': 2, '8': 3, '9': 5},
+                        imbattibilita: {'3': 1, '4': 1, '5': 2, '6': 2, '7': 0, '8': 0, '9': -1, '10': -2, '11': -3, '12': -5},
+                        pareggi: {'2': -1, '3': -1, '4': -2, '5': -3, '6': -2, '7': -1, '8': -2},
+                        senza_vittorie: {'3': -1, '4': -1, '5': -2, '6': -2, '7': 0, '8': 0, '9': 1, '10': 2, '11': 3, '12': 4},
+                        over25: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -4},
+                        under25: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -4},
+                        gg: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -4},
+                        clean_sheet: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -4},
+                        senza_segnare: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -4},
+                        gol_subiti: {'2': 1, '3': 2, '4': 3, '5': 0, '6': -1, '7': -2, '8': -4},
                       };
                       const getCurveVal = (type: string, n: number): number => {
                         const curve = STREAK_CURVES[type];
@@ -1289,14 +1289,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       // Mappatura: striscia → quale pronostico supporta
                       const SUPPORTS_SEGNO: Record<string, { home: string[], away: string[] }> = {
                         vittorie:       { home: ['1', '1X'], away: ['2', 'X2'] },
-                        sconfitte:      { home: ['2', 'X2'], away: ['1', '1X'] },
+                        sconfitte:      { home: ['1', '1X'], away: ['2', 'X2'] },
                         imbattibilita:  { home: ['1', 'X', '1X'], away: ['2', 'X', 'X2'] },
                         pareggi:        { home: ['X'], away: ['X'] },
-                        senza_vittorie: { home: ['2', 'X', 'X2'], away: ['1', 'X', '1X'] },
+                        senza_vittorie: { home: ['1', '1X'], away: ['2', 'X2'] },
                       };
                       const SUPPORTS_GOL: Record<string, string[]> = {
                         over25: ['Over'], under25: ['Under'],
-                        gg: ['GG'], clean_sheet: ['NG'], senza_segnare: ['NG'], gol_subiti: ['GG'],
+                        gg: ['GG'], clean_sheet: ['NG'], senza_segnare: ['Under'], gol_subiti: ['Over'],
                       };
 
                       return (

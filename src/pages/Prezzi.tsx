@@ -23,10 +23,9 @@ const c = {
 
 // --- Dati ---
 const PACKS = [
-  { name: 'Starter', credits: 9, shield: 1, price: 1.99, perCredit: 0.22, discount: null },
-  { name: 'Base', credits: 21, shield: 3, price: 3.99, perCredit: 0.19, discount: 14 },
-  { name: 'Plus', credits: 45, shield: 6, price: 6.99, perCredit: 0.16, discount: 29 },
-  { name: 'Pro', credits: 90, shield: 12, price: 12.99, perCredit: 0.14, discount: 35, popular: true },
+  { name: 'Base', credits: 18, shield: 3, price: 4.99, perCredit: 0.28, discount: null },
+  { name: 'Plus', credits: 42, shield: 6, price: 9.99, perCredit: 0.24, discount: 14, popular: true },
+  { name: 'Pro', credits: 72, shield: 12, price: 14.99, perCredit: 0.21, discount: 25 },
 ];
 
 const SUBS = [
@@ -125,7 +124,147 @@ export default function Prezzi({ onBack }: PrezziProps) {
           </p>
         </div>
 
-        {/* --- SEZIONE CREDITI --- */}
+        {/* --- 3 PIANI PRINCIPALI (stile Linear) --- */}
+        <section style={{ marginBottom: '80px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '20px',
+          }}>
+            {/* PIANO FREE */}
+            <div style={{
+              background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: '12px',
+              padding: '32px 28px', display: 'flex', flexDirection: 'column',
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: c.textDim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                Free
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.02em' }}>€0</span>
+              </div>
+              <div style={{ fontSize: '13px', color: c.textDim, marginBottom: '24px' }}>
+                Per sempre, nessuna carta richiesta
+              </div>
+              <div style={{ borderTop: `1px solid ${c.divider}`, paddingTop: '20px', flex: 1 }}>
+                {[
+                  'Dashboard e campionati',
+                  'Partite, quote, H2H e statistiche',
+                  'Match Day e live scores',
+                  '3 simulazioni al giorno',
+                  'Coach AI (3 messaggi/giorno)',
+                  'Track Record completo',
+                  'Bankroll e Money Tracker',
+                ].map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c.success} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style={{ fontSize: '13px', color: c.text, lineHeight: '1.4' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => { window.location.href = '/'; }} style={{
+                marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                border: `1px solid ${c.cardBorder}`, background: 'transparent', color: c.text,
+                transition: 'all 0.15s',
+              }}>Inizia gratis</button>
+            </div>
+
+            {/* PIANO CREDITI */}
+            <div style={{
+              position: 'relative',
+              background: c.cardHighlight, border: `1px solid ${c.cardHighlightBorder}`, borderRadius: '12px',
+              padding: '32px 28px', display: 'flex', flexDirection: 'column',
+            }}>
+              <div style={{
+                position: 'absolute', top: '-10px', left: '28px',
+                background: c.accent, color: '#fff',
+                fontSize: '10px', fontWeight: '700', textTransform: 'uppercase',
+                letterSpacing: '0.06em', padding: '3px 10px', borderRadius: '4px',
+              }}>Popolare</div>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: c.textDim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                Crediti
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.02em' }}>€4.99</span>
+                <span style={{ fontSize: '14px', color: c.textDim }}>da</span>
+              </div>
+              <div style={{ fontSize: '13px', color: c.textDim, marginBottom: '24px' }}>
+                Compra solo quando vuoi, senza vincoli
+              </div>
+              <div style={{ borderTop: `1px solid ${c.divider}`, paddingTop: '20px', flex: 1 }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
+                  Tutto il piano Free, in aggiunta:
+                </div>
+                {[
+                  'Sblocca pronostici Best Picks',
+                  'Analisi Premium AI',
+                  'Coach AI illimitato',
+                  '10 simulazioni al giorno',
+                  'Shield inclusi in ogni pacchetto',
+                  'I crediti non scadono mai',
+                ].map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style={{ fontSize: '13px', color: c.text, lineHeight: '1.4' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <button style={{
+                marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                border: 'none', background: c.accent, color: '#fff',
+                transition: 'all 0.15s',
+              }}>Acquista crediti</button>
+            </div>
+
+            {/* PIANO ABBONAMENTO */}
+            <div style={{
+              background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: '12px',
+              padding: '32px 28px', display: 'flex', flexDirection: 'column',
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: c.textDim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                Abbonamento
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.02em' }}>€7.99</span>
+                <span style={{ fontSize: '14px', color: c.textDim }}>/mese da</span>
+              </div>
+              <div style={{ fontSize: '13px', color: c.textDim, marginBottom: '24px' }}>
+                Risparmia su ogni pronostico e analisi
+              </div>
+              <div style={{ borderTop: `1px solid ${c.divider}`, paddingTop: '20px', flex: 1 }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
+                  Tutto il piano Crediti, in aggiunta:
+                </div>
+                {[
+                  'Pronostici e analisi a 1 credito invece di 3',
+                  'Crediti bonus ogni mese (fino a 15)',
+                  'Shield bonus ogni mese (fino a 6)',
+                  'Step System esclusivo',
+                ].map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c.success} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style={{ fontSize: '13px', color: c.text, lineHeight: '1.4' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <button style={{
+                marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                border: `1px solid ${c.cardBorder}`, background: 'transparent', color: c.text,
+                transition: 'all 0.15s',
+              }}>Vedi piani</button>
+            </div>
+          </div>
+        </section>
+
+        {/* --- DETTAGLIO PACCHETTI CREDITI --- */}
         <section style={{ marginBottom: '80px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{
@@ -138,7 +277,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             gap: '16px',
           }}>
             {PACKS.map(pack => {
@@ -169,7 +308,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
                       background: c.accent, color: '#fff',
                       fontSize: '10px', fontWeight: '700', textTransform: 'uppercase',
                       letterSpacing: '0.06em', padding: '3px 10px', borderRadius: '4px',
-                    }}>Popolare</div>
+                    }}>Miglior valore</div>
                   )}
                   <div style={{
                     fontSize: '13px', fontWeight: '600', color: c.textDim,

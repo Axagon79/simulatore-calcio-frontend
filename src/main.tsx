@@ -21,6 +21,7 @@ import StepSystem from './pages/StepSystem';
 import Settings from './pages/Settings';
 import AnalisiStorica from './pages/AnalisiStorica';
 import SimulazioneRapida from './pages/SimulazioneRapida';
+import Prezzi from './pages/Prezzi';
 
 function AppRoot() {
   const [showSettings, setShowSettings] = useState(() => {
@@ -57,6 +58,7 @@ function AppRoot() {
           <Route path="/best-picks" element={<UnifiedPredictions onBack={() => window.history.back()} />} />
           <Route path="/analisi-storica" element={<AnalisiStorica onBack={() => window.history.back()} />} />
           <Route path="/simulate" element={<SimulazioneRapida onBack={() => window.history.back()} />} />
+          <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
           <Route path="/*" element={<AppDev />} />
         </Routes>
       </BrowserRouter>

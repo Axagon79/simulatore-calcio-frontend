@@ -1,6 +1,5 @@
 // src/pages/TuningMixer.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 // --- CONFIGURAZIONE API ---
 const AI_ENGINE_BASE = 'https://us-central1-puppals-456c7.cloudfunctions.net';
@@ -93,8 +92,6 @@ interface ParamData {
 
 // --- COMPONENTE PRINCIPALE ---
 const TuningMixer: React.FC = () => {
-  const navigate = useNavigate();
-  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

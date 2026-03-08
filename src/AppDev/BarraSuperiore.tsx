@@ -26,7 +26,7 @@ interface BarraSuperioreProps {
   stemmiCoppe: Record<string, string>;
   styles: Record<string, CSSProperties>;
   onMobileMenuOpen: () => void;
-  onDashboard: () => void;
+  onDashboard?: () => void;
   viewMode: 'calendar' | 'today';
   onToggleViewMode: (mode: 'calendar' | 'today') => void;
 }
@@ -43,7 +43,6 @@ export default function BarraSuperiore({
   stemmiCoppe,
   styles,
   onMobileMenuOpen,
-  onDashboard,
   viewMode,
   onToggleViewMode
 }: BarraSuperioreProps) {

@@ -69,6 +69,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
   const [showOtherLeagues, setShowOtherLeagues] = useState(false);
   const [showCups, setShowCups] = useState(false);
   const [showBankroll, setShowBankroll] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Coach AI chat state
@@ -143,15 +144,6 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
     { id: 'LIGUE_1', name: 'Ligue 1', country: '🇫🇷 Francia', matches: 7, color: '#0055ff' }, 
   ];
 
-  // CARD SPECIALE PER ALTRI CAMPIONATI
-  const otherLeaguesCard = {
-    id: 'OTHER_LEAGUES',
-    name: 'Altri Campionati',
-    country: '🌍 Mondo',
-    matches: 15,
-    color: theme.purple
-  };
-
   // LISTA COMPLETA ALTRI CAMPIONATI
   const otherLeagues = [
     // ITALIA
@@ -185,13 +177,6 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
   ];
 
   // CONFIGURAZIONE COPPE EUROPEE
-  const cupsCard = {
-    id: 'EUROPEAN_CUPS',
-    name: 'Coppe Europee',
-    country: '🏆 UEFA',
-    matches: 72,
-    color: theme.cyan
-  };
 
   const europeanCups = [
     { id: 'UCL', name: 'UEFA Champions League', country: '⭐ Europa', color: '#0066cc' },
@@ -200,8 +185,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
   return (
     <div style={{ 
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-        backgroundColor: 'transparent',
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: isLight ? '#f0f2f5' : '#0a0b0f',
         zIndex: 9999,
         overflowY: 'auto',
         overflowX: 'hidden',     
@@ -209,6 +194,17 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         display: 'flex', flexDirection: 'column', alignItems: 'center'
     }}>
       
+      {/* Sfondo stadio trasparente */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: 'url(/bg-stadium.png)',
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+        opacity: isLight ? 0.02 : 0.025,
+        filter: 'saturate(3) contrast(1.6) brightness(1.3)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
+
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
@@ -226,8 +222,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           backdropFilter: 'blur(10px)',
           background: isLight ? 'rgba(215, 220, 235, 0.85)' : 'rgba(5,7,10,0.85)',
           margin: isMobile ? '0 -20px' : '0 -20px',
-          width: isMobile ? 'calc(100% + 40px)' : '100vw',
-          marginLeft: isMobile ? '-20px' : 'calc(-50vw + 50%)',
+          width: '100vw',
+          marginLeft: 'calc(-50vw + 50%)',
+          boxSizing: 'border-box' as const,
           fontFamily: '"Inter", "Segoe UI", sans-serif'
         }}>
           {/* RIGA 1: Logo + Auth (mobile) / Logo + Pronostici + Auth (desktop) */}
@@ -239,12 +236,27 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           }}>
             {/* SINISTRA: Logo */}
             <div style={{
-              fontSize: isMobile ? '16px' : '20px', fontWeight: 900,
-              background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              letterSpacing: '1.5px', flexShrink: 0
+              display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
             }}>
-              AI SIMULATOR
+              <img
+                src="/logo-virgo.png"
+                alt="Logo"
+                style={{
+                  width: isMobile ? 28 : 32,
+                  height: isMobile ? 28 : 32,
+                  objectFit: 'contain',
+                  filter: isLight ? 'none' : 'invert(1)',
+                  opacity: isLight ? 1 : 0.85,
+                }}
+              />
+              <span style={{
+                fontSize: isMobile ? '14px' : '15px', fontWeight: 600,
+                color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                letterSpacing: '0.05em',
+                fontFamily: '"Inter", system-ui, sans-serif',
+              }}>
+                AI Simulator
+              </span>
             </div>
 
             {/* CENTRO: Pronostici (solo desktop) */}
@@ -307,13 +319,15 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               onClick={() => window.dispatchEvent(new Event('open-settings'))}
               style={{
                 width: 34, height: 34, borderRadius: '50%',
-                background: theme.surface08, border: `1px solid ${theme.surface15}`,
+                background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', fontSize: '18px', color: theme.textDim,
+                cursor: 'pointer', fontSize: '18px',
+                color: isLight ? '#111827' : 'rgba(255,255,255,0.6)',
                 transition: 'all 0.2s', fontFamily: 'inherit'
               }}
               title="Impostazioni"
-            >⚙️</button>
+            ><img src="/icon-settings.png" alt="Impostazioni" style={{ width: 18, height: 18 }} /></button>
           </div>
           </div>
 
@@ -329,549 +343,713 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           )}
         </div>
 
-        {/* ===== TAGLINE (riga sottile) ===== */}
+        {/* ===== BARRA NAVIGAZIONE ===== */}
+        {(() => {
+          const navMenus: { label: string; items?: { label: string; onClick: () => void }[]; onClick?: () => void }[] = [
+            { label: 'Competizioni', items: [
+              ...leagues.map(l => ({ label: l.name, onClick: () => onSelectLeague(l.id) })),
+              { label: 'Altri Campionati', onClick: () => setShowOtherLeagues(true) },
+              { label: 'Coppe Europee', onClick: () => setShowCups(true) },
+            ]},
+            { label: 'Oggi', items: [
+              { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
+              { label: 'Best Picks', onClick: () => { window.location.href = '/best-picks'; } },
+            ]},
+            { label: 'Strumenti', items: [
+              { label: 'Simulazione Rapida', onClick: () => { window.location.href = '/simulate'; } },
+              { label: 'Step System', onClick: () => { window.location.href = '/step-system'; } },
+              { label: 'Bankroll & Gestione', onClick: () => setShowBankroll(true) },
+              { label: 'Track Record', onClick: () => { window.location.href = '/track-record'; } },
+              { label: 'Coach AI', onClick: () => setCoachOpen(true) },
+              ...(checkAdmin() ? [{ label: 'Analisi Storica', onClick: () => { window.location.href = '/analisi-storica'; } }] : []),
+            ]},
+            { label: 'Prezzi', onClick: () => { window.location.href = '/prezzi'; } },
+            { label: 'Contatti', onClick: () => { window.location.href = '/contatti'; } },
+          ];
+          return isMobile ? (
+            /* MOBILE: Hamburger */
+            <>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                padding: '6px 0',
+                borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                margin: '0 -20px', paddingLeft: '20px', paddingRight: '20px',
+              }}>
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+                    fontSize: '18px', cursor: 'pointer', padding: '4px 8px',
+                    fontFamily: 'inherit', lineHeight: 1,
+                  }}
+                >☰</button>
+                <span style={{
+                  fontSize: '12px', fontWeight: '500',
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                  marginLeft: '8px',
+                }}>Menu</span>
+              </div>
+              {/* PANNELLO HAMBURGER */}
+              {menuOpen && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: isLight ? 'rgba(255,255,255,0.97)' : 'rgba(10,11,15,0.97)',
+                  zIndex: 9000, overflowY: 'auto',
+                  padding: '20px',
+                  fontFamily: '"Inter", "Segoe UI", sans-serif',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                    <button
+                      onClick={() => setMenuOpen(false)}
+                      style={{
+                        background: 'none', border: 'none',
+                        color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+                        fontSize: '24px', cursor: 'pointer', padding: '4px 8px',
+                        fontFamily: 'inherit',
+                      }}
+                    >✕</button>
+                  </div>
+                  {navMenus.map(menu => (
+                    menu.items ? (
+                    <div key={menu.label} style={{ marginBottom: '24px' }}>
+                      <div style={{
+                        fontSize: '11px', fontWeight: '500',
+                        color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                        textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+                        marginBottom: '8px',
+                      }}>{menu.label}</div>
+                      {menu.items.map(item => (
+                        <div
+                          key={item.label}
+                          onClick={() => { item.onClick(); setMenuOpen(false); }}
+                          style={{
+                            padding: '10px 0',
+                            fontSize: '15px', fontWeight: '400',
+                            color: isLight ? '#374151' : 'rgba(255,255,255,0.8)',
+                            cursor: 'pointer',
+                            borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
+                          }}
+                        >
+                          {item.label}
+                        </div>
+                      ))}
+                    </div>
+                    ) : (
+                    <div
+                      key={menu.label}
+                      onClick={() => { if (menu.onClick) menu.onClick(); setMenuOpen(false); }}
+                      style={{
+                        padding: '12px 0',
+                        fontSize: '15px', fontWeight: '500',
+                        color: isLight ? '#374151' : 'rgba(255,255,255,0.8)',
+                        cursor: 'pointer',
+                        borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
+                      }}
+                    >
+                      {menu.label}
+                    </div>
+                    )
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            /* DESKTOP: Dropdown hover */
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: '8px',
+              padding: '8px 0',
+              fontFamily: '"Inter", "Segoe UI", sans-serif',
+              borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+              margin: '0 -20px', paddingLeft: '20px', paddingRight: '20px',
+            }}>
+              {navMenus.map(menu => (
+                menu.items ? (
+                <div
+                  key={menu.label}
+                  style={{ position: 'relative' }}
+                  onMouseEnter={e => {
+                    const dd = e.currentTarget.querySelector('[data-dropdown]') as HTMLElement;
+                    if (dd) dd.style.display = 'block';
+                  }}
+                  onMouseLeave={e => {
+                    const dd = e.currentTarget.querySelector('[data-dropdown]') as HTMLElement;
+                    if (dd) dd.style.display = 'none';
+                  }}
+                >
+                  <button style={{
+                    background: 'none', border: 'none',
+                    color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+                    fontSize: '13px', fontWeight: '500',
+                    padding: '6px 18px',
+                    cursor: 'pointer', borderRadius: '6px',
+                    transition: 'color 0.15s, background 0.15s',
+                    fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = isLight ? '#111827' : 'rgba(255,255,255,0.9)';
+                    e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.5)';
+                    e.currentTarget.style.background = 'none';
+                  }}
+                  >
+                    {menu.label}
+                  </button>
+                  <div data-dropdown style={{
+                    display: 'none',
+                    position: 'absolute',
+                    top: '100%', left: '0',
+                    minWidth: '200px',
+                    background: isLight ? '#fff' : '#161820',
+                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: '8px',
+                    padding: '4px 0',
+                    boxShadow: isLight ? '0 8px 30px rgba(0,0,0,0.12)' : '0 8px 30px rgba(0,0,0,0.5)',
+                    zIndex: 200,
+                  }}>
+                    {menu.items.map(item => (
+                      <div
+                        key={item.label}
+                        onClick={item.onClick}
+                        style={{
+                          padding: '8px 14px',
+                          fontSize: '13px', fontWeight: '400',
+                          color: isLight ? '#374151' : 'rgba(255,255,255,0.75)',
+                          cursor: 'pointer',
+                          transition: 'background 0.1s',
+                          fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'none';
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                ) : (
+                <button
+                  key={menu.label}
+                  onClick={menu.onClick}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+                    fontSize: '13px', fontWeight: '500',
+                    padding: '6px 18px',
+                    cursor: 'pointer', borderRadius: '6px',
+                    transition: 'color 0.15s, background 0.15s',
+                    fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = isLight ? '#111827' : 'rgba(255,255,255,0.9)';
+                    e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.5)';
+                    e.currentTarget.style.background = 'none';
+                  }}
+                >
+                  {menu.label}
+                </button>
+                )
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ===== HERO — Tagline grande ===== */}
         <div style={{
-          textAlign: 'center',
-          padding: isMobile ? '8px 0 10px' : '10px 0 14px',
+          padding: isMobile ? '36px 4px 28px' : '56px 0 44px',
         }}>
-          <span style={{
-            color: isLight ? '#4a6078' : '#a8b8cc',
-            fontSize: isMobile ? '10.5px' : '12px',
-            fontFamily: "'Georgia', 'Times New Roman', serif",
-            fontStyle: 'italic',
-            letterSpacing: isMobile ? '0.3px' : '0.8px',
-            whiteSpace: 'nowrap' as const,
+          <h1 style={{
+            color: isLight ? '#111827' : 'rgba(255,255,255,0.92)',
+            fontSize: isMobile ? '26px' : '46px',
+            fontWeight: '500',
+            fontFamily: '"Inter", system-ui, sans-serif',
+            lineHeight: '1.2',
+            margin: 0,
+            letterSpacing: '-0.03em',
           }}>
-            Ogni partita ha una storia — noi la scriviamo prima che accada
-          </span>
+            Ogni partita ha una storia<br />
+            noi la scriviamo prima che accada
+          </h1>
+          <p style={{
+            color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)',
+            fontSize: isMobile ? '13px' : '14px',
+            fontFamily: '"Inter", "Segoe UI", sans-serif',
+            marginTop: isMobile ? '14px' : '20px',
+            fontWeight: '400',
+            letterSpacing: '0.01em',
+          }}>
+            Pronostici AI, simulazioni avanzate e analisi in tempo reale
+          </p>
         </div>
 
-        {/* BARRA AZIONI RAPIDE */}
-        <div style={{
-          background: isLight ? 'rgba(255,255,255,0.85)' : '#1e2337',
-          border: `1px solid ${theme.borderSubtle}`,
-          borderRadius: '12px', padding: isMobile ? '10px' : '14px', marginBottom: '30px'
-        }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-          {[
-            { label: 'Match Day', icon: '\u26BD', color: theme.cyan, bg: `${theme.cyan}20`, borderColor: `${theme.cyan}44`, onClick: () => { if (onGoToToday) onGoToToday(); } },
-            { label: 'Track Record', icon: '\uD83D\uDCCA', color: theme.success, bg: `${theme.success}20`, borderColor: `${theme.success}40`, onClick: () => { window.location.href = '/track-record'; } },
-            { label: 'Coach AI', icon: '\uD83E\uDD16', color: theme.purple, bg: `${theme.purple}20`, borderColor: `${theme.purple}44`, onClick: () => setCoachOpen(true) },
-            ...(checkAdmin() ? [{ label: 'Analisi', icon: '\uD83D\uDCC8', color: theme.warning, bg: `${theme.warning}20`, borderColor: `${theme.warning}44`, onClick: () => { window.location.href = '/analisi-storica'; } }] : [])
-          ].map(btn => (
-            <button
-              key={btn.label}
-              onClick={btn.onClick}
+        {/* ===== SHOWCASE SEZIONI (stile Linear) ===== */}
+        {[
+          {
+            title: 'Competizioni Selezionate',
+            subtitle: 'Solo il meglio, niente compromessi',
+            text: 'Ogni competizione è stata scelta perché calibrata al massimo con i nostri algoritmi. Leghe su misura per offrire la massima precisione.',
+            img: '/showcase-competizioni.png',
+            link: { label: 'Esplora le competizioni', action: () => { /* scroll to leagues */ document.querySelector('[data-section="competizioni"]')?.scrollIntoView({ behavior: 'smooth' }); } },
+          },
+          {
+            title: 'Pronostici Intelligenti',
+            subtitle: 'Dati che parlano, non opinioni',
+            text: 'Algoritmi avanzati analizzano statistiche, quote e tendenze per generare pronostici con livelli di confidenza trasparenti.',
+            img: '/showcase-pronostici.png',
+            link: { label: 'Scopri i pronostici', action: () => { window.location.href = '/best-picks'; } },
+          },
+          {
+            title: 'Simulazione Avanzata',
+            subtitle: 'Gioca la partita prima del fischio',
+            text: 'Simula qualsiasi match con 6 algoritmi diversi: statistico, tattico, dinamico, Monte Carlo e altri.',
+            img: '/showcase-simulazione.png',
+            link: { label: 'Simula una partita', action: () => { window.location.href = '/simulate'; } },
+          },
+          {
+            title: 'Track Record',
+            subtitle: 'La trasparenza, il nostro punto di forza',
+            text: 'Risultati verificabili, non promesse. Ogni pronostico viene tracciato e verificato. Consulta lo storico completo con percentuali di successo reali.',
+            img: '/showcase-trackrecord.png',
+            link: { label: 'Verifica i risultati', action: () => { window.location.href = '/track-record'; } },
+          },
+          {
+            title: 'Assistente AI',
+            subtitle: 'Mai più da solo',
+            text: 'Un coach personale che analizza partite, risponde alle tue domande e ti guida nelle scelte. Sempre disponibile.',
+            img: '/showcase-assistente.jpg',
+            link: { label: 'Chiedi al Coach', action: () => setCoachOpen(true) },
+          },
+          {
+            title: 'Gestione Bankroll',
+            subtitle: 'Il controllo che fa la differenza',
+            text: 'Step System, bankroll management e ROI tracking. Ogni scommessa è gestita con disciplina e strategia.',
+            img: '/showcase-bankroll.jpg',
+            link: { label: 'Gestisci il bankroll', action: () => setShowBankroll(true) },
+          },
+        ].map((section, idx) => (
+          <div key={idx} style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : (idx % 2 === 0 ? 'row' : 'row-reverse'),
+            alignItems: 'center',
+            gap: isMobile ? '24px' : '48px',
+            marginBottom: isMobile ? '48px' : '80px',
+          }}>
+            {/* Testo */}
+            <div style={{
+              flex: isMobile ? 'unset' : '0 0 35%',
+              width: isMobile ? '100%' : 'auto',
+            }}>
+              <div style={{
+                fontSize: isMobile ? '10px' : '11px',
+                fontWeight: '500',
+                color: isLight ? '#6366f1' : 'rgba(99,102,241,0.8)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.1em',
+                marginBottom: '8px',
+                fontFamily: '"Inter", system-ui, sans-serif',
+              }}>{section.subtitle}</div>
+              <h2 style={{
+                fontSize: isMobile ? '22px' : '28px',
+                fontWeight: '600',
+                color: isLight ? '#111827' : 'rgba(255,255,255,0.9)',
+                margin: '0 0 12px 0',
+                lineHeight: '1.2',
+                fontFamily: '"Inter", system-ui, sans-serif',
+                letterSpacing: '-0.02em',
+              }}>{section.title}</h2>
+              <p style={{
+                fontSize: isMobile ? '13px' : '14px',
+                color: isLight ? '#6b7280' : 'rgba(255,255,255,0.4)',
+                lineHeight: '1.6',
+                margin: 0,
+                fontFamily: '"Inter", system-ui, sans-serif',
+              }}>{section.text}</p>
+              {section.link && (
+                <div
+                  onClick={section.link.action}
+                  style={{
+                    marginTop: '16px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: isLight ? '#6366f1' : 'rgba(99,102,241,0.9)',
+                    cursor: 'pointer',
+                    fontFamily: '"Inter", system-ui, sans-serif',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'gap 0.2s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.gap = '10px'; }}
+                  onMouseLeave={e => { e.currentTarget.style.gap = '6px'; }}
+                >
+                  {section.link.label} <span style={{ fontSize: '16px' }}>&rarr;</span>
+                </div>
+              )}
+            </div>
+            {/* Screenshot sfumato */}
+            <div style={{
+              flex: isMobile ? 'unset' : '0 0 60%',
+              width: isMobile ? '100%' : 'auto',
+              position: 'relative',
+              borderRadius: '12px',
+              overflow: 'hidden',
+            }}>
+              <img
+                src={section.img}
+                alt={section.title}
+                style={{
+                  width: '100%',
+                  display: 'block',
+                  borderRadius: '12px',
+                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                }}
+              />
+              {/* Sfumatura bordi */}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '12px',
+                background: isLight
+                  ? 'none'
+                  : 'linear-gradient(to right, rgba(10,11,15,0.6) 0%, transparent 15%, transparent 85%, rgba(10,11,15,0.6) 100%), linear-gradient(to bottom, transparent 70%, rgba(10,11,15,0.8) 100%)',
+                pointerEvents: 'none',
+              }} />
+            </div>
+          </div>
+        ))}
+
+        {/* SEZIONE CAMPIONATI */}
+        <div data-section="competizioni" style={{ marginBottom: '32px' }}>
+          <div style={{
+            fontSize: '11px', fontWeight: '500', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+            textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '12px',
+            fontFamily: '"Inter", "Segoe UI", sans-serif',
+          }}>Competizioni</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '1px',
+            background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+            borderRadius: '8px',
+            overflow: 'hidden',
+          }}>
+            {leagues.map(league => (
+              <div
+                key={league.id}
+                onClick={() => onSelectLeague(league.id)}
+                style={{
+                  background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)',
+                  padding: isMobile ? '12px 14px' : '16px 18px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  fontFamily: '"Inter", "Segoe UI", sans-serif',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = isLight ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.06)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)';
+                }}
+              >
+                <StemmaImg
+                  src={STEMMI_CAMPIONATI[league.id]}
+                  size={isMobile ? 28 : 32}
+                  alt={league.name}
+                  cardColor={league.color}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: isMobile ? '13px' : '14px', fontWeight: '500',
+                    color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                    whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>{league.name}</div>
+                  <div style={{
+                    fontSize: '11px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                    marginTop: '1px',
+                  }}>{league.country}</div>
+                </div>
+                <span style={{
+                  fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)',
+                }}>&#8250;</span>
+              </div>
+            ))}
+            {/* Altri Campionati */}
+            <div
+              onClick={() => setShowOtherLeagues(true)}
               style={{
-                flex: 1, padding: isMobile ? '12px 8px' : '14px 16px', borderRadius: '12px',
-                background: btn.bg, border: `1px solid ${btn.borderColor}`,
-                color: btn.color, fontSize: isMobile ? '12px' : '13px', fontWeight: '800',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                fontFamily: '"Inter", "Segoe UI", sans-serif', transition: 'all 0.3s ease'
+                background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)',
+                padding: isMobile ? '12px 14px' : '16px 18px',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease',
+                display: 'flex', alignItems: 'center', gap: '12px',
+                fontFamily: '"Inter", "Segoe UI", sans-serif',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = btn.color;
-                e.currentTarget.style.background = theme.cardHoverBg;
-                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.background = isLight ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.06)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = btn.borderColor;
-                e.currentTarget.style.background = btn.bg;
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-              onTouchStart={e => {
-                e.currentTarget.style.borderColor = btn.color;
-                e.currentTarget.style.background = theme.cardHoverBg;
-                e.currentTarget.style.transform = 'scale(0.96)';
-              }}
-              onTouchEnd={e => {
-                const t = e.currentTarget;
-                setTimeout(() => {
-                  t.style.borderColor = btn.borderColor;
-                  t.style.background = btn.bg;
-                  t.style.transform = 'scale(1)';
-                }, 200);
+                e.currentTarget.style.background = isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)';
               }}
             >
-              <span style={{ fontSize: '16px' }}>{btn.icon}</span> {btn.label}
-            </button>
-          ))}
+              <div style={{
+                width: isMobile ? '28px' : '32px', height: isMobile ? '28px' : '32px',
+                borderRadius: '6px',
+                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: isMobile ? '14px' : '16px', flexShrink: 0,
+              }}>+</div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: isMobile ? '13px' : '14px', fontWeight: '500',
+                  color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                }}>Altri Campionati</div>
+                <div style={{
+                  fontSize: '11px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                  marginTop: '1px',
+                }}>+15 disponibili</div>
+              </div>
+              <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
+            </div>
+            {/* Coppe Europee */}
+            <div
+              onClick={() => setShowCups(true)}
+              style={{
+                background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)',
+                padding: isMobile ? '12px 14px' : '16px 18px',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease',
+                display: 'flex', alignItems: 'center', gap: '12px',
+                fontFamily: '"Inter", "Segoe UI", sans-serif',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = isLight ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.06)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)';
+              }}
+            >
+              <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                <StemmaImg src={STEMMI_COPPE['UCL']} size={isMobile ? 14 : 16} alt="UCL" cardColor="#1a3c6e" />
+                <StemmaImg src={STEMMI_COPPE['UEL']} size={isMobile ? 14 : 16} alt="UEL" cardColor="#e87500" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: isMobile ? '13px' : '14px', fontWeight: '500',
+                  color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                }}>Coppe Europee</div>
+                <div style={{
+                  fontSize: '11px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                  marginTop: '1px',
+                }}>UCL + UEL</div>
+              </div>
+              <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
+            </div>
           </div>
         </div>
 
-        {/* GRIGLIA RESPONSIVA */}
-        <div style={{
+        {/* SEZIONE STRUMENTI */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{
+            fontSize: '11px', fontWeight: '500', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+            textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '12px',
+            fontFamily: '"Inter", "Segoe UI", sans-serif',
+          }}>Strumenti</div>
+          <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '20px'
-        }}>
-            {/* CARD CAMPIONATI PRINCIPALI */}
-            {leagues.map(league => (
-               <div 
-                 key={league.id}
-                 onClick={() => onSelectLeague(league.id)}
-                 style={{
-                     background: theme.cardBg,
-                     backdropFilter: 'blur(10px)',
-                     border: `1px solid ${league.color}40`,
-                     borderRadius: isMobile ? '16px' : '20px',
-                     padding: isMobile ? '18px' : '25px',
-                     cursor: 'pointer',
-                     transition: 'all 0.3s ease',
-                     position: 'relative',
-                     height: isMobile ? '120px' : '180px',
-                     display: 'flex',
-                     flexDirection: 'column',
-                     justifyContent: 'space-between',
-                     gap: isMobile ? '8px' : '0'
-                 }}
-                 onMouseEnter={(e) => {
-                    if (!e.currentTarget) return;
-                    e.currentTarget.style.borderColor = league.color;
-                    e.currentTarget.style.background = theme.cardHoverBg;
-                    e.currentTarget.style.transform = 'translateY(-3px)';
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '1px',
+            background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+            borderRadius: '8px',
+            overflow: 'hidden',
+          }}>
+            {[
+              { label: 'Step System', sub: 'Sistema Progressivo', onClick: () => { window.location.href = '/step-system'; } },
+              { label: 'Bankroll & Gestione', sub: 'ROI & Money Management', onClick: () => setShowBankroll(true) },
+              { label: 'Track Record', sub: 'Statistiche Pronostici', onClick: () => { window.location.href = '/track-record'; } },
+              { label: 'Impostazioni', sub: 'Tema, Account & Preferenze', onClick: () => window.dispatchEvent(new Event('open-settings')) },
+            ].map(item => (
+              <div
+                key={item.label}
+                onClick={item.onClick}
+                style={{
+                  background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)',
+                  padding: isMobile ? '12px 14px' : '16px 18px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  fontFamily: '"Inter", "Segoe UI", sans-serif',
                 }}
-                onMouseLeave={(e) => {
-                    if (!e.currentTarget) return;
-                    e.currentTarget.style.borderColor = `${league.color}40`;
-                    e.currentTarget.style.background = theme.cardBg;
-                    e.currentTarget.style.transform = 'translateY(0)';
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = isLight ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.06)';
                 }}
-                onTouchStart={(e) => {
-                    if (!e.currentTarget) return;
-                    e.currentTarget.style.borderColor = league.color;
-                    e.currentTarget.style.background = theme.cardHoverBg;
-                    e.currentTarget.style.transform = 'scale(0.98)';
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)';
                 }}
-                onTouchEnd={(e) => {
-                    const target = e.currentTarget;
-                    if (!target) return;
-                    setTimeout(() => {
-                        if (!target) return;
-                        target.style.borderColor = `${league.color}40`;
-                        target.style.background = theme.cardBg;
-                        target.style.transform = 'scale(1)';
-                    }, 200);
-                }}
-               >
-                   {/* PARTE SUPERIORE: STEMMA + INFO */}
-                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '12px' : '15px' }}>
-                      {/* STEMMA */}
-                      <StemmaImg
-                        src={STEMMI_CAMPIONATI[league.id]}
-                        size={isMobile ? 40 : 55}
-                        alt={league.name}
-                        cardColor={league.color}
-                      />
-                      <div>
-                        <div style={{
-                            fontSize: isMobile ? '10px' : '12px', 
-                            color: theme.textDim, 
-                            textTransform:'uppercase', 
-                            fontWeight:'bold', 
-                            display:'flex', 
-                            alignItems:'center', 
-                            gap:'6px'
-                        }}>
-                            {league.country}
-                        </div>
-                        <div style={{
-                            fontSize: isMobile ? '20px' : '26px',
-                            fontWeight: '800',
-                            color: theme.text,
-                            marginTop: isMobile ? '2px' : '5px',
-                            lineHeight: '1.1'
-                        }}>
-                            {league.name}
-                        </div>
-                      </div>
-                   </div>
-                   
-                   {/* PARTE INFERIORE: BADGE + FRECCIA */}
-                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
-                      <div style={{
-                          fontSize: isMobile ? '10px' : '12px', 
-                          color: league.color, 
-                          fontWeight:'bold', 
-                          background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.3)',
-                          padding: isMobile ? '3px 8px' : '4px 10px', 
-                          borderRadius:'6px',
-                          whiteSpace: 'nowrap'
-                      }}>
-                        ● {league.matches} LIVE
-                      </div>
-                      
-                      <div style={{
-                          width: isMobile ? '30px' : '35px', 
-                          height: isMobile ? '30px' : '35px', 
-                          borderRadius: '50%', 
-                          background: isLight ? theme.text : '#fff', color: isLight ? '#fff' : '#000',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: isMobile ? '16px' : '18px', 
-                          fontWeight:'bold'
-                      }}>
-                        ➜
-                      </div>
-                   </div>
-               </div>
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: isMobile ? '13px' : '14px', fontWeight: '500',
+                    color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                  }}>{item.label}</div>
+                  <div style={{
+                    fontSize: '11px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                    marginTop: '1px',
+                  }}>{item.sub}</div>
+                </div>
+                <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
+              </div>
             ))}
-
-            {/* CARD ALTRI CAMPIONATI */}
-            <div 
-              key={otherLeaguesCard.id}
-              onClick={() => setShowOtherLeagues(true)}
-              style={{
-                background: `linear-gradient(135deg, ${theme.purple}33, ${theme.cyan}1a)`,
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.purple}`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.purple}40`;
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>🌍</div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Altri Campionati
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.purple,
-                fontWeight: 'bold'
-              }}>
-                +15 Disponibili
-              </div>
-            </div>
-
-            {/* CARD BEST PICKS — Pronostici Unificati */}
-            <div
-              key="PREDICTIONS_CARD"
-              onClick={() => window.location.href = '/best-picks'}
-              style={{
-                background: `linear-gradient(135deg, ${theme.purple}26, ${theme.cyan}14)`,
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.purple}66`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.purple}4d`;
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>🔮</div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Best Picks
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.purple,
-                fontWeight: 'bold'
-              }}>
-                AI Predictions
-              </div>
-            </div>
-              
-            {/* CARD COPPE EUROPEE - CON STEMMI UCL + UEL */}
-            <div 
-              key={cupsCard.id}
-              onClick={() => setShowCups(true)}
-              style={{
-                background: isLight ? 'linear-gradient(135deg, rgba(0,102,204,0.08), rgba(255,102,0,0.04))' : 'linear-gradient(135deg, rgba(0,102,204,0.2), rgba(255,102,0,0.1))',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.cyan}`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.cyan}40`;
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              {/* STEMMI UCL + UEL AFFIANCATI */}
-              <div style={{ display: 'flex', gap: isMobile ? '10px' : '15px', marginBottom: isMobile ? '8px' : '10px' }}>
-                <StemmaImg src={STEMMI_COPPE['UCL']} size={isMobile ? 35 : 45} alt="Champions League" cardColor="#1a3c6e" />
-                <StemmaImg src={STEMMI_COPPE['UEL']} size={isMobile ? 35 : 45} alt="Europa League" cardColor="#e87500" />
-              </div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Coppe Europee
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.cyan,
-                fontWeight: 'bold'
-              }}>
-                UCL + UEL
-              </div>
-            </div>
-
-            {/* CARD STEP SYSTEM */}
-            <div
-              key="STEP_SYSTEM_CARD"
-              onClick={() => window.location.href = '/step-system'}
-              style={{
-                position: 'relative',
-                background: `linear-gradient(135deg, ${theme.purple}26, ${theme.purple}14)`,
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.purple}66`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.purple}4d`;
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <span style={{
-                position: 'absolute',
-                top: isMobile ? '8px' : '12px',
-                right: isMobile ? '8px' : '12px',
-                background: `linear-gradient(135deg, ${theme.purple}, #8b5cf6)`,
-                color: 'white',
-                fontSize: '10px',
-                fontWeight: '900',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                letterSpacing: '1px',
-                textTransform: 'uppercase'
-              }}>PRO</span>
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>📈</div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Step System
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.purple,
-                fontWeight: 'bold'
-              }}>
-                Sistema Progressivo
-              </div>
-            </div>
-
-            {/* CARD BANKROLL & GESTIONE */}
-            <div
-              key="BANKROLL_CARD"
-              onClick={() => setShowBankroll(true)}
-              style={{
-                background: `linear-gradient(135deg, ${theme.success}26, ${theme.gold}14)`,
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.success}66`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.success}4d`;
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>💰</div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Bankroll & Gestione
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.success,
-                fontWeight: 'bold'
-              }}>
-                ROI & Money Management
-              </div>
-            </div>
-
-            {/* CARD SIMULAZIONE RAPIDA */}
-            <div
-              key="QUICK_SIM_CARD"
-              onClick={() => window.location.href = '/simulate'}
-              style={{
-                background: `linear-gradient(135deg, ${theme.cyan}26, ${theme.cyan}10)`,
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.cyan}66`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 10px 40px ${theme.cyan}4d`;
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px'}}>⚡</div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Simulazione Rapida
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.cyan,
-                fontWeight: 'bold'
-              }}>
-                Quick Sim
-              </div>
-            </div>
-
-            {/* CARD IMPOSTAZIONI */}
-            <div
-              key="SETTINGS_CARD"
-              onClick={() => window.dispatchEvent(new Event('open-settings'))}
-              style={{
-                background: isLight ? 'linear-gradient(135deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01))' : 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.borderSubtle}`,
-                borderRadius: isMobile ? '16px' : '20px',
-                padding: isMobile ? '18px' : '25px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                height: isMobile ? '120px' : '180px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                e.currentTarget.style.boxShadow = isLight ? '0 10px 40px rgba(0,0,0,0.08)' : '0 10px 40px rgba(255,255,255,0.1)';
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget) return;
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{fontSize: isMobile ? '36px' : '48px', marginBottom: isMobile ? '5px' : '-10px', ...(isLight ? { filter: 'brightness(0.6)' } : {})}}>⚙️</div>
-              <div style={{
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: '800',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Impostazioni
-              </div>
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                color: theme.textDim,
-                fontWeight: 'bold'
-              }}>
-                Tema, Account & Preferenze
-              </div>
-            </div>
-
-            <div style={{height: '50px'}}></div>
+          </div>
         </div>
+
+        {/* ===== FOOTER (stile Linear) ===== */}
+        <footer style={{
+          borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+          marginTop: '40px',
+          paddingTop: '40px',
+          paddingBottom: '32px',
+          fontFamily: '"Inter", system-ui, sans-serif',
+        }}>
+          {/* Colonne */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : '1.5fr repeat(4, 1fr)',
+            gap: isMobile ? '32px' : '40px',
+            marginBottom: '40px',
+          }}>
+            {/* Logo + nome */}
+            {!isMobile && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <img src="/logo-virgo.png" alt="Logo" style={{
+                    width: 24, height: 24, objectFit: 'contain',
+                    filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
+                  }} />
+                  <span style={{
+                    fontSize: '14px', fontWeight: 600,
+                    color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                    letterSpacing: '0.05em',
+                  }}>AI Simulator</span>
+                </div>
+                <p style={{
+                  fontSize: '12px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)',
+                  lineHeight: '1.5', margin: 0, maxWidth: '200px',
+                }}>Pronostici AI, simulazioni avanzate e analisi in tempo reale.</p>
+              </div>
+            )}
+            {/* Colonna Prodotto */}
+            <div>
+              <div style={{
+                fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em', marginBottom: '12px',
+                color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+              }}>Prodotto</div>
+              {[
+                { label: 'Competizioni', action: () => document.querySelector('[data-section="competizioni"]')?.scrollIntoView({ behavior: 'smooth' }) },
+                { label: 'Pronostici', action: () => { window.location.href = '/best-picks'; } },
+                { label: 'Simulazione', action: () => { window.location.href = '/simulate'; } },
+                { label: 'Track Record', action: () => { window.location.href = '/track-record'; } },
+                { label: 'Coach AI', action: () => setCoachOpen(true) },
+              ].map(item => (
+                <div key={item.label} onClick={item.action} style={{
+                  fontSize: '13px', color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
+                  padding: '4px 0', cursor: 'pointer', transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#111827' : 'rgba(255,255,255,0.85)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.45)'; }}
+                >{item.label}</div>
+              ))}
+            </div>
+            {/* Colonna Strumenti */}
+            <div>
+              <div style={{
+                fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em', marginBottom: '12px',
+                color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+              }}>Strumenti</div>
+              {[
+                { label: 'Step System', action: () => { window.location.href = '/step-system'; } },
+                { label: 'Bankroll', action: () => setShowBankroll(true) },
+                { label: 'Money Tracker', action: () => { window.location.href = '/money-tracker'; } },
+                { label: 'Impostazioni', action: () => window.dispatchEvent(new Event('open-settings')) },
+              ].map(item => (
+                <div key={item.label} onClick={item.action} style={{
+                  fontSize: '13px', color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
+                  padding: '4px 0', cursor: 'pointer', transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#111827' : 'rgba(255,255,255,0.85)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.45)'; }}
+                >{item.label}</div>
+              ))}
+            </div>
+            {/* Colonna Prezzi */}
+            <div>
+              <div style={{
+                fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em', marginBottom: '12px',
+                color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+              }}>Prezzi</div>
+              {[
+                { label: 'Piani', action: () => { window.location.href = '/prezzi'; } },
+              ].map(item => (
+                <div key={item.label} onClick={item.action} style={{
+                  fontSize: '13px', color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
+                  padding: '4px 0', cursor: 'pointer', transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#111827' : 'rgba(255,255,255,0.85)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.45)'; }}
+                >{item.label}</div>
+              ))}
+            </div>
+            {/* Colonna Contatti */}
+            <div>
+              <div style={{
+                fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em', marginBottom: '12px',
+                color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+              }}>Contatti</div>
+              {[
+                { label: 'Contattaci', action: () => { window.location.href = '/contatti'; } },
+              ].map(item => (
+                <div key={item.label} onClick={item.action} style={{
+                  fontSize: '13px', color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
+                  padding: '4px 0', cursor: 'pointer', transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#111827' : 'rgba(255,255,255,0.85)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.45)'; }}
+                >{item.label}</div>
+              ))}
+            </div>
+          </div>
+          {/* Copyright */}
+          <div style={{
+            borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+            paddingTop: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '8px',
+          }}>
+            <span style={{
+              fontSize: '12px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.25)',
+            }}>&copy; {new Date().getFullYear()} AI Simulator. Tutti i diritti riservati.</span>
+            <span style={{
+              fontSize: '11px', color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.2)',
+            }}>Il gioco d'azzardo può causare dipendenza. 18+ | Numero Verde: 800 55 88 22</span>
+          </div>
+        </footer>
       </div>
 
       {/* MODALE ALTRI CAMPIONATI */}

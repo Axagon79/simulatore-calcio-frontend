@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
-import { getTheme, getThemeMode } from '../AppDev/costanti';
+import { getTheme } from '../AppDev/costanti';
 import StemmaImg from './StemmaImg';
 
 const theme = getTheme();
-const isLight = getThemeMode() === 'light';
 
 const isLocal = typeof window !== 'undefined' && (
   ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
@@ -86,7 +85,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentRef = useRef<HTMLDivElement>(null);
   const offscreenRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch pronostici del giorno
   useEffect(() => {
@@ -98,7 +97,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
         const allPicks: Pick[] = [];
         for (const pred of data.predictions) {
           for (const p of pred.pronostici || []) {
-            if (p.stars >= 3 && p.tipo === 'SEGNO') {
+            if (p.stars >= 3) {
               allPicks.push({
                 home: pred.home, away: pred.away,
                 home_mongo_id: pred.home_mongo_id, away_mongo_id: pred.away_mongo_id,

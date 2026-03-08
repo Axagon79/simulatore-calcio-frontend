@@ -27,7 +27,6 @@ const PACKS = [
   { name: 'Base', credits: 21, shield: 3, price: 3.99, perCredit: 0.19, discount: 14 },
   { name: 'Plus', credits: 45, shield: 6, price: 6.99, perCredit: 0.16, discount: 29 },
   { name: 'Pro', credits: 90, shield: 12, price: 12.99, perCredit: 0.14, discount: 35, popular: true },
-  { name: 'Max', credits: 180, shield: 24, price: 49.99, perCredit: 0.28, discount: null, premium: true },
 ];
 
 const SUBS = [
@@ -145,7 +144,6 @@ export default function Prezzi({ onBack }: PrezziProps) {
             {PACKS.map(pack => {
               const isHovered = hoveredPack === pack.name;
               const isPopular = pack.popular;
-              const isPremium = pack.premium;
               return (
                 <div
                   key={pack.name}
@@ -173,15 +171,6 @@ export default function Prezzi({ onBack }: PrezziProps) {
                       letterSpacing: '0.06em', padding: '3px 10px', borderRadius: '4px',
                     }}>Popolare</div>
                   )}
-                  {isPremium && (
-                    <div style={{
-                      position: 'absolute', top: '-10px',
-                      background: isLight ? '#b8860b' : '#fbbf24', color: isLight ? '#fff' : '#000',
-                      fontSize: '10px', fontWeight: '700', textTransform: 'uppercase',
-                      letterSpacing: '0.06em', padding: '3px 10px', borderRadius: '4px',
-                    }}>Premium</div>
-                  )}
-
                   <div style={{
                     fontSize: '13px', fontWeight: '600', color: c.textDim,
                     textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '16px',

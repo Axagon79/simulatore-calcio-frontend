@@ -1054,12 +1054,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
       {/* MODALE ALTRI CAMPIONATI */}
       {showOtherLeagues && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
-            backdropFilter: 'blur(10px)',
+            background: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
             zIndex: 99999,
             display: 'flex',
             alignItems: 'center',
@@ -1070,21 +1070,22 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         >
           <div
             style={{
-              background: isMobile ? mobileTheme.bg : theme.bg,
-              border: `2px solid ${theme.purple}`,
-              borderRadius: '20px',
-              padding: isMobile ? '20px' : '30px',
+              background: isLight ? '#ffffff' : '#161820',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: '12px',
+              padding: isMobile ? '20px' : '28px',
               maxWidth: '900px',
               width: '100%',
               maxHeight: '80vh',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              boxShadow: isLight ? '0 16px 48px rgba(0,0,0,0.12)' : '0 16px 48px rgba(0,0,0,0.5)',
+              fontFamily: '"Inter", system-ui, sans-serif',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* HEADER (fisso) */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -1093,37 +1094,38 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               flexShrink: 0
             }}>
               <h2 style={{
-                fontSize: isMobile ? '22px' : '28px',
-                fontWeight: '800',
-                color: theme.text,
-                margin: 0
+                fontSize: isMobile ? '18px' : '20px',
+                fontWeight: '600',
+                color: isLight ? '#111827' : 'rgba(255,255,255,0.9)',
+                margin: 0,
+                letterSpacing: '-0.02em',
               }}>
-                🌍 Altri Campionati
+                Altri Campionati
               </h2>
               <button
                 onClick={() => setShowOtherLeagues(false)}
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme.textDim,
-                  fontSize: '32px',
-                  cursor: 'pointer',
-                  padding: '0',
-                  lineHeight: '1'
+                  background: 'none', border: 'none',
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.4)',
+                  fontSize: '20px', cursor: 'pointer', padding: '4px 8px',
+                  lineHeight: '1', borderRadius: '6px',
+                  transition: 'background 0.15s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
               >
-                ×
+                &#10005;
               </button>
             </div>
 
-            {/* GRIGLIA CAMPIONATI CON STEMMI (scrollabile) */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: isMobile ? '15px' : '10px',
-              overflowY: 'auto',
+              gap: '1px',
+              background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+              borderRadius: '8px',
+              overflow: 'hidden auto',
               flex: 1,
-              paddingTop: '5px'
             }}>
               {otherLeagues.map(league => (
                 <div
@@ -1133,48 +1135,45 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     onSelectLeague(league.id);
                   }}
                   style={{
-                    background: theme.cardBg,
-                    border: `1px solid ${theme.borderSubtle}`,
-                    borderRadius: '12px',
-                    padding: isMobile ? '15px' : '20px',
+                    background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
+                    padding: isMobile ? '12px 14px' : '14px 16px',
                     cursor: 'pointer',
-                    transition: 'all 0.3s ease',
+                    transition: 'background 0.15s',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px'
+                    gap: '12px',
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = league.color;
-                    e.currentTarget.style.transform = 'translateY(-3px)';
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = theme.borderSubtle;
-                    e.currentTarget.style.transform = 'translateY(0)';
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
                   }}
                 >
-                  {/* STEMMA */}
                   <StemmaImg
                     src={STEMMI_CAMPIONATI[league.id]}
-                    size={isMobile ? 35 : 40}
+                    size={isMobile ? 28 : 32}
                     alt={league.name}
                     cardColor={league.color}
                   />
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: '11px',
-                      color: theme.textDim,
-                      marginBottom: isMobile ? '4px' : '2px'
-                    }}>
-                      {league.country}
-                    </div>
-                    <div style={{
-                      fontSize: isMobile ? '16px' : '18px',
-                      fontWeight: '700',
-                      color: theme.text
+                      fontSize: isMobile ? '13px' : '14px',
+                      fontWeight: '500',
+                      color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                      whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>
                       {league.name}
                     </div>
+                    <div style={{
+                      fontSize: '11px',
+                      color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                      marginTop: '1px',
+                    }}>
+                      {league.country}
+                    </div>
                   </div>
+                  <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
                 </div>
               ))}
             </div>
@@ -1184,12 +1183,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
       {/* MODALE COPPE EUROPEE */}
       {showCups && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
-            backdropFilter: 'blur(10px)',
+            background: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
             zIndex: 99999,
             display: 'flex',
             alignItems: 'center',
@@ -1200,54 +1199,58 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         >
           <div
             style={{
-              background: isMobile ? mobileTheme.bg : theme.bg,
-              border: `2px solid ${theme.cyan}`,
-              borderRadius: '20px',
-              padding: isMobile ? '20px' : '30px',
-              maxWidth: '900px',
+              background: isLight ? '#ffffff' : '#161820',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: '12px',
+              padding: isMobile ? '20px' : '28px',
+              maxWidth: '600px',
               width: '100%',
               maxHeight: '80vh',
               overflowY: 'auto',
-              position: 'relative'
+              position: 'relative',
+              boxShadow: isLight ? '0 16px 48px rgba(0,0,0,0.12)' : '0 16px 48px rgba(0,0,0,0.5)',
+              fontFamily: '"Inter", system-ui, sans-serif',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* HEADER */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '30px'
+              marginBottom: '20px'
             }}>
               <h2 style={{
-                fontSize: isMobile ? '22px' : '28px',
-                fontWeight: '800',
-                color: theme.text,
-                margin: 0
+                fontSize: isMobile ? '18px' : '20px',
+                fontWeight: '600',
+                color: isLight ? '#111827' : 'rgba(255,255,255,0.9)',
+                margin: 0,
+                letterSpacing: '-0.02em',
               }}>
-                🏆 Coppe Europee
+                Coppe Europee
               </h2>
               <button
                 onClick={() => setShowCups(false)}
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme.textDim,
-                  fontSize: '32px',
-                  cursor: 'pointer',
-                  padding: '0',
-                  lineHeight: '1'
+                  background: 'none', border: 'none',
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.4)',
+                  fontSize: '20px', cursor: 'pointer', padding: '4px 8px',
+                  lineHeight: '1', borderRadius: '6px',
+                  transition: 'background 0.15s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
               >
-                ×
+                &#10005;
               </button>
             </div>
 
-            {/* GRIGLIA COPPE CON STEMMI */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: '15px'
+              gridTemplateColumns: '1fr',
+              gap: '1px',
+              background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+              borderRadius: '8px',
+              overflow: 'hidden',
             }}>
               {europeanCups.map(cup => (
                 <div
@@ -1257,48 +1260,44 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     onSelectLeague(cup.id);
                   }}
                   style={{
-                    background: theme.cardBg,
-                    border: `1px solid ${theme.borderSubtle}`,
-                    borderRadius: '12px',
-                    padding: isMobile ? '20px' : '25px',
+                    background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
+                    padding: isMobile ? '14px' : '16px 18px',
                     cursor: 'pointer',
-                    transition: 'all 0.3s ease',
+                    transition: 'background 0.15s',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '15px'
+                    gap: '14px',
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = cup.color;
-                    e.currentTarget.style.transform = 'translateY(-3px)';
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = theme.borderSubtle;
-                    e.currentTarget.style.transform = 'translateY(0)';
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
                   }}
                 >
-                  {/* STEMMA COPPA */}
                   <StemmaImg
                     src={STEMMI_COPPE[cup.id]}
-                    size={isMobile ? 45 : 55}
+                    size={isMobile ? 32 : 40}
                     alt={cup.name}
                     cardColor={cup.color}
                   />
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{
-                      fontSize: '11px',
-                      color: theme.textDim,
-                      marginBottom: '4px'
-                    }}>
-                      {cup.country}
-                    </div>
-                    <div style={{
-                      fontSize: isMobile ? '16px' : '20px',
-                      fontWeight: '700',
-                      color: theme.text
+                      fontSize: isMobile ? '14px' : '15px',
+                      fontWeight: '500',
+                      color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
                     }}>
                       {cup.name}
                     </div>
+                    <div style={{
+                      fontSize: '11px',
+                      color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                      marginTop: '2px',
+                    }}>
+                      {cup.country}
+                    </div>
                   </div>
+                  <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
                 </div>
               ))}
             </div>
@@ -1312,8 +1311,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
-            backdropFilter: 'blur(10px)',
+            background: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
             zIndex: 99999,
             display: 'flex',
             alignItems: 'center',
@@ -1324,249 +1323,98 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         >
           <div
             style={{
-              background: isMobile ? mobileTheme.bg : theme.bg,
-              border: `2px solid ${theme.success}`,
-              borderRadius: '20px',
-              padding: isMobile ? '20px' : '30px',
-              maxWidth: '600px',
+              background: isLight ? '#ffffff' : '#161820',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: '12px',
+              padding: isMobile ? '20px' : '28px',
+              maxWidth: '500px',
               width: '100%',
               maxHeight: '80vh',
               overflowY: 'auto',
-              position: 'relative'
+              position: 'relative',
+              boxShadow: isLight ? '0 16px 48px rgba(0,0,0,0.12)' : '0 16px 48px rgba(0,0,0,0.5)',
+              fontFamily: '"Inter", system-ui, sans-serif',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* HEADER */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '30px'
+              marginBottom: '20px'
             }}>
               <h2 style={{
-                fontSize: isMobile ? '22px' : '28px',
-                fontWeight: '800',
-                color: theme.text,
-                margin: 0
+                fontSize: isMobile ? '18px' : '20px',
+                fontWeight: '600',
+                color: isLight ? '#111827' : 'rgba(255,255,255,0.9)',
+                margin: 0,
+                letterSpacing: '-0.02em',
               }}>
-                💰 Bankroll & Gestione
+                Bankroll & Gestione
               </h2>
               <button
                 onClick={() => setShowBankroll(false)}
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme.textDim,
-                  fontSize: '32px',
-                  cursor: 'pointer',
-                  padding: '0',
-                  lineHeight: '1'
+                  background: 'none', border: 'none',
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.4)',
+                  fontSize: '20px', cursor: 'pointer', padding: '4px 8px',
+                  lineHeight: '1', borderRadius: '6px',
+                  transition: 'background 0.15s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
               >
-                ×
+                &#10005;
               </button>
             </div>
 
-            {/* OPZIONI */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr',
-              gap: '15px'
+              gap: '1px',
+              background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+              borderRadius: '8px',
+              overflow: 'hidden',
             }}>
-              {/* Bankroll & ROI */}
-              <div
-                onClick={() => {
-                  setShowBankroll(false);
-                  window.location.href = '/bankroll';
-                }}
-                style={{
-                  background: theme.cardBg,
-                  border: `1px solid ${theme.borderSubtle}`,
-                  borderRadius: '12px',
-                  padding: isMobile ? '20px' : '25px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = theme.success;
-                  e.currentTarget.style.transform = 'translateY(-3px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = theme.borderSubtle;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{
-                  width: isMobile ? '45px' : '55px',
-                  height: isMobile ? '45px' : '55px',
-                  borderRadius: '12px',
-                  background: `${theme.success}26`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isMobile ? '24px' : '28px',
-                  flexShrink: 0
-                }}>
-                  📊
+              {[
+                { label: 'Bankroll & ROI', sub: 'Profitti, perdite, yield e performance', onClick: () => { setShowBankroll(false); window.location.href = '/bankroll'; } },
+                { label: 'Money Management', sub: 'Quarter Kelly, scala stake e regole', onClick: () => { setShowBankroll(false); window.location.href = '/money-management'; } },
+                { label: 'Money Tracker', sub: 'Traccia scommesse e stake suggeriti', onClick: () => { setShowBankroll(false); window.location.href = '/money-tracker'; } },
+              ].map(item => (
+                <div
+                  key={item.label}
+                  onClick={item.onClick}
+                  style={{
+                    background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
+                    padding: isMobile ? '14px' : '16px 18px',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: isMobile ? '13px' : '14px',
+                      fontWeight: '500',
+                      color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                    }}>{item.label}</div>
+                    <div style={{
+                      fontSize: '11px',
+                      color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                      marginTop: '1px',
+                    }}>{item.sub}</div>
+                  </div>
+                  <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
                 </div>
-                <div>
-                  <div style={{
-                    fontSize: '11px',
-                    color: theme.success,
-                    marginBottom: '4px',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Statistiche & ROI
-                  </div>
-                  <div style={{
-                    fontSize: isMobile ? '16px' : '20px',
-                    fontWeight: '700',
-                    color: theme.text
-                  }}>
-                    Bankroll & ROI
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: theme.textDim,
-                    marginTop: '4px'
-                  }}>
-                    Profitti, perdite, yield e performance
-                  </div>
-                </div>
-              </div>
-
-              {/* Money Management */}
-              <div
-                onClick={() => {
-                  setShowBankroll(false);
-                  window.location.href = '/money-management';
-                }}
-                style={{
-                  background: theme.cardBg,
-                  border: `1px solid ${theme.borderSubtle}`,
-                  borderRadius: '12px',
-                  padding: isMobile ? '20px' : '25px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = theme.gold;
-                  e.currentTarget.style.transform = 'translateY(-3px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = theme.borderSubtle;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{
-                  width: isMobile ? '45px' : '55px',
-                  height: isMobile ? '45px' : '55px',
-                  borderRadius: '12px',
-                  background: `${theme.gold}26`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isMobile ? '24px' : '28px',
-                  flexShrink: 0
-                }}>
-                  📖
-                </div>
-                <div>
-                  <div style={{
-                    fontSize: '11px',
-                    color: theme.gold,
-                    marginBottom: '4px',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Guida & Strategia
-                  </div>
-                  <div style={{
-                    fontSize: isMobile ? '16px' : '20px',
-                    fontWeight: '700',
-                    color: theme.text
-                  }}>
-                    Money Management
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: theme.textDim,
-                    marginTop: '4px'
-                  }}>
-                    Quarter Kelly, scala stake e regole d'oro
-                  </div>
-                </div>
-              </div>
-
-              {/* Money Tracker */}
-              <div
-                onClick={() => {
-                  setShowBankroll(false);
-                  window.location.href = '/money-tracker';
-                }}
-                style={{
-                  background: theme.cardBg,
-                  border: `1px solid ${theme.borderSubtle}`,
-                  borderRadius: '12px',
-                  padding: isMobile ? '20px' : '25px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = theme.success;
-                  e.currentTarget.style.transform = 'translateY(-3px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = theme.borderSubtle;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{
-                  width: isMobile ? '45px' : '55px',
-                  height: isMobile ? '45px' : '55px',
-                  borderRadius: '12px',
-                  background: `${theme.success}26`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isMobile ? '24px' : '28px',
-                  flexShrink: 0
-                }}>
-                  💰
-                </div>
-                <div>
-                  <div style={{
-                    fontSize: '11px',
-                    color: theme.success,
-                    marginBottom: '4px',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Gestione Scommesse
-                  </div>
-                  <div style={{
-                    fontSize: isMobile ? '16px' : '20px',
-                    fontWeight: '700',
-                    color: theme.text
-                  }}>
-                    Money Tracker
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: theme.textDim,
-                    marginTop: '4px'
-                  }}>
-                    Traccia scommesse, bankroll e stake suggeriti
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1576,33 +1424,42 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
       {coachOpen && (
         <div onClick={() => setCoachOpen(false)} style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          background: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
           zIndex: 10002, display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
         }}>
           <div onClick={e => e.stopPropagation()} style={{
             width: '100%', maxWidth: isMobile ? '100%' : '440px',
             height: isMobile ? '85vh' : '520px',
-            background: theme.panelSolid, border: `1px solid ${theme.purple}4d`,
-            borderRadius: isMobile ? '20px 20px 0 0' : '16px',
+            background: isLight ? '#ffffff' : '#161820',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`,
+            borderRadius: isMobile ? '12px 12px 0 0' : '12px',
             display: 'flex', flexDirection: 'column',
-            fontFamily: '"Inter", "Segoe UI", sans-serif',
+            fontFamily: '"Inter", system-ui, sans-serif',
+            boxShadow: isLight ? '0 16px 48px rgba(0,0,0,0.12)' : '0 16px 48px rgba(0,0,0,0.5)',
             ...(isMobile ? {} : { marginBottom: '30px' })
           }}>
             {/* Header */}
             <div style={{
               padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              borderBottom: `1px solid ${theme.borderSubtle}`
+              borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <img src="/coach-ai-robot.png" alt="" style={{ height: '30px', width: 'auto' }} />
                 <div>
-                  <div style={{ color: theme.text, fontWeight: 700, fontSize: '14px' }}>Coach AI</div>
-                  <div style={{ color: theme.textDim, fontSize: '10px' }}>Guida al sistema di pronostici</div>
+                  <div style={{ color: isLight ? '#111827' : 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: '14px' }}>Coach AI</div>
+                  <div style={{ color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)', fontSize: '10px' }}>Guida al sistema di pronostici</div>
                 </div>
               </div>
               <button onClick={() => setCoachOpen(false)} style={{
-                background: 'none', border: 'none', color: theme.textDim, fontSize: '18px', cursor: 'pointer'
-              }}>&#10005;</button>
+                background: 'none', border: 'none',
+                color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.4)',
+                fontSize: '18px', cursor: 'pointer', padding: '4px 8px',
+                borderRadius: '6px', transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+              >&#10005;</button>
             </div>
 
             {/* Messages */}
@@ -1611,21 +1468,23 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 <div style={{ padding: '20px 6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
                     <img src="/coach-ai-robot.png" alt="" style={{ height: '36px', width: 'auto' }} />
-                    <div style={{ color: theme.text, fontSize: '15px', fontWeight: 700 }}>Ciao! Sono il tuo assistente.</div>
+                    <div style={{ color: isLight ? '#111827' : 'rgba(255,255,255,0.9)', fontSize: '15px', fontWeight: 600 }}>Ciao! Sono il tuo assistente.</div>
                   </div>
                   <div style={{
-                    background: theme.surfaceSubtle, border: `1px solid ${theme.borderSubtle}`,
-                    borderRadius: '12px', padding: '14px 16px', lineHeight: '1.7', fontSize: '13px', color: theme.textDim
+                    background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                    borderRadius: '10px', padding: '14px 16px', lineHeight: '1.7', fontSize: '13px',
+                    color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
                   }}>
                     <p style={{ margin: '0 0 10px' }}>
-                      Sono qui per rispondere a qualsiasi <strong style={{ color: theme.text }}>curiosit&agrave; sul nostro sistema di pronostici</strong>.
+                      Sono qui per rispondere a qualsiasi <strong style={{ color: isLight ? '#111827' : 'rgba(255,255,255,0.85)' }}>curiosit&agrave; sul nostro sistema di pronostici</strong>.
                       Come funzionano gli algoritmi? Cosa significano le stelle? Come vengono calcolate le quote? Chiedimi pure, senza limiti.
                     </p>
                     <p style={{ margin: '0 0 10px' }}>
-                      Se invece vuoi <strong style={{ color: theme.purple }}>analizzare una partita specifica</strong> o dialogare sui pronostici del giorno,
+                      Se invece vuoi <strong style={{ color: '#6366f1' }}>analizzare una partita specifica</strong> o dialogare sui pronostici del giorno,
                       troverai un altro Coach AI dedicato direttamente dentro la pagina di ogni partita.
                     </p>
-                    <p style={{ margin: 0, fontSize: '12px', color: theme.textDim }}>
+                    <p style={{ margin: 0, fontSize: '12px' }}>
                       Qui parliamo del sistema — l&agrave; si parla di calcio.
                     </p>
                   </div>
@@ -1634,16 +1493,20 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               {coachMessages.map(msg => (
                 <div key={msg.id} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
-                    maxWidth: '80%', padding: '10px 14px', borderRadius: '12px', fontSize: '13px', lineHeight: '1.5',
+                    maxWidth: '80%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', lineHeight: '1.5',
                     ...(msg.sender === 'user'
-                      ? { background: `${theme.purple}26`, border: `1px solid ${theme.purple}4d`, color: theme.text }
-                      : { background: theme.surfaceSubtle, border: `1px solid ${theme.borderSubtle}`, color: theme.textDim })
+                      ? { background: isLight ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.15)',
+                          border: `1px solid ${isLight ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.3)'}`,
+                          color: isLight ? '#111827' : 'rgba(255,255,255,0.9)' }
+                      : { background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                          color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)' })
                   }}>
                     {msg.isLoading ? (
                       <div style={{ display: 'flex', gap: '4px', padding: '4px 0' }}>
                         {[0,1,2].map(i => (
                           <span key={i} style={{
-                            width: '6px', height: '6px', borderRadius: '50%', background: theme.purple,
+                            width: '6px', height: '6px', borderRadius: '50%', background: '#6366f1',
                             animation: `coachDot 1.4s infinite ${i * 0.2}s`
                           }} />
                         ))}
@@ -1658,23 +1521,26 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             </div>
 
             {/* Quick Actions */}
-            <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: `1px solid ${theme.borderSubtle}` }}>
+            <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap',
+              borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}` }}>
               {[
                 { label: 'Come funziona?', msg: 'Come funziona il sistema di pronostici? Spiegamelo in modo semplice.' },
                 { label: 'Cosa sono le stelle?', msg: 'Cosa significano le stelle nei pronostici e come vengono calcolate?' },
                 { label: 'Quanti algoritmi ci sono?', msg: 'Quanti algoritmi utilizza il sistema e come lavorano insieme?' }
               ].map(qa => (
                 <button key={qa.label} onClick={() => sendCoachMessage(qa.msg)} disabled={coachLoading} style={{
-                  background: `${theme.purple}1a`, border: `1px solid ${theme.purple}40`,
-                  color: theme.purple, padding: '5px 10px', borderRadius: '15px', fontSize: '11px',
-                  cursor: coachLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
-                  opacity: coachLoading ? 0.5 : 1, fontFamily: '"Inter", "Segoe UI", sans-serif'
+                  background: isLight ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.1)',
+                  border: `1px solid ${isLight ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.25)'}`,
+                  color: '#6366f1', padding: '5px 10px', borderRadius: '6px', fontSize: '11px',
+                  cursor: coachLoading ? 'not-allowed' : 'pointer', fontWeight: 500,
+                  opacity: coachLoading ? 0.5 : 1, fontFamily: '"Inter", system-ui, sans-serif'
                 }}>{qa.label}</button>
               ))}
             </div>
 
             {/* Input */}
-            <div style={{ padding: '10px 12px', display: 'flex', gap: '8px', borderTop: `1px solid ${theme.borderSubtle}` }}>
+            <div style={{ padding: '10px 12px', display: 'flex', gap: '8px',
+              borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}` }}>
               <input
                 value={coachInput}
                 onChange={e => setCoachInput(e.target.value)}
@@ -1683,9 +1549,13 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 disabled={coachLoading}
                 autoComplete="off"
                 style={{
-                  flex: 1, background: theme.surfaceSubtle, border: `1px solid ${theme.borderSubtle}`,
-                  borderRadius: '10px', padding: '10px 14px', color: theme.text, fontSize: '13px',
-                  outline: 'none', fontFamily: '"Inter", "Segoe UI", sans-serif',
+                  flex: 1,
+                  background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: '8px', padding: '10px 14px',
+                  color: isLight ? '#111827' : 'rgba(255,255,255,0.9)',
+                  fontSize: '13px', outline: 'none',
+                  fontFamily: '"Inter", system-ui, sans-serif',
                   opacity: coachLoading ? 0.5 : 1
                 }}
               />
@@ -1693,12 +1563,13 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 onClick={() => sendCoachMessage()}
                 disabled={coachLoading || !coachInput.trim()}
                 style={{
-                  background: `${theme.purple}26`, border: `1px solid ${theme.purple}4d`,
-                  borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
-                  color: theme.purple, fontSize: '16px',
+                  background: isLight ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.15)',
+                  border: `1px solid ${isLight ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.3)'}`,
+                  borderRadius: '8px', padding: '10px 14px', cursor: 'pointer',
+                  color: '#6366f1', fontSize: '14px',
                   opacity: (coachLoading || !coachInput.trim()) ? 0.3 : 1
                 }}
-              >&#128640;</button>
+              >&#10148;</button>
             </div>
           </div>
         </div>

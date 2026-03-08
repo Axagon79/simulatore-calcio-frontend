@@ -78,7 +78,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
         height: '56px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', cursor: 'pointer' }}>
           <img src="/logo-virgo.png" alt="" style={{
             width: '28px', height: '28px', objectFit: 'contain',
             filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
@@ -88,7 +88,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
             color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
             letterSpacing: '0.05em',
           }}>AI Simulator</span>
-        </div>
+        </a>
         <button onClick={onBack} style={{
           background: 'none', border: `1px solid ${c.cardBorder}`,
           borderRadius: '6px', padding: '6px 14px', cursor: 'pointer',

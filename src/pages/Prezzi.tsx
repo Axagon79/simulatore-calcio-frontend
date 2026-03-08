@@ -79,17 +79,10 @@ export default function Prezzi({ onBack }: PrezziProps) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            border: `1.2px solid ${isLight ? '#111827' : 'rgba(255,255,255,0.5)'}`,
-            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: isLight ? '#fff' : c.bg,
-          }}>
-            <img src="/logo-virgo.png" alt="" style={{
-              width: '85%', height: '85%', objectFit: 'contain',
-              filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
-            }} />
-          </div>
+          <img src="/logo-virgo.png" alt="" style={{
+            width: '28px', height: '28px', objectFit: 'contain',
+            filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
+          }} />
           <span style={{
             fontSize: '15px', fontWeight: '600',
             color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',

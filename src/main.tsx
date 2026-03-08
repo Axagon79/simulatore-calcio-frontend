@@ -23,7 +23,7 @@ import AnalisiStorica from './pages/AnalisiStorica';
 import SimulazioneRapida from './pages/SimulazioneRapida';
 import Prezzi from './pages/Prezzi';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import CookieBanner from './components/CookieBanner';
+import CookieBanner from './components/ConsentBanner';
 
 function AppRoot() {
   const [showSettings, setShowSettings] = useState(() => {

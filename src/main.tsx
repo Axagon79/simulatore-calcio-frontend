@@ -22,6 +22,7 @@ import Settings from './pages/Settings';
 import AnalisiStorica from './pages/AnalisiStorica';
 import SimulazioneRapida from './pages/SimulazioneRapida';
 import Prezzi from './pages/Prezzi';
+import ContactPage from './pages/ContactPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CookieBanner from './components/ConsentBanner';
 
@@ -61,6 +62,7 @@ function AppRoot() {
           <Route path="/analisi-storica" element={<AnalisiStorica onBack={() => window.history.back()} />} />
           <Route path="/simulate" element={<SimulazioneRapida onBack={() => window.history.back()} />} />
           <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
+          <Route path="/contatti" element={<ContactPage onBack={() => window.history.back()} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={() => window.history.back()} />} />
           <Route path="/*" element={<AppDev />} />
         </Routes>

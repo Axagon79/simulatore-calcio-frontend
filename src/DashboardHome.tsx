@@ -268,51 +268,90 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           {/* DESTRA: Auth + Settings */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             {user ? (
-              <>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${theme.cyan}40, ${theme.purple}40)`,
-                  border: `2px solid ${theme.cyan}60`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '13px', fontWeight: '800', color: theme.cyan,
-                  overflow: 'hidden'
-                }}>
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    (user.email || 'U')[0].toUpperCase()
+              <div style={{ position: 'relative' }}
+                onMouseEnter={e => { const dd = e.currentTarget.querySelector('[data-user-dropdown]') as HTMLElement; if (dd) dd.style.display = 'block'; }}
+                onMouseLeave={e => { const dd = e.currentTarget.querySelector('[data-user-dropdown]') as HTMLElement; if (dd) dd.style.display = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${theme.cyan}40, ${theme.purple}40)`,
+                    border: `2px solid ${theme.cyan}60`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '13px', fontWeight: '800', color: theme.cyan,
+                    overflow: 'hidden'
+                  }}>
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      (user.email || 'U')[0].toUpperCase()
+                    )}
+                  </div>
+                  {!isMobile && (
+                    <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.displayName || user.email}
+                    </span>
                   )}
                 </div>
-                {!isMobile && (
-                  <span style={{ color: theme.textDim, fontSize: '12px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div data-user-dropdown style={{
+                  display: 'none', position: 'absolute', top: '100%', right: 0,
+                  minWidth: '160px', marginTop: '4px',
+                  background: isLight ? '#fff' : '#161820',
+                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: '8px', padding: '4px 0',
+                  boxShadow: isLight ? '0 8px 30px rgba(0,0,0,0.12)' : '0 8px 30px rgba(0,0,0,0.5)',
+                  zIndex: 300,
+                }}>
+                  <div style={{
+                    padding: '10px 14px', fontSize: '12px', fontWeight: '500',
+                    color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                    borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                  }}>
                     {user.displayName || user.email}
-                  </span>
-                )}
+                  </div>
+                  <div
+                    onClick={() => logout()}
+                    style={{
+                      padding: '10px 14px', fontSize: '13px',
+                      color: theme.danger, cursor: 'pointer',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    Esci
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
                 <button
-                  onClick={() => logout()}
+                  onClick={() => setShowAuthModal(true)}
                   style={{
-                    background: `${theme.danger}18`, border: `1px solid ${theme.danger}40`,
-                    color: theme.danger, padding: '4px 10px',
+                    background: 'none', border: `1px solid ${theme.borderSubtle}`,
+                    color: theme.textDim, padding: '6px 14px',
                     borderRadius: '8px', cursor: 'pointer',
-                    fontSize: '11px', fontWeight: '700', fontFamily: 'inherit'
+                    fontSize: '12px', fontWeight: '600', fontFamily: 'inherit',
+                    transition: 'all 0.2s'
                   }}
                 >
-                  Esci
+                  Accedi
+                </button>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  style={{
+                    background: '#6366f1', border: 'none',
+                    color: '#fff', padding: '6px 14px',
+                    borderRadius: '8px', cursor: 'pointer',
+                    fontSize: '12px', fontWeight: '600', fontFamily: 'inherit',
+                    transition: 'background 0.15s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#4f46e5'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#6366f1'; }}
+                >
+                  Registrati gratis
                 </button>
               </>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                style={{
-                  background: 'none', border: `1px solid ${theme.borderSubtle}`,
-                  color: theme.textDim, padding: '6px 14px',
-                  borderRadius: '8px', cursor: 'pointer',
-                  fontSize: '12px', fontWeight: '600', fontFamily: 'inherit',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Accedi
-              </button>
             )}
             <button
               onClick={() => window.dispatchEvent(new Event('open-settings'))}
@@ -450,6 +489,43 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     </div>
                     )
                   ))}
+                  {/* Auth buttons — solo non loggati, mobile */}
+                  {!user && (
+                    <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <button
+                        onClick={() => { setShowAuthModal(true); setMenuOpen(false); }}
+                        style={{
+                          width: '100%',
+                          background: '#6366f1',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '15px', fontWeight: '600',
+                          padding: '14px 0',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Registrati gratis
+                      </button>
+                      <button
+                        onClick={() => { setShowAuthModal(true); setMenuOpen(false); }}
+                        style={{
+                          width: '100%',
+                          background: 'none',
+                          border: `1px solid ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)'}`,
+                          color: isLight ? '#374151' : 'rgba(255,255,255,0.7)',
+                          fontSize: '15px', fontWeight: '500',
+                          padding: '14px 0',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Accedi
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -589,6 +665,57 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           }}>
             Pronostici AI, simulazioni avanzate e analisi in tempo reale
           </p>
+          {!user && (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              style={{
+                marginTop: isMobile ? '20px' : '28px',
+                background: '#6366f1',
+                border: 'none',
+                color: '#fff',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                padding: isMobile ? '14px 32px' : '16px 40px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 0.15s',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#4f46e5'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#6366f1'; }}
+            >
+              Inizia gratis
+            </button>
+          )}
+          {user && (
+            <button
+              onClick={() => { window.location.href = '/best-picks'; }}
+              style={{
+                marginTop: isMobile ? '20px' : '28px',
+                background: 'none',
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)'}`,
+                color: isLight ? '#374151' : 'rgba(255,255,255,0.7)',
+                fontSize: isMobile ? '14px' : '15px',
+                fontWeight: '500',
+                padding: isMobile ? '12px 28px' : '14px 36px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#6366f1';
+                e.currentTarget.style.color = '#6366f1';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)';
+                e.currentTarget.style.color = isLight ? '#374151' : 'rgba(255,255,255,0.7)';
+              }}
+            >
+              Vai ai pronostici
+            </button>
+          )}
         </div>
 
         {/* ===== SHOWCASE SEZIONI (stile Linear) ===== */}

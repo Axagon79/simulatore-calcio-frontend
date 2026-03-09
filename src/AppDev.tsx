@@ -57,25 +57,12 @@ import { getStemmaLeagueUrl as _getStemmaLeagueUrl } from './AppDev/utilita';
 
 // --- HOOK (estratti) ---
 import { useDatiCampionato } from './AppDev/hooks/useDatiCampionato';
-import { useAuth } from './contexts/AuthContext';
-import AuthModal from './components/AuthModal';
 
 
 
 export default function AppDev() {
   const location = useLocation();
   const isLight = getThemeMode() === 'light';
-  const { user } = useAuth();
-  const [showGateAuth, setShowGateAuth] = useState(false);
-
-  // Gate: controlla auth prima di navigare a sezioni protette
-  const requireAuth = (callback: () => void) => {
-    if (!user) {
-      setShowGateAuth(true);
-      return;
-    }
-    callback();
-  };
 
   // --- DATI CAMPIONATO (hook estratto) ---
   const {
@@ -1955,18 +1942,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta e Pulita) ---
   if (!activeLeague) {
     return (
-      <>
       <DashboardHome
         onGoToToday={() => {
-          requireAuth(() => {
-            setViewMode('today');
-            setActiveLeague('TODAY');
-            setViewState('list');
-            window.history.pushState(null, '', '#today');
-          });
+          setViewMode('today');
+          setActiveLeague('TODAY');
+          setViewState('list');
+          window.history.pushState(null, '', '#today');
         }}
         onSelectLeague={(id) => {
-          if (!user) { setShowGateAuth(true); return; }
           // ✅ GESTIONE COPPE EUROPEE (UCL / UEL)
           if (id === 'UCL' || id === 'UEL') {
             setActiveLeague(id);
@@ -2012,8 +1995,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           setActiveLeague(id);
         }}
       />
-      <AuthModal isOpen={showGateAuth} onClose={() => setShowGateAuth(false)} />
-      </>
     );
   }
 

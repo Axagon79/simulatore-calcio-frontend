@@ -50,18 +50,18 @@ function AppRoot() {
           {import.meta.env.DEV && (
             <Route path="/mixer" element={<TuningMixer />} />
           )}
-          <Route path="/track-record" element={<ProtectedRoute><TrackRecord onBack={() => window.history.back()} /></ProtectedRoute>} />
+          <Route path="/track-record" element={<TrackRecord onBack={() => window.history.back()} />} />
           {import.meta.env.DEV && (
             <Route path="/predictions-mixer" element={<PredictionsMixer />} />
           )}
-          <Route path="/bankroll" element={<ProtectedRoute><Bankroll onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/money-management" element={<ProtectedRoute><MoneyManagement onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/money-tracker" element={<ProtectedRoute><MoneyTracker onBack={() => window.history.back()} /></ProtectedRoute>} />
+          <Route path="/bankroll" element={<Bankroll onBack={() => window.history.back()} />} />
+          <Route path="/money-management" element={<MoneyManagement onBack={() => window.history.back()} />} />
+          <Route path="/money-tracker" element={<MoneyTracker onBack={() => window.history.back()} />} />
           <Route path="/step-system" element={<ProtectedRoute><StepSystem onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/sistema-c" element={<ProtectedRoute><SistemaC /></ProtectedRoute>} />
+          <Route path="/sistema-c" element={<SistemaC />} />
           <Route path="/best-picks" element={<ProtectedRoute><UnifiedPredictions onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/analisi-storica" element={<ProtectedRoute><AnalisiStorica onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/simulate" element={<ProtectedRoute><SimulazioneRapida onBack={() => window.history.back()} /></ProtectedRoute>} />
+          <Route path="/analisi-storica" element={<AnalisiStorica onBack={() => window.history.back()} />} />
+          <Route path="/simulate" element={<SimulazioneRapida onBack={() => window.history.back()} />} />
           <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
           <Route path="/contatti" element={<ContactPage onBack={() => window.history.back()} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={() => window.history.back()} />} />

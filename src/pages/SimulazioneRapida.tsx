@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-
+import { useAuth } from '../contexts/AuthContext';
+import AuthModal from '../components/AuthModal';
 import { ArrowLeft, ChevronDown, ChevronRight, Zap } from 'lucide-react';
 import { getTheme, getThemeMode, getMobileTheme, API_BASE, STEMMI_CAMPIONATI, LEAGUES_MAP, SPEED_PRESETS } from '../AppDev/costanti';
 
@@ -39,6 +40,8 @@ interface SimulazioneRapidaProps {
 }
 
 export default function SimulazioneRapida({ onBack }: SimulazioneRapidaProps) {
+  const { user } = useAuth();
+  const [showGateAuth, setShowGateAuth] = useState(false);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [dayOffset, setDayOffset] = useState(0);
@@ -101,6 +104,7 @@ export default function SimulazioneRapida({ onBack }: SimulazioneRapidaProps) {
 
   const handleAvviaSimulazione = () => {
     if (!popupMatch) return;
+    if (!user) { setShowGateAuth(true); return; }
     const cycles = selectedPreset === 8 ? customCycles : SPEED_PRESETS.find(p => p.id === selectedPreset)?.cycles || 20;
     sessionStorage.setItem('quicksim_data', JSON.stringify({
       match: popupMatch.match,
@@ -535,6 +539,7 @@ export default function SimulazioneRapida({ onBack }: SimulazioneRapidaProps) {
           </div>
         </div>
       )}
+      <AuthModal isOpen={showGateAuth} onClose={() => setShowGateAuth(false)} />
     </div>
   );
 }

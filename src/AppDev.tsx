@@ -57,12 +57,16 @@ import { getStemmaLeagueUrl as _getStemmaLeagueUrl } from './AppDev/utilita';
 
 // --- HOOK (estratti) ---
 import { useDatiCampionato } from './AppDev/hooks/useDatiCampionato';
+import { useAuth } from './contexts/AuthContext';
+import AuthModal from './components/AuthModal';
 
 
 
 export default function AppDev() {
   const location = useLocation();
   const isLight = getThemeMode() === 'light';
+  const { user } = useAuth();
+  const [showGateAuth, setShowGateAuth] = useState(false);
 
   // --- DATI CAMPIONATO (hook estratto) ---
   const {
@@ -690,6 +694,7 @@ const loadFormations = async (home: string, away: string, league: string) => {
 // ✅ VERSIONE AGGIORNATA, VELOCE E FIXATA PER IL BACKEND
 const startSimulation = async (algoOverride: number | null = null, cyclesOverride: number | null = null) => {
   if (!selectedMatch) return;
+  if (!user) { setShowGateAuth(true); return; }
 
   // 1. DETERMINAZIONE PARAMETRI (PrioritÃ  ai valori passati dal popup)
   const useAlgo = algoOverride !== null ? algoOverride : configAlgo;
@@ -1198,6 +1203,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   };
 
   const handleAnalyzeMatch = async () => {
+    if (!user) { setShowGateAuth(true); return; }
     if (!chatMatchContext || chatLoading) return;
     const { home, away, date } = chatMatchContext;
 
@@ -1248,6 +1254,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   };
 
   const handleUserMessage = async () => {
+    if (!user) { setShowGateAuth(true); return; }
     if (!chatInput.trim() || chatLoading) return;
     const userText = chatInput.trim();
     setChatInput('');
@@ -1942,6 +1949,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
     // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta e Pulita) ---
   if (!activeLeague) {
     return (
+      <>
       <DashboardHome
         onGoToToday={() => {
           setViewMode('today');
@@ -1995,6 +2003,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           setActiveLeague(id);
         }}
       />
+      <AuthModal isOpen={showGateAuth} onClose={() => setShowGateAuth(false)} />
+      </>
     );
   }
 
@@ -2589,6 +2599,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         onClose={() => setShowMatchSummary(false)}
         theme={theme}
       />
+      <AuthModal isOpen={showGateAuth} onClose={() => setShowGateAuth(false)} />
     </div>
   );
 }

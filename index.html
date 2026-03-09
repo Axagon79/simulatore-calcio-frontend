@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="it">
   <head>
+    <!-- Google Analytics (rispetta consenso cookie) -->
+    <script>
+      window.__GA_ID = 'G-HT6HLTMH7Q';
+      (function(){
+        var c = localStorage.getItem('cookie_consent');
+        if (c !== 'accepted') return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + window.__GA_ID;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', window.__GA_ID);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 

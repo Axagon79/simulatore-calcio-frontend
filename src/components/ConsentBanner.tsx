@@ -22,6 +22,16 @@ export default function CookieBanner() {
   const save = (choice: 'accepted' | 'rejected') => {
     localStorage.setItem(COOKIE_CONSENT_KEY, choice);
     setVisible(false);
+    if (choice === 'accepted' && (window as any).__GA_ID) {
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + (window as any).__GA_ID;
+      document.head.appendChild(s);
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      function gtag(...args: any[]) { (window as any).dataLayer.push(args); }
+      gtag('js', new Date());
+      gtag('config', (window as any).__GA_ID);
+    }
     window.dispatchEvent(new Event('cookie-consent-change'));
   };
 

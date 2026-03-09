@@ -72,8 +72,8 @@ export default function PrivacyPolicy({ onBack }: Props) {
             <li><strong>localStorage</strong>: per salvare preferenze (tema, consenso cookie, impostazioni).</li>
           </ul>
           <p style={pStyle}>
-            Non vengono utilizzati cookie di profilazione o di tracciamento pubblicitario.
-            Se l'utente rifiuta i cookie, nessun cookie di terze parti verrà caricato.
+            Se l'utente accetta i cookie, viene caricato <strong>Google Analytics</strong> (gtag.js) per analisi
+            anonime sull'utilizzo del sito. Se l'utente rifiuta, nessun cookie di terze parti verrà caricato.
           </p>
 
           <h2 style={h2Style}>6. Conservazione dei Dati</h2>

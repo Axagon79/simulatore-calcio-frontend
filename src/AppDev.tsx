@@ -669,6 +669,15 @@ const prepareSimulation = (match: Match) => {
     text: `Partita selezionata: ${match.home} vs ${match.away}. Clicca "Analizza" o scrivimi una domanda!`,
     timestamp: new Date()
   }]);
+
+  // Carica formazioni e mostra popup se disponibili
+  const matchLeague = league || activeLeague || '';
+  loadFormations(match.home, match.away, matchLeague).then(ok => {
+    if (ok) {
+      setShowFormationsPopup(true);
+      setPopupOpacity(0);
+    }
+  });
 };
 
 // ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)
@@ -738,10 +747,12 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   
   try {
     // ✅ CARICA FORMAZIONI
+    const formationsReadyAt = Date.now();
     loadFormations(selectedMatch.home, selectedMatch.away, currentLeague).then(success => {
       if (success) {
         console.log("✅ Formazioni caricate!");
-        setTimeout(() => setPopupOpacity(1), 8000); // Mostra popup dopo un po'
+        setPopupOpacity(1); // Mostra subito
+        (window as any).__formationsReadyAt = Date.now();
       }
     });
     
@@ -803,19 +814,25 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
       }
     };
 
+    // Garantisci che le formazioni restino visibili almeno 5 secondi
+    const readyAt = (window as any).__formationsReadyAt || 0;
+    const elapsed = readyAt ? Date.now() - readyAt : 5000;
+    const minVisible = 5000; // 5 secondi minimo di visibilità
+    const waitMore = Math.max(0, minVisible - elapsed);
+
     setTimeout(() => {
       setPopupOpacity(0);
       setTimeout(() => {
         setShowFormationsPopup(false);
         if (isFlashActive || simMode === 'fast') {
           setSimResult(enrichedData);
-          setViewState('result'); // O 'results' a seconda di come hai chiamato la stringa
+          setViewState('result');
           addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score || '-:-'}.`);
         } else {
           runAnimation(enrichedData);
         }
       }, 1000);
-    }, 50);
+    }, waitMore);
 
   } catch (e: any) {
     console.error("Errore Simulazione:", e);

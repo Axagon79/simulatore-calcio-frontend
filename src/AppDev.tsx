@@ -669,15 +669,6 @@ const prepareSimulation = (match: Match) => {
     text: `Partita selezionata: ${match.home} vs ${match.away}. Clicca "Analizza" o scrivimi una domanda!`,
     timestamp: new Date()
   }]);
-
-  // Carica formazioni e mostra popup se disponibili
-  const matchLeague = league || activeLeague || '';
-  loadFormations(match.home, match.away, matchLeague).then(ok => {
-    if (ok) {
-      setShowFormationsPopup(true);
-      setPopupOpacity(0);
-    }
-  });
 };
 
 // ✅ FUNZIONE PER CARICARE FORMAZIONI (veloce, prima della simulazione)

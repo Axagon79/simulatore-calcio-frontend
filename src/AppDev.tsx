@@ -314,6 +314,7 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   // Wrapper setChatOpen: chiusura = reset totale (bolla riapre chat pulita)
   const handleSetChatOpen = (open: boolean) => {
+    if (open && !user) { setShowGateAuth(true); return; }
     setChatOpen(open);
     if (!open) {
       setChatMatchContext(null);
@@ -1428,6 +1429,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   // Apri Coach AI da lista partite (ElementoPartita / CupMatches)
   // Inline API call: usa i parametri direttamente (non dipende da state async)
   const handleOpenCoachAI = async (home: string, away: string, date: string, league: string) => {
+    if (!user) { setShowGateAuth(true); return; }
     setChatMatchContext({ home, away, date, league });
     setChatHistory([]);
     const loadingId = Date.now().toString();

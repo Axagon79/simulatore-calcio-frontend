@@ -747,7 +747,6 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   
   try {
     // ✅ CARICA FORMAZIONI
-    const formationsReadyAt = Date.now();
     loadFormations(selectedMatch.home, selectedMatch.away, currentLeague).then(success => {
       if (success) {
         console.log("✅ Formazioni caricate!");

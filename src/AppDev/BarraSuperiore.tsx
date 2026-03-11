@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { getTheme, getThemeMode } from './costanti';
+import { useAuth } from '../contexts/AuthContext';
 const theme = getTheme();
 
 interface League {
@@ -47,6 +48,7 @@ export default function BarraSuperiore({
   onToggleViewMode
 }: BarraSuperioreProps) {
   const isLight = getThemeMode() === 'light';
+  const { user, credits, shields } = useAuth();
 
   return (
     <div style={{
@@ -292,9 +294,28 @@ export default function BarraSuperiore({
           </div>
         )}
 
-        {!isMobile && (
-          <div style={{ fontSize: '12px', color: theme.textDim }}>
-            Crediti: <span style={{ color: theme.success }}>∞</span>
+        {user && (
+          <div
+            onClick={() => window.location.href = '/wallet'}
+            style={{
+              display: 'flex', gap: isMobile ? '8px' : '10px', alignItems: 'center',
+              fontSize: isMobile ? '10px' : '12px',
+              padding: isMobile ? '4px 10px' : '6px 14px',
+              borderRadius: '20px',
+              background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(15,15,30,0.92)',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`,
+              backdropFilter: 'blur(10px)',
+              boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.1)' : '0 2px 8px rgba(0,0,0,0.4)',
+              cursor: 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            <span style={{ color: theme.textDim }}>
+              <span style={{ color: theme.cyan, fontWeight: 700 }}>{credits}</span> crediti
+            </span>
+            <span style={{ color: theme.textDim }}>
+              <span style={{ color: '#f0c040', fontWeight: 700 }}>{shields}</span> Shield
+            </span>
           </div>
         )}
 

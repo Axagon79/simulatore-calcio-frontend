@@ -19,13 +19,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Checkbox consensi (solo per signup email)
+  const [terms, setTerms] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
+  const [disclaimer, setDisclaimer] = useState(false);
+
   if (!isOpen) return null;
+
+  const allConsentsChecked = terms && privacy && disclaimer;
+  const signupDisabled = mode === 'signup' && !allConsentsChecked;
 
   const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
     try {
       await loginWithGoogle();
+      // Per Google il consenso viene gestito dal TermsConsentModal (AuthContext.needsConsent)
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
@@ -52,6 +61,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('La password deve avere almeno 6 caratteri');
       return;
     }
+    if (mode === 'signup' && !allConsentsChecked) {
+      setError('Devi accettare tutti i termini per registrarti');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -59,6 +72,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         await login(email, password);
       } else {
         await signup(email, password);
+        // Il consenso verra salvato dal TermsConsentModal che appare dopo (AuthContext.needsConsent)
       }
       onSuccess?.();
       onClose();
@@ -80,6 +94,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     }
   };
 
+  const linkStyle = { color: theme.cyan, textDecoration: 'underline' as const };
+  const checkboxLabelStyle = {
+    display: 'flex' as const, gap: '8px', marginBottom: '10px', alignItems: 'flex-start' as const, cursor: 'pointer' as const
+  };
+  const checkboxTextStyle = { color: theme.textDim, fontSize: '11px', lineHeight: '1.4' };
+
   return (
     <div
       onClick={onClose}
@@ -95,6 +115,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         style={{
           background: theme.panel, border: theme.panelBorder,
           borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '400px',
+          maxHeight: '90vh', overflowY: 'auto'
         }}
       >
         {/* Header */}
@@ -171,19 +192,52 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             }}
           />
           {mode === 'signup' && (
-            <input
-              type="password"
-              placeholder="Conferma password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              required
-              style={{
-                width: '100%', padding: '12px 14px', borderRadius: '8px',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                color: theme.text, fontSize: '14px', marginBottom: '16px',
-                outline: 'none', boxSizing: 'border-box'
-              }}
-            />
+            <>
+              <input
+                type="password"
+                placeholder="Conferma password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                  color: theme.text, fontSize: '14px', marginBottom: '16px',
+                  outline: 'none', boxSizing: 'border-box'
+                }}
+              />
+
+              {/* 3 Checkbox consensi */}
+              <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <label style={checkboxLabelStyle}>
+                  <input type="checkbox" checked={terms} onChange={e => setTerms(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: theme.cyan, flexShrink: 0, marginTop: '1px' }} />
+                  <span style={checkboxTextStyle}>
+                    Ho letto e accetto i{' '}
+                    <a href="/termini" target="_blank" rel="noopener noreferrer" style={linkStyle} onClick={e => e.stopPropagation()}>Termini e Condizioni</a>{' '}
+                    (sez. 1–12)
+                  </span>
+                </label>
+                <label style={checkboxLabelStyle}>
+                  <input type="checkbox" checked={privacy} onChange={e => setPrivacy(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: theme.cyan, flexShrink: 0, marginTop: '1px' }} />
+                  <span style={checkboxTextStyle}>
+                    Ho letto e accetto la{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={linkStyle} onClick={e => e.stopPropagation()}>Privacy e Cookie Policy</a>{' '}
+                    (sez. 13–14)
+                  </span>
+                </label>
+                <label style={{ ...checkboxLabelStyle, marginBottom: 0 }}>
+                  <input type="checkbox" checked={disclaimer} onChange={e => setDisclaimer(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: theme.cyan, flexShrink: 0, marginTop: '1px' }} />
+                  <span style={checkboxTextStyle}>
+                    Ho letto il{' '}
+                    <a href="/disclaimer" target="_blank" rel="noopener noreferrer" style={linkStyle} onClick={e => e.stopPropagation()}>Disclaimer e Gioco Responsabile</a>{' '}
+                    (sez. 8–9). Dichiaro di essere maggiorenne. I pronostici vengono aggiornati automaticamente due volte al giorno: circa 3 ore prima e circa 1 ora prima dell'inizio di ogni match. In questi momenti il pronostico potrebbe cambiare o essere ritirato. Solo in caso di ritiro definitivo all'aggiornamento di 1 ora prima i crediti verranno rimborsati automaticamente. La responsabilità di qualsiasi decisione di puntata è esclusivamente dell'utente.
+                  </span>
+                </label>
+              </div>
+            </>
           )}
 
           {error && (
@@ -198,13 +252,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || signupDisabled}
             style={{
               width: '100%', padding: '12px', borderRadius: '10px',
-              background: `linear-gradient(135deg, ${theme.cyan}20, ${theme.cyan}40)`,
-              border: `1px solid ${theme.cyan}50`,
-              color: theme.cyan, fontSize: '14px', fontWeight: '700',
-              cursor: loading ? 'wait' : 'pointer',
+              background: signupDisabled
+                ? 'rgba(255,255,255,0.06)'
+                : `linear-gradient(135deg, ${theme.cyan}20, ${theme.cyan}40)`,
+              border: signupDisabled
+                ? '1px solid rgba(255,255,255,0.08)'
+                : `1px solid ${theme.cyan}50`,
+              color: signupDisabled ? theme.textDim : theme.cyan,
+              fontSize: '14px', fontWeight: '700',
+              cursor: (loading || signupDisabled) ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.6 : 1
             }}
           >
@@ -218,7 +277,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             <>
               Non hai un account?{' '}
               <span
-                onClick={() => { setMode('signup'); setError(''); }}
+                onClick={() => { setMode('signup'); setError(''); setTerms(false); setPrivacy(false); setDisclaimer(false); }}
                 style={{ color: theme.cyan, cursor: 'pointer', fontWeight: '700' }}
               >
                 Registrati

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import './index.css';
 
 import { getThemeMode } from './AppDev/costanti';
@@ -22,10 +22,29 @@ import Settings from './pages/Settings';
 import AnalisiStorica from './pages/AnalisiStorica';
 import SimulazioneRapida from './pages/SimulazioneRapida';
 import Prezzi from './pages/Prezzi';
+import Wallet from './pages/Wallet';
 import ContactPage from './pages/ContactPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsPage from './pages/TermsPage';
+import WalletBadge from './components/WalletBadge';
 import CookieBanner from './components/ConsentBanner';
 import ProtectedRoute from './components/ProtectedRoute';
+import TermsConsentModal from './components/TermsConsentModal';
+import { useAuth } from './contexts/AuthContext';
+
+const LEGAL_PATHS = ['/termini', '/privacy', '/disclaimer', '/privacy-policy'];
+
+function ConsentGate({ children }: { children: React.ReactNode }) {
+  const { user, needsConsent, markConsentGiven } = useAuth();
+  const location = useLocation();
+  const isLegalPage = LEGAL_PATHS.includes(location.pathname);
+  return (
+    <>
+      {children}
+      <TermsConsentModal isOpen={!!user && needsConsent && !isLegalPage} onAccepted={markConsentGiven} />
+    </>
+  );
+}
 
 function AppRoot() {
   const [showSettings, setShowSettings] = useState(() => {
@@ -46,6 +65,7 @@ function AppRoot() {
   return (
     <AuthProvider>
       <BrowserRouter>
+      <ConsentGate>
         <Routes>
           {import.meta.env.DEV && (
             <Route path="/mixer" element={<TuningMixer />} />
@@ -63,13 +83,19 @@ function AppRoot() {
           <Route path="/analisi-storica" element={<AnalisiStorica onBack={() => window.history.back()} />} />
           <Route path="/simulate" element={<SimulazioneRapida onBack={() => window.history.back()} />} />
           <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
+          <Route path="/wallet" element={<ProtectedRoute><Wallet onBack={() => window.history.back()} /></ProtectedRoute>} />
           <Route path="/contatti" element={<ContactPage onBack={() => window.history.back()} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={() => window.history.back()} />} />
+          <Route path="/termini" element={<TermsPage />} />
+          <Route path="/privacy" element={<TermsPage />} />
+          <Route path="/disclaimer" element={<TermsPage />} />
           <Route path="/*" element={<AppDev />} />
         </Routes>
-      </BrowserRouter>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      <WalletBadge />
       <CookieBanner />
+      </ConsentGate>
+      </BrowserRouter>
     </AuthProvider>
   );
 }

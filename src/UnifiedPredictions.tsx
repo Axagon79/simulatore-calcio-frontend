@@ -1913,6 +1913,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     fontSize: '11px', lineHeight: '1.7', color: theme.text,
                     padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
                     background: theme.surfaceSubtle, borderRadius: '4px',
+                    filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const,
                   }}>
                     {pred.analysis_free}
                   </div>

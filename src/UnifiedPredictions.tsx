@@ -2462,7 +2462,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             return (
                               <div style={{ marginBottom: '8px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
-                                  <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold' }}>{segnoTip.pronostico}</span>?</span>
+                                  <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold', filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const }}>{segnoTip.pronostico}</span>?</span>
                                   <span style={{ color, fontWeight: 'bold' }}>{val.toFixed(1)}</span>
                                 </div>
                                 <div style={{ height: '4px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden' }}>
@@ -2482,7 +2482,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             return (
                               <div style={{ marginBottom: '8px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
-                                  <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold' }}>{golTip.pronostico}</span>?</span>
+                                  <span style={{ color: theme.textDim }}>Le strisce confermano <span style={{ color: theme.cyan, fontWeight: 'bold', filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const }}>{golTip.pronostico}</span>?</span>
                                   <span style={{ color, fontWeight: 'bold' }}>{val.toFixed(1)}</span>
                                 </div>
                                 <div style={{ height: '4px', background: theme.surface08, borderRadius: '2px', overflow: 'hidden' }}>

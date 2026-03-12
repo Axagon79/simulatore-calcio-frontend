@@ -374,6 +374,32 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     return canSeeAll || purchasedMatches.has(matchKey);
   }, [canSeeAll, purchasedMatches]);
 
+  // Helper: blur selettivo dei pronostici nel testo per utenti non premium
+  const blurPronostici = useCallback((text: string, tips: string[], canSee: boolean) => {
+    if (canSee || !text) return text;
+    // Pattern di mercato fissi + pronostici specifici della partita
+    const marketPatterns = [
+      'Over 2\\.5', 'Under 2\\.5', 'Over 1\\.5', 'Under 1\\.5', 'Over 3\\.5', 'Under 3\\.5',
+      'Over 0\\.5', 'Under 0\\.5',
+      'NoGoal', 'No Goal', 'Goal',
+    ];
+    const allTerms = [...tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), ...marketPatterns];
+    // Aggiungi segni come word-boundary match per evitare falsi positivi
+    const segni = ['1X', 'X2', '12', 'GG', 'NG'];
+    segni.forEach(s => allTerms.push(`(?<=\\s|,|—|:|^)${s}(?=\\s|,|—|$|\\b)`));
+    if (!allTerms.length) return text;
+    const regex = new RegExp(`(${allTerms.join('|')})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part: string, j: number) => {
+      if (regex.test(part)) {
+        regex.lastIndex = 0;
+        return <span key={j} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>;
+      }
+      regex.lastIndex = 0;
+      return part;
+    });
+  }, []);
+
   const [purchaseSnapshots, setPurchaseSnapshots] = useState<Record<string, any>>({});
 
   const activateShield = async (matchKey: string, home: string, away: string) => {
@@ -1914,19 +1940,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
                     background: theme.surfaceSubtle, borderRadius: '4px',
                   }}>
-                    {canSee ? pred.analysis_free : (() => {
-                      const tips = (pred.pronostici || []).map((pr: any) => pr.pronostico as string).filter(Boolean);
-                      if (!tips.length || !pred.analysis_free) return pred.analysis_free;
-                      const escaped = tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-                      const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
-                      const parts = (pred.analysis_free as string).split(regex);
-                      return parts.map((part: string, i: number) => {
-                        const isMatch = tips.some(t => t.toLowerCase() === part.toLowerCase());
-                        return isMatch
-                          ? <span key={i} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>
-                          : part;
-                      });
-                    })()}
+                    {blurPronostici(pred.analysis_free || '', (pred.pronostici || []).map((pr: any) => pr.pronostico as string).filter(Boolean), canSee)}
                   </div>
                 )}
 
@@ -2159,26 +2173,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}>
                 {(() => {
                   const tips = (pred.pronostici || []).map((pr: any) => pr.pronostico as string).filter(Boolean);
-                  const blurTips = (text: string) => {
-                    if (canSee || !tips.length) return text.replace(/BVS/g, 'MAP');
-                    const clean = text.replace(/BVS/g, 'MAP');
-                    const escaped = tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-                    const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
-                    const parts = clean.split(regex);
-                    return parts.map((part: string, j: number) => {
-                      const isMatch = tips.some(t => t.toLowerCase() === part.toLowerCase());
-                      return isMatch
-                        ? <span key={j} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>
-                        : part;
-                    });
-                  };
+                  const bt = (text: string) => blurPronostici(text.replace(/BVS/g, 'MAP'), tips, canSee);
                   return typeof pred.comment === 'string'
-                    ? <div>🔹 {blurTips(pred.comment)}</div>
+                    ? <div>🔹 {bt(pred.comment)}</div>
                     : <>
-                        {pred.comment?.segno && <div>🔹 {blurTips(pred.comment.segno)}</div>}
-                        {pred.comment?.gol && <div style={{ marginTop: '4px' }}>🔹 {blurTips(pred.comment.gol)}</div>}
-                        {pred.comment?.doppia_chance && <div style={{ marginTop: '4px' }}>🔹 {blurTips(pred.comment.doppia_chance)}</div>}
-                        {pred.comment?.gol_extra && <div style={{ marginTop: '4px' }}>🔹 {blurTips(pred.comment.gol_extra)}</div>}
+                        {pred.comment?.segno && <div>🔹 {bt(pred.comment.segno)}</div>}
+                        {pred.comment?.gol && <div style={{ marginTop: '4px' }}>🔹 {bt(pred.comment.gol)}</div>}
+                        {pred.comment?.doppia_chance && <div style={{ marginTop: '4px' }}>🔹 {bt(pred.comment.doppia_chance)}</div>}
+                        {pred.comment?.gol_extra && <div style={{ marginTop: '4px' }}>🔹 {bt(pred.comment.gol_extra)}</div>}
                       </>;
                 })()}
               </div>
@@ -2445,24 +2447,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           return (
                             <div style={{ marginTop: '6px', fontSize: '9px', lineHeight: '1.6' }}>
                               {insights.slice(0, 4).map((ins, i) => {
-                                const renderText = () => {
-                                  if (canSee) return ins.text;
-                                  const tips = [segnoTip?.pronostico, golTip?.pronostico].filter(Boolean) as string[];
-                                  if (!tips.length) return ins.text;
-                                  const escaped = tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-                                  const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
-                                  const parts = ins.text.split(regex);
-                                  return parts.map((part: string, j: number) => {
-                                    const isMatch = tips.some(t => t.toLowerCase() === part.toLowerCase());
-                                    return isMatch
-                                      ? <span key={j} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>
-                                      : part;
-                                  });
-                                };
+                                const tips = [segnoTip?.pronostico, golTip?.pronostico].filter(Boolean) as string[];
                                 return (
                                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', marginBottom: '2px' }}>
                                   <span style={{ flexShrink: 0, fontSize: '10px' }}>{ins.isGood ? '✅' : '⚠️'}</span>
-                                  <span style={{ color: ins.isGood ? theme.success : theme.warning }}>{renderText()}</span>
+                                  <span style={{ color: ins.isGood ? theme.success : theme.warning }}>{blurPronostici(ins.text, tips, canSee)}</span>
                                 </div>
                                 );
                               })}

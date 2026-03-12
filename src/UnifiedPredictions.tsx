@@ -2415,7 +2415,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           if (insights.length === 0) return null;
 
                           return (
-                            <div style={{ marginTop: '6px', fontSize: '9px', lineHeight: '1.6' }}>
+                            <div style={{ marginTop: '6px', fontSize: '9px', lineHeight: '1.6', filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const }}>
                               {insights.slice(0, 4).map((ins, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', marginBottom: '2px' }}>
                                   <span style={{ flexShrink: 0, fontSize: '10px' }}>{ins.isGood ? '✅' : '⚠️'}</span>

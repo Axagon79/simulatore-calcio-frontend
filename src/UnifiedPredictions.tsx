@@ -561,8 +561,12 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
             }
 
             // Aggiungi partite che sono solo in prediction_versions (ritirate)
+            // Solo se almeno una versione aveva pronostici (= è stata selezionata almeno una volta)
             for (const [matchKey, matchVersions] of Object.entries(versionsByMatch)) {
               if (unifiedKeys.has(matchKey)) continue;
+              // Skip se nessuna versione ha mai avuto pronostici (mai entrata nella selezione)
+              const everHadPicks = matchVersions.some((v: any) => v.pronostici && v.pronostici.length > 0);
+              if (!everHadPicks) continue;
               // Prendi la versione più recente per i dati base
               const latest = matchVersions[matchVersions.length - 1];
               if (!latest) continue;

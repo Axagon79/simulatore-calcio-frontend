@@ -600,6 +600,21 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
               const latest = matchVersions[matchVersions.length - 1];
               if (!latest) continue;
               // Crea entry fantasma con badge NO BET
+              // Recupera i tipi di mercato che avevano pronostici nelle versioni precedenti
+              const allPrevTypes = new Set<string>();
+              for (const v of matchVersions) {
+                for (const pr of (v.pronostici || [])) {
+                  if (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') allPrevTypes.add('SEGNO');
+                  else if (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO') allPrevTypes.add('GOL');
+                }
+              }
+              // Almeno SEGNO come fallback
+              if (allPrevTypes.size === 0) allPrevTypes.add('SEGNO');
+
+              const ghostPronostici: any[] = [];
+              if (allPrevTypes.has('SEGNO')) ghostPronostici.push({ tipo: 'SEGNO', pronostico: 'NO BET', confidence: 0, stars: 0 });
+              if (allPrevTypes.has('GOL')) ghostPronostici.push({ tipo: 'GOL', pronostico: 'NO BET', confidence: 0, stars: 0 });
+
               const ghostPred: Prediction = {
                 date: latest.date || date,
                 home: latest.home || matchKey.split('_')[1] || '?',
@@ -609,15 +624,13 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
                 home_mongo_id: latest.home_mongo_id,
                 away_mongo_id: latest.away_mongo_id,
                 decision: 'NO_BET',
-                pronostici: [{
-                  tipo: 'SEGNO', pronostico: 'NO BET', confidence: 0, stars: 0,
-                }],
+                pronostici: ghostPronostici,
                 confidence_segno: 0,
                 confidence_gol: 0,
                 stars_segno: 0,
                 stars_gol: 0,
                 comment: 'Pronostico ritirato',
-                odds: { '1': 0, '2': 0, 'X': 0 },
+                odds: latest.odds || [...matchVersions].reverse().find((v: any) => v.odds)?.odds || { '1': 0, '2': 0, 'X': 0 },
                 segno_dettaglio: {},
                 gol_dettaglio: {},
               };
@@ -1480,23 +1493,50 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             </thead>
                             <tbody>
                               {(() => {
-                                // Versioni esistenti ordinate dal più recente
-                                const existing = (['update_1h', 'update_3h', 'nightly'] as const).filter(v => (versionCache[matchKey] || []).find((d: any) => d.version === v));
-                                return existing;
-                              })().map((ver, verIdx) => {
                                 const vL: Record<string, string> = { nightly: 'Notte', update_3h: '-3h', update_1h: '-1h' };
-                                const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver)!;
-                                const isNB = doc.status === 'NO_BET' || !doc.pronostici?.length;
-                                const mt = doc.pronostici?.find((pr: any) => pr.tipo === p.tipo && pr.pronostico === p.pronostico) || doc.pronostici?.find((pr: any) => pr.tipo === p.tipo);
-                                const isCurrent = verIdx === 0;
-                                return (
-                                  <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
-                                    <td style={{ padding: '3px 4px', color: isNB ? theme.danger : theme.cyan, fontWeight: 700 }}>{isNB ? 'NO BET' : (mt?.pronostico || '—')}</td>
-                                    <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{isCurrent ? 'Attuale' : (doc.run_time ? new Date(doc.run_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : vL[ver])}</td>
-                                    <td style={{ padding: '3px 4px', textAlign: 'center', color: isNB ? theme.textDim : theme.text, fontWeight: 600 }}>{isNB ? '—' : (mt?.stake || '—')}</td>
-                                  </tr>
-                                );
-                              })}
+                                const existing = (['update_1h', 'update_3h', 'nightly'] as const).filter(v => (versionCache[matchKey] || []).find((d: any) => d.version === v));
+                                const rows: React.ReactNode[] = [];
+                                existing.forEach((ver, verIdx) => {
+                                  const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver)!;
+                                  const isNB = doc.status === 'NO_BET' || !doc.pronostici?.length;
+                                  const isCurrent = verIdx === 0;
+                                  const verLabel = isCurrent ? 'Attuale' : (doc.run_time ? new Date(doc.run_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : vL[ver]);
+                                  if (isNB) {
+                                    rows.push(
+                                      <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                        <td style={{ padding: '3px 4px', color: theme.danger, fontWeight: 700 }}>NO BET</td>
+                                        <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
+                                        <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
+                                      </tr>
+                                    );
+                                  } else {
+                                    // Filtra pronostici per mercato coerente con la pill corrente
+                                    const isSegnoCol = p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE';
+                                    const filtered = (doc.pronostici || []).filter((pr: any) =>
+                                      isSegnoCol ? (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') : (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO')
+                                    );
+                                    if (filtered.length === 0) {
+                                      rows.push(
+                                        <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                          <td style={{ padding: '3px 4px', color: theme.textDim, fontWeight: 700 }}>—</td>
+                                          <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
+                                          <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
+                                        </tr>
+                                      );
+                                    }
+                                    filtered.forEach((pr: any, prIdx: number) => {
+                                      rows.push(
+                                        <tr key={`${ver}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                          <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>{pr.pronostico || '—'}</td>
+                                          <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{prIdx === 0 ? verLabel : ''}</td>
+                                          <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{pr.stake || '—'}</td>
+                                        </tr>
+                                      );
+                                    });
+                                  }
+                                });
+                                return rows;
+                              })()}
                             </tbody>
                           </table>
                         )}

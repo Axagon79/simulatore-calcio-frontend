@@ -26,7 +26,9 @@ export default function WalletBadge() {
 
   const isExplicitRoute = EXPLICIT_ROUTES.some(r => path === r || path.startsWith(r + '/'));
 
-  if (!user || !isExplicitRoute || ROUTES_NO_BADGE.has(path)) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+  if (!user || !isExplicitRoute || ROUTES_NO_BADGE.has(path) || isMobile) {
     return null;
   }
 

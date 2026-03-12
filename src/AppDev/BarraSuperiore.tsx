@@ -294,13 +294,13 @@ export default function BarraSuperiore({
           </div>
         )}
 
-        {user && (
+        {user && !isMobile && (
           <div
             onClick={() => window.location.href = '/wallet'}
             style={{
-              display: 'flex', gap: isMobile ? '8px' : '10px', alignItems: 'center',
-              fontSize: isMobile ? '10px' : '12px',
-              padding: isMobile ? '4px 10px' : '6px 14px',
+              display: 'flex', gap: '10px', alignItems: 'center',
+              fontSize: '12px',
+              padding: '6px 14px',
               borderRadius: '20px',
               background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(15,15,30,0.92)',
               border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`,

@@ -417,14 +417,14 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   onClick={() => setMenuOpen(!menuOpen)}
                   style={{
                     background: 'none', border: 'none',
-                    color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+                    color: isLight ? '#6b7280' : 'rgba(255,255,255,0.85)',
                     fontSize: '18px', cursor: 'pointer', padding: '4px 8px',
                     fontFamily: 'inherit', lineHeight: 1,
                   }}
                 >☰</button>
                 <span style={{
-                  fontSize: '12px', fontWeight: '500',
-                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                  fontSize: '12px', fontWeight: '600',
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.7)',
                   marginLeft: '8px',
                 }}>Menu</span>
               </div>
@@ -442,7 +442,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                       onClick={() => setMenuOpen(false)}
                       style={{
                         background: 'none', border: 'none',
-                        color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+                        color: isLight ? '#6b7280' : 'rgba(255,255,255,0.85)',
                         fontSize: '24px', cursor: 'pointer', padding: '4px 8px',
                         fontFamily: 'inherit',
                       }}
@@ -453,7 +453,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     <div key={menu.label} style={{ marginBottom: '24px' }}>
                       <div style={{
                         fontSize: '11px', fontWeight: '500',
-                        color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
+                        color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.6)',
                         textTransform: 'uppercase' as const, letterSpacing: '0.08em',
                         marginBottom: '8px',
                       }}>{menu.label}</div>
@@ -464,7 +464,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                           style={{
                             padding: '10px 0',
                             fontSize: '15px', fontWeight: '400',
-                            color: isLight ? '#374151' : 'rgba(255,255,255,0.8)',
+                            color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
                             cursor: 'pointer',
                             borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
                           }}

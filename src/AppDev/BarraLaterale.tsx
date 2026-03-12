@@ -2,6 +2,7 @@ import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import type { League, Match } from '../types';
 import { getTheme, getThemeMode } from './costanti';
 import { checkAdmin } from '../permissions';
+import { useAuth } from '../contexts/AuthContext';
 const appTheme = getTheme();
 
 interface Country {
@@ -95,6 +96,7 @@ export default function BarraLaterale({
   isAdmin: _isAdmin
 }: BarraLateraleProps) {
   const isLight = getThemeMode() === 'light';
+  const { credits, shields } = useAuth();
 
   return (
     <div style={{
@@ -119,6 +121,19 @@ export default function BarraLaterale({
           >
             ← Dashboard
           </button>
+          <span
+            onClick={() => { setMobileMenuOpen(false); window.location.href = '/wallet'; }}
+            style={{
+              fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '4px 10px', borderRadius: '14px',
+              background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
+            }}
+          >
+            <span style={{ color: '#06b6d4', fontWeight: 700 }}>C: {credits ?? 0}</span>
+            <span style={{ color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)' }}>·</span>
+            <span style={{ color: '#f0c040', fontWeight: 700 }}>S: {shields ?? 0}</span>
+          </span>
           <button
             onClick={() => setMobileMenuOpen(false)}
             style={{

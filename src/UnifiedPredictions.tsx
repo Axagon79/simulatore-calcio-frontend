@@ -1913,9 +1913,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     fontSize: '11px', lineHeight: '1.7', color: theme.text,
                     padding: '8px 10px', whiteSpace: 'pre-wrap' as const,
                     background: theme.surfaceSubtle, borderRadius: '4px',
-                    filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const,
                   }}>
-                    {pred.analysis_free}
+                    {canSee ? pred.analysis_free : (() => {
+                      const tips = (pred.pronostici || []).map((pr: any) => pr.pronostico as string).filter(Boolean);
+                      if (!tips.length || !pred.analysis_free) return pred.analysis_free;
+                      const escaped = tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+                      const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+                      const parts = (pred.analysis_free as string).split(regex);
+                      return parts.map((part: string, i: number) => {
+                        const isMatch = tips.some(t => t.toLowerCase() === part.toLowerCase());
+                        return isMatch
+                          ? <span key={i} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>
+                          : part;
+                      });
+                    })()}
                   </div>
                 )}
 
@@ -2417,13 +2428,29 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           if (insights.length === 0) return null;
 
                           return (
-                            <div style={{ marginTop: '6px', fontSize: '9px', lineHeight: '1.6', filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const }}>
-                              {insights.slice(0, 4).map((ins, i) => (
+                            <div style={{ marginTop: '6px', fontSize: '9px', lineHeight: '1.6' }}>
+                              {insights.slice(0, 4).map((ins, i) => {
+                                const renderText = () => {
+                                  if (canSee) return ins.text;
+                                  const tips = [segnoTip?.pronostico, golTip?.pronostico].filter(Boolean) as string[];
+                                  if (!tips.length) return ins.text;
+                                  const escaped = tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+                                  const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+                                  const parts = ins.text.split(regex);
+                                  return parts.map((part: string, j: number) => {
+                                    const isMatch = tips.some(t => t.toLowerCase() === part.toLowerCase());
+                                    return isMatch
+                                      ? <span key={j} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>
+                                      : part;
+                                  });
+                                };
+                                return (
                                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', marginBottom: '2px' }}>
                                   <span style={{ flexShrink: 0, fontSize: '10px' }}>{ins.isGood ? '✅' : '⚠️'}</span>
-                                  <span style={{ color: ins.isGood ? theme.success : theme.warning }}>{ins.text}</span>
+                                  <span style={{ color: ins.isGood ? theme.success : theme.warning }}>{renderText()}</span>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           );
                         })()}

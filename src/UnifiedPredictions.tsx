@@ -1758,6 +1758,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   border: '1px solid rgba(5, 150, 105, 0.2)',
                   borderRadius: '6px',
                   display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                  filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const,
                 }}>
                   <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
                   {((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3).map(([score, count], i, arr) => {
@@ -2071,7 +2072,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         { name: 'NG', pct: sim.ng_pct, color: '#f06292' },
                       ])}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
-                        <div style={{ textAlign: 'center' }}>
+                        <div style={{ textAlign: 'center', filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const }}>
                           <div style={{ fontSize: '10px', color: theme.textDim }}>Score Predetto</div>
                           <div style={{ fontSize: '20px', fontWeight: 800, color: theme.orange }}>{sim.predicted_score}</div>
                         </div>
@@ -2081,7 +2082,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             🏠 {sim.avg_goals_home} — ✈️ {sim.avg_goals_away}
                           </div>
                         </div>
-                        <div>
+                        <div style={{ filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const }}>
                           <div style={{ fontSize: '10px', color: theme.textDim, marginBottom: '2px' }}>Top Scores</div>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {[...(sim.top_scores || [])].slice(0, 4).map(([score, count]: [string, number], i: number) => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
 import { getTheme } from '../AppDev/costanti';
+import { checkAdmin } from '../permissions';
 import StemmaImg from './StemmaImg';
 
 const theme = getTheme();
@@ -387,6 +388,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
               {awaySrc && <StemmaImg src={awaySrc} size={stemmaSize} alt={pick.away} />}
               <span style={{
                 fontSize: isMobile ? '11px' : '12px', fontWeight: 800, color: theme.cyan, marginLeft: '2px',
+                ...(checkAdmin() || localStorage.getItem('pp_pu') === '1' ? {} : { filter: 'blur(5px)', userSelect: 'none' as const }),
               }}>{pick.pronostico}</span>
               <span style={{ fontSize: isMobile ? '10px' : '10px' }}>
                 {Array.from({ length: pick.stars }, (_, j) => (

@@ -317,8 +317,9 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     }
   };
   // --- Sistema Acquisti Pronostici ---
-  const { user, credits, subscription, getIdToken, refreshWallet } = useAuth();
+  const { user, credits, shields, subscription, getIdToken, refreshWallet } = useAuth();
   const [purchasedMatches, setPurchasedMatches] = useState<Set<string>>(new Set());
+  const [shieldedMatches, setShieldedMatches] = useState<Set<string>>(new Set());
   const [purchaseModal, setPurchaseModal] = useState<{ matchKey: string; home: string; away: string; league: string; matchTime: string } | null>(null);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
@@ -373,12 +374,46 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     return canSeeAll || purchasedMatches.has(matchKey);
   }, [canSeeAll, purchasedMatches]);
 
+  const [purchaseSnapshots, setPurchaseSnapshots] = useState<Record<string, any>>({});
+
+  const activateShield = async (matchKey: string, home: string, away: string) => {
+    if ((shields ?? 0) < 1) return;
+    try {
+      const token = await getIdToken();
+      const res = await fetch(`${API_BASE}/wallet/transaction`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'shield_attivato',
+          credits_delta: 0,
+          shields_delta: -1,
+          amount_eur: 0,
+          description: `Shield su ${home} vs ${away}`,
+          metadata: { match_key: matchKey },
+        }),
+      });
+      if (res.ok) {
+        setShieldedMatches(prev => new Set([...prev, matchKey]));
+        window.dispatchEvent(new Event('wallet-changed'));
+        await refreshWallet();
+      }
+    } catch { /* silent */ }
+  };
+
   const handleUnlock = (pred: Prediction) => {
     if (!user) {
       window.dispatchEvent(new Event('open-settings'));
       return;
     }
     const matchKey = `${pred.date}_${pred.home}_${pred.away}`;
+    // Salva snapshot per confronto post-acquisto
+    setPurchaseSnapshots(prev => ({
+      ...prev,
+      [matchKey]: {
+        pronostici: pred.pronostici?.map(p => ({ pronostico: p.pronostico, tipo: p.tipo, stake: p.stake, confidence: p.confidence })),
+        purchased_at: new Date().toISOString(),
+      },
+    }));
     setPurchaseModal({ matchKey, home: pred.home, away: pred.away, league: pred.league, matchTime: pred.match_time });
   };
 
@@ -396,7 +431,10 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           shields_delta: 0,
           amount_eur: 0,
           description: `${purchaseModal.home} vs ${purchaseModal.away}`,
-          metadata: { match_key: purchaseModal.matchKey, date, cost: predictionCost },
+          metadata: {
+            match_key: purchaseModal.matchKey, date, cost: predictionCost,
+            snapshot_at_purchase: purchaseSnapshots[purchaseModal.matchKey]?.pronostici || [],
+          },
         }),
       });
       if (res.ok) {
@@ -1349,6 +1387,90 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </div>
               );
             })()}
+            {/* Shield Badge + Attivazione */}
+            {canSee && !canSeeAll && purchasedMatches.has(matchKey) && (
+              <div style={{ marginLeft: '8px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {shieldedMatches.has(matchKey) ? (
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700, color: '#f0c040',
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    padding: '3px 8px', borderRadius: '4px',
+                    background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
+                  }}>
+                    Protetto
+                  </span>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); activateShield(matchKey, pred.home, pred.away); }}
+                    disabled={(shields ?? 0) < 1}
+                    style={{
+                      fontSize: '11px', fontWeight: 600, cursor: (shields ?? 0) < 1 ? 'default' : 'pointer',
+                      color: (shields ?? 0) < 1 ? theme.textDim : '#f0c040',
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      padding: '3px 8px', borderRadius: '4px',
+                      background: (shields ?? 0) < 1 ? theme.surface05 : 'rgba(240,192,64,0.08)',
+                      border: `1px solid ${(shields ?? 0) < 1 ? theme.surface15 : 'rgba(240,192,64,0.2)'}`,
+                      fontFamily: 'inherit',
+                    }}
+                    title={(shields ?? 0) < 1 ? 'Nessun Shield disponibile' : 'Se il pronostico perde, crediti rimborsati'}
+                  >
+                    Attiva Shield ({shields ?? 0})
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Banner Aggiornamento Pronostico (casi A/B/C/D) */}
+            {canSee && !canSeeAll && purchasedMatches.has(matchKey) && (() => {
+              const snap = purchaseSnapshots[matchKey]?.pronostici;
+              if (!snap || snap.length === 0) return null;
+              const currentTips = pred.pronostici || [];
+              // Caso C: pronostico ritirato (partita non più in daily_predictions_unified)
+              if (currentTips.length === 0) {
+                return (
+                  <div style={{ marginLeft: '8px', marginBottom: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                    <div style={{ fontSize: '12px', color: theme.danger, fontWeight: 700, marginBottom: '4px' }}>
+                      {snap.map((s: any) => s.pronostico).join(', ')} — <s>Stake {snap[0]?.stake}</s> → NO BET
+                    </div>
+                    <div style={{ fontSize: '11px', color: theme.textDim, lineHeight: 1.5 }}>
+                      Questo pronostico è stato ritirato. I tuoi {predictionCost} crediti sono stati rimborsati automaticamente.
+                    </div>
+                  </div>
+                );
+              }
+              // Confronta tip principale
+              const snapMain = snap[0];
+              const currMain = currentTips[0];
+              if (!snapMain || !currMain) return null;
+              const tipChanged = snapMain.pronostico !== currMain.pronostico;
+              const stakeChanged = snapMain.stake !== currMain.stake;
+              if (!tipChanged && !stakeChanged) return null; // Caso D: nessuna modifica
+              if (tipChanged) {
+                // Caso A: pronostico cambiato
+                return (
+                  <div style={{ marginLeft: '8px', marginBottom: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                    <div style={{ fontSize: '12px', color: theme.cyan, fontWeight: 700, marginBottom: '4px' }}>
+                      <s>{snapMain.pronostico} — Stake {snapMain.stake}</s> → <strong>{currMain.pronostico} — Stake {currMain.stake}</strong>
+                    </div>
+                    <div style={{ fontSize: '11px', color: theme.textDim, lineHeight: 1.5 }}>
+                      Il pronostico è stato aggiornato con dati più recenti. Puoi scegliere quale versione seguire — consigliamo quella aggiornata. Nessun rimborso previsto per aggiornamenti del tip.
+                    </div>
+                  </div>
+                );
+              }
+              // Caso B: solo stake cambiato
+              return (
+                <div style={{ marginLeft: '8px', marginBottom: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                  <div style={{ fontSize: '12px', color: isLight ? '#b45309' : '#fbbf24', fontWeight: 700, marginBottom: '4px' }}>
+                    <s>Stake: {snapMain.stake}</s> → <strong>Stake: {currMain.stake}</strong>
+                  </div>
+                  <div style={{ fontSize: '11px', color: theme.textDim, lineHeight: 1.5 }}>
+                    La fiducia del sistema su questo pronostico è cambiata. Si consiglia di rivalutare l'importo della puntata.
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Storico Versioni Pronostico */}
             {canSee && (
               <div style={{ marginLeft: '8px', marginBottom: '8px' }}>
@@ -3681,6 +3803,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         </div>
       )}
+
+      {/* Modal Shield (post-acquisto) */}
+      {/* Shield si attiva dalla card del pronostico sbloccato, non dal modal di acquisto */}
 
       {/* Modal Successo Acquisto */}
       {purchaseSuccess && (

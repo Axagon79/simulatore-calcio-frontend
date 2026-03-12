@@ -424,10 +424,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     fontFamily: 'inherit', lineHeight: 1,
                   }}
                 >☰</button>
-                <span style={{
+                <span
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  style={{
                   fontSize: '12px', fontWeight: '600',
                   color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.7)',
-                  marginLeft: '8px',
+                  marginLeft: '8px', cursor: 'pointer',
                 }}>Menu</span>
               </div>
               {/* PANNELLO HAMBURGER */}
@@ -454,10 +456,12 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     menu.items ? (
                     <div key={menu.label} style={{ marginBottom: '24px' }}>
                       <div style={{
-                        fontSize: '11px', fontWeight: '500',
-                        color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.6)',
+                        fontSize: '13px', fontWeight: '600',
+                        color: isLight ? '#6b7280' : 'rgba(255,255,255,0.6)',
                         textTransform: 'uppercase' as const, letterSpacing: '0.08em',
-                        marginBottom: '8px', paddingBottom: '8px',
+                        marginBottom: '8px',
+                        background: isLight ? 'rgba(0,0,0,0.008)' : 'transparent',
+                        padding: '10px 10px', borderRadius: '6px',
                         borderBottom: `2px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
                       }}>{menu.label}</div>
                       {menu.items.map(item => (
@@ -469,7 +473,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                             fontSize: '15px', fontWeight: '400',
                             color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
                             cursor: 'pointer',
-                            background: isLight ? 'transparent' : 'rgba(255,255,255,0.03)',
+                            background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(255,255,255,0.03)',
                             borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
                             borderRadius: '4px',
                           }}
@@ -487,7 +491,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                         fontSize: '15px', fontWeight: '500',
                         color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
                         cursor: 'pointer',
-                        background: isLight ? 'transparent' : 'rgba(255,255,255,0.03)',
+                        background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(255,255,255,0.03)',
                         borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
                         borderRadius: '4px',
                       }}

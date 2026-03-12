@@ -4,12 +4,6 @@ import { getTheme, getThemeMode } from '../AppDev/costanti';
 
 const theme = getTheme();
 
-// Rotte dove la BarraSuperiore è GIÀ presente (AppDev catchall)
-// Su queste rotte il badge NON appare perché i crediti sono già visibili
-const ROUTES_WITH_NAVBAR = new Set([
-  '/',
-]);
-
 // Rotte dove il badge NON deve apparire (pagine legali, contatti, ecc.)
 const ROUTES_NO_BADGE = new Set([
   '/privacy-policy', '/termini', '/privacy', '/disclaimer', '/contatti',

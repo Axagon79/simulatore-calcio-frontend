@@ -66,7 +66,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
   const [confirmModal, setConfirmModal] = useState<{ type: 'pack' | 'sub'; name: string; credits: number; shields: number; price: number } | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handlePurchase = async (type: 'pack' | 'sub', name: string, credits: number, shields: number, price: number, subType?: string) => {
+  const handlePurchase = async (type: 'pack' | 'sub', name: string, credits: number, shields: number, price: number, _subType?: string) => {
     if (!user) {
       window.dispatchEvent(new Event('open-settings'));
       return;

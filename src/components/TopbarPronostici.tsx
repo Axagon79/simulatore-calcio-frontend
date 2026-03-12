@@ -99,7 +99,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
         const allPicks: Pick[] = [];
         for (const pred of data.predictions) {
           for (const p of pred.pronostici || []) {
-            if (p.stars >= 3 && p.tipo === 'SEGNO') {
+            if (p.stars >= 2.5) {
               allPicks.push({
                 home: pred.home, away: pred.away,
                 home_mongo_id: pred.home_mongo_id, away_mongo_id: pred.away_mongo_id,
@@ -389,8 +389,8 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
               {awaySrc && <StemmaImg src={awaySrc} size={stemmaSize} alt={pick.away} />}
               <span style={{
                 fontSize: isMobile ? '11px' : '12px', fontWeight: 800, color: theme.cyan, marginLeft: '2px',
-                opacity: _canSeeTips ? 1 : 0.12,
-                userSelect: _canSeeTips ? 'auto' : 'none',
+                filter: _canSeeTips ? 'none' : 'blur(5px)',
+                userSelect: _canSeeTips ? 'auto' as const : 'none' as const,
               }}>{pick.pronostico}</span>
               <span style={{ fontSize: isMobile ? '10px' : '10px' }}>
                 {Array.from({ length: pick.stars }, (_, j) => (

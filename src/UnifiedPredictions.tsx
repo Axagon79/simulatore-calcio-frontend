@@ -329,27 +329,27 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [versionOpen, setVersionOpen] = useState<Set<string>>(new Set());
   const [versionLoading, setVersionLoading] = useState<Set<string>>(new Set());
 
-  const toggleVersionHistory = async (matchKey: string) => {
+  const toggleVersionHistory = async (pillKey: string, fetchKey: string) => {
     const newOpen = new Set(versionOpen);
-    if (newOpen.has(matchKey)) {
-      newOpen.delete(matchKey);
+    if (newOpen.has(pillKey)) {
+      newOpen.delete(pillKey);
       setVersionOpen(newOpen);
       return;
     }
-    newOpen.add(matchKey);
+    newOpen.add(pillKey);
     setVersionOpen(newOpen);
 
-    if (versionCache[matchKey]) return;
+    if (versionCache[fetchKey]) return;
 
-    setVersionLoading(prev => new Set([...prev, matchKey]));
+    setVersionLoading(prev => new Set([...prev, fetchKey]));
     try {
-      const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&match_key=${encodeURIComponent(matchKey)}`);
+      const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&match_key=${encodeURIComponent(fetchKey)}`);
       if (res.ok) {
         const data = await res.json();
-        setVersionCache(prev => ({ ...prev, [matchKey]: data.versions || [] }));
+        setVersionCache(prev => ({ ...prev, [fetchKey]: data.versions || [] }));
       }
     } catch { /* silent */ }
-    setVersionLoading(prev => { const s = new Set(prev); s.delete(matchKey); return s; });
+    setVersionLoading(prev => { const s = new Set(prev); s.delete(fetchKey); return s; });
   };
 
   // Carica acquisti utente
@@ -1390,7 +1390,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       cursor: 'pointer',
                       ...(isMobile ? { flexWrap: 'wrap' as const } : {})
                     }}
-                      onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey); }}
+                      onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey, matchKey); }}
                     >
                       <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>
                         {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
@@ -1421,7 +1421,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         </span>
                       )}
                       <span
-                        onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey); }}
+                        onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey, matchKey); }}
                         style={{
                           fontSize: '8px', color: theme.textDim, cursor: 'pointer',
                           transition: 'transform 0.2s', display: 'inline-block',
@@ -1486,7 +1486,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               })().map((ver, verIdx) => {
                                 const vL: Record<string, string> = { nightly: 'Notte', update_3h: '-3h', update_1h: '-1h' };
                                 const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver)!;
-                                const isNB = doc.status === 'NO_BET';
+                                const isNB = doc.status === 'NO_BET' || !doc.pronostici?.length;
                                 const mt = doc.pronostici?.find((pr: any) => pr.tipo === p.tipo && pr.pronostico === p.pronostico) || doc.pronostici?.find((pr: any) => pr.tipo === p.tipo);
                                 const isCurrent = verIdx === 0;
                                 return (

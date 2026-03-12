@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { getThemeMode } from '../AppDev/costanti';
+import { getThemeMode, API_BASE } from '../AppDev/costanti';
+import { useAuth } from '../contexts/AuthContext';
 
 const isLight = getThemeMode() === 'light';
 
@@ -58,8 +59,90 @@ interface PrezziProps {
 }
 
 export default function Prezzi({ onBack }: PrezziProps) {
+  const { user, getIdToken, refreshWallet } = useAuth();
   const [hoveredPack, setHoveredPack] = useState<string | null>(null);
   const [hoveredSub, setHoveredSub] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ type: 'pack' | 'sub'; name: string; credits: number; shields: number; price: number } | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handlePurchase = async (type: 'pack' | 'sub', name: string, credits: number, shields: number, price: number, subType?: string) => {
+    if (!user) {
+      window.dispatchEvent(new Event('open-settings'));
+      return;
+    }
+    setConfirmModal({ type, name, credits, shields, price });
+  };
+
+  const confirmPurchase = async () => {
+    if (!confirmModal) return;
+    setPurchasing(true);
+    try {
+      const token = await getIdToken();
+      const { type, name, credits, shields, price } = confirmModal;
+
+      if (type === 'pack') {
+        // Acquisto pacchetto crediti
+        await fetch(`${API_BASE}/wallet/transaction`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'acquisto_pacchetto',
+            credits_delta: credits,
+            shields_delta: shields,
+            amount_eur: price,
+            description: `Pacchetto ${name} (beta)`,
+            metadata: { package_name: name, beta: true },
+          }),
+        });
+      } else {
+        // Attivazione abbonamento
+        const subName = name.toLowerCase();
+        const months = subName === 'mensile' ? 1 : subName === 'semestrale' ? 6 : 12;
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + months);
+
+        await fetch(`${API_BASE}/wallet/transaction`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'crediti_bonus_abbonamento',
+            credits_delta: credits,
+            shields_delta: shields,
+            amount_eur: price,
+            description: `Abbonamento ${name} attivato (beta)`,
+            metadata: { subscription: subName, expires_at: expiresAt.toISOString(), beta: true },
+          }),
+        });
+
+        // Aggiorna subscription nel profilo utente
+        await fetch(`${API_BASE}/wallet/transaction`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'acquisto_pacchetto',
+            credits_delta: 0,
+            shields_delta: 0,
+            amount_eur: 0,
+            description: `Attivazione abbonamento ${name}`,
+            metadata: { set_subscription: subName, set_subscription_expires_at: expiresAt.toISOString() },
+          }),
+        });
+      }
+
+      window.dispatchEvent(new Event('wallet-changed'));
+      await refreshWallet();
+      setSuccessMsg(type === 'pack'
+        ? `Pacchetto ${name} attivato! Hai ricevuto ${credits} crediti e ${shields} Shield.`
+        : `Abbonamento ${name} attivato! Hai ricevuto ${credits} crediti bonus e ${shields} Shield bonus.`
+      );
+      setConfirmModal(null);
+    } catch {
+      setSuccessMsg('Errore durante l\'acquisto. Riprova.');
+    } finally {
+      setPurchasing(false);
+    }
+  };
 
   return (
     <div style={{
@@ -100,6 +183,97 @@ export default function Prezzi({ onBack }: PrezziProps) {
         onMouseLeave={e => { e.currentTarget.style.color = c.textDim; e.currentTarget.style.borderColor = c.cardBorder; }}
         >Torna indietro</button>
       </header>
+
+      {/* Banner Beta */}
+      <div style={{
+        maxWidth: '1100px', margin: '20px auto 0', padding: '0 24px',
+      }}>
+        <div style={{
+          padding: '12px 20px', borderRadius: '8px',
+          background: isLight ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.12)',
+          border: `1px solid ${isLight ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.25)'}`,
+          fontSize: '13px', color: c.accent, fontWeight: 500, textAlign: 'center',
+        }}>
+          AI Simulator è in fase beta. I pagamenti non sono ancora attivi — esplora tutte le funzionalità gratuitamente.
+        </div>
+      </div>
+
+      {/* Modal conferma acquisto */}
+      {confirmModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => !purchasing && setConfirmModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: isLight ? '#fff' : '#1a1a2e', borderRadius: '12px',
+            padding: '28px', maxWidth: '380px', width: '90%',
+            border: `1px solid ${c.cardBorder}`,
+          }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 600 }}>
+              Conferma {confirmModal.type === 'pack' ? 'acquisto' : 'abbonamento'}
+            </h3>
+            <p style={{ fontSize: '14px', color: c.textDim, margin: '0 0 8px' }}>
+              {confirmModal.type === 'pack' ? 'Pacchetto' : 'Piano'}: <strong style={{ color: c.text }}>{confirmModal.name}</strong>
+            </p>
+            <p style={{ fontSize: '14px', color: c.textDim, margin: '0 0 8px' }}>
+              Crediti: <strong style={{ color: c.accent }}>+{confirmModal.credits}</strong> — Shield: <strong style={{ color: c.success }}>+{confirmModal.shields}</strong>
+            </p>
+            <p style={{ fontSize: '14px', color: c.textDim, margin: '0 0 20px' }}>
+              Prezzo: <strong style={{ color: c.text }}>€{confirmModal.price.toFixed(2)}</strong>
+              <span style={{ fontSize: '12px', color: c.accent, marginLeft: '8px' }}>(gratuito in beta)</span>
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setConfirmModal(null)}
+                disabled={purchasing}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '6px', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+                  border: `1px solid ${c.cardBorder}`, background: 'transparent', color: c.text,
+                }}
+              >Annulla</button>
+              <button
+                onClick={confirmPurchase}
+                disabled={purchasing}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '6px', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+                  border: 'none', background: c.accent, color: '#fff',
+                  opacity: purchasing ? 0.6 : 1,
+                }}
+              >{purchasing ? 'Attendi...' : 'Conferma'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal successo */}
+      {successMsg && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setSuccessMsg(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: isLight ? '#fff' : '#1a1a2e', borderRadius: '12px',
+            padding: '28px', maxWidth: '380px', width: '90%',
+            border: `1px solid ${c.cardBorder}`, textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>
+              {successMsg.includes('Errore') ? '' : ''}
+            </div>
+            <p style={{ fontSize: '14px', color: c.text, margin: '0 0 20px', lineHeight: 1.6 }}>
+              {successMsg}
+            </p>
+            <button onClick={() => setSuccessMsg(null)} style={{
+              padding: '10px 24px', borderRadius: '6px', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+              border: 'none', background: c.accent, color: '#fff',
+            }}>OK</button>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 24px 80px' }}>
 
@@ -207,12 +381,14 @@ export default function Prezzi({ onBack }: PrezziProps) {
                   </div>
                 ))}
               </div>
-              <button style={{
-                marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
-                border: 'none', background: c.accent, color: '#fff',
-                transition: 'all 0.15s',
-              }}>Acquista crediti</button>
+              <button
+                onClick={() => document.querySelector('#pacchetti-crediti')?.scrollIntoView({ behavior: 'smooth' })}
+                style={{
+                  marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
+                  cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                  border: 'none', background: c.accent, color: '#fff',
+                  transition: 'all 0.15s',
+                }}>Acquista crediti</button>
             </div>
 
             {/* PIANO ABBONAMENTO */}
@@ -248,18 +424,20 @@ export default function Prezzi({ onBack }: PrezziProps) {
                   </div>
                 ))}
               </div>
-              <button style={{
-                marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
-                border: `1px solid ${c.cardBorder}`, background: 'transparent', color: c.text,
-                transition: 'all 0.15s',
-              }}>Vedi piani</button>
+              <button
+                onClick={() => document.querySelector('#piani-abbonamento')?.scrollIntoView({ behavior: 'smooth' })}
+                style={{
+                  marginTop: '20px', width: '100%', padding: '10px 0', borderRadius: '6px',
+                  cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                  border: `1px solid ${c.cardBorder}`, background: 'transparent', color: c.text,
+                  transition: 'all 0.15s',
+                }}>Vedi piani</button>
             </div>
           </div>
         </section>
 
         {/* --- DETTAGLIO PACCHETTI CREDITI --- */}
-        <section style={{ marginBottom: '80px' }}>
+        <section id="pacchetti-crediti" style={{ marginBottom: '80px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{
               fontSize: '24px', fontWeight: '600', letterSpacing: '-0.02em', margin: '0 0 8px',
@@ -338,15 +516,17 @@ export default function Prezzi({ onBack }: PrezziProps) {
                     </div>
                   )}
 
-                  <button style={{
-                    marginTop: '20px', width: '100%',
-                    padding: '10px 0', borderRadius: '6px', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
-                    border: isPopular ? 'none' : `1px solid ${c.cardBorder}`,
-                    background: isPopular ? c.accent : 'transparent',
-                    color: isPopular ? '#fff' : c.text,
-                    transition: 'all 0.15s',
-                  }}>Acquista</button>
+                  <button
+                    onClick={() => handlePurchase('pack', pack.name, pack.credits, pack.shield, pack.price)}
+                    style={{
+                      marginTop: '20px', width: '100%',
+                      padding: '10px 0', borderRadius: '6px', cursor: 'pointer',
+                      fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                      border: isPopular ? 'none' : `1px solid ${c.cardBorder}`,
+                      background: isPopular ? c.accent : 'transparent',
+                      color: isPopular ? '#fff' : c.text,
+                      transition: 'all 0.15s',
+                    }}>Acquista</button>
                 </div>
               );
             })}
@@ -420,7 +600,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
         </section>
 
         {/* --- SEZIONE ABBONAMENTO --- */}
-        <section style={{ marginBottom: '80px' }}>
+        <section id="piani-abbonamento" style={{ marginBottom: '80px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: '600', letterSpacing: '-0.02em', margin: '0 0 8px' }}>
               Abbonamento
@@ -524,14 +704,16 @@ export default function Prezzi({ onBack }: PrezziProps) {
                     </div>
                   </div>
 
-                  <button style={{
-                    width: '100%', padding: '10px 0', borderRadius: '6px', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
-                    border: isPopular ? 'none' : `1px solid ${c.cardBorder}`,
-                    background: isPopular ? c.accent : 'transparent',
-                    color: isPopular ? '#fff' : c.text,
-                    transition: 'all 0.15s',
-                  }}>Abbonati</button>
+                  <button
+                    onClick={() => handlePurchase('sub', sub.name, sub.creditsBonus, sub.shieldBonus, sub.priceMonth)}
+                    style={{
+                      width: '100%', padding: '10px 0', borderRadius: '6px', cursor: 'pointer',
+                      fontFamily: 'inherit', fontSize: '13px', fontWeight: '600',
+                      border: isPopular ? 'none' : `1px solid ${c.cardBorder}`,
+                      background: isPopular ? c.accent : 'transparent',
+                      color: isPopular ? '#fff' : c.text,
+                      transition: 'all 0.15s',
+                    }}>Abbonati</button>
                 </div>
               );
             })}

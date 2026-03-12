@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
-import { getTheme, getThemeMode } from '../AppDev/costanti';
+import { getTheme } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import StemmaImg from './StemmaImg';
 
 const theme = getTheme();
-const isLight = getThemeMode() === 'light';
 const _canSeeTips = checkAdmin() || localStorage.getItem('pp_pu') === '1';
 
 const isLocal = typeof window !== 'undefined' && (
@@ -88,7 +87,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentRef = useRef<HTMLDivElement>(null);
   const offscreenRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch pronostici del giorno
   useEffect(() => {

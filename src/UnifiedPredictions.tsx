@@ -1330,6 +1330,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 })}
                 </div>
               </div>
+
             </div>
           )}
         </div>
@@ -1352,50 +1353,128 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   || (p.tipo === 'DOPPIA_CHANCE' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
                   || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
                 const source = (p as any).source;
+                const pillKey = `${matchKey}_${p.tipo}_${p.pronostico}`;
+                const isExpanded = versionOpen.has(pillKey);
                 return (
-                  <div key={idx} style={{
-                    background: pillBg, border: `1px solid ${pillBorder}`,
-                    borderRadius: '5px', padding: '3px 8px', marginBottom: '3px',
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    ...(isMobile ? { flexWrap: 'wrap' as const } : {})
-                  }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>
-                      {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
-                    </span>
-                    <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
-                    {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
-                    {source && (
-                      <span style={{
-                        fontSize: '8px', fontWeight: '700',
-                        color: source.includes('_screm') ? (isLight ? '#9333ea' : '#c084fc') : '#a78bfa',
-                        background: source.includes('_screm') ? 'rgba(192,132,252,0.12)' : 'rgba(167,139,250,0.12)',
-                        borderRadius: '3px', padding: '1px 4px',
-                      }}>
-                        {source.includes('_screm') ? 'S8F' : source}
+                  <div key={idx} style={{ marginBottom: '3px' }}>
+                    <div style={{
+                      background: pillBg, border: `1px solid ${pillBorder}`,
+                      borderRadius: isExpanded ? '5px 5px 0 0' : '5px', padding: '3px 8px',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      cursor: 'pointer',
+                      ...(isMobile ? { flexWrap: 'wrap' as const } : {})
+                    }}
+                      onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey); }}
+                    >
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>
+                        {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
                       </span>
-                    )}
-                    {isAdmin && p.edge != null && p.edge > 0 && (
-                      <span style={{ fontSize: '8px', color: theme.textFaint }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
-                        E:+{p.edge?.toFixed(1)}%
-                      </span>
-                    )}
-                    {p.stake != null && p.stake > 0 && (
-                      <span style={{
-                        fontSize: '9px', fontWeight: '800', color: getStakeColor(p.stake),
-                        background: theme.surface05, borderRadius: '3px', padding: '1px 4px',
-                      }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
-                        Stake:{p.stake}
-                      </span>
-                    )}
-                    {isHit !== null && <span style={{ fontSize: '11px', marginLeft: 'auto' }}>{isHit ? '✅' : '❌'}</span>}
-                    {!effScore && quota && (
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
+                      {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
+                      {source && (
+                        <span style={{
+                          fontSize: '8px', fontWeight: '700',
+                          color: source.includes('_screm') ? (isLight ? '#9333ea' : '#c084fc') : '#a78bfa',
+                          background: source.includes('_screm') ? 'rgba(192,132,252,0.12)' : 'rgba(167,139,250,0.12)',
+                          borderRadius: '3px', padding: '1px 4px',
+                        }}>
+                          {source.includes('_screm') ? 'S8F' : source}
+                        </span>
+                      )}
+                      {isAdmin && p.edge != null && p.edge > 0 && (
+                        <span style={{ fontSize: '8px', color: theme.textFaint }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
+                          E:+{p.edge?.toFixed(1)}%
+                        </span>
+                      )}
+                      {p.stake != null && p.stake > 0 && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: '800', color: getStakeColor(p.stake),
+                          background: theme.surface05, borderRadius: '3px', padding: '1px 4px',
+                        }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
+                          Stake:{p.stake}
+                        </span>
+                      )}
                       <span
-                        onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota), confidence: p.confidence, probabilitaStimata: (p as any).probabilita_stimata, systemStake: p.stake}); }}
-                        style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: isHit !== null ? '4px' : 'auto', opacity: 0.7, transition: 'opacity 0.2s' }}
+                        onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey); }}
+                        style={{
+                          fontSize: '8px', color: theme.textDim, cursor: 'pointer',
+                          transition: 'transform 0.2s', display: 'inline-block',
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          opacity: 0.6, marginLeft: '5px',
+                        }}
                         onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
-                        title="Salva nel Tracker"
-                      >💰+</span>
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+                        title="Storico versioni"
+                      >▼</span>
+                      {isHit !== null && <span style={{ fontSize: '11px', marginLeft: 'auto' }}>{isHit ? '✅' : '❌'}</span>}
+                      {!effScore && quota && (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota), confidence: p.confidence, probabilitaStimata: (p as any).probabilita_stimata, systemStake: p.stake}); }}
+                          style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: isHit !== null ? '4px' : 'auto', opacity: 0.7, transition: 'opacity 0.2s' }}
+                          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                          title="Salva nel Tracker"
+                        >💰+</span>
+                      )}
+                    </div>
+                    {/* Storico inline sotto la pill */}
+                    {isExpanded && (
+                      <div style={{
+                        background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${pillBorder}`, borderTop: 'none',
+                        borderRadius: '0 0 5px 5px', padding: '6px 8px',
+                      }}>
+                        {versionLoading.has(matchKey) ? (
+                          <div style={{ fontSize: '10px', color: theme.textDim }}>Caricamento...</div>
+                        ) : (versionCache[matchKey] || []).length === 0 ? (
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                            <thead>
+                              <tr style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                <th style={{ textAlign: 'left', padding: '2px 4px', color: theme.textDim, fontWeight: 600 }}>Pronostico</th>
+                                <th style={{ textAlign: 'left', padding: '2px 4px', color: theme.textDim, fontWeight: 600 }}>Versione</th>
+                                <th style={{ textAlign: 'center', padding: '2px 4px', color: theme.textDim, fontWeight: 600 }}>Stake</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>{p.pronostico}</td>
+                                <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>Attuale</td>
+                                <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{p.stake || '—'}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        ) : (
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                            <thead>
+                              <tr style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                <th style={{ textAlign: 'left', padding: '2px 4px', color: theme.textDim, fontWeight: 600 }}>Pronostico</th>
+                                <th style={{ textAlign: 'left', padding: '2px 4px', color: theme.textDim, fontWeight: 600 }}>Versione</th>
+                                <th style={{ textAlign: 'center', padding: '2px 4px', color: theme.textDim, fontWeight: 600 }}>Stake</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                // Versioni esistenti ordinate dal più recente
+                                const existing = (['update_1h', 'update_3h', 'nightly'] as const).filter(v => (versionCache[matchKey] || []).find((d: any) => d.version === v));
+                                return existing;
+                              })().map((ver, verIdx) => {
+                                const vL: Record<string, string> = { nightly: 'Notte', update_3h: '-3h', update_1h: '-1h' };
+                                const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver)!;
+                                const isNB = doc.status === 'NO_BET';
+                                const mt = doc.pronostici?.find((pr: any) => pr.tipo === p.tipo && pr.pronostico === p.pronostico) || doc.pronostici?.find((pr: any) => pr.tipo === p.tipo);
+                                const isCurrent = verIdx === 0;
+                                return (
+                                  <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                    <td style={{ padding: '3px 4px', color: isNB ? theme.danger : theme.cyan, fontWeight: 700 }}>{isNB ? 'NO BET' : (mt?.pronostico || '—')}</td>
+                                    <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{isCurrent ? 'Attuale' : (doc.run_time ? new Date(doc.run_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : vL[ver])}</td>
+                                    <td style={{ padding: '3px 4px', textAlign: 'center', color: isNB ? theme.textDim : theme.text, fontWeight: 600 }}>{isNB ? '—' : (mt?.stake || '—')}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -1536,77 +1615,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               );
             })()}
 
-            {/* Storico Versioni Pronostico */}
-            {canSee && (
-              <div style={{ marginLeft: '8px', marginBottom: '8px' }}>
-                <div
-                  onClick={(e) => { e.stopPropagation(); toggleVersionHistory(matchKey); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
-                    padding: '6px 10px', borderRadius: '6px',
-                    background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
-                  }}
-                >
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: theme.textDim }}>Storico pronostico</span>
-                  <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: versionOpen.has(matchKey) ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-                </div>
-                {versionOpen.has(matchKey) && (
-                  <div style={{
-                    marginTop: '6px', padding: '8px 10px', borderRadius: '6px',
-                    background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}`,
-                  }}>
-                    {versionLoading.has(matchKey) ? (
-                      <div style={{ fontSize: '11px', color: theme.textDim, padding: '4px 0' }}>Caricamento...</div>
-                    ) : (versionCache[matchKey] || []).length === 0 ? (
-                      <div style={{ fontSize: '11px', color: theme.textDim, padding: '4px 0' }}>Nessuna versione disponibile</div>
-                    ) : (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                        <thead>
-                          <tr style={{ borderBottom: `1px solid ${theme.surface05}` }}>
-                            <th style={{ textAlign: 'left', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Versione</th>
-                            <th style={{ textAlign: 'left', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Orario</th>
-                            <th style={{ textAlign: 'left', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Tip</th>
-                            <th style={{ textAlign: 'center', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Stake</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(['nightly', 'update_3h', 'update_1h'] as const).map(ver => {
-                            const versionLabels: Record<string, string> = { nightly: 'Notturno', update_3h: 'Agg. -3h', update_1h: 'Agg. -1h' };
-                            const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver);
-                            if (!doc) {
-                              return (
-                                <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
-                                  <td style={{ padding: '5px 6px', color: theme.textDim }}>{versionLabels[ver]}</td>
-                                  <td style={{ padding: '5px 6px', color: theme.textDim }}>—</td>
-                                  <td style={{ padding: '5px 6px', color: theme.textDim, fontStyle: 'italic' }}>In attesa</td>
-                                  <td style={{ padding: '5px 6px', textAlign: 'center', color: theme.textDim }}>—</td>
-                                </tr>
-                              );
-                            }
-                            const isNoBet = doc.status === 'NO_BET';
-                            const mainTip = doc.pronostici?.[0];
-                            return (
-                              <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
-                                <td style={{ padding: '5px 6px', color: theme.textDim }}>{versionLabels[ver]}</td>
-                                <td style={{ padding: '5px 6px', color: theme.textDim }}>{doc.run_time ? new Date(doc.run_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                                <td style={{ padding: '5px 6px', color: isNoBet ? theme.danger : theme.cyan, fontWeight: 700 }}>
-                                  {isNoBet ? 'NO BET' : (mainTip?.pronostico || '—')}
-                                </td>
-                                <td style={{ padding: '5px 6px', textAlign: 'center', color: isNoBet ? theme.textDim : theme.text, fontWeight: 600 }}>
-                                  {isNoBet ? '—' : (mainTip?.stake || '—')}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Quote — sezione dedicata sopra i pronostici */}
             <div style={{

@@ -2157,15 +2157,30 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 borderTop: `1px solid ${theme.cyan}20`,
                 animation: 'fadeIn 0.3s ease', fontSize: '11px', color: theme.textDim, fontStyle: 'italic', lineHeight: '1.5'
               }}>
-                {typeof pred.comment === 'string'
-                  ? <div>🔹 {pred.comment.replace(/BVS/g, 'MAP')}</div>
-                  : <>
-                      {pred.comment?.segno && <div>🔹 {pred.comment.segno.replace(/BVS/g, 'MAP')}</div>}
-                      {pred.comment?.gol && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.gol.replace(/BVS/g, 'MAP')}</div>}
-                      {pred.comment?.doppia_chance && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.doppia_chance.replace(/BVS/g, 'MAP')}</div>}
-                      {pred.comment?.gol_extra && <div style={{ marginTop: '4px' }}>🔹 {pred.comment.gol_extra.replace(/BVS/g, 'MAP')}</div>}
-                    </>
-                }
+                {(() => {
+                  const tips = (pred.pronostici || []).map((pr: any) => pr.pronostico as string).filter(Boolean);
+                  const blurTips = (text: string) => {
+                    if (canSee || !tips.length) return text.replace(/BVS/g, 'MAP');
+                    const clean = text.replace(/BVS/g, 'MAP');
+                    const escaped = tips.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+                    const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+                    const parts = clean.split(regex);
+                    return parts.map((part: string, j: number) => {
+                      const isMatch = tips.some(t => t.toLowerCase() === part.toLowerCase());
+                      return isMatch
+                        ? <span key={j} style={{ filter: 'blur(5px)', userSelect: 'none' as const }}>{part}</span>
+                        : part;
+                    });
+                  };
+                  return typeof pred.comment === 'string'
+                    ? <div>🔹 {blurTips(pred.comment)}</div>
+                    : <>
+                        {pred.comment?.segno && <div>🔹 {blurTips(pred.comment.segno)}</div>}
+                        {pred.comment?.gol && <div style={{ marginTop: '4px' }}>🔹 {blurTips(pred.comment.gol)}</div>}
+                        {pred.comment?.doppia_chance && <div style={{ marginTop: '4px' }}>🔹 {blurTips(pred.comment.doppia_chance)}</div>}
+                        {pred.comment?.gol_extra && <div style={{ marginTop: '4px' }}>🔹 {blurTips(pred.comment.gol_extra)}</div>}
+                      </>;
+                })()}
               </div>
             )}
 

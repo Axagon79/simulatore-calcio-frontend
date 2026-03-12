@@ -531,21 +531,71 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [datePickerOpen]);
 
-  // --- FETCH DATA (Unified endpoint) ---
+  // --- FETCH DATA (Unified + prediction_versions per partite ritirate) ---
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const predRes = await fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`);
-        const predData = await predRes.json();
+        // Fetch parallelo: pronostici unified + versioni (per partite ritirate)
+        const [predRes, versionsRes] = await Promise.all([
+          fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`),
+          fetch(`${API_BASE}/prediction-versions?date=${date}`).catch(() => null),
+        ]);
 
-        if (predData.success) {
-          const unified = predData.predictions || [];
-          setPredictions(unified);
-        } else {
-          setPredictions([]);
+        const predData = await predRes.json();
+        const unified: Prediction[] = predData.success ? (predData.predictions || []) : [];
+
+        // Merge: aggiungi partite ritirate da prediction_versions che non sono in unified
+        if (versionsRes && versionsRes.ok) {
+          try {
+            const versData = await versionsRes.json();
+            const versions = versData.versions || [];
+            const unifiedKeys = new Set(unified.map(p => `${p.date}_${p.home}_${p.away}`));
+
+            // Raggruppa versioni per match_key
+            const versionsByMatch: Record<string, any[]> = {};
+            for (const v of versions) {
+              if (!versionsByMatch[v.match_key]) versionsByMatch[v.match_key] = [];
+              versionsByMatch[v.match_key].push(v);
+            }
+
+            // Aggiungi partite che sono solo in prediction_versions (ritirate)
+            for (const [matchKey, matchVersions] of Object.entries(versionsByMatch)) {
+              if (unifiedKeys.has(matchKey)) continue;
+              // Prendi la versione più recente per i dati base
+              const latest = matchVersions[matchVersions.length - 1];
+              if (!latest) continue;
+              // Crea entry fantasma con badge NO BET
+              const ghostPred: Prediction = {
+                date: latest.date || date,
+                home: latest.home || matchKey.split('_')[1] || '?',
+                away: latest.away || matchKey.split('_')[2] || '?',
+                league: latest.league || '',
+                match_time: latest.match_time || '',
+                home_mongo_id: latest.home_mongo_id,
+                away_mongo_id: latest.away_mongo_id,
+                decision: 'NO_BET',
+                pronostici: [{
+                  tipo: 'SEGNO', pronostico: 'NO BET', confidence: 0, stars: 0,
+                }],
+                confidence_segno: 0,
+                confidence_gol: 0,
+                stars_segno: 0,
+                stars_gol: 0,
+                comment: 'Pronostico ritirato',
+                odds: { '1': 0, '2': 0, 'X': 0 },
+                segno_dettaglio: {},
+                gol_dettaglio: {},
+              };
+              unified.push(ghostPred);
+            }
+          } catch {
+            // Errore parsing versioni — ignora silenziosamente
+          }
         }
+
+        setPredictions(unified);
 
       } catch (err: any) {
         console.error('Errore fetch pronostici unified:', err);
@@ -1160,6 +1210,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {pred.away}
             </span>
             <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            {pred.decision === 'NO_BET' && (
+              <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', padding: '1px 5px', marginLeft: '4px', flexShrink: 0 }}>NO BET</span>
+            )}
           </div>
 
           {/* Diamante RE + Risultato + Freccia — spinto a destra */}

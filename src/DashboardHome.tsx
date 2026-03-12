@@ -384,14 +384,16 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         {/* ===== BARRA NAVIGAZIONE ===== */}
         {(() => {
           const navMenus: { label: string; items?: { label: string; onClick: () => void }[]; onClick?: () => void }[] = [
+            { label: 'Pronostici', items: [
+              { label: 'Best Picks', onClick: () => { window.location.href = '/best-picks'; } },
+            ]},
+            { label: 'Oggi', items: [
+              { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
+            ]},
             { label: 'Competizioni', items: [
               ...leagues.map(l => ({ label: l.name, onClick: () => onSelectLeague(l.id) })),
               { label: 'Altri Campionati', onClick: () => setShowOtherLeagues(true) },
               { label: 'Coppe Europee', onClick: () => setShowCups(true) },
-            ]},
-            { label: 'Oggi', items: [
-              { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
-              { label: 'Best Picks', onClick: () => { window.location.href = '/best-picks'; } },
             ]},
             { label: 'Strumenti', items: [
               { label: 'Simulazione Rapida', onClick: () => { window.location.href = '/simulate'; } },
@@ -455,18 +457,21 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                         fontSize: '11px', fontWeight: '500',
                         color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.6)',
                         textTransform: 'uppercase' as const, letterSpacing: '0.08em',
-                        marginBottom: '8px',
+                        marginBottom: '8px', paddingBottom: '8px',
+                        borderBottom: `2px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
                       }}>{menu.label}</div>
                       {menu.items.map(item => (
                         <div
                           key={item.label}
                           onClick={() => { item.onClick(); setMenuOpen(false); }}
                           style={{
-                            padding: '10px 0',
+                            padding: '10px 8px',
                             fontSize: '15px', fontWeight: '400',
                             color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
                             cursor: 'pointer',
-                            borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
+                            background: isLight ? 'transparent' : 'rgba(255,255,255,0.03)',
+                            borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                            borderRadius: '4px',
                           }}
                         >
                           {item.label}
@@ -478,11 +483,13 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                       key={menu.label}
                       onClick={() => { if (menu.onClick) menu.onClick(); setMenuOpen(false); }}
                       style={{
-                        padding: '12px 0',
+                        padding: '12px 8px',
                         fontSize: '15px', fontWeight: '500',
-                        color: isLight ? '#374151' : 'rgba(255,255,255,0.8)',
+                        color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
                         cursor: 'pointer',
-                        borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
+                        background: isLight ? 'transparent' : 'rgba(255,255,255,0.03)',
+                        borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: '4px',
                       }}
                     >
                       {menu.label}

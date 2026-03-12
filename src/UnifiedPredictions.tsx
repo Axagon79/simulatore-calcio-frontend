@@ -1107,7 +1107,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
     const matchKey = `${pred.date}_${pred.home}_${pred.away}`;
-    const canSee = canSeePrediction(matchKey);
+    const isFinished = !!pred.match_finished || !!pred.real_score;
+    const canSee = canSeePrediction(matchKey) || isFinished;
     const matchId = `${pred.home}-${pred.away}-${pred.date}`;
     const currentAnalysisTab = analysisTab[matchId];
     const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;

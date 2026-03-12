@@ -4,7 +4,7 @@ import { getThemeMode } from '../AppDev/costanti';
 
 interface SectionDef {
   title: string;
-  content: JSX.Element;
+  content: React.ReactNode;
 }
 
 export default function TermsPage() {

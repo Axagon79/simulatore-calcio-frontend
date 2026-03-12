@@ -324,6 +324,32 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
   const canSeeAll = isAdmin || isPremiumUser;
   const predictionCost = subscription ? 1 : 3;
+  const [versionCache, setVersionCache] = useState<Record<string, any[]>>({});
+  const [versionOpen, setVersionOpen] = useState<Set<string>>(new Set());
+  const [versionLoading, setVersionLoading] = useState<Set<string>>(new Set());
+
+  const toggleVersionHistory = async (matchKey: string) => {
+    const newOpen = new Set(versionOpen);
+    if (newOpen.has(matchKey)) {
+      newOpen.delete(matchKey);
+      setVersionOpen(newOpen);
+      return;
+    }
+    newOpen.add(matchKey);
+    setVersionOpen(newOpen);
+
+    if (versionCache[matchKey]) return;
+
+    setVersionLoading(prev => new Set([...prev, matchKey]));
+    try {
+      const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&match_key=${encodeURIComponent(matchKey)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersionCache(prev => ({ ...prev, [matchKey]: data.versions || [] }));
+      }
+    } catch { /* silent */ }
+    setVersionLoading(prev => { const s = new Set(prev); s.delete(matchKey); return s; });
+  };
 
   // Carica acquisti utente
   useEffect(() => {
@@ -1323,6 +1349,78 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </div>
               );
             })()}
+            {/* Storico Versioni Pronostico */}
+            {canSee && (
+              <div style={{ marginLeft: '8px', marginBottom: '8px' }}>
+                <div
+                  onClick={(e) => { e.stopPropagation(); toggleVersionHistory(matchKey); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+                    padding: '6px 10px', borderRadius: '6px',
+                    background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                  }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: theme.textDim }}>Storico pronostico</span>
+                  <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: versionOpen.has(matchKey) ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                </div>
+                {versionOpen.has(matchKey) && (
+                  <div style={{
+                    marginTop: '6px', padding: '8px 10px', borderRadius: '6px',
+                    background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}`,
+                  }}>
+                    {versionLoading.has(matchKey) ? (
+                      <div style={{ fontSize: '11px', color: theme.textDim, padding: '4px 0' }}>Caricamento...</div>
+                    ) : (versionCache[matchKey] || []).length === 0 ? (
+                      <div style={{ fontSize: '11px', color: theme.textDim, padding: '4px 0' }}>Nessuna versione disponibile</div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                            <th style={{ textAlign: 'left', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Versione</th>
+                            <th style={{ textAlign: 'left', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Orario</th>
+                            <th style={{ textAlign: 'left', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Tip</th>
+                            <th style={{ textAlign: 'center', padding: '4px 6px', color: theme.textDim, fontWeight: 600, fontSize: '10px' }}>Stake</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(['nightly', 'update_3h', 'update_1h'] as const).map(ver => {
+                            const versionLabels: Record<string, string> = { nightly: 'Notturno', update_3h: 'Agg. -3h', update_1h: 'Agg. -1h' };
+                            const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver);
+                            if (!doc) {
+                              return (
+                                <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                  <td style={{ padding: '5px 6px', color: theme.textDim }}>{versionLabels[ver]}</td>
+                                  <td style={{ padding: '5px 6px', color: theme.textDim }}>—</td>
+                                  <td style={{ padding: '5px 6px', color: theme.textDim, fontStyle: 'italic' }}>In attesa</td>
+                                  <td style={{ padding: '5px 6px', textAlign: 'center', color: theme.textDim }}>—</td>
+                                </tr>
+                              );
+                            }
+                            const isNoBet = doc.status === 'NO_BET';
+                            const mainTip = doc.pronostici?.[0];
+                            return (
+                              <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                <td style={{ padding: '5px 6px', color: theme.textDim }}>{versionLabels[ver]}</td>
+                                <td style={{ padding: '5px 6px', color: theme.textDim }}>{doc.run_time ? new Date(doc.run_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                                <td style={{ padding: '5px 6px', color: isNoBet ? theme.danger : theme.cyan, fontWeight: 700 }}>
+                                  {isNoBet ? 'NO BET' : (mainTip?.pronostico || '—')}
+                                </td>
+                                <td style={{ padding: '5px 6px', textAlign: 'center', color: isNoBet ? theme.textDim : theme.text, fontWeight: 600 }}>
+                                  {isNoBet ? '—' : (mainTip?.stake || '—')}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quote — sezione dedicata sopra i pronostici */}
             <div style={{
               paddingLeft: '8px', marginBottom: '8px',

@@ -1,6 +1,7 @@
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import type { League, Match } from '../types';
 import { getTheme, getThemeMode } from './costanti';
+import { checkAdmin } from '../permissions';
 const appTheme = getTheme();
 
 interface Country {
@@ -638,7 +639,11 @@ export default function BarraLaterale({
                     {pred.home} vs {pred.away}
                   </div>
                 </div>
-                <div style={{ color: glowColor, fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
+                <div style={{
+                  color: glowColor, fontSize: '11px', fontWeight: '700', flexShrink: 0,
+                  filter: checkAdmin() || localStorage.getItem('pp_pu') === '1' ? 'none' : 'blur(5px)',
+                  userSelect: checkAdmin() || localStorage.getItem('pp_pu') === '1' ? 'auto' as const : 'none' as const,
+                }}>
                   {mainPronostico?.pronostico || '-'}
                 </div>
               </div>

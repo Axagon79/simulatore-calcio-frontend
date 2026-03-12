@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
+import { useAuth } from './contexts/AuthContext';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're';
@@ -315,6 +316,80 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       setTimeout(() => setPwError(false), 2000);
     }
   };
+  // --- Sistema Acquisti Pronostici ---
+  const { user, credits, subscription, getIdToken, refreshWallet } = useAuth();
+  const [purchasedMatches, setPurchasedMatches] = useState<Set<string>>(new Set());
+  const [purchaseModal, setPurchaseModal] = useState<{ matchKey: string; home: string; away: string; league: string; matchTime: string } | null>(null);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
+  const canSeeAll = isAdmin || isPremiumUser;
+  const predictionCost = subscription ? 1 : 3;
+
+  // Carica acquisti utente
+  useEffect(() => {
+    if (!user || canSeeAll) return;
+    const loadPurchases = async () => {
+      try {
+        const token = await getIdToken();
+        const res = await fetch(`${API_BASE}/wallet/purchases?date=${date}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPurchasedMatches(new Set((data.purchases || []).map((p: any) => p.match_key)));
+        }
+      } catch { /* silent */ }
+    };
+    loadPurchases();
+  }, [user, date, canSeeAll]);
+
+  const canSeePrediction = useCallback((matchKey: string) => {
+    return canSeeAll || purchasedMatches.has(matchKey);
+  }, [canSeeAll, purchasedMatches]);
+
+  const handleUnlock = (pred: Prediction) => {
+    if (!user) {
+      window.dispatchEvent(new Event('open-settings'));
+      return;
+    }
+    const matchKey = `${pred.date}_${pred.home}_${pred.away}`;
+    setPurchaseModal({ matchKey, home: pred.home, away: pred.away, league: pred.league, matchTime: pred.match_time });
+  };
+
+  const confirmUnlock = async () => {
+    if (!purchaseModal) return;
+    setPurchaseLoading(true);
+    try {
+      const token = await getIdToken();
+      const res = await fetch(`${API_BASE}/wallet/transaction`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'pronostico_sbloccato',
+          credits_delta: -predictionCost,
+          shields_delta: 0,
+          amount_eur: 0,
+          description: `${purchaseModal.home} vs ${purchaseModal.away}`,
+          metadata: { match_key: purchaseModal.matchKey, date, cost: predictionCost },
+        }),
+      });
+      if (res.ok) {
+        setPurchasedMatches(prev => new Set([...prev, purchaseModal.matchKey]));
+        window.dispatchEvent(new Event('wallet-changed'));
+        await refreshWallet();
+        setPurchaseSuccess(`Pronostico sbloccato! ${purchaseModal.home} vs ${purchaseModal.away}`);
+        setPurchaseModal(null);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setPurchaseSuccess(err.error || 'Errore. Crediti insufficienti?');
+      }
+    } catch {
+      setPurchaseSuccess('Errore di rete. Riprova.');
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
   const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
   const [sourceFilter, setSourceFilter] = useState<string>('tutti');
@@ -917,6 +992,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
+    const matchKey = `${pred.date}_${pred.home}_${pred.away}`;
+    const canSee = canSeePrediction(matchKey);
     const matchId = `${pred.home}-${pred.away}-${pred.date}`;
     const currentAnalysisTab = analysisTab[matchId];
     const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;
@@ -1087,7 +1164,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               boxShadow: `0 0 12px rgba(0,240,255,0.15), 0 6px 24px ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.9)'}`,
               minWidth: '160px', whiteSpace: 'nowrap' as const
             }}>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', position: 'relative' }}>
+                {!canSee && (
+                  <div
+                    onClick={(e) => { e.stopPropagation(); handleUnlock(pred); }}
+                    style={{
+                      position: 'absolute', inset: 0, zIndex: 2,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', borderRadius: '4px',
+                    }}
+                    title="Sblocca pronostico"
+                  >
+                    <span style={{ fontSize: '16px' }}>🔒</span>
+                  </div>
+                )}
+                <div style={{ filter: canSee ? 'none' : 'blur(6px)', pointerEvents: canSee ? 'auto' as const : 'none' as const, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {pred.pronostici?.map((p, i) => {
                   const isHit = getEffectiveHit(pred, p);
                   const pillBg = isHit === true ? theme.hitBg : isHit === false ? theme.missBg : theme.surface05;
@@ -1108,6 +1199,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </span>
                   );
                 })}
+                </div>
               </div>
             </div>
           )}
@@ -1187,13 +1279,30 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   background: 'rgba(140, 90, 0, 0.22)',
                   border: '2px solid rgba(140, 90, 0, 0.35)',
                   borderRadius: '8px',
+                  position: 'relative',
                 }}>
                   {/* Titolo centrato */}
                   <div style={{ fontSize: '12px', fontWeight: 800, color: isLight ? '#b45309' : '#fbbf24', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: '8px', textAlign: 'center' as const }}>
                     Pronostici
                   </div>
+                  {/* Lock overlay */}
+                  {!canSee && (
+                    <div
+                      onClick={(e) => { e.stopPropagation(); handleUnlock(pred); }}
+                      style={{
+                        position: 'absolute', inset: 0, zIndex: 2, borderRadius: '8px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', background: 'rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      <span style={{ fontSize: '24px', marginBottom: '4px' }}>🔒</span>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: isLight ? '#b45309' : '#fbbf24' }}>
+                        Sblocca con {predictionCost} crediti
+                      </span>
+                    </div>
+                  )}
                   {/* Tabella 2 colonne */}
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', filter: canSee ? 'none' : 'blur(6px)', pointerEvents: canSee ? 'auto' as const : 'none' as const }}>
                     {/* Colonna SEGNO */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '9px', color: theme.textDim, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Segno:</div>
@@ -3406,6 +3515,100 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         </div>
       )}
+      {/* Modal Acquisto Pronostico */}
+      {purchaseModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => !purchaseLoading && setPurchaseModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: isLight ? '#fff' : '#1a1a2e', borderRadius: '12px',
+            padding: '24px', maxWidth: '380px', width: '90%',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`,
+          }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: theme.text }}>
+              Sblocca pronostico
+            </h3>
+            <p style={{ fontSize: '14px', color: theme.textDim, margin: '0 0 6px' }}>
+              <strong style={{ color: theme.text }}>{purchaseModal.home}</strong> vs <strong style={{ color: theme.text }}>{purchaseModal.away}</strong>
+            </p>
+            <p style={{ fontSize: '12px', color: theme.textDim, margin: '0 0 6px' }}>
+              {purchaseModal.league} — {purchaseModal.matchTime}
+            </p>
+            <p style={{ fontSize: '14px', color: theme.text, margin: '12px 0', fontWeight: 600 }}>
+              Costo: <span style={{ color: theme.cyan }}>{predictionCost} crediti</span>
+              <span style={{ fontSize: '12px', color: theme.textDim, marginLeft: '8px' }}>
+                (hai {credits ?? 0} crediti)
+              </span>
+            </p>
+            <div style={{
+              padding: '10px', borderRadius: '6px', marginBottom: '16px',
+              background: isLight ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.1)',
+              border: `1px solid ${isLight ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.15)'}`,
+              fontSize: '11px', color: isLight ? '#92400e' : '#fbbf24', lineHeight: 1.5,
+            }}>
+              I pronostici vengono aggiornati automaticamente due volte: circa 3 ore prima e circa 1 ora prima del match. Solo in caso di ritiro definitivo all'aggiornamento di 1 ora prima, i crediti verranno rimborsati automaticamente.
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setPurchaseModal(null)}
+                disabled={purchaseLoading}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '6px', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`,
+                  background: 'transparent', color: theme.text,
+                }}
+              >Annulla</button>
+              <button
+                onClick={confirmUnlock}
+                disabled={purchaseLoading || (credits ?? 0) < predictionCost}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '6px', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+                  border: 'none', background: (credits ?? 0) < predictionCost ? theme.surface15 : theme.cyan,
+                  color: (credits ?? 0) < predictionCost ? theme.textDim : '#000',
+                  opacity: purchaseLoading ? 0.6 : 1,
+                }}
+              >{purchaseLoading ? 'Attendi...' : (credits ?? 0) < predictionCost ? 'Crediti insufficienti' : 'Conferma'}</button>
+            </div>
+            {(credits ?? 0) < predictionCost && (
+              <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                <a href="/prezzi" style={{ fontSize: '12px', color: theme.cyan, textDecoration: 'underline' }}>
+                  Acquista crediti
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Successo Acquisto */}
+      {purchaseSuccess && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setPurchaseSuccess(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: isLight ? '#fff' : '#1a1a2e', borderRadius: '12px',
+            padding: '24px', maxWidth: '340px', width: '90%',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`,
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: '14px', color: theme.text, margin: '0 0 16px', lineHeight: 1.5 }}>
+              {purchaseSuccess}
+            </p>
+            <button onClick={() => setPurchaseSuccess(null)} style={{
+              padding: '8px 20px', borderRadius: '6px', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+              border: 'none', background: theme.cyan, color: '#000',
+            }}>OK</button>
+          </div>
+        </div>
+      )}
+
       <AddBetPopup
         isOpen={addBetPopup.isOpen}
         onClose={() => setAddBetPopup(p => ({...p, isOpen: false}))}

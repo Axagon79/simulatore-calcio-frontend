@@ -5,6 +5,7 @@ import { checkAdmin } from '../permissions';
 import StemmaImg from './StemmaImg';
 
 const theme = getTheme();
+const _canSeeTips = checkAdmin() || localStorage.getItem('pp_pu') === '1';
 
 const isLocal = typeof window !== 'undefined' && (
   ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
@@ -268,7 +269,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
           <span style="font-size:${isMobile ? 10 : 10}px;color:${theme.textDim}">vs</span>
           <span style="font-size:${isMobile ? 12 : 13}px;font-weight:700;color:${theme.text}">${awayName}</span>
           ${awaySrc ? `<img src="${awaySrc}" style="width:${stemmaSize}px;height:${stemmaSize}px;object-fit:contain" crossorigin="anonymous" />` : ''}
-          <span style="font-size:${isMobile ? 11 : 12}px;font-weight:800;color:${theme.cyan};margin-left:2px">${pick.pronostico}</span>
+          <span style="font-size:${isMobile ? 11 : 12}px;font-weight:800;color:${theme.cyan};margin-left:2px">${_canSeeTips ? pick.pronostico : '???'}</span>
           <span style="font-size:${isMobile ? 10 : 10}px">${Array.from({ length: pick.stars }, () => '<span style="color:#ffd700">&#9733;</span>').join('')}</span>
         `;
         offscreenEl.appendChild(item);
@@ -388,8 +389,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
               {awaySrc && <StemmaImg src={awaySrc} size={stemmaSize} alt={pick.away} />}
               <span style={{
                 fontSize: isMobile ? '11px' : '12px', fontWeight: 800, color: theme.cyan, marginLeft: '2px',
-                ...(checkAdmin() || localStorage.getItem('pp_pu') === '1' ? {} : { filter: 'blur(5px)', userSelect: 'none' as const }),
-              }}>{pick.pronostico}</span>
+              }}>{checkAdmin() || localStorage.getItem('pp_pu') === '1' ? pick.pronostico : '???'}</span>
               <span style={{ fontSize: isMobile ? '10px' : '10px' }}>
                 {Array.from({ length: pick.stars }, (_, j) => (
                   <span key={j} style={{ color: '#ffd700' }}>&#9733;</span>

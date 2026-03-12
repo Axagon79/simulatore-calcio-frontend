@@ -647,7 +647,10 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 
   // Chiudi popover tip quando si clicca fuori
   useEffect(() => {
-    const handleClickOutside = () => {
+    const handleClickOutside = (e: MouseEvent) => {
+      // Non chiudere se il click è dentro un popover tip o bottone tip
+      const target = e.target as HTMLElement;
+      if (target.closest?.('[data-tip-area]')) return;
       setExpandedSections(prev => {
         let changed = false;
         const next = new Set(prev);
@@ -660,8 +663,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         return changed ? next : prev;
       });
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // --- RENDER DETTAGLIO ESPANDIBILE ---
@@ -1260,6 +1263,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             zIndex: 5
           }}
           onClick={(e) => e.stopPropagation()}
+          data-tip-area
         >
           <div
             style={{

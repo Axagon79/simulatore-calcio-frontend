@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
-import { getTheme } from '../AppDev/costanti';
+import { getTheme, getThemeMode } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import StemmaImg from './StemmaImg';
 
 const theme = getTheme();
+const isLight = getThemeMode() === 'light';
 const _canSeeTips = checkAdmin() || localStorage.getItem('pp_pu') === '1';
 
 const isLocal = typeof window !== 'undefined' && (
@@ -87,7 +88,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentRef = useRef<HTMLDivElement>(null);
   const offscreenRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Fetch pronostici del giorno
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
         const allPicks: Pick[] = [];
         for (const pred of data.predictions) {
           for (const p of pred.pronostici || []) {
-            if (p.stars >= 3) {
+            if (p.stars >= 3 && p.tipo === 'SEGNO') {
               allPicks.push({
                 home: pred.home, away: pred.away,
                 home_mongo_id: pred.home_mongo_id, away_mongo_id: pred.away_mongo_id,
@@ -269,7 +270,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
           <span style="font-size:${isMobile ? 10 : 10}px;color:${theme.textDim}">vs</span>
           <span style="font-size:${isMobile ? 12 : 13}px;font-weight:700;color:${theme.text}">${awayName}</span>
           ${awaySrc ? `<img src="${awaySrc}" style="width:${stemmaSize}px;height:${stemmaSize}px;object-fit:contain" crossorigin="anonymous" />` : ''}
-          <span style="font-size:${isMobile ? 11 : 12}px;font-weight:800;color:${theme.cyan};margin-left:2px">${_canSeeTips ? pick.pronostico : '???'}</span>
+          <span style="font-size:${isMobile ? 11 : 12}px;font-weight:800;color:${theme.cyan};margin-left:2px">${pick.pronostico}</span>
           <span style="font-size:${isMobile ? 10 : 10}px">${Array.from({ length: pick.stars }, () => '<span style="color:#ffd700">&#9733;</span>').join('')}</span>
         `;
         offscreenEl.appendChild(item);
@@ -389,7 +390,9 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
               {awaySrc && <StemmaImg src={awaySrc} size={stemmaSize} alt={pick.away} />}
               <span style={{
                 fontSize: isMobile ? '11px' : '12px', fontWeight: 800, color: theme.cyan, marginLeft: '2px',
-              }}>{checkAdmin() || localStorage.getItem('pp_pu') === '1' ? pick.pronostico : '???'}</span>
+                opacity: _canSeeTips ? 1 : 0.12,
+                userSelect: _canSeeTips ? 'auto' : 'none',
+              }}>{pick.pronostico}</span>
               <span style={{ fontSize: isMobile ? '10px' : '10px' }}>
                 {Array.from({ length: pick.stars }, (_, j) => (
                   <span key={j} style={{ color: '#ffd700' }}>&#9733;</span>

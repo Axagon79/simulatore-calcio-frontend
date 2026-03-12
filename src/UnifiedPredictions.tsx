@@ -551,7 +551,10 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           try {
             const versData = await versionsRes.json();
             const versions = versData.versions || [];
-            const unifiedKeys = new Set(unified.map(p => `${p.date}_${p.home}_${p.away}`));
+            // Normalizza come fa il backend: lowercase + spazi → underscore
+            const normalizeKey = (d: string, h: string, a: string) =>
+              `${d}_${h.trim().toLowerCase().replace(/\s+/g, '_')}_${a.trim().toLowerCase().replace(/\s+/g, '_')}`;
+            const unifiedKeys = new Set(unified.map(p => normalizeKey(p.date, p.home, p.away)));
 
             // Raggruppa versioni per match_key
             const versionsByMatch: Record<string, any[]> = {};

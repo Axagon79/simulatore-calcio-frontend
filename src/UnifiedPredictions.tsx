@@ -3064,9 +3064,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             return mf ? allTips.filter(mf.filter) : allTips;
           })();
           // Calcolo metriche finanziarie (flat stake = 1 unità)
-          const verifiedWithQuota = marketFilteredTips.filter(t => (t.hit === true || t.hit === false) && t._quota && t._quota > 1);
+          const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
           const totalBets = verifiedWithQuota.length;
-          const totalProfit = verifiedWithQuota.reduce((sum, t) => sum + (t.hit ? (t._quota - 1) : -1), 0);
+          const totalProfit = verifiedWithQuota.reduce((sum, t) => sum + (t._effHit ? (t._quota - 1) : -1), 0);
           const yieldPct = totalBets > 0 ? Math.round((totalProfit / totalBets) * 1000) / 10 : null;
           const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
           const roiPct = yieldPct;

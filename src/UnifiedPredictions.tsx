@@ -1500,7 +1500,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver)!;
                                   const isNB = doc.status === 'NO_BET' || !doc.pronostici?.length;
                                   const isCurrent = verIdx === 0;
-                                  const verLabel = isCurrent ? 'Attuale' : (doc.run_time ? new Date(doc.run_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : vL[ver]);
+                                  const ts = doc.created_at ? new Date(doc.created_at) : null;
+                                  const tsLabel = ts ? `${ts.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : '';
+                                  const verLabel = isCurrent ? `Attuale${tsLabel ? ` (${tsLabel})` : ''}` : `${vL[ver]}${tsLabel ? ` · ${tsLabel}` : ''}`;
                                   if (isNB) {
                                     rows.push(
                                       <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>

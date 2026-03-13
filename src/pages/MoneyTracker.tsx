@@ -6,8 +6,9 @@ import AuthModal from '../components/AuthModal';
 // THEME & CONSTANTS
 // ============================================
 
-import { getTheme } from '../AppDev/costanti';
+import { getTheme, getThemeMode } from '../AppDev/costanti';
 const theme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
@@ -149,6 +150,13 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
   const [betDate, setBetDate] = useState(new Date().toISOString().slice(0, 10));
   const [betLoading, setBetLoading] = useState(false);
 
+  // Match picker
+  const [showMatchPicker, setShowMatchPicker] = useState(false);
+  const [matchPickerIdx, setMatchPickerIdx] = useState(0);
+  const [matchPickerPreds, setMatchPickerPreds] = useState<any[]>([]);
+  const [matchPickerLoading, setMatchPickerLoading] = useState(false);
+  const [matchPickerSearch, setMatchPickerSearch] = useState('');
+
   // Settings form
   const [sCapital, setSCapital] = useState('500');
   const [sMaxBet, setSMaxBet] = useState('4');
@@ -221,6 +229,25 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
       setSummaryTotals(data.totals || null);
     } catch { /* ignore */ }
   }, [apiFetch, summaryYear]);
+
+  // Fetch predictions for match picker
+  const fetchMatchPickerPreds = useCallback(async (date: string) => {
+    setMatchPickerLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`);
+      const data = await res.json();
+      if (data.success && data.predictions) {
+        const upcoming = data.predictions.filter((p: any) => !p.real_score);
+        setMatchPickerPreds(upcoming);
+      } else {
+        setMatchPickerPreds([]);
+      }
+    } catch {
+      setMatchPickerPreds([]);
+    } finally {
+      setMatchPickerLoading(false);
+    }
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -320,7 +347,8 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
   // Input style
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px', borderRadius: '8px',
-    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+    background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+    border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.12)',
     color: theme.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box'
   };
 
@@ -535,13 +563,6 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
                       </tr>
                     ))}
 
-                    {/* ADD ROW */}
-                    <tr style={{ background: 'rgba(0,240,255,0.03)', cursor: 'pointer' }} onClick={() => setShowAddBet(true)}>
-                      <td colSpan={11} style={{ padding: '10px', textAlign: 'center', color: theme.cyan, fontSize: '12px', fontWeight: '700', borderTop: theme.cellBorder }}>
-                        + Aggiungi scommessa
-                      </td>
-                    </tr>
-
                     {/* TOTALS ROW */}
                     {monthStats && monthStats.total > 0 && (
                       <tr style={{ background: 'rgba(0,240,255,0.08)' }}>
@@ -558,6 +579,19 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* BOTTONE AGGIUNGI SCOMMESSA */}
+            <div
+              onClick={() => setShowAddBet(true)}
+              style={{
+                textAlign: 'center', padding: '12px', marginTop: '12px',
+                background: 'rgba(0,240,255,0.06)', border: `1px solid ${theme.cyan}30`,
+                borderRadius: '8px', cursor: 'pointer',
+                color: theme.cyan, fontSize: '13px', fontWeight: '700',
+              }}
+            >
+              + Aggiungi scommessa
             </div>
           </>
         )}
@@ -804,9 +838,9 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ color: theme.textDim, fontSize: '10px', fontWeight: '700', display: 'block', marginBottom: '3px' }}>TIPO</label>
-                  <select value={betType} onChange={e => handleBetTypeChange(e.target.value)} style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)' }}>
+                  <select value={betType} onChange={e => handleBetTypeChange(e.target.value)} style={inputStyle}>
                     {['singola', 'doppia', 'tripla', 'quadrupla', 'quintupla'].map(t => (
-                      <option key={t} value={t} style={{ background: '#1a1d2e', color: '#fff' }}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                      <option key={t} value={t} style={{ background: isLight ? '#fff' : '#1a1d2e', color: isLight ? '#000' : '#fff' }}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                     ))}
                   </select>
                 </div>
@@ -815,10 +849,27 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
               {/* Selections */}
               {betSelections.map((sel, i) => (
                 <div key={i} style={{
-                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+                  background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)',
+                  border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.05)',
                   borderRadius: '6px', padding: '8px', marginBottom: '6px'
                 }}>
                   <div style={{ color: theme.textDim, fontSize: '9px', fontWeight: '700', marginBottom: '4px' }}>SEL. {i + 1}</div>
+                  <button onClick={() => {
+                    setMatchPickerIdx(i);
+                    setMatchPickerSearch('');
+                    setShowMatchPicker(true);
+                    fetchMatchPickerPreds(betDate);
+                  }} style={{
+                    width: '100%', padding: '7px 8px', marginBottom: '6px',
+                    background: 'rgba(0,240,255,0.06)', border: '1px solid rgba(0,240,255,0.15)',
+                    borderRadius: '6px', cursor: 'pointer',
+                    color: theme.cyan, fontSize: '11px', fontWeight: '700', textAlign: 'center'
+                  }}>📋 Scegli partita</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <div style={{ flex: 1, height: '1px', background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)' }} />
+                    <span style={{ color: theme.textDim, fontSize: '9px', fontWeight: '600' }}>oppure scrivi manualmente</span>
+                    <div style={{ flex: 1, height: '1px', background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)' }} />
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginBottom: '4px' }}>
                     <input placeholder="Casa" value={sel.home || ''} onChange={e => {
                       const ns = [...betSelections]; ns[i] = { ...ns[i], home: e.target.value }; setBetSelections(ns);
@@ -830,16 +881,17 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 70px', gap: '4px' }}>
                     <select value={sel.market || '1X2'} onChange={e => {
                       const ns = [...betSelections]; ns[i] = { ...ns[i], market: e.target.value }; setBetSelections(ns);
-                    }} style={{ ...inputStyle, padding: '7px 8px', fontSize: '11px', background: 'rgba(255,255,255,0.06)' }}>
+                    }} style={{ ...inputStyle, padding: '7px 8px', fontSize: '11px' }}>
                       {['1X2', 'DC', 'O/U', 'GG/NG', 'Altro'].map(m => (
-                        <option key={m} value={m} style={{ background: '#1a1d2e', color: '#fff' }}>{m}</option>
+                        <option key={m} value={m} style={{ background: isLight ? '#fff' : '#1a1d2e', color: isLight ? '#000' : '#fff' }}>{m}</option>
                       ))}
                     </select>
                     <input placeholder="Pronostico" value={sel.prediction || ''} onChange={e => {
                       const ns = [...betSelections]; ns[i] = { ...ns[i], prediction: e.target.value }; setBetSelections(ns);
                     }} style={{ ...inputStyle, padding: '7px 8px', fontSize: '12px' }} />
                     <input placeholder="Quota" type="number" step="0.01" value={sel.odds || ''} onChange={e => {
-                      const ns = [...betSelections]; ns[i] = { ...ns[i], odds: Number(e.target.value) }; setBetSelections(ns);
+                      const v = Math.round(Number(e.target.value) * 100) / 100;
+                      const ns = [...betSelections]; ns[i] = { ...ns[i], odds: v }; setBetSelections(ns);
                       setSuggestedStake(null);
                     }} style={{ ...inputStyle, padding: '7px 8px', fontSize: '12px' }} />
                   </div>
@@ -938,10 +990,120 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
           </div>
         )}
 
+        {/* ================================================ */}
+        {/* MODAL: MATCH PICKER */}
+        {/* ================================================ */}
+        {showMatchPicker && (
+          <div onClick={() => setShowMatchPicker(false)} style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            zIndex: 10001, overflowY: 'auto', paddingTop: '30px', paddingBottom: '30px'
+          }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: theme.panelSolid, border: theme.panelBorder,
+              borderRadius: '14px', padding: '16px', width: '92%', maxWidth: '500px',
+              maxHeight: '80vh', display: 'flex', flexDirection: 'column'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ color: theme.cyan, fontSize: '15px', fontWeight: '800', margin: 0 }}>Scegli Partita</h3>
+                <button onClick={() => setShowMatchPicker(false)} style={{ background: 'none', border: 'none', color: theme.textDim, fontSize: '16px', cursor: 'pointer' }}>✕</button>
+              </div>
+
+              <input
+                type="text" value={matchPickerSearch}
+                onChange={e => setMatchPickerSearch(e.target.value)}
+                placeholder="Cerca squadra..."
+                style={{ ...inputStyle, marginBottom: '12px' }}
+                autoFocus
+              />
+
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {matchPickerLoading ? (
+                  <div style={{ color: theme.textDim, textAlign: 'center', padding: '20px' }}>Caricamento partite...</div>
+                ) : matchPickerPreds.length === 0 ? (
+                  <div style={{ color: theme.textDim, textAlign: 'center', padding: '20px' }}>Nessuna partita disponibile per {betDate}</div>
+                ) : (() => {
+                  const q = matchPickerSearch.toLowerCase();
+                  const filtered = matchPickerPreds.filter((p: any) =>
+                    !q || p.home.toLowerCase().includes(q) || p.away.toLowerCase().includes(q)
+                  );
+                  const byLeague: Record<string, any[]> = {};
+                  filtered.forEach((p: any) => {
+                    const lg = p.league || 'Altro';
+                    if (!byLeague[lg]) byLeague[lg] = [];
+                    byLeague[lg].push(p);
+                  });
+                  if (filtered.length === 0) {
+                    return <div style={{ color: theme.textDim, textAlign: 'center', padding: '20px' }}>Nessun risultato per "{matchPickerSearch}"</div>;
+                  }
+                  return Object.entries(byLeague).map(([league, preds]) => (
+                    <div key={league} style={{ marginBottom: '12px' }}>
+                      <div style={{
+                        fontSize: '10px', color: theme.textDim, fontWeight: '700',
+                        textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px',
+                        padding: '4px 8px', background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)', borderRadius: '4px'
+                      }}>
+                        {league}
+                      </div>
+                      {preds.map((pred: any, idx: number) => (
+                        <div key={idx} style={{ marginBottom: '6px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: theme.text, padding: '6px 8px' }}>
+                            {pred.match_time && <span style={{ color: theme.textDim, marginRight: '6px', fontSize: '11px' }}>{pred.match_time}</span>}
+                            {pred.home} vs {pred.away}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '0 8px 6px' }}>
+                            {(pred.pronostici || []).filter((p: any) => p.quota && p.quota > 0).map((p: any, pIdx: number) => (
+                              <button
+                                key={pIdx}
+                                onClick={() => {
+                                  const ns = [...betSelections];
+                                  const marketMap: Record<string, string> = {
+                                    '1': '1X2', 'X': '1X2', '2': '1X2',
+                                    '1X': 'DC', '12': 'DC', 'X2': 'DC',
+                                    'Over 2.5': 'O/U', 'Under 2.5': 'O/U', 'Over 1.5': 'O/U', 'Under 1.5': 'O/U',
+                                    'Over 3.5': 'O/U', 'Under 3.5': 'O/U',
+                                    'GG': 'GG/NG', 'NG': 'GG/NG'
+                                  };
+                                  ns[matchPickerIdx] = {
+                                    ...ns[matchPickerIdx],
+                                    home: pred.home,
+                                    away: pred.away,
+                                    market: marketMap[p.pronostico] || ns[matchPickerIdx]?.market || '1X2',
+                                    prediction: p.pronostico,
+                                    odds: Math.round(Number(p.quota) * 100) / 100
+                                  };
+                                  setBetSelections(ns);
+                                  setSuggestedStake(null);
+                                  setShowMatchPicker(false);
+                                  setMatchPickerSearch('');
+                                }}
+                                style={{
+                                  background: 'rgba(0,240,255,0.06)', border: '1px solid rgba(0,240,255,0.15)',
+                                  borderRadius: '6px', padding: '4px 8px', cursor: 'pointer',
+                                  color: theme.text, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px'
+                                }}
+                              >
+                                <span style={{ fontWeight: '700', color: theme.cyan }}>{p.pronostico}</span>
+                                <span style={{ color: theme.gold }}>@{Number(p.quota).toFixed(2)}</span>
+                                {p.stars > 0 && <span style={{ color: theme.textDim, fontSize: '9px' }}>{'★'.repeat(p.stars)}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* DISCLAIMER */}
         <div style={{
           background: 'rgba(255,42,109,0.03)', border: '1px solid rgba(255,42,109,0.08)',
-          borderRadius: '8px', padding: '10px', marginTop: '16px', marginBottom: '20px',
+          borderRadius: '8px', padding: '10px', marginTop: '40px', marginBottom: '20px',
           fontSize: '9px', color: theme.textDim, lineHeight: 1.5, textAlign: 'center'
         }}>
           Il gioco d'azzardo puo causare dipendenza. 18+ | Numero Verde: <span style={{ color: theme.cyan }}>800 55 88 22</span>

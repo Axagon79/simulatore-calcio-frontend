@@ -436,7 +436,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               {menuOpen && (
                 <div style={{
                   position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                  background: isLight ? 'rgba(255,255,255,0.97)' : 'rgba(10,11,15,0.97)',
+                  background: isLight ? 'rgba(255,255,255,0.97)' : 'rgb(10,11,15)',
                   zIndex: 9000, overflowY: 'auto',
                   padding: '20px',
                   fontFamily: '"Inter", "Segoe UI", sans-serif',

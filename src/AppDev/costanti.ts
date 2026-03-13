@@ -112,8 +112,8 @@ export const themeDark = {
   // Spreadsheet/tabelle
   cellBorder: '1px solid rgba(255,255,255,0.06)',
   headerBg: 'rgba(0, 240, 255, 0.06)',
-  rowEven: 'rgba(255,255,255,0.015)',
-  rowOdd: 'transparent',
+  rowEven: 'rgba(255,255,255,0.04)',
+  rowOdd: 'rgba(255,255,255,0.015)',
   rowHover: 'rgba(0,240,255,0.04)',
   // Dashboard/card
   cardBg: 'rgba(20, 22, 35, 0.6)',
@@ -167,8 +167,8 @@ export const themeLight = {
   // Spreadsheet/tabelle
   cellBorder: '1px solid rgba(0,0,0,0.08)',
   headerBg: 'rgba(0, 119, 204, 0.06)',
-  rowEven: 'rgba(0,0,0,0.02)',
-  rowOdd: 'transparent',
+  rowEven: 'rgba(0,0,0,0.05)',
+  rowOdd: 'rgba(0,0,0,0.02)',
   rowHover: 'rgba(0,119,204,0.04)',
   // Dashboard/card
   cardBg: 'rgba(255, 255, 255, 0.85)',

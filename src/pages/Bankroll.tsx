@@ -187,7 +187,7 @@ export default function Bankroll({ onBack }: { onBack?: () => void }) {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '0 20px 20px' : '0 20px 20px' }}>
 
       {/* Tab Pronostici / Alto Rendimento */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: isMobile ? '10px' : '0' }}>
         {([
           { id: 'pronostici' as const, label: 'Pronostici', icon: '📊' },
           { id: 'alto_rendimento' as const, label: 'Alto Rendimento', icon: '💎' },

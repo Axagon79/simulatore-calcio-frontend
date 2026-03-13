@@ -38,7 +38,7 @@ export default function WalletBadge() {
       style={{
         position: 'fixed',
         top: '12px',
-        right: '12px',
+        right: '100px',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',

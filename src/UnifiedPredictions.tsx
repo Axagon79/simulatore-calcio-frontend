@@ -3355,16 +3355,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       );
                     });
                   })()}
-                  {reHitsTotal > 0 && (
-                    <div style={{
-                      background: `${theme.success}${isLight ? '55' : '15'}`, border: `1px solid ${theme.success}${isLight ? '70' : '30'}`,
-                      borderRadius: '10px', padding: '2px 6px',
-                      display: 'flex', alignItems: 'center', gap: '3px'
-                    }}>
-                      <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.success, fontWeight: '700' }}>✓RE</span>
-                      <span style={{ fontSize: '10px', fontWeight: '900', color: theme.success }}>{reHitsTotal}</span>
-                    </div>
-                  )}
                 </div>
                 <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: marketsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '30px' }}>▼</span>
               </div>

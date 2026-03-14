@@ -3665,8 +3665,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
-                  const hits = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
-                  const misses = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
+                  const predsActive = preds.filter(p => p.decision !== 'NO_BET');
+                  const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
+                  const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
                   const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
@@ -3677,13 +3678,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
                   const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
-                  const reHits = preds.filter(p => {
+                  const reHits = predsActive.filter(p => {
                     const es = getEffectiveScore(p);
                     if (!es) return false;
                     const ts = (p as any).simulation_data?.top_scores;
                     return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
                   }).length;
-                  const reCount = preds.filter(p => reMatchKeys.has(`${p.home}|${p.away}`)).length;
+                  const reCount = predsActive.filter(p => reMatchKeys.has(`${p.home}|${p.away}`)).length;
                   const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>
@@ -3748,9 +3749,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
-                  // Conteggio per singolo pronostico
-                  const hits = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
-                  const misses = preds.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
+                  // Conteggio per singolo pronostico (escludi NO BET)
+                  const predsActive = preds.filter(p => p.decision !== 'NO_BET');
+                  const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
+                  const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
                   const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
@@ -3763,14 +3765,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
                   const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
                   // Conteggio RE hits (top 4 Monte Carlo vs risultato reale)
-                  const reHits = preds.filter(p => {
+                  const reHits = predsActive.filter(p => {
                     const es = getEffectiveScore(p);
                     if (!es) return false;
                     const ts = (p as any).simulation_data?.top_scores;
                     return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
                   }).length;
                   // Conteggio partite con RE prediction (per diamante)
-                  const reCount = preds.filter(p => reMatchKeys.has(`${p.home}|${p.away}`)).length;
+                  const reCount = predsActive.filter(p => reMatchKeys.has(`${p.home}|${p.away}`)).length;
                   const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
                   const statsEls = (
                     <>

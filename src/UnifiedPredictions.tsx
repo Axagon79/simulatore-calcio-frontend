@@ -3410,6 +3410,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </button>
                     );
                   })}
+                  {reHitsTotal > 0 && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '3px',
+                      background: `${theme.success}${isLight ? '20' : '15'}`,
+                      border: `1px solid ${theme.success}${isLight ? '40' : '30'}`,
+                      borderRadius: '12px', padding: '4px 12px',
+                    }}>
+                      <span style={{ fontSize: '10px', color: theme.success, fontWeight: '700' }}>✓RE</span>
+                      <span style={{ fontSize: '10px', fontWeight: '900', color: theme.success }}>{reHitsTotal}</span>
+                    </div>
+                  )}
                 </div>
                 </>
               )}

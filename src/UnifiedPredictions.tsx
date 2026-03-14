@@ -487,6 +487,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
   const [financeOpen, setFinanceOpen] = useState(false);
   const [marketsOpen, setMarketsOpen] = useState(false);
+  const [reHitFilter, setReHitFilter] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [finLegendOpen, setFinLegendOpen] = useState(false);
   const [filtersStatsOpen, setFiltersStatsOpen] = useState(false);
@@ -537,6 +538,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     setStatusFilter('tutte');
     setMarketFilter('tutti');
     setSourceFilter('tutti');
+    setReHitFilter(false);
   }, [date]);
 
   useEffect(() => {
@@ -1075,10 +1077,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
 
   // --- DATI FILTRATI (status + mercato combinati) ---
+  const reHitMatch = (p: Prediction): boolean => {
+    if (!reHitFilter) return true;
+    const es = getEffectiveScore(p);
+    if (!es) return false;
+    const ts = (p as any).simulation_data?.top_scores;
+    return ts && ts.slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
+  };
   const filteredPredictions = normalPredictions
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
     .filter(predMatchesMarket)
-    .filter(predMatchesSource);
+    .filter(predMatchesSource)
+    .filter(reHitMatch);
   const filteredExactScore = exactScorePredictions
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter));
   const filteredGroupedByLeague = filteredPredictions.reduce<Record<string, Prediction[]>>((acc, p) => {
@@ -1089,7 +1099,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const filteredAltoRendimento = altoRendimentoPreds
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
     .filter(predMatchesMarket)
-    .filter(predMatchesSource);
+    .filter(predMatchesSource)
+    .filter(reHitMatch);
   const filteredAltoRendimentoByLeague = filteredAltoRendimento.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
@@ -3411,15 +3422,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     );
                   })}
                   {reHitsTotal > 0 && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '3px',
-                      background: `${theme.success}${isLight ? '20' : '15'}`,
-                      border: `1px solid ${theme.success}${isLight ? '40' : '30'}`,
-                      borderRadius: '12px', padding: '4px 12px',
-                    }}>
+                    <button
+                      onClick={() => setReHitFilter(!reHitFilter)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '3px',
+                        background: reHitFilter ? `${theme.success}${isLight ? '30' : '25'}` : `${theme.success}${isLight ? '10' : '10'}`,
+                        border: `1px solid ${reHitFilter ? theme.success : `${theme.success}${isLight ? '40' : '30'}`}`,
+                        borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
                       <span style={{ fontSize: '10px', color: theme.success, fontWeight: '700' }}>✓RE</span>
                       <span style={{ fontSize: '10px', fontWeight: '900', color: theme.success }}>{reHitsTotal}</span>
-                    </div>
+                    </button>
                   )}
                 </div>
                 </>

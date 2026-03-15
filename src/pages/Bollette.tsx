@@ -195,10 +195,10 @@ function Quadrante({ cat, items, onClick, liveScores = [] }: {
               if (b.esito_globale === 'persa') { perse++; continue; }
               // Calcola da live scores
               const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+              const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
               const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
-              if (!allDone) continue;
-              if (esitiLive.every(e => e === 'win')) vinte++;
-              else if (esitiLive.some(e => e === 'lose')) perse++;
+              if (hasLose) { perse++; continue; }
+              if (allDone && esitiLive.every(e => e === 'win')) { vinte++; continue; }
             }
             const showStats = vinte > 0 || perse > 0;
             return showStats ? (

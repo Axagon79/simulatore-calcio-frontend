@@ -592,6 +592,9 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
         {items.map(b => {
           const isCollapsed = collapsed[b._id] ?? false;
           const isSaved = savedIds.has(b._id);
+          const esitiAll = b.selezioni.map(s => getEsitoLive(s, liveScores));
+          const anyStarted = esitiAll.some(e => e !== 'pending');
+          const canSave = !isSaved && !anyStarted;
 
           return (
             <div key={b._id} style={{
@@ -662,8 +665,8 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     {b.quota_totale.toFixed(2)}
                   </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); onSave(b._id, parseFloat(stakes[b._id]) || 0); }}
-                    disabled={savingId === b._id}
+                    onClick={(e) => { e.stopPropagation(); if (canSave || isSaved) onSave(b._id, parseFloat(stakes[b._id]) || 0); }}
+                    disabled={savingId === b._id || (!canSave && !isSaved)}
                     style={{
                       background: isSaved
                         ? (isLight ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.12)')
@@ -671,15 +674,16 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       border: isSaved
                         ? `1px solid ${theme.gold}`
                         : (isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)'),
-                      borderRadius: 8, cursor: 'pointer',
+                      borderRadius: 8,
+                      cursor: (!canSave && !isSaved) ? 'not-allowed' : 'pointer',
                       fontSize: 13, padding: '4px 10px',
                       color: isSaved ? theme.gold : textSecondary,
-                      opacity: savingId === b._id ? 0.4 : 1,
+                      opacity: (!canSave && !isSaved) ? 0.3 : savingId === b._id ? 0.4 : 1,
                       display: 'flex', alignItems: 'center', gap: 4,
                       fontWeight: 600,
                     }}
                   >
-                    {isSaved ? '★ Salvata' : '☆ Salva'}
+                    {isSaved ? '★ Salvata' : anyStarted ? '⏱ Iniziata' : '☆ Salva'}
                   </button>
                   <span style={{ color: textSecondary, fontSize: 12 }}>
                     {isCollapsed ? '▼' : '▲'}

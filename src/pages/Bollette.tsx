@@ -161,21 +161,31 @@ function BollettaCard({ b, isCollapsed, onToggle, isSaved, onSave, savingId }: {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary }}>
                     {s.home} - {s.away}
-                    {s.esito === true && ' ✅'}
-                    {s.esito === false && ' ❌'}
                   </div>
                   <div style={{ fontSize: 12, color: textSecondary, marginTop: 3, textTransform: 'uppercase' }}>
                     {formatMercato(s.mercato, s.pronostico)}
                   </div>
                 </div>
-                {/* Destra: data/ora + quota */}
-                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                  <div style={{ fontSize: 12, color: textSecondary }}>
-                    {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                {/* Destra: data/ora + quota + tondo esito */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 16 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 12, color: textSecondary }}>
+                      {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 17, color: quotaColor, marginTop: 2 }}>
+                      {s.quota.toFixed(2)}
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 17, color: quotaColor, marginTop: 2 }}>
-                    {s.quota.toFixed(2)}
-                  </div>
+                  {/* Tondo indicatore esito */}
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: s.esito === true
+                      ? '#4caf50'
+                      : s.esito === false
+                        ? '#f44336'
+                        : isLight ? '#ddd' : '#444',
+                    flexShrink: 0,
+                  }} />
                 </div>
               </div>
             );

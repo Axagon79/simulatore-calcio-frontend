@@ -48,7 +48,7 @@ type Categoria = 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
 
 function formatMercato(mercato: string, pronostico: string): string {
   switch (mercato) {
-    case 'SEGNO': return pronostico;
+    case 'SEGNO': return `1X2 ESITO FINALE: ${pronostico}`;
     case 'DOPPIA_CHANCE': return `DOPPIA CHANCE: ${pronostico}`;
     case 'GOL':
       if (pronostico === 'Goal') return 'GOAL/NOGOAL: GOAL';

@@ -23,6 +23,7 @@ import AnalisiStorica from './pages/AnalisiStorica';
 import SimulazioneRapida from './pages/SimulazioneRapida';
 import Prezzi from './pages/Prezzi';
 import Wallet from './pages/Wallet';
+import Bollette from './pages/Bollette';
 import ContactPage from './pages/ContactPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsPage from './pages/TermsPage';
@@ -84,6 +85,7 @@ function AppRoot() {
           <Route path="/simulate" element={<SimulazioneRapida onBack={() => window.history.back()} />} />
           <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
           <Route path="/wallet" element={<ProtectedRoute><Wallet onBack={() => window.history.back()} /></ProtectedRoute>} />
+          <Route path="/ticket-ai" element={<ProtectedRoute><Bollette onBack={() => window.history.back()} /></ProtectedRoute>} />
           <Route path="/contatti" element={<ContactPage onBack={() => window.history.back()} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={() => window.history.back()} />} />
           <Route path="/termini" element={<TermsPage />} />

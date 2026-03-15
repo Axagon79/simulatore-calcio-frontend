@@ -386,6 +386,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           const navMenus: { label: string; items?: { label: string; onClick: () => void }[]; onClick?: () => void }[] = [
             { label: 'Pronostici', items: [
               { label: 'Best Picks', onClick: () => { window.location.href = '/best-picks'; } },
+              { label: 'Ticket AI', onClick: () => { window.location.href = '/ticket-ai'; } },
             ]},
             { label: 'Oggi', items: [
               { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },

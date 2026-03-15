@@ -141,10 +141,11 @@ const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: strin
 // QUADRANTE — anteprima categoria
 // ============================================
 
-function Quadrante({ cat, items, onClick }: {
+function Quadrante({ cat, items, onClick, liveScores = [] }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onClick: () => void;
+  liveScores?: LiveScore[];
 }) {
   // Mostra anteprima: prime 3 bollette, prime 2 selezioni ciascuna
   const preview = items.slice(0, 3);
@@ -157,14 +158,14 @@ function Quadrante({ cat, items, onClick }: {
       style={{
         background: isLight ? cat.gradientLight : cat.gradient,
         borderRadius: 16,
-        padding: '16px 10px',
+        padding: '12px 10px',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
         transition: 'transform 0.2s, box-shadow 0.2s',
         border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.1)',
-        minHeight: 180,
+        minHeight: 165,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -180,18 +181,40 @@ function Quadrante({ cat, items, onClick }: {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 24 }}>{cat.emoji}</span>
+          <span style={{ fontSize: 20 }}>{cat.emoji}</span>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 18, color: textColor }}>{cat.label}</div>
-            <div style={{ fontSize: 12, color: dimColor }}>{cat.subtitle}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: textColor }}>{cat.label}</div>
+            <div style={{ fontSize: 11, color: dimColor }}>{cat.subtitle}</div>
           </div>
         </div>
-        <div style={{
-          background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
-          borderRadius: 20, padding: '4px 12px',
-          fontSize: 13, fontWeight: 700, color: textColor,
-        }}>
-          {items.length}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {(() => {
+            let vinte = 0, perse = 0;
+            for (const b of items) {
+              if (b.esito_globale === 'vinta') { vinte++; continue; }
+              if (b.esito_globale === 'persa') { perse++; continue; }
+              // Calcola da live scores
+              const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+              const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+              if (!allDone) continue;
+              if (esitiLive.every(e => e === 'win')) vinte++;
+              else if (esitiLive.some(e => e === 'lose')) perse++;
+            }
+            const showStats = vinte > 0 || perse > 0;
+            return showStats ? (
+              <>
+                {vinte > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: 'rgba(76,175,80,0.2)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>}
+                {perse > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: 'rgba(244,67,54,0.2)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>}
+              </>
+            ) : null;
+          })()}
+          <div style={{
+            background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
+            borderRadius: 20, padding: '4px 12px',
+            fontSize: 13, fontWeight: 700, color: textColor,
+          }}>
+            {items.length}
+          </div>
         </div>
       </div>
 
@@ -201,11 +224,11 @@ function Quadrante({ cat, items, onClick }: {
           Nessuna bolletta
         </div>
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
           {preview.map((b) => (
             <div key={b._id} style={{
               background: isLight ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
-              borderRadius: 8, padding: '8px 10px',
+              borderRadius: 8, padding: '6px 10px',
               fontSize: 12,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -1512,28 +1535,30 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             /* Mobile: 1 colonna */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {CATEGORIE.map(cat => (
-                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} />
+                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} />
               ))}
               <Quadrante
                 cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
                 items={[...customBollette, ...bollette.filter(b => savedIds.has(b._id))]}
                 onClick={() => setActiveCategory('custom' as Categoria)}
+                liveScores={liveScores}
               />
             </div>
           ) : (
             /* Desktop: 3+2 */
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 26 }}>
                 {CATEGORIE.slice(0, 3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} />
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} />
+                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} />
                 <Quadrante
                   cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
                   items={[...customBollette, ...bollette.filter(b => savedIds.has(b._id))]}
                   onClick={() => setActiveCategory('custom' as Categoria)}
+                  liveScores={liveScores}
                 />
               </div>
             </>

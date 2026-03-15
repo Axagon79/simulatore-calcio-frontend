@@ -1163,12 +1163,13 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
                     {/* Bolletta inline (se presente) */}
                     {m.bolletta && (
-                      <div style={{ marginTop: 8, marginLeft: 0, maxWidth: '90%' }}>
+                      <div style={{ marginTop: 8, marginLeft: 0, maxWidth: '95%' }}>
                         <div style={{
                           background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)',
                           border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
                           borderRadius: 12, overflow: 'hidden',
                         }}>
+                          {/* Header */}
                           <div style={{
                             padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
                             background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
@@ -1177,13 +1178,39 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             <span>{m.bolletta.tipo} · {m.bolletta.selezioni.length} sel.</span>
                             <span>Quota: {m.bolletta.quota_totale.toFixed(2)}</span>
                           </div>
+
+                          {/* Selezioni con X rimuovi */}
                           {m.bolletta.selezioni.map((s, j) => (
                             <div key={j} style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                              display: 'flex', alignItems: 'flex-start',
                               padding: '8px 12px', fontSize: 13,
                               borderTop: isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)',
                             }}>
-                              <div>
+                              {/* X rossa per rimuovere */}
+                              {!builderSaved && (
+                                <button
+                                  onClick={() => {
+                                    if (!m.bolletta) return;
+                                    const newSel = m.bolletta.selezioni.filter((_, idx) => idx !== j);
+                                    if (newSel.length === 0) return;
+                                    const newQuota = newSel.reduce((acc, sel) => acc * sel.quota, 1);
+                                    const updated = { ...m.bolletta, selezioni: newSel, quota_totale: Math.round(newQuota * 100) / 100 };
+                                    setBuilderResult(updated);
+                                    setChatMessages(prev => prev.map((msg, idx) =>
+                                      idx === i ? { ...msg, bolletta: updated } : msg
+                                    ));
+                                  }}
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    color: '#f44336', fontSize: 16, fontWeight: 700,
+                                    padding: '0 8px 0 0', lineHeight: 1,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700 }}>{s.home} - {s.away}</div>
                                 <div style={{ fontSize: 11, color: textSecondary, textTransform: 'uppercase' }}>
                                   {formatMercato(s.mercato, s.pronostico)}
@@ -1197,7 +1224,39 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                               </div>
                             </div>
                           ))}
+
+                          {/* Footer: quota totale */}
+                          <div style={{
+                            padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
+                            borderTop: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.1)',
+                            background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.04)',
+                            fontSize: 14, fontWeight: 700,
+                          }}>
+                            <span>Quota totale</span>
+                            <span>{m.bolletta.quota_totale.toFixed(2)}</span>
+                          </div>
                         </div>
+
+                        {/* Motivazione espandibile */}
+                        {m.bolletta.reasoning && (
+                          <details style={{ marginTop: 6 }}>
+                            <summary style={{
+                              fontSize: 12, color: isLight ? '#667eea' : '#11998e',
+                              cursor: 'pointer', fontWeight: 600,
+                            }}>
+                              💡 Perché queste selezioni?
+                            </summary>
+                            <div style={{
+                              fontSize: 12, color: textSecondary, marginTop: 4,
+                              padding: '8px 10px', lineHeight: 1.5,
+                              background: isLight ? '#f8f8fc' : 'rgba(255,255,255,0.03)',
+                              borderRadius: 8,
+                            }}>
+                              {m.bolletta.reasoning}
+                            </div>
+                          </details>
+                        )}
+
                         {/* Bottone salva */}
                         {!builderSaved ? (
                           <button

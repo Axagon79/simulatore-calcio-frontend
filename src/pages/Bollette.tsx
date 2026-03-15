@@ -853,6 +853,14 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [liveScores, setLiveScores] = useState<LiveScore[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Storico
+  const [showStorico, setShowStorico] = useState(false);
+  const [storicoDate, setStoricoDate] = useState('');
+  const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
+  const [storicoStats, setStoricoStats] = useState<any>(null);
+  const [storicoLoading, setStoricoLoading] = useState(false);
+  const [dateDisponibili, setDateDisponibili] = useState<string[]>([]);
+
   const fetchBollette = useCallback(async () => {
     setLoading(true);
     try {
@@ -891,6 +899,30 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Fetch date disponibili per storico
+  useEffect(() => {
+    fetch(`${API_BASE}/bollette/date-disponibili`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setDateDisponibili(d.dates || []); })
+      .catch(() => {});
+  }, []);
+
+  // Fetch storico per data selezionata
+  const fetchStorico = async (date: string) => {
+    setStoricoLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/bollette/storico?date=${date}`);
+      const data = await res.json();
+      if (data.success) {
+        setStoricoBollette(data.bollette || []);
+        setStoricoStats(data.stats || null);
+      }
+    } catch (err) {
+      console.error('Errore fetch storico:', err);
+    }
+    setStoricoLoading(false);
+  };
 
   // Polling live scores ogni 15s
   useEffect(() => {
@@ -1068,10 +1100,132 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
           🎫 Ticket AI
         </h1>
-        <span style={{ color: isLight ? '#999' : theme.textDim, fontSize: 14, marginLeft: 'auto' }}>
-          {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ color: isLight ? '#999' : theme.textDim, fontSize: 14 }}>
+            {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
+          <button
+            onClick={() => setShowStorico(!showStorico)}
+            style={{
+              background: showStorico ? (isLight ? '#667eea' : '#11998e') : 'none',
+              border: showStorico ? 'none' : (isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.2)'),
+              borderRadius: 8, padding: '6px 12px',
+              color: showStorico ? '#fff' : (isLight ? '#333' : '#fff'),
+              cursor: 'pointer', fontSize: 14, fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            📅 Storico
+          </button>
+        </div>
       </div>
+
+      {/* Pannello storico */}
+      {showStorico && (
+        <div style={{
+          background: isLight ? '#fff' : theme.panelSolid,
+          borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
+          padding: '12px 20px',
+        }}>
+          {/* Selettore data */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, color: textSecondary }}>Seleziona data:</span>
+            <select
+              value={storicoDate}
+              onChange={(e) => { setStoricoDate(e.target.value); if (e.target.value) fetchStorico(e.target.value); }}
+              style={{
+                padding: '6px 12px', borderRadius: 8,
+                background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)',
+                border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
+                color: textPrimary, fontSize: 14, outline: 'none',
+              }}
+            >
+              <option value="">— Scegli —</option>
+              {dateDisponibili.map(d => (
+                <option key={d} value={d}>
+                  {new Date(d + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Stats giorno */}
+          {storicoStats && storicoDate && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                {[
+                  { label: 'Totale', value: storicoStats.totale, color: textPrimary },
+                  { label: 'Vinte', value: storicoStats.vinte, color: '#4caf50' },
+                  { label: 'Perse', value: storicoStats.perse, color: '#f44336' },
+                  { label: 'In corso', value: storicoStats.pending, color: '#ff9800' },
+                ].map(s => (
+                  <div key={s.label} style={{
+                    background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.06)',
+                    borderRadius: 8, padding: '8px 14px', textAlign: 'center', minWidth: 60,
+                  }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 11, color: textSecondary }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stats per tipo */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {Object.entries(storicoStats.per_tipo || {}).map(([tipo, s]: [string, any]) => (
+                  <div key={tipo} style={{
+                    fontSize: 12, color: textSecondary,
+                    background: isLight ? '#f8f8fc' : 'rgba(255,255,255,0.04)',
+                    padding: '4px 10px', borderRadius: 6,
+                  }}>
+                    <strong style={{ color: textPrimary }}>{tipo}</strong>: {s.vinte}V / {s.perse}P / {s.pending}?
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lista bollette storico */}
+          {storicoLoading && <div style={{ padding: 20, textAlign: 'center', color: textSecondary }}>Caricamento...</div>}
+          {!storicoLoading && storicoDate && storicoBollette.length > 0 && (
+            <div style={{ marginTop: 12, maxHeight: 400, overflowY: 'auto' }}>
+              {storicoBollette.map(b => {
+                const esitiLive = b.selezioni.map(s => getEsitoLive(s, []));
+                const hasLose = esitiLive.some(e => e === 'lose');
+                const allWin = esitiLive.every(e => e === 'win');
+                const dotColor = hasLose ? '#f44336' : allWin ? '#4caf50' : isLight ? '#ddd' : '#444';
+                const statusLabel = b.esito_globale === 'vinta' ? 'VINTA!' : b.esito_globale === 'persa' ? 'PERSA' : null;
+                const statusColor = statusLabel === 'VINTA!' ? '#4caf50' : statusLabel === 'PERSA' ? '#f44336' : undefined;
+
+                return (
+                  <div key={b._id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 12px', borderRadius: 8, marginBottom: 4,
+                    background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)',
+                    border: isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: dotColor }} />
+                      {statusLabel && (
+                        <span style={{ fontSize: 10, fontWeight: 800, color: statusColor, background: `${statusColor}18`, padding: '1px 6px', borderRadius: 4 }}>
+                          {statusLabel}
+                        </span>
+                      )}
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{b.label}</span>
+                      <span style={{ fontSize: 12, color: textSecondary }}>· {b.selezioni.length} sel.</span>
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{b.quota_totale.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {!storicoLoading && storicoDate && storicoBollette.length === 0 && (
+            <div style={{ padding: 16, textAlign: 'center', color: textSecondary, fontSize: 13 }}>
+              Nessuna bolletta per questa data.
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: textSecondary }}>

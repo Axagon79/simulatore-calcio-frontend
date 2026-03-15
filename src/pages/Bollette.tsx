@@ -973,12 +973,6 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   }, []);
 
   // Fetch date disponibili per storico
-  useEffect(() => {
-    fetch(`${API_BASE}/bollette/date-disponibili`)
-      .then(r => r.json())
-      .then(d => { if (d.success) setDateDisponibili(d.dates || []); })
-      .catch(() => {});
-  }, []);
 
   // Fetch storico per data selezionata
   const fetchStorico = async (date: string) => {

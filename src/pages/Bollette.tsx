@@ -40,7 +40,7 @@ interface Bolletta {
   pool_size: number;
 }
 
-type Categoria = 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
+type Categoria = 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'custom';
 
 // ============================================
 // HELPERS
@@ -336,11 +336,19 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId }: {
 export default function Bollette({ onBack }: { onBack?: () => void }) {
   const { user, getIdToken } = useAuth();
   const [bollette, setBollette] = useState<Bolletta[]>([]);
+  const [customBollette, setCustomBollette] = useState<Bolletta[]>([]);
   const [loading, setLoading] = useState(true);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [showAuth, setShowAuth] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Categoria | null>(null);
+
+  // Builder state
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [builderMsg, setBuilderMsg] = useState('');
+  const [builderLoading, setBuilderLoading] = useState(false);
+  const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
+  const [builderSaved, setBuilderSaved] = useState(false);
 
   const fetchBollette = useCallback(async () => {
     setLoading(true);
@@ -357,6 +365,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           }
           setSavedIds(saved);
         }
+      }
+      // Fetch custom bollette
+      if (user) {
+        const token = await getIdToken();
+        const resCustom = await fetch(`${API_BASE}/bollette/custom`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const dataCustom = await resCustom.json();
+        if (dataCustom.success) setCustomBollette(dataCustom.bollette || []);
       }
     } catch (err) {
       console.error('Errore fetch bollette:', err);
@@ -386,9 +403,56 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     setSavingId(null);
   };
 
+  // Builder: genera bolletta personalizzata
+  const handleGenerate = async () => {
+    if (!user) { setShowAuth(true); return; }
+    if (!builderMsg.trim()) return;
+    setBuilderLoading(true);
+    setBuilderResult(null);
+    setBuilderSaved(false);
+    try {
+      const token = await getIdToken();
+      const res = await fetch(`${API_BASE}/bollette/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ message: builderMsg }),
+      });
+      const data = await res.json();
+      if (data.success && data.bolletta) {
+        setBuilderResult(data.bolletta);
+      } else {
+        alert(data.error || 'Errore nella generazione');
+      }
+    } catch (err) {
+      console.error('Errore generazione:', err);
+      alert('Errore di connessione');
+    }
+    setBuilderLoading(false);
+  };
+
+  // Builder: salva bolletta personalizzata
+  const handleSaveCustom = async () => {
+    if (!builderResult || !user) return;
+    try {
+      const token = await getIdToken();
+      const res = await fetch(`${API_BASE}/bollette/save-custom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ bolletta: builderResult }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuilderSaved(true);
+        setCustomBollette(prev => [data.bolletta, ...prev]);
+      }
+    } catch (err) {
+      console.error('Errore salvataggio custom:', err);
+    }
+  };
+
   // Raggruppa
   const today = new Date().toISOString().split('T')[0];
-  const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [] };
+  const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
   for (const b of bollette) {
     const tutteOggi = b.selezioni.every(s => s.match_date === today);
     if (tutteOggi) grouped.oggi.push(b);
@@ -397,12 +461,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
   // Se una categoria è attiva, mostra il dettaglio
   if (activeCategory) {
-    const cat = CATEGORIE.find(c => c.key === activeCategory)!;
+    const catDef = activeCategory === 'custom'
+      ? { key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }
+      : CATEGORIE.find(c => c.key === activeCategory)!;
+    const items = activeCategory === 'custom' ? customBollette : grouped[activeCategory] || [];
     return (
       <>
         <VistaDettaglio
-          cat={cat}
-          items={grouped[activeCategory]}
+          cat={catDef}
+          items={items}
           onBack={() => setActiveCategory(null)}
           savedIds={savedIds}
           onSave={toggleSave}
@@ -413,12 +480,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     );
   }
 
-  // Dashboard con 4 quadranti
+  const textPrimary = isLight ? '#1a1a1a' : '#fff';
+  const textSecondary = isLight ? '#666' : 'rgba(255,255,255,0.6)';
+
+  // Dashboard
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: isLight ? '#f5f5f5' : theme.bg,
-      color: isLight ? '#1a1a1a' : '#fff',
+      color: textPrimary,
       fontFamily: theme.font,
       overflowY: 'auto', zIndex: 100,
     }}>
@@ -444,27 +514,224 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
         </span>
       </div>
 
-      {/* Griglia 2x2 — occupa tutto lo spazio sotto l'header */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: isLight ? '#999' : theme.textDim }}>
+        <div style={{ textAlign: 'center', padding: 60, color: textSecondary }}>
           Caricamento ticket...
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 16,
-          padding: 16,
-          boxSizing: 'border-box',
-        }}>
-          {CATEGORIE.map(cat => (
+        <div style={{ padding: 16 }}>
+
+          {/* === BANNER: Costruisci il tuo Ticket AI === */}
+          <div
+            onClick={() => { if (!user) { setShowAuth(true); return; } setShowBuilder(!showBuilder); }}
+            style={{
+              background: isLight
+                ? 'linear-gradient(135deg, #667eea, #764ba2)'
+                : 'linear-gradient(135deg, #2d1b69, #11998e)',
+              borderRadius: 16,
+              padding: '20px 24px',
+              marginBottom: 16,
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              transition: 'transform 0.2s',
+              border: 'none',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>
+                🤖 Costruisci il tuo Ticket AI
+              </div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+                Chiedi a Mistral di comporre una bolletta su misura per te
+              </div>
+            </div>
+            <span style={{ fontSize: 24, color: '#fff' }}>{showBuilder ? '▲' : '▼'}</span>
+          </div>
+
+          {/* === BUILDER ESPANSO === */}
+          {showBuilder && (
+            <div style={{
+              background: isLight ? '#fff' : '#1a1d2e',
+              border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 16, padding: 20, marginBottom: 16,
+            }}>
+              {/* Suggerimenti rapidi */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                {[
+                  'Fammi una bolletta sicura con quota massimo 3',
+                  'Bolletta rischiosa con quota almeno 15',
+                  'Mix di mercati diversi con 4 selezioni',
+                  'Solo partite di oggi, quota intorno a 5',
+                ].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setBuilderMsg(s)}
+                    style={{
+                      background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)',
+                      border: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 20, padding: '6px 14px',
+                      fontSize: 12, color: textSecondary,
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = isLight ? '#e0e0ea' : 'rgba(255,255,255,0.15)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)'; }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input + bottone */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input
+                  value={builderMsg}
+                  onChange={(e) => setBuilderMsg(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !builderLoading) handleGenerate(); }}
+                  placeholder="Descrivi la bolletta che vuoi..."
+                  style={{
+                    flex: 1, padding: '12px 16px',
+                    background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)',
+                    border: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 10, fontSize: 14,
+                    color: textPrimary, outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={handleGenerate}
+                  disabled={builderLoading || !builderMsg.trim()}
+                  style={{
+                    padding: '12px 24px',
+                    background: builderLoading ? '#666' : isLight ? '#667eea' : '#11998e',
+                    border: 'none', borderRadius: 10,
+                    color: '#fff', fontWeight: 700, fontSize: 14,
+                    cursor: builderLoading ? 'wait' : 'pointer',
+                    opacity: !builderMsg.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {builderLoading ? '⏳ Genero...' : '🚀 Genera'}
+                </button>
+              </div>
+
+              {/* Risultato */}
+              {builderResult && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{
+                    background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)',
+                    border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 12, overflow: 'hidden',
+                  }}>
+                    {/* Header risultato */}
+                    <div style={{
+                      padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
+                    }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>
+                        Bolletta {builderResult.tipo} · {builderResult.selezioni.length} selezioni
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: 16 }}>
+                        Quota: {builderResult.quota_totale.toFixed(2)}
+                      </span>
+                    </div>
+                    {/* Selezioni */}
+                    {builderResult.selezioni.map((s, i) => (
+                      <div key={i} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                        padding: '10px 16px',
+                        borderTop: isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{s.home} - {s.away}</div>
+                          <div style={{ fontSize: 12, color: textSecondary, marginTop: 2, textTransform: 'uppercase' }}>
+                            {formatMercato(s.mercato, s.pronostico)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 12, color: textSecondary }}>
+                            {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: 16, marginTop: 2 }}>{s.quota.toFixed(2)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bottone salva */}
+                  <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+                    {!builderSaved ? (
+                      <button
+                        onClick={handleSaveCustom}
+                        style={{
+                          flex: 1, padding: '12px',
+                          background: isLight ? '#4caf50' : '#2e7d32',
+                          border: 'none', borderRadius: 10,
+                          color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                        }}
+                      >
+                        ✅ Salva nelle mie bollette
+                      </button>
+                    ) : (
+                      <div style={{
+                        flex: 1, padding: '12px', textAlign: 'center',
+                        background: isLight ? '#e8f5e9' : 'rgba(46,125,50,0.2)',
+                        borderRadius: 10, fontWeight: 700, fontSize: 14,
+                        color: isLight ? '#2e7d32' : '#66bb6a',
+                      }}>
+                        ✅ Salvata!
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { setBuilderResult(null); setBuilderMsg(''); }}
+                      style={{
+                        padding: '12px 20px',
+                        background: isLight ? '#eee' : 'rgba(255,255,255,0.08)',
+                        border: 'none', borderRadius: 10,
+                        color: textSecondary, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                      }}
+                    >
+                      Nuova
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* === GRIGLIA 3+2 === */}
+          {/* Riga 1: Oggi, Selettiva, Bilanciata */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 16,
+            marginBottom: 16,
+          }}>
+            {CATEGORIE.slice(0, 3).map(cat => (
+              <Quadrante
+                key={cat.key}
+                cat={cat}
+                items={grouped[cat.key]}
+                onClick={() => setActiveCategory(cat.key)}
+              />
+            ))}
+          </div>
+          {/* Riga 2: Ambiziosa, Le mie bollette */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 16,
+          }}>
             <Quadrante
-              key={cat.key}
-              cat={cat}
-              items={grouped[cat.key]}
-              onClick={() => setActiveCategory(cat.key)}
+              cat={CATEGORIE[3]}
+              items={grouped.ambiziosa}
+              onClick={() => setActiveCategory('ambiziosa')}
             />
-          ))}
+            <Quadrante
+              cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+              items={customBollette}
+              onClick={() => setActiveCategory('custom' as Categoria)}
+            />
+          </div>
         </div>
       )}
 

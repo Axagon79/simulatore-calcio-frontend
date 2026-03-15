@@ -344,13 +344,13 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Categoria | null>(null);
 
-  // Builder state
+  // Builder state (chat conversazionale)
   const [showBuilder, setShowBuilder] = useState(false);
   const [builderMsg, setBuilderMsg] = useState('');
   const [builderLoading, setBuilderLoading] = useState(false);
   const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
   const [builderSaved, setBuilderSaved] = useState(false);
-  const [builderError, setBuilderError] = useState('');
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string; bolletta?: Bolletta }[]>([]);
 
   const fetchBollette = useCallback(async () => {
     setLoading(true);
@@ -405,32 +405,45 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     setSavingId(null);
   };
 
-  // Builder: genera bolletta personalizzata
+  // Builder: invia messaggio nella chat
   const handleGenerate = async () => {
     if (!user) { setShowAuth(true); return; }
     if (!builderMsg.trim()) return;
+
+    const userMsg = builderMsg.trim();
+    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setBuilderMsg('');
     setBuilderLoading(true);
-    setBuilderResult(null);
     setBuilderSaved(false);
-    setBuilderError('');
+
     try {
       const token = await getIdToken();
+      // Prepara storico per Mistral (solo testo, non bollette)
+      const history = chatMessages.map(m => ({
+        role: m.role,
+        content: m.bolletta
+          ? JSON.stringify({ type: 'bolletta', selezioni: m.bolletta.selezioni.map(s => ({ match_key: `${s.home} vs ${s.away}|${s.match_date}`, mercato: s.mercato, pronostico: s.pronostico })), reasoning: '' })
+          : m.content,
+      }));
+
       const res = await fetch(`${API_BASE}/bollette/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ message: builderMsg }),
+        body: JSON.stringify({ message: userMsg, history }),
       });
       const data = await res.json();
-      if (data.success && data.bolletta) {
+
+      if (data.success && data.type === 'bolletta' && data.bolletta) {
         setBuilderResult(data.bolletta);
-      } else if (data.info) {
-        setBuilderError(data.info);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.bolletta.reasoning || 'Ecco la tua bolletta!', bolletta: data.bolletta }]);
+      } else if (data.success && data.type === 'messaggio') {
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
       } else {
-        setBuilderError(data.error || 'Errore nella generazione');
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.error || 'Non sono riuscito a generare la bolletta.' }]);
       }
     } catch (err) {
       console.error('Errore generazione:', err);
-      setBuilderError('Errore di connessione');
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Errore di connessione. Riprova.' }]);
     }
     setBuilderLoading(false);
   };
@@ -555,59 +568,178 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             <span style={{ fontSize: 24, color: '#fff' }}>{showBuilder ? '▲' : '▼'}</span>
           </div>
 
-          {/* === BUILDER ESPANSO === */}
+          {/* === BUILDER CHAT === */}
           {showBuilder && (
             <div style={{
               background: isLight ? '#fff' : '#1a1d2e',
               border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 16, padding: 20, marginBottom: 16,
+              borderRadius: 16, marginBottom: 16, overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
+              maxHeight: '60vh',
             }}>
-              {/* Suggerimenti rapidi */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-                {[
-                  'Fammi una bolletta sicura con quota massimo 3',
-                  'Bolletta rischiosa con quota almeno 15',
-                  'Mix di mercati diversi con 4 selezioni',
-                  'Solo partite di oggi, quota intorno a 5',
-                ].map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setBuilderMsg(s)}
-                    style={{
-                      background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)',
-                      border: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: 20, padding: '6px 14px',
-                      fontSize: 12, color: textSecondary,
-                      cursor: 'pointer', transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = isLight ? '#e0e0ea' : 'rgba(255,255,255,0.15)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)'; }}
-                  >
-                    {s}
-                  </button>
+              {/* Suggerimenti rapidi (solo se chat vuota) */}
+              {chatMessages.length === 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '16px 16px 8px' }}>
+                  {[
+                    'Fammi una bolletta sicura con quota massimo 3',
+                    'Bolletta rischiosa con quota almeno 15',
+                    'Mix di mercati diversi con 4 selezioni',
+                    'Solo partite di oggi, quota intorno a 5',
+                  ].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setBuilderMsg(s); }}
+                      style={{
+                        background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)',
+                        border: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 20, padding: '6px 14px',
+                        fontSize: 12, color: textSecondary,
+                        cursor: 'pointer', transition: 'all 0.2s',
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Area chat scrollabile */}
+              <div style={{
+                flex: 1, overflowY: 'auto', padding: '12px 16px',
+                display: 'flex', flexDirection: 'column', gap: 10,
+              }}>
+                {chatMessages.map((m, i) => (
+                  <div key={i}>
+                    {/* Bubble messaggio */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                    }}>
+                      <div style={{
+                        maxWidth: '80%',
+                        padding: '10px 14px',
+                        borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                        background: m.role === 'user'
+                          ? (isLight ? '#667eea' : '#11998e')
+                          : (isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)'),
+                        color: m.role === 'user' ? '#fff' : textPrimary,
+                        fontSize: 14, lineHeight: 1.5,
+                        wordBreak: 'break-word',
+                      }}>
+                        {m.content}
+                      </div>
+                    </div>
+
+                    {/* Bolletta inline (se presente) */}
+                    {m.bolletta && (
+                      <div style={{ marginTop: 8, marginLeft: 0, maxWidth: '90%' }}>
+                        <div style={{
+                          background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)',
+                          border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 12, overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
+                            background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
+                            fontSize: 13, fontWeight: 700,
+                          }}>
+                            <span>{m.bolletta.tipo} · {m.bolletta.selezioni.length} sel.</span>
+                            <span>Quota: {m.bolletta.quota_totale.toFixed(2)}</span>
+                          </div>
+                          {m.bolletta.selezioni.map((s, j) => (
+                            <div key={j} style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                              padding: '8px 12px', fontSize: 13,
+                              borderTop: isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)',
+                            }}>
+                              <div>
+                                <div style={{ fontWeight: 700 }}>{s.home} - {s.away}</div>
+                                <div style={{ fontSize: 11, color: textSecondary, textTransform: 'uppercase' }}>
+                                  {formatMercato(s.mercato, s.pronostico)}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
+                                <div style={{ fontSize: 11, color: textSecondary }}>
+                                  {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: 14 }}>{s.quota.toFixed(2)}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Bottone salva */}
+                        {!builderSaved ? (
+                          <button
+                            onClick={handleSaveCustom}
+                            style={{
+                              marginTop: 8, width: '100%', padding: '10px',
+                              background: isLight ? '#4caf50' : '#2e7d32',
+                              border: 'none', borderRadius: 10,
+                              color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                            }}
+                          >
+                            ✅ Salva nelle mie bollette
+                          </button>
+                        ) : (
+                          <div style={{
+                            marginTop: 8, padding: '10px', textAlign: 'center',
+                            background: isLight ? '#e8f5e9' : 'rgba(46,125,50,0.2)',
+                            borderRadius: 10, fontWeight: 700, fontSize: 13,
+                            color: isLight ? '#2e7d32' : '#66bb6a',
+                          }}>
+                            ✅ Salvata!
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
+
+                {/* Loading indicator */}
+                {builderLoading && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                    <div style={{
+                      padding: '10px 14px', borderRadius: '16px 16px 16px 4px',
+                      background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)',
+                      fontSize: 14, color: textSecondary,
+                    }}>
+                      ⏳ Sto pensando...
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Input + bottone */}
-              <div style={{ display: 'flex', gap: 10 }}>
-                <input
+              {/* Input chat — textarea per wrap automatico */}
+              <div style={{
+                display: 'flex', gap: 8, padding: '12px 16px',
+                borderTop: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <textarea
                   value={builderMsg}
                   onChange={(e) => setBuilderMsg(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !builderLoading) handleGenerate(); }}
-                  placeholder="Descrivi la bolletta che vuoi..."
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !builderLoading) { e.preventDefault(); handleGenerate(); } }}
+                  placeholder="Scrivi un messaggio..."
+                  rows={1}
                   style={{
-                    flex: 1, padding: '12px 16px',
+                    flex: 1, padding: '10px 14px',
                     background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)',
                     border: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.15)',
                     borderRadius: 10, fontSize: 14,
                     color: textPrimary, outline: 'none',
+                    resize: 'none', minHeight: 40, maxHeight: 100,
+                    lineHeight: 1.4, fontFamily: 'inherit',
+                  }}
+                  onInput={(e) => {
+                    const t = e.currentTarget;
+                    t.style.height = 'auto';
+                    t.style.height = Math.min(t.scrollHeight, 100) + 'px';
                   }}
                 />
                 <button
                   onClick={handleGenerate}
                   disabled={builderLoading || !builderMsg.trim()}
                   style={{
-                    padding: '12px 24px',
+                    padding: '10px 18px', alignSelf: 'flex-end',
                     background: builderLoading ? '#666' : isLight ? '#667eea' : '#11998e',
                     border: 'none', borderRadius: 10,
                     color: '#fff', fontWeight: 700, fontSize: 14,
@@ -615,103 +747,9 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                     opacity: !builderMsg.trim() ? 0.5 : 1,
                   }}
                 >
-                  {builderLoading ? '⏳ Genero...' : '🚀 Genera'}
+                  {builderLoading ? '⏳' : '➤'}
                 </button>
               </div>
-
-              {/* Errore */}
-              {builderError && (
-                <div style={{
-                  marginTop: 14, padding: '12px 16px',
-                  background: isLight ? '#fff3e0' : 'rgba(255,152,0,0.12)',
-                  border: isLight ? '1px solid #ffe0b2' : '1px solid rgba(255,152,0,0.3)',
-                  borderRadius: 10, fontSize: 14, color: isLight ? '#e65100' : '#ffb74d',
-                }}>
-                  💬 {builderError}
-                </div>
-              )}
-
-              {/* Risultato */}
-              {builderResult && (
-                <div style={{ marginTop: 16 }}>
-                  <div style={{
-                    background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)',
-                    border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 12, overflow: 'hidden',
-                  }}>
-                    {/* Header risultato */}
-                    <div style={{
-                      padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
-                    }}>
-                      <span style={{ fontWeight: 700, fontSize: 14 }}>
-                        Bolletta {builderResult.tipo} · {builderResult.selezioni.length} selezioni
-                      </span>
-                      <span style={{ fontWeight: 700, fontSize: 16 }}>
-                        Quota: {builderResult.quota_totale.toFixed(2)}
-                      </span>
-                    </div>
-                    {/* Selezioni */}
-                    {builderResult.selezioni.map((s, i) => (
-                      <div key={i} style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                        padding: '10px 16px',
-                        borderTop: isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)',
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 14 }}>{s.home} - {s.away}</div>
-                          <div style={{ fontSize: 12, color: textSecondary, marginTop: 2, textTransform: 'uppercase' }}>
-                            {formatMercato(s.mercato, s.pronostico)}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 12, color: textSecondary }}>
-                            {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
-                          </div>
-                          <div style={{ fontWeight: 700, fontSize: 16, marginTop: 2 }}>{s.quota.toFixed(2)}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bottone salva */}
-                  <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
-                    {!builderSaved ? (
-                      <button
-                        onClick={handleSaveCustom}
-                        style={{
-                          flex: 1, padding: '12px',
-                          background: isLight ? '#4caf50' : '#2e7d32',
-                          border: 'none', borderRadius: 10,
-                          color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer',
-                        }}
-                      >
-                        ✅ Salva nelle mie bollette
-                      </button>
-                    ) : (
-                      <div style={{
-                        flex: 1, padding: '12px', textAlign: 'center',
-                        background: isLight ? '#e8f5e9' : 'rgba(46,125,50,0.2)',
-                        borderRadius: 10, fontWeight: 700, fontSize: 14,
-                        color: isLight ? '#2e7d32' : '#66bb6a',
-                      }}>
-                        ✅ Salvata!
-                      </div>
-                    )}
-                    <button
-                      onClick={() => { setBuilderResult(null); setBuilderMsg(''); }}
-                      style={{
-                        padding: '12px 20px',
-                        background: isLight ? '#eee' : 'rgba(255,255,255,0.08)',
-                        border: 'none', borderRadius: 10,
-                        color: textSecondary, fontWeight: 700, fontSize: 14, cursor: 'pointer',
-                      }}
-                    >
-                      Nuova
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

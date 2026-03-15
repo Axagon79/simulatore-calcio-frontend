@@ -342,6 +342,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
   useEffect(() => { fetchMy(); }, [fetchMy]);
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questo ticket?')) return;
     setDeletingId(id);
     try {
       const token = await getIdToken();

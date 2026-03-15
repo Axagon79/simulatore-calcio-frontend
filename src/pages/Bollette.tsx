@@ -444,7 +444,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
       if (data.success && data.type === 'bolletta' && data.bolletta) {
         setBuilderResult(data.bolletta);
-        setChatMessages(prev => [...prev, { role: 'assistant', content: data.bolletta.reasoning || 'Ecco la tua bolletta!', bolletta: data.bolletta }]);
+        const warningText = (data.warnings || []).length > 0 ? '\n⚠️ ' + data.warnings.join('\n⚠️ ') : '';
+        setChatMessages(prev => [...prev, { role: 'assistant', content: (data.bolletta.reasoning || 'Ecco la tua bolletta!') + warningText, bolletta: data.bolletta }]);
       } else if (data.success && data.type === 'messaggio') {
         setChatMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
       } else {

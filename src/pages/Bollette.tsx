@@ -247,7 +247,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
   onBack: () => void;
   liveScores: LiveScore[];
   user: any;
-  getIdToken: () => Promise<string>;
+  getIdToken: () => Promise<string | null>;
 }) {
   const [myBollette, setMyBollette] = useState<Bolletta[]>([]);
   const [stats, setStats] = useState<{ vinte: number; perse: number; in_corso: number; totale: number; totale_stake: number; profitto: number } | null>(null);
@@ -623,7 +623,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       : hasLose ? '#f44336'
                       : allWin ? '#4caf50'
                       : '#4caf50';
-                    const blink = anyLive && !allDone;
+                    const blink = anyLive && !allDone && !hasLose;
 
                     const statusLabel = allPending ? null
                       : (allDone && hasLose) ? 'PERSA'

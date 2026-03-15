@@ -96,7 +96,7 @@ function Quadrante({ cat, items, onClick }: {
         gap: 10,
         transition: 'transform 0.2s, box-shadow 0.2s',
         border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.1)',
-        minHeight: 260,
+        minHeight: 180,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -219,7 +219,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId }: {
       </div>
 
       {/* Bollette */}
-      <div style={{ padding: '20px', maxWidth: 700, margin: '0 auto' }}>
+      <div style={{ padding: '12px', maxWidth: 700, margin: '0 auto' }}>
         {items.map(b => {
           const isCollapsed = collapsed[b._id] ?? false;
           const isSaved = savedIds.has(b._id);
@@ -334,8 +334,11 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId }: {
 // MAIN COMPONENT
 // ============================================
 
+const isMob = () => window.innerWidth < 768;
+
 export default function Bollette({ onBack }: { onBack?: () => void }) {
   const { user, getIdToken } = useAuth();
+  const [isMobile, setIsMobile] = useState(isMob());
   const [bollette, setBollette] = useState<Bolletta[]>([]);
   const [customBollette, setCustomBollette] = useState<Bolletta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -384,6 +387,12 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   }, [user]);
 
   useEffect(() => { fetchBollette(); }, [fetchBollette]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(isMob());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const toggleSave = async (id: string) => {
     if (!user) { setShowAuth(true); return; }
@@ -547,7 +556,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 ? 'linear-gradient(135deg, #667eea, #764ba2)'
                 : 'linear-gradient(135deg, #2d1b69, #11998e)',
               borderRadius: 16,
-              padding: '20px 24px',
+              padding: isMobile ? '14px 16px' : '20px 24px',
               marginBottom: 16,
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -558,10 +567,10 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
           >
             <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>
+              <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700, color: '#fff' }}>
                 🤖 Costruisci il tuo Ticket AI
               </div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+              <div style={{ fontSize: isMobile ? 12 : 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
                 Chiedi a Mistral di comporre una bolletta su misura per te
               </div>
             </div>
@@ -753,40 +762,37 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             </div>
           )}
 
-          {/* === GRIGLIA 3+2 === */}
-          {/* Riga 1: Oggi, Selettiva, Bilanciata */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 16,
-            marginBottom: 16,
-          }}>
-            {CATEGORIE.slice(0, 3).map(cat => (
+          {/* === GRIGLIA RESPONSIVE === */}
+          {isMobile ? (
+            /* Mobile: 1 colonna */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {CATEGORIE.map(cat => (
+                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} />
+              ))}
               <Quadrante
-                key={cat.key}
-                cat={cat}
-                items={grouped[cat.key]}
-                onClick={() => setActiveCategory(cat.key)}
+                cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+                items={customBollette}
+                onClick={() => setActiveCategory('custom' as Categoria)}
               />
-            ))}
-          </div>
-          {/* Riga 2: Ambiziosa, Le mie bollette */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 16,
-          }}>
-            <Quadrante
-              cat={CATEGORIE[3]}
-              items={grouped.ambiziosa}
-              onClick={() => setActiveCategory('ambiziosa')}
-            />
-            <Quadrante
-              cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
-              items={customBollette}
-              onClick={() => setActiveCategory('custom' as Categoria)}
-            />
-          </div>
+            </div>
+          ) : (
+            /* Desktop: 3+2 */
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+                {CATEGORIE.slice(0, 3).map(cat => (
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} />
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} />
+                <Quadrante
+                  cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+                  items={customBollette}
+                  onClick={() => setActiveCategory('custom' as Categoria)}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

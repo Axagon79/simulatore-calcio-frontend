@@ -240,6 +240,296 @@ function Quadrante({ cat, items, onClick }: {
 }
 
 // ============================================
+// LE MIE BOLLETTE — Pagina personale con storico e stats
+// ============================================
+
+function MieBollette({ onBack, liveScores, user, getIdToken }: {
+  onBack: () => void;
+  liveScores: LiveScore[];
+  user: any;
+  getIdToken: () => Promise<string>;
+}) {
+  const [myBollette, setMyBollette] = useState<Bolletta[]>([]);
+  const [stats, setStats] = useState<{ vinte: number; perse: number; in_corso: number; totale: number; totale_stake: number; profitto: number } | null>(null);
+  const [loadingMy, setLoadingMy] = useState(true);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const textPrimary = isLight ? '#1a1a1a' : '#fff';
+  const textSecondary = isLight ? '#666' : '#999';
+  const cardBg = isLight ? '#ffffff' : '#1a1d2e';
+  const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)';
+  const rowBorder = isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)';
+  const headerBg = isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)';
+
+  const fetchMy = useCallback(async () => {
+    if (!user) return;
+    setLoadingMy(true);
+    try {
+      const token = await getIdToken();
+      const res = await fetch(`${API_BASE}/bollette/my`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMyBollette(data.bollette || []);
+        setStats(data.stats || null);
+      }
+    } catch (err) {
+      console.error('Errore fetch mie bollette:', err);
+    }
+    setLoadingMy(false);
+  }, [user]);
+
+  useEffect(() => { fetchMy(); }, [fetchMy]);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const token = await getIdToken();
+      await fetch(`${API_BASE}/bollette/${id}/remove`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      setMyBollette(prev => prev.filter(b => b._id !== id));
+    } catch (err) {
+      console.error('Errore eliminazione:', err);
+    }
+    setDeletingId(null);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: isLight ? '#f5f5f5' : theme.bg,
+      color: textPrimary, fontFamily: theme.font,
+      overflowY: 'auto', zIndex: 110,
+    }}>
+      {/* Header */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: isLight ? '#fff' : theme.panelSolid,
+        borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
+        padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none',
+          color: isLight ? '#333' : theme.cyan,
+          cursor: 'pointer', fontSize: 20, padding: '4px 8px',
+        }}>←</button>
+        <span style={{ fontSize: 22 }}>✨</span>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Le mie bollette</h1>
+      </div>
+
+      <div style={{ padding: '16px', maxWidth: 700, margin: '0 auto' }}>
+        {/* Stats */}
+        {stats && (
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
+            marginBottom: 20,
+          }}>
+            {[
+              { label: 'Totale', value: stats.totale, color: textPrimary },
+              { label: 'Vinte', value: stats.vinte, color: '#4caf50' },
+              { label: 'Perse', value: stats.perse, color: '#f44336' },
+              { label: 'Profitto', value: `€${stats.profitto >= 0 ? '+' : ''}${stats.profitto.toFixed(2)}`, color: stats.profitto >= 0 ? '#4caf50' : '#f44336' },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: cardBg, border: cardBorder, borderRadius: 12,
+                padding: '12px', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: textSecondary, marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loadingMy ? (
+          <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>Caricamento...</div>
+        ) : myBollette.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>
+            Nessuna bolletta salvata. Salva le bollette che ti piacciono dalla pagina principale!
+          </div>
+        ) : (
+          myBollette.map(b => {
+            const isCollapsedB = collapsed[b._id] ?? false;
+            const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+            const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
+            const allWin = esitiLive.every(e => e === 'win');
+            const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+            const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
+            const allPending = esitiLive.every(e => e === 'pending');
+
+            const dotColor = allPending ? (isLight ? '#ddd' : '#444')
+              : hasLose ? '#f44336' : allWin ? '#4caf50' : '#4caf50';
+            const blink = anyLive && !allDone;
+
+            const statusLabel = allPending ? null
+              : (allDone && hasLose) ? 'PERSA' : (allDone && allWin) ? 'VINTA!'
+              : hasLose ? 'PERSA' : anyLive ? 'LIVE' : null;
+            const statusColor = statusLabel === 'PERSA' ? '#f44336'
+              : statusLabel === 'VINTA!' ? '#4caf50' : statusLabel === 'LIVE' ? '#ff9800' : undefined;
+
+            const userStake = user ? (b.user_stakes?.[user.uid] || 0) : 0;
+
+            return (
+              <div key={b._id} style={{
+                background: cardBg, border: cardBorder,
+                borderRadius: 12, marginBottom: 14, overflow: 'hidden',
+                boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+              }}>
+                {/* Header */}
+                <div
+                  onClick={() => setCollapsed(prev => ({ ...prev, [b._id]: !prev[b._id] }))}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 16px', cursor: 'pointer',
+                    background: headerBg, borderBottom: isCollapsedB ? 'none' : rowBorder,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className={blink ? 'blink-dot' : ''} style={{
+                      width: 14, height: 14, borderRadius: '50%', background: dotColor, flexShrink: 0,
+                    }} />
+                    {statusLabel && (
+                      <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
+                        fontSize: 11, fontWeight: 800, color: statusColor,
+                        background: `${statusColor}18`, padding: '2px 8px', borderRadius: 4,
+                      }}>
+                        {statusLabel}
+                      </span>
+                    )}
+                    <span style={{ fontWeight: 700, fontSize: 14, color: textPrimary }}>{b.label}</span>
+                    <span style={{ fontSize: 12, color: textSecondary }}>· {b.date}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {userStake > 0 && (
+                      <span style={{ fontSize: 12, color: textSecondary }}>€{userStake}</span>
+                    )}
+                    <span style={{ fontWeight: 700, fontSize: 16, color: textPrimary }}>
+                      {b.quota_totale.toFixed(2)}
+                    </span>
+                    <span style={{ color: textSecondary, fontSize: 12 }}>
+                      {isCollapsedB ? '▼' : '▲'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Selezioni */}
+                {!isCollapsedB && (
+                  <>
+                    {b.selezioni.map((s, i) => {
+                      const esLive = getEsitoLive(s, liveScores);
+                      const bgEsito = (esLive === 'win' || esLive === 'live_win')
+                        ? (isLight ? '#f0fdf4' : 'rgba(0,255,136,0.08)')
+                        : (esLive === 'lose' || esLive === 'live_lose')
+                          ? (isLight ? '#fef2f2' : 'rgba(255,68,102,0.08)')
+                          : 'transparent';
+                      const sDotColor = esLive === 'win' || esLive === 'live_win' ? '#4caf50'
+                        : esLive === 'lose' || esLive === 'live_lose' ? '#f44336'
+                        : isLight ? '#ddd' : '#444';
+                      const sBlinking = esLive === 'live_win' || esLive === 'live_lose';
+
+                      return (
+                        <div key={i} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                          padding: '12px 16px',
+                          borderBottom: i < b.selezioni.length - 1 ? rowBorder : 'none',
+                          background: bgEsito,
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span>{s.home} - {s.away}</span>
+                              {(() => {
+                                const live = liveScores.find(l => l.home === s.home && l.away === s.away);
+                                if (!live || !live.live_score) return null;
+                                const fin = live.live_status === 'Finished';
+                                return (
+                                  <span style={{
+                                    fontSize: 13, fontWeight: 700,
+                                    color: fin ? textSecondary : '#f44336',
+                                    background: isLight ? (fin ? '#f0f0f0' : 'rgba(244,67,54,0.08)') : (fin ? 'rgba(255,255,255,0.08)' : 'rgba(244,67,54,0.15)'),
+                                    padding: '1px 8px', borderRadius: 6,
+                                  }}>
+                                    {live.live_score.replace(':', ' - ')}
+                                    {!fin && live.live_minute ? ` ${live.live_minute}'` : ''}
+                                    {fin ? ' FT' : ''}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            <div style={{ fontSize: 12, color: textSecondary, marginTop: 3, textTransform: 'uppercase' }}>
+                              {formatMercato(s.mercato, s.pronostico)}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 16 }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 12, color: textSecondary }}>
+                                {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                              </div>
+                              <div style={{ fontWeight: 700, fontSize: 17, color: textPrimary, marginTop: 2 }}>
+                                {s.quota.toFixed(2)}
+                              </div>
+                            </div>
+                            <div className={sBlinking ? 'blink-dot' : ''} style={{
+                              width: 22, height: 22, borderRadius: '50%', background: sDotColor, flexShrink: 0,
+                            }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Footer: quota + stake + vincita + elimina */}
+                    <div style={{ padding: '10px 16px', borderTop: rowBorder, background: headerBg }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, color: textSecondary }}>Quota totale</span>
+                        <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>{b.quota_totale.toFixed(2)}</span>
+                      </div>
+                      {userStake > 0 && (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                            <span style={{ fontSize: 13, color: textSecondary }}>Puntata</span>
+                            <span style={{ fontWeight: 700, fontSize: 15, color: textPrimary }}>€{userStake.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: isLight ? '#059669' : '#4caf50' }}>Vincita potenziale</span>
+                            <span style={{ fontWeight: 700, fontSize: 18, color: isLight ? '#059669' : '#4caf50' }}>
+                              €{(userStake * b.quota_totale).toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {/* Bottone elimina */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(b._id); }}
+                        disabled={deletingId === b._id}
+                        style={{
+                          marginTop: 10, width: '100%', padding: '8px',
+                          background: isLight ? '#fef2f2' : 'rgba(244,67,54,0.1)',
+                          border: isLight ? '1px solid #fca5a5' : '1px solid rgba(244,67,54,0.3)',
+                          borderRadius: 8, cursor: 'pointer',
+                          fontSize: 13, fontWeight: 600,
+                          color: '#f44336',
+                          opacity: deletingId === b._id ? 0.5 : 1,
+                        }}
+                      >
+                        {deletingId === b._id ? 'Eliminando...' : '🗑 Elimina bolletta'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // VISTA DETTAGLIO — lista bollette di una categoria
 // ============================================
 
@@ -320,7 +610,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {/* Tondino esito globale bolletta */}
+                  {/* Tondino esito globale + stato */}
                   {(() => {
                     const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
                     const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
@@ -332,14 +622,36 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     const color = allPending ? (isLight ? '#ddd' : '#444')
                       : hasLose ? '#f44336'
                       : allWin ? '#4caf50'
-                      : '#4caf50'; // in corso, tutto ok per ora
+                      : '#4caf50';
                     const blink = anyLive && !allDone;
 
+                    const statusLabel = allPending ? null
+                      : (allDone && hasLose) ? 'PERSA'
+                      : (allDone && allWin) ? 'VINTA!'
+                      : (hasLose && !allDone) ? 'PERSA'
+                      : anyLive ? 'LIVE'
+                      : null;
+                    const statusColor = statusLabel === 'PERSA' ? '#f44336'
+                      : statusLabel === 'VINTA!' ? '#4caf50'
+                      : statusLabel === 'LIVE' ? '#ff9800'
+                      : undefined;
+
                     return (
-                      <div className={blink ? 'blink-dot' : ''} style={{
-                        width: 14, height: 14, borderRadius: '50%',
-                        background: color, flexShrink: 0,
-                      }} />
+                      <>
+                        <div className={blink ? 'blink-dot' : ''} style={{
+                          width: 14, height: 14, borderRadius: '50%',
+                          background: color, flexShrink: 0,
+                        }} />
+                        {statusLabel && (
+                          <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
+                            fontSize: 11, fontWeight: 800, color: statusColor,
+                            background: `${statusColor}18`, padding: '2px 8px',
+                            borderRadius: 4, letterSpacing: 0.5,
+                          }}>
+                            {statusLabel}
+                          </span>
+                        )}
+                      </>
                     );
                   })()}
                   <span style={{ fontWeight: 700, fontSize: 14, color: textPrimary }}>{b.label}</span>
@@ -682,12 +994,20 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
   // Se una categoria è attiva, mostra il dettaglio
   if (activeCategory) {
-    const catDef = activeCategory === 'custom'
-      ? { key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }
-      : CATEGORIE.find(c => c.key === activeCategory)!;
-    const items = activeCategory === 'custom'
-      ? [...customBollette, ...bollette.filter(b => savedIds.has(b._id))]
-      : grouped[activeCategory] || [];
+    // "Le mie bollette" — vista personale dedicata
+    if (activeCategory === 'custom') {
+      return (
+        <MieBollette
+          onBack={() => setActiveCategory(null)}
+          liveScores={liveScores}
+          user={user}
+          getIdToken={getIdToken}
+        />
+      );
+    }
+
+    const catDef = CATEGORIE.find(c => c.key === activeCategory)!;
+    const items = grouped[activeCategory] || [];
     return (
       <>
         <VistaDettaglio

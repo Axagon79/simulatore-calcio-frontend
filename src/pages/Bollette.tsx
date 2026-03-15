@@ -104,6 +104,7 @@ interface Bolletta {
   esito_globale: string | null;
   saved_by: string[];
   user_stakes?: Record<string, number>;
+  reasoning?: string;
   pool_size: number;
 }
 

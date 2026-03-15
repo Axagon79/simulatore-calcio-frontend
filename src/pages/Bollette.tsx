@@ -103,6 +103,7 @@ interface Bolletta {
   selezioni: Selezione[];
   esito_globale: string | null;
   saved_by: string[];
+  user_stakes?: Record<string, number>;
   pool_size: number;
 }
 
@@ -242,17 +243,27 @@ function Quadrante({ cat, items, onClick }: {
 // VISTA DETTAGLIO — lista bollette di una categoria
 // ============================================
 
-function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores }: {
+function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores, userId }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onBack: () => void;
   savedIds: Set<string>;
-  onSave: (id: string) => void;
+  onSave: (id: string, stakeAmount?: number) => void;
   savingId: string | null;
   liveScores: LiveScore[];
+  userId?: string;
 }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [stakes, setStakes] = useState<Record<string, string>>({});
+  const [stakes, setStakes] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (userId) {
+      for (const b of items) {
+        const saved = b.user_stakes?.[userId];
+        if (saved && saved > 0) initial[b._id] = String(saved);
+      }
+    }
+    return initial;
+  });
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
   const textSecondary = isLight ? '#666' : '#999';
   const cardBg = isLight ? '#ffffff' : '#1a1d2e';
@@ -339,7 +350,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     {b.quota_totale.toFixed(2)}
                   </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); onSave(b._id); }}
+                    onClick={(e) => { e.stopPropagation(); onSave(b._id, parseFloat(stakes[b._id]) || 0); }}
                     disabled={savingId === b._id}
                     style={{
                       background: isSaved
@@ -453,7 +464,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                         value={stakes[b._id] || ''}
                         onChange={(e) => setStakes(prev => ({ ...prev, [b._id]: e.target.value }))}
                         onClick={(e) => e.stopPropagation()}
-                        placeholder="0"
+                        placeholder=""
                         style={{
                           width: 80, textAlign: 'right', padding: '4px 8px',
                           background: isLight ? '#fff' : 'rgba(255,255,255,0.06)',
@@ -575,7 +586,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  const toggleSave = async (id: string) => {
+  const toggleSave = async (id: string, stakeAmount?: number) => {
     if (!user) { setShowAuth(true); return; }
     setSavingId(id);
     try {
@@ -583,6 +594,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       await fetch(`${API_BASE}/bollette/${id}/save`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ stake_amount: stakeAmount || 0 }),
       });
       setSavedIds(prev => {
         const next = new Set(prev);
@@ -686,6 +698,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           onSave={toggleSave}
           savingId={savingId}
           liveScores={liveScores}
+          userId={user?.uid}
         />
         {showAuth && <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />}
       </>

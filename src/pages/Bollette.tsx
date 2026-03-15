@@ -1364,7 +1364,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                                   onClick={() => {
                                     if (!m.bolletta) return;
                                     const newSel = m.bolletta.selezioni.filter((_, idx) => idx !== j);
-                                    if (newSel.length === 0) return;
+                                    if (newSel.length === 0) { setBuilderResult(null); setChatMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, bolletta: undefined } : msg)); return; }
                                     const newQuota = newSel.reduce((acc, sel) => acc * sel.quota, 1);
                                     const updated = { ...m.bolletta, selezioni: newSel, quota_totale: Math.round(newQuota * 100) / 100 };
                                     setBuilderResult(updated);
@@ -1373,10 +1373,13 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                                     ));
                                   }}
                                   style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    color: '#f44336', fontSize: 16, fontWeight: 700,
-                                    padding: '0 8px 0 0', lineHeight: 1,
-                                    flexShrink: 0,
+                                    background: 'rgba(244,67,54,0.1)', border: '1px solid rgba(244,67,54,0.3)',
+                                    borderRadius: '50%', cursor: 'pointer',
+                                    color: '#f44336', fontSize: 12, fontWeight: 700,
+                                    width: 24, height: 24, lineHeight: '24px',
+                                    textAlign: 'center', padding: 0,
+                                    flexShrink: 0, marginRight: 8,
+                                    outline: 'none',
                                   }}
                                 >
                                   ✕

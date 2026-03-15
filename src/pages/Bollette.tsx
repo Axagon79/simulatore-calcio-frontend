@@ -126,6 +126,7 @@ interface Selezione {
   confidence: number;
   stars: number;
   esito: boolean | null;
+  from_pool?: boolean;
 }
 
 interface Bolletta {
@@ -920,6 +921,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
   const [builderSaved, setBuilderSaved] = useState(false);
   const [builderStake, setBuilderStake] = useState('');
+  const [chatTicketCollapsed, setChatTicketCollapsed] = useState<Record<number, boolean>>({});
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string; bolletta?: Bolletta }[]>([]);
   const [liveScores, setLiveScores] = useState<LiveScore[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -930,7 +932,6 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
   const [storicoStats, setStoricoStats] = useState<any>(null);
   const [storicoLoading, setStoricoLoading] = useState(false);
-  const [dateDisponibili, setDateDisponibili] = useState<string[]>([]);
 
   const fetchBollette = useCallback(async () => {
     setLoading(true);
@@ -1377,18 +1378,24 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
                           borderRadius: 12, overflow: 'hidden',
                         }}>
-                          {/* Header */}
-                          <div style={{
-                            padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
-                            background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
-                            fontSize: 13, fontWeight: 700,
-                          }}>
+                          {/* Header — cliccabile per collassare */}
+                          <div
+                            onClick={() => setChatTicketCollapsed(prev => ({ ...prev, [i]: !prev[i] }))}
+                            style={{
+                              padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
+                              background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
+                              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                            }}
+                          >
                             <span>{m.bolletta.tipo} · {m.bolletta.selezioni.length} sel.</span>
-                            <span>Quota: {m.bolletta.quota_totale.toFixed(2)}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              Quota: {m.bolletta.quota_totale.toFixed(2)}
+                              <span style={{ fontSize: 10 }}>{chatTicketCollapsed[i] ? '▼' : '▲'}</span>
+                            </span>
                           </div>
 
-                          {/* Selezioni con X rimuovi */}
-                          {m.bolletta.selezioni.map((s, j) => (
+                          {/* Selezioni con X rimuovi — collassabile */}
+                          {!chatTicketCollapsed[i] && m.bolletta.selezioni.map((s, j) => (
                             <div key={j} style={{
                               display: 'flex', alignItems: 'flex-start',
                               padding: '8px 12px', fontSize: 13,
@@ -1437,7 +1444,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           ))}
 
                           {/* Footer: quota totale */}
-                          <div style={{
+                          {!chatTicketCollapsed[i] && <div style={{
                             padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
                             borderTop: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.1)',
                             background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.04)',
@@ -1445,9 +1452,10 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           }}>
                             <span>Quota totale</span>
                             <span>{m.bolletta.quota_totale.toFixed(2)}</span>
-                          </div>
+                          </div>}
                         </div>
 
+                        {!chatTicketCollapsed[i] && <>
                         {/* Warning fuori pool — appare solo se ci sono selezioni non nei pronostici AI */}
                         {m.bolletta.selezioni.some((s: Selezione) => s.from_pool === false) && (
                           <details style={{ marginTop: 6 }}>
@@ -1523,6 +1531,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             ✅ Salvata!
                           </div>
                         )}
+                        </>}
                       </div>
                     )}
                   </div>
@@ -1595,7 +1604,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               ))}
               <Quadrante
                 cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
-                items={[...customBollette, ...bollette.filter(b => savedIds.has(b._id))]}
+                items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                 onClick={() => setActiveCategory('custom' as Categoria)}
                 liveScores={liveScores}
               />
@@ -1612,7 +1621,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} />
                 <Quadrante
                   cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
-                  items={[...customBollette, ...bollette.filter(b => savedIds.has(b._id))]}
+                  items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                   onClick={() => setActiveCategory('custom' as Categoria)}
                   liveScores={liveScores}
                 />

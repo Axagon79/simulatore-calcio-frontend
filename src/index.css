@@ -113,3 +113,12 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Tondino lampeggiante per esiti live */
+@keyframes blink-animation {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.blink-dot {
+  animation: blink-animation 1s ease-in-out infinite;
+}

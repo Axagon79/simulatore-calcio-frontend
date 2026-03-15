@@ -1,10 +1,76 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { getTheme, getThemeMode } from '../AppDev/costanti';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
+
+// ============================================
+// LIVE SCORES — Algoritmo esito pronostico
+// ============================================
+
+interface LiveScore {
+  home: string;
+  away: string;
+  live_score: string;
+  live_status: string;
+  live_minute: number;
+}
+
+type EsitoLive = 'pending' | 'win' | 'lose' | 'live_win' | 'live_lose';
+
+function calculateHitFromScore(score: string, pronostico: string, tipo: string): boolean | null {
+  if (!score) return null;
+  const parts = score.split(':');
+  if (parts.length !== 2) return null;
+  const home = parseInt(parts[0]), away = parseInt(parts[1]);
+  if (isNaN(home) || isNaN(away)) return null;
+  const total = home + away;
+
+  if (tipo === 'SEGNO') {
+    const sign = home > away ? '1' : home === away ? 'X' : '2';
+    return pronostico === sign;
+  }
+  if (tipo === 'DOPPIA_CHANCE') {
+    const sign = home > away ? '1' : home === away ? 'X' : '2';
+    if (pronostico === '1X') return sign === '1' || sign === 'X';
+    if (pronostico === 'X2') return sign === 'X' || sign === '2';
+    if (pronostico === '12') return sign === '1' || sign === '2';
+    return null;
+  }
+  if (tipo === 'GOL') {
+    const p = pronostico.toLowerCase();
+    if (p.startsWith('over')) { const thr = parseFloat(pronostico.split(' ')[1]); return total > thr; }
+    if (p.startsWith('under')) { const thr = parseFloat(pronostico.split(' ')[1]); return total < thr; }
+    if (p === 'goal') return home > 0 && away > 0;
+    if (p === 'nogoal') return home === 0 || away === 0;
+    const mg = pronostico.match(/^MG\s+(\d+)-(\d+)/i);
+    if (mg) return total >= parseInt(mg[1]) && total <= parseInt(mg[2]);
+    return null;
+  }
+  if (tipo === 'RISULTATO_ESATTO') {
+    return `${home}:${away}` === pronostico.replace('-', ':');
+  }
+  return null;
+}
+
+function getEsitoLive(sel: Selezione, liveScores: LiveScore[]): EsitoLive {
+  // Se esito già salvato in MongoDB
+  if (sel.esito === true) return 'win';
+  if (sel.esito === false) return 'lose';
+
+  // Cerca live score
+  const live = liveScores.find(s => s.home === sel.home && s.away === sel.away);
+  if (!live || !live.live_score) return 'pending';
+
+  const isFinished = live.live_status === 'Finished';
+  const hit = calculateHitFromScore(live.live_score, sel.pronostico, sel.mercato);
+
+  if (hit === null) return 'pending';
+  if (isFinished) return hit ? 'win' : 'lose';
+  return hit ? 'live_win' : 'live_lose';
+}
 
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
@@ -176,13 +242,14 @@ function Quadrante({ cat, items, onClick }: {
 // VISTA DETTAGLIO — lista bollette di una categoria
 // ============================================
 
-function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId }: {
+function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onBack: () => void;
   savedIds: Set<string>;
   onSave: (id: string) => void;
   savingId: string | null;
+  liveScores: LiveScore[];
 }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
@@ -270,11 +337,18 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId }: {
               {!isCollapsed && (
                 <>
                   {b.selezioni.map((s, i) => {
-                    const bgEsito = s.esito === true
+                    const esLive = getEsitoLive(s, liveScores);
+                    const bgEsito = (esLive === 'win' || esLive === 'live_win')
                       ? (isLight ? '#f0fdf4' : 'rgba(0,255,136,0.08)')
-                      : s.esito === false
+                      : (esLive === 'lose' || esLive === 'live_lose')
                         ? (isLight ? '#fef2f2' : 'rgba(255,68,102,0.08)')
                         : 'transparent';
+                    const dotColor = esLive === 'win' ? '#4caf50'
+                      : esLive === 'lose' ? '#f44336'
+                      : esLive === 'live_win' ? '#4caf50'
+                      : esLive === 'live_lose' ? '#f44336'
+                      : isLight ? '#ddd' : '#444';
+                    const isBlinking = esLive === 'live_win' || esLive === 'live_lose';
 
                     return (
                       <div key={i} style={{
@@ -300,9 +374,9 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId }: {
                               {s.quota.toFixed(2)}
                             </div>
                           </div>
-                          <div style={{
+                          <div className={isBlinking ? 'blink-dot' : ''} style={{
                             width: 22, height: 22, borderRadius: '50%',
-                            background: s.esito === true ? '#4caf50' : s.esito === false ? '#f44336' : isLight ? '#ddd' : '#444',
+                            background: dotColor,
                             flexShrink: 0,
                           }} />
                         </div>
@@ -354,6 +428,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
   const [builderSaved, setBuilderSaved] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string; bolletta?: Bolletta }[]>([]);
+  const [liveScores, setLiveScores] = useState<LiveScore[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const fetchBollette = useCallback(async () => {
     setLoading(true);
@@ -393,6 +469,26 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Polling live scores ogni 15s
+  useEffect(() => {
+    const pollLive = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const res = await fetch(`${API_BASE}/live-scores?date=${today}`);
+        const data = await res.json();
+        if (data.success && data.scores) setLiveScores(data.scores);
+      } catch (_) {}
+    };
+    pollLive();
+    const interval = setInterval(pollLive, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   const toggleSave = async (id: string) => {
     if (!user) { setShowAuth(true); return; }
@@ -502,6 +598,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           savedIds={savedIds}
           onSave={toggleSave}
           savingId={savingId}
+          liveScores={liveScores}
         />
         {showAuth && <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />}
       </>

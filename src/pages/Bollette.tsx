@@ -341,13 +341,21 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     onClick={(e) => { e.stopPropagation(); onSave(b._id); }}
                     disabled={savingId === b._id}
                     style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: 18, padding: '2px 4px',
+                      background: isSaved
+                        ? (isLight ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.12)')
+                        : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'),
+                      border: isSaved
+                        ? `1px solid ${theme.gold}`
+                        : (isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)'),
+                      borderRadius: 8, cursor: 'pointer',
+                      fontSize: 13, padding: '4px 10px',
                       color: isSaved ? theme.gold : textSecondary,
                       opacity: savingId === b._id ? 0.4 : 1,
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      fontWeight: 600,
                     }}
                   >
-                    {isSaved ? '★' : '☆'}
+                    {isSaved ? '★ Salvata' : '☆ Salva'}
                   </button>
                   <span style={{ color: textSecondary, fontSize: 12 }}>
                     {isCollapsed ? '▼' : '▲'}
@@ -626,9 +634,11 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   // Se una categoria è attiva, mostra il dettaglio
   if (activeCategory) {
     const catDef = activeCategory === 'custom'
-      ? { key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }
+      ? { key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }
       : CATEGORIE.find(c => c.key === activeCategory)!;
-    const items = activeCategory === 'custom' ? customBollette : grouped[activeCategory] || [];
+    const items = activeCategory === 'custom'
+      ? [...customBollette, ...bollette.filter(b => savedIds.has(b._id))]
+      : grouped[activeCategory] || [];
     return (
       <>
         <VistaDettaglio
@@ -908,8 +918,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} />
               ))}
               <Quadrante
-                cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
-                items={customBollette}
+                cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+                items={[...customBollette, ...bollette.filter(b => savedIds.has(b._id))]}
                 onClick={() => setActiveCategory('custom' as Categoria)}
               />
             </div>
@@ -924,8 +934,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                 <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} />
                 <Quadrante
-                  cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Bollette personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
-                  items={customBollette}
+                  cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+                  items={[...customBollette, ...bollette.filter(b => savedIds.has(b._id))]}
                   onClick={() => setActiveCategory('custom' as Categoria)}
                 />
               </div>

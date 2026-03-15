@@ -692,6 +692,18 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                   })()}
                   <span style={{ fontWeight: 700, fontSize: 14, color: textPrimary }}>{b.label}</span>
                   <span style={{ fontSize: 12, color: textSecondary }}>· {b.selezioni.length} sel.</span>
+                  {(() => {
+                    const esitiSel = b.selezioni.map(s => getEsitoLive(s, liveScores));
+                    const winCount = esitiSel.filter(e => e === 'win' || e === 'live_win').length;
+                    const loseCount = esitiSel.filter(e => e === 'lose' || e === 'live_lose').length;
+                    if (winCount === 0 && loseCount === 0) return null;
+                    return (
+                      <span style={{ fontSize: 11, color: textSecondary, display: 'flex', gap: 4 }}>
+                        {winCount > 0 && <span style={{ color: '#4caf50', fontWeight: 700 }}>{winCount}✓</span>}
+                        {loseCount > 0 && <span style={{ color: '#f44336', fontWeight: 700 }}>{loseCount}✗</span>}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontWeight: 700, fontSize: 16, color: textPrimary }}>
@@ -1018,8 +1030,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
       if (data.success && data.type === 'bolletta' && data.bolletta) {
         setBuilderResult(data.bolletta);
-        const warningText = (data.warnings || []).length > 0 ? '\n⚠️ ' + data.warnings.join('\n⚠️ ') : '';
-        setChatMessages(prev => [...prev, { role: 'assistant', content: (data.bolletta.reasoning || 'Ecco la tua bolletta!') + warningText, bolletta: data.bolletta }]);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.bolletta.reasoning || 'Ecco la tua bolletta!', bolletta: data.bolletta }]);
       } else if (data.success && data.type === 'messaggio') {
         setChatMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
       } else {
@@ -1150,10 +1161,11 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
           padding: '12px 20px',
         }}>
-          {/* Selettore data */}
+          {/* Selettore data — calendario */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13, color: textSecondary }}>Seleziona data:</span>
-            <select
+            <input
+              type="date"
               value={storicoDate}
               onChange={(e) => { setStoricoDate(e.target.value); if (e.target.value) fetchStorico(e.target.value); }}
               style={{
@@ -1161,15 +1173,9 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)',
                 border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
                 color: textPrimary, fontSize: 14, outline: 'none',
+                colorScheme: isLight ? 'light' : 'dark',
               }}
-            >
-              <option value="">— Scegli —</option>
-              {dateDisponibili.map(d => (
-                <option key={d} value={d}>
-                  {new Date(d + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Stats giorno */}
@@ -1424,22 +1430,22 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           </div>
                         </div>
 
-                        {/* Motivazione espandibile */}
-                        {m.bolletta.reasoning && (
+                        {/* Warning fuori pool — appare solo se ci sono selezioni non nei pronostici AI */}
+                        {m.bolletta.selezioni.some((s: Selezione) => s.from_pool === false) && (
                           <details style={{ marginTop: 6 }}>
                             <summary style={{
-                              fontSize: 12, color: isLight ? '#667eea' : '#11998e',
+                              fontSize: 12, color: '#ff9800',
                               cursor: 'pointer', fontWeight: 600,
                             }}>
-                              💡 Perché queste selezioni?
+                              ⚠️ Avviso
                             </summary>
                             <div style={{
                               fontSize: 12, color: textSecondary, marginTop: 4,
                               padding: '8px 10px', lineHeight: 1.5,
-                              background: isLight ? '#f8f8fc' : 'rgba(255,255,255,0.03)',
+                              background: isLight ? '#fff8e1' : 'rgba(255,152,0,0.08)',
                               borderRadius: 8,
                             }}>
-                              {m.bolletta.reasoning}
+                              Alcune selezioni di questo biglietto non fanno parte dei pronostici generati dal sistema AI. Sono state scelte per esaudire la tua richiesta.
                             </div>
                           </details>
                         )}

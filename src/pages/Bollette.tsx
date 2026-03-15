@@ -252,6 +252,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
   liveScores: LiveScore[];
 }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [stakes, setStakes] = useState<Record<string, string>>({});
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
   const textSecondary = isLight ? '#666' : '#999';
   const cardBg = isLight ? '#ffffff' : '#1a1d2e';
@@ -432,15 +433,51 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     );
                   })}
 
-                  {/* Footer */}
+                  {/* Footer: quota + puntata + vincita */}
                   <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '10px 16px', borderTop: rowBorder, background: headerBg,
                   }}>
-                    <span style={{ fontSize: 13, color: textSecondary }}>Quota totale</span>
-                    <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>
-                      {b.quota_totale.toFixed(2)}
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, color: textSecondary }}>Quota totale</span>
+                      <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>
+                        {b.quota_totale.toFixed(2)}
+                      </span>
+                    </div>
+                    {/* Riga puntata */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                      <span style={{ fontSize: 13, color: textSecondary }}>Puntata €</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={stakes[b._id] || ''}
+                        onChange={(e) => setStakes(prev => ({ ...prev, [b._id]: e.target.value }))}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="0"
+                        style={{
+                          width: 80, textAlign: 'right', padding: '4px 8px',
+                          background: isLight ? '#fff' : 'rgba(255,255,255,0.06)',
+                          border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: 6, fontSize: 15, fontWeight: 700,
+                          color: textPrimary, outline: 'none',
+                        }}
+                      />
+                    </div>
+                    {/* Vincita potenziale */}
+                    {stakes[b._id] && parseFloat(stakes[b._id]) > 0 && (
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        marginTop: 6, padding: '6px 0',
+                        borderTop: rowBorder,
+                      }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: isLight ? '#059669' : '#4caf50' }}>
+                          Vincita potenziale
+                        </span>
+                        <span style={{ fontWeight: 700, fontSize: 18, color: isLight ? '#059669' : '#4caf50' }}>
+                          € {(parseFloat(stakes[b._id]) * b.quota_totale).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

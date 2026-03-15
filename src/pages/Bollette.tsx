@@ -366,11 +366,20 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
               : hasLose ? '#f44336' : allWin ? '#4caf50' : '#4caf50';
             const blink = anyLive && !allDone;
 
+            const hasDefinitiveLose = esitiLive.some(e => e === 'lose');
+            const hasLiveLose = esitiLive.some(e => e === 'live_lose');
+
             const statusLabel = allPending ? null
-              : (allDone && hasLose) ? 'PERSA' : (allDone && allWin) ? 'VINTA!'
-              : hasLose ? 'PERSA' : anyLive ? 'LIVE' : null;
+              : hasDefinitiveLose ? 'PERSA'
+              : (allDone && allWin) ? 'VINTA!'
+              : hasLiveLose ? 'A RISCHIO'
+              : anyLive ? 'LIVE'
+              : null;
             const statusColor = statusLabel === 'PERSA' ? '#f44336'
-              : statusLabel === 'VINTA!' ? '#4caf50' : statusLabel === 'LIVE' ? '#ff9800' : undefined;
+              : statusLabel === 'VINTA!' ? '#4caf50'
+              : statusLabel === 'A RISCHIO' ? '#ff9800'
+              : statusLabel === 'LIVE' ? '#ff9800'
+              : undefined;
 
             const userStake = user ? (b.user_stakes?.[user.uid] || 0) : 0;
 

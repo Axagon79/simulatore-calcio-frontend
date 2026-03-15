@@ -308,6 +308,28 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Tondino esito globale bolletta */}
+                  {(() => {
+                    const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+                    const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
+                    const allWin = esitiLive.every(e => e === 'win');
+                    const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+                    const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
+                    const allPending = esitiLive.every(e => e === 'pending');
+
+                    const color = allPending ? (isLight ? '#ddd' : '#444')
+                      : hasLose ? '#f44336'
+                      : allWin ? '#4caf50'
+                      : '#4caf50'; // in corso, tutto ok per ora
+                    const blink = anyLive && !allDone;
+
+                    return (
+                      <div className={blink ? 'blink-dot' : ''} style={{
+                        width: 14, height: 14, borderRadius: '50%',
+                        background: color, flexShrink: 0,
+                      }} />
+                    );
+                  })()}
                   <span style={{ fontWeight: 700, fontSize: 14, color: textPrimary }}>{b.label}</span>
                   <span style={{ fontSize: 12, color: textSecondary }}>· {b.selezioni.length} sel.</span>
                 </div>
@@ -358,8 +380,26 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                         background: bgEsito,
                       }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary }}>
-                            {s.home} - {s.away}
+                          <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{s.home} - {s.away}</span>
+                            {(() => {
+                              const live = liveScores.find(l => l.home === s.home && l.away === s.away);
+                              if (!live || !live.live_score) return null;
+                              const isFinished = live.live_status === 'Finished';
+                              const scoreColor = isFinished ? textSecondary : '#f44336';
+                              return (
+                                <span style={{
+                                  fontSize: 13, fontWeight: 700,
+                                  color: scoreColor,
+                                  background: isLight ? (isFinished ? '#f0f0f0' : 'rgba(244,67,54,0.08)') : (isFinished ? 'rgba(255,255,255,0.08)' : 'rgba(244,67,54,0.15)'),
+                                  padding: '1px 8px', borderRadius: 6,
+                                }}>
+                                  {live.live_score.replace(':', ' - ')}
+                                  {!isFinished && live.live_minute ? ` ${live.live_minute}'` : ''}
+                                  {isFinished ? ' FT' : ''}
+                                </span>
+                              );
+                            })()}
                           </div>
                           <div style={{ fontSize: 12, color: textSecondary, marginTop: 3, textTransform: 'uppercase' }}>
                             {formatMercato(s.mercato, s.pronostico)}

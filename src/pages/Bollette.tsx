@@ -53,8 +53,9 @@ function formatMercato(mercato: string, pronostico: string): string {
     case 'GOL':
       if (pronostico === 'Goal') return 'GOAL/NOGOAL: GOAL';
       if (pronostico === 'NoGoal') return 'GOAL/NOGOAL: NO GOAL';
-      if (pronostico.startsWith('Over')) return 'U/O 2.5: OVER';
-      if (pronostico.startsWith('Under')) return 'U/O 2.5: UNDER';
+      if (pronostico.startsWith('Over')) return `U/O: ${pronostico.toUpperCase()}`;
+      if (pronostico.startsWith('Under')) return `U/O: ${pronostico.toUpperCase()}`;
+      if (pronostico.startsWith('MG')) return `MULTIGOL: ${pronostico.replace('MG ', '')}`;
       return pronostico;
     case 'RISULTATO_ESATTO': return `RE: ${pronostico}`;
     default: return `${mercato}: ${pronostico}`;

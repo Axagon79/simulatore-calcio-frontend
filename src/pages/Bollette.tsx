@@ -7,6 +7,40 @@ const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
 // ============================================
+// DIZIONARIO COMPETIZIONI — prefissi abbreviati
+// ============================================
+const LEAGUE_PREFIX: Record<string, string> = {
+  'Serie A': 'ITA1',
+  'Serie B': 'ITA2',
+  'Serie C - Girone A': 'ITA3A',
+  'Serie C - Girone B': 'ITA3B',
+  'Serie C - Girone C': 'ITA3C',
+  'Premier League': 'ENG1',
+  'Championship': 'ENG2',
+  'La Liga': 'ESP1',
+  'LaLiga 2': 'ESP2',
+  'Ligue 1': 'FRA1',
+  'Ligue 2': 'FRA2',
+  'Bundesliga': 'GER1',
+  '2. Bundesliga': 'GER2',
+  'Eredivisie': 'NED1',
+  'Liga Portugal': 'POR1',
+  'Süper Lig': 'TUR1',
+  'Champions League': 'UCL',
+  'Europa League': 'UEL',
+  'Conference League': 'UECL',
+  'Brasileirão Serie A': 'BRA1',
+  'Major League Soccer': 'MLS',
+  'Primera División': 'ARG1',
+  'League of Ireland Premier Division': 'IRL1',
+};
+
+function getLeaguePrefix(league?: string): string {
+  if (!league) return '';
+  return LEAGUE_PREFIX[league] || league.substring(0, 3).toUpperCase();
+}
+
+// ============================================
 // LIVE SCORES — Algoritmo esito pronostico
 // ============================================
 
@@ -237,7 +271,7 @@ function Quadrante({ cat, items, onClick, liveScores = [] }: {
               </div>
               {b.selezioni.slice(0, 2).map((s, j) => (
                 <div key={j} style={{ color: dimColor, fontSize: 11, lineHeight: 1.4 }}>
-                  {s.home} - {s.away} · {formatMercato(s.mercato, s.pronostico)}
+                  {s.league && <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.7, marginRight: 4 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away} · {formatMercato(s.mercato, s.pronostico)}
                 </div>
               ))}
               {b.selezioni.length > 2 && (
@@ -474,7 +508,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span>{s.home} - {s.away}</span>
+                              <span>{s.league && <span style={{ fontSize: 10, fontWeight: 600, color: textSecondary, background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away}</span>
                               {(() => {
                                 const live = liveScores.find(l => l.home === s.home && l.away === s.away);
                                 if (!live || !live.live_score) return null;
@@ -762,7 +796,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>{s.home} - {s.away}</span>
+                            <span>{s.league && <span style={{ fontSize: 10, fontWeight: 600, color: textSecondary, background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away}</span>
                             {(() => {
                               const live = liveScores.find(l => l.home === s.home && l.away === s.away);
                               if (!live || !live.live_score) return null;
@@ -1387,7 +1421,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                                 </button>
                               )}
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700 }}>{s.home} - {s.away}</div>
+                                <div style={{ fontWeight: 700 }}>{s.league && <span style={{ fontSize: 10, fontWeight: 600, color: textSecondary, background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away}</div>
                                 <div style={{ fontSize: 11, color: textSecondary, textTransform: 'uppercase' }}>
                                   {formatMercato(s.mercato, s.pronostico)}
                                 </div>

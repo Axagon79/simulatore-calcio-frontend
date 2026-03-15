@@ -195,9 +195,9 @@ function Quadrante({ cat, items, onClick, liveScores = [] }: {
               if (b.esito_globale === 'persa') { perse++; continue; }
               // Calcola da live scores
               const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
-              const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
+              const hasDefinitiveLose = esitiLive.some(e => e === 'lose');
               const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
-              if (hasLose) { perse++; continue; }
+              if (hasDefinitiveLose) { perse++; continue; }
               if (allDone && esitiLive.every(e => e === 'win')) { vinte++; continue; }
             }
             const showStats = vinte > 0 || perse > 0;
@@ -884,6 +884,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [builderLoading, setBuilderLoading] = useState(false);
   const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
   const [builderSaved, setBuilderSaved] = useState(false);
+  const [builderStake, setBuilderStake] = useState('');
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string; bolletta?: Bolletta }[]>([]);
   const [liveScores, setLiveScores] = useState<LiveScore[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -1051,7 +1052,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       const res = await fetch(`${API_BASE}/bollette/save-custom`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ bolletta: builderResult }),
+        body: JSON.stringify({ bolletta: builderResult, stake_amount: parseFloat(builderStake) || 0 }),
       });
       const data = await res.json();
       if (data.success) {
@@ -1431,6 +1432,38 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             </div>
                           </details>
                         )}
+
+                        {/* Puntata + vincita potenziale */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '8px 12px', marginTop: 4,
+                          background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.04)',
+                          borderRadius: 8,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 13, color: textSecondary }}>Puntata €</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={builderStake}
+                              onChange={(e) => setBuilderStake(e.target.value)}
+                              placeholder="0"
+                              style={{
+                                width: 70, padding: '4px 8px', borderRadius: 6,
+                                background: isLight ? '#fff' : 'rgba(255,255,255,0.08)',
+                                border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
+                                color: textPrimary, fontSize: 14, fontWeight: 700,
+                                outline: 'none', textAlign: 'right',
+                              }}
+                            />
+                          </div>
+                          {parseFloat(builderStake) > 0 && m.bolletta.quota_totale && (
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#4caf50' }}>
+                              Vincita: €{(parseFloat(builderStake) * m.bolletta.quota_totale).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
 
                         {/* Bottone salva */}
                         {!builderSaved ? (

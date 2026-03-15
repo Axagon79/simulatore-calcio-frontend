@@ -350,6 +350,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [builderLoading, setBuilderLoading] = useState(false);
   const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
   const [builderSaved, setBuilderSaved] = useState(false);
+  const [builderError, setBuilderError] = useState('');
 
   const fetchBollette = useCallback(async () => {
     setLoading(true);
@@ -411,6 +412,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     setBuilderLoading(true);
     setBuilderResult(null);
     setBuilderSaved(false);
+    setBuilderError('');
     try {
       const token = await getIdToken();
       const res = await fetch(`${API_BASE}/bollette/generate`, {
@@ -421,12 +423,14 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       const data = await res.json();
       if (data.success && data.bolletta) {
         setBuilderResult(data.bolletta);
+      } else if (data.info) {
+        setBuilderError(data.info);
       } else {
-        alert(data.error || 'Errore nella generazione');
+        setBuilderError(data.error || 'Errore nella generazione');
       }
     } catch (err) {
       console.error('Errore generazione:', err);
-      alert('Errore di connessione');
+      setBuilderError('Errore di connessione');
     }
     setBuilderLoading(false);
   };
@@ -614,6 +618,18 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                   {builderLoading ? '⏳ Genero...' : '🚀 Genera'}
                 </button>
               </div>
+
+              {/* Errore */}
+              {builderError && (
+                <div style={{
+                  marginTop: 14, padding: '12px 16px',
+                  background: isLight ? '#fff3e0' : 'rgba(255,152,0,0.12)',
+                  border: isLight ? '1px solid #ffe0b2' : '1px solid rgba(255,152,0,0.3)',
+                  borderRadius: 10, fontSize: 14, color: isLight ? '#e65100' : '#ffb74d',
+                }}>
+                  💬 {builderError}
+                </div>
+              )}
 
               {/* Risultato */}
               {builderResult && (

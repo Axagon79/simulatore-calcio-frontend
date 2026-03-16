@@ -1310,9 +1310,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const today = isStorico ? storicoDate : new Date().toISOString().split('T')[0];
   const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
   for (const b of bolletteAttive) {
-    const tutteOggi = b.selezioni.every(s => s.match_date === today);
-    if (tutteOggi) grouped.oggi.push(b);
-    else grouped[b.tipo]?.push(b);
+    if (b.tipo === 'oggi') {
+      grouped.oggi.push(b);
+    } else {
+      // Smista per quota reale, indipendentemente da cosa dice Mistral
+      const q = b.quota_totale ?? 0;
+      if (q < 3.0) grouped.selettiva.push(b);
+      else if (q < 6.0) grouped.bilanciata.push(b);
+      else grouped.ambiziosa.push(b);
+    }
   }
 
   // Se una categoria è attiva, mostra il dettaglio

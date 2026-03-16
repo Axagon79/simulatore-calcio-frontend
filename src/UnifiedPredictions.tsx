@@ -3265,10 +3265,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}
                   onMouseEnter={isLight && !isMobile ? e => { e.currentTarget.style.background = '#c8cdcd'; } : undefined}
                   onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
-                  onClick={isMobile ? () => setSourceOpen(!sourceOpen) : undefined}
                 >
                   <div
-                    onClick={!isMobile ? () => setSourceOpen(!sourceOpen) : undefined}
+                    onClick={() => setSourceOpen(!sourceOpen)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                   >
                     <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Filtra per Algoritmo</span>
@@ -3341,10 +3340,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}
               onMouseEnter={isLight && !isMobile ? e => { e.currentTarget.style.background = '#c8cdcd'; } : undefined}
               onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
-              onClick={isMobile ? () => setMarketsOpen(!marketsOpen) : undefined}
             >
               <div
-                onClick={!isMobile ? () => setMarketsOpen(!marketsOpen) : undefined}
+                onClick={() => setMarketsOpen(!marketsOpen)}
                 style={{ display: 'flex', alignItems: 'center' }}
               >
                 <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Mercati</span>

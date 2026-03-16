@@ -42,25 +42,32 @@ async function renderAndShare(wrapper: HTMLElement, filename: string): Promise<v
     const blob = new Blob([ab], { type: 'image/png' });
     console.log('[shareCard] blob size:', blob.size);
 
-    // Prova Web Share API (mobile HTTPS — Instagram, Telegram, WhatsApp, ecc.)
-    try {
-      const file = new File([blob], filename, { type: 'image/png' });
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'AI Simulator', text: 'Pronostici AI gratuiti su aisimulator.vercel.app' });
-        return;
+    // Detect mobile
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // Mobile: Web Share API con file (Instagram, Telegram, WhatsApp, ecc.)
+    if (isMobile) {
+      try {
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'AI Simulator', text: 'Pronostici AI gratuiti su aisimulator.vercel.app' });
+          return;
+        }
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
       }
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
     }
 
-    // Download diretto (desktop + fallback)
-    console.log('[shareCard] download diretto...');
+    // Desktop + fallback: download con Blob URL (non dataUrl che ha limiti di memoria)
+    console.log('[shareCard] download diretto via blob URL...');
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = dataUrl;
+    a.href = blobUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
   } finally {
     document.body.removeChild(wrapper);
   }

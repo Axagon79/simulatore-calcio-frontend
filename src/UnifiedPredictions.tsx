@@ -3152,9 +3152,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                 borderRadius: '10px', padding: '2px 6px',
                                 display: 'flex', alignItems: 'center', gap: '3px'
                               }}>
-                                <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : hrColor, fontWeight: '700' }}>HR</span>
-                                <span style={{ fontSize: '10px', fontWeight: '900', color: hrColor }}>{hr}%</span>
-                                <span style={{ fontSize: '8px', opacity: 0.6, color: hrColor }}>{filterCounts.centrate}/{verified}</span>
+                                <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : hrColor, fontWeight: '700', lineHeight: '14px' }}>HR</span>
+                                <span style={{ fontSize: '9px', fontWeight: '900', color: hrColor, lineHeight: '14px' }}>{hr}%</span>
+                                <span style={{ fontSize: '8px', opacity: 0.6, color: hrColor, lineHeight: '14px' }}>{filterCounts.centrate}/{verified}</span>
                               </div>
                             )}
                             {matchHR !== null && (
@@ -3163,9 +3163,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                 borderRadius: '10px', padding: '2px 6px',
                                 display: 'flex', alignItems: 'center', gap: '3px'
                               }}>
-                                <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : matchHRColor, fontWeight: '700' }}>Partite</span>
-                                <span style={{ fontSize: '10px', fontWeight: '900', color: matchHRColor }}>{matchHR}%</span>
-                                <span style={{ fontSize: '8px', opacity: 0.6, color: matchHRColor }}>{matchHits}/{matchesFinished.length}</span>
+                                <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : matchHRColor, fontWeight: '700', lineHeight: '14px' }}>Partite</span>
+                                <span style={{ fontSize: '9px', fontWeight: '900', color: matchHRColor, lineHeight: '14px' }}>{matchHR}%</span>
+                                <span style={{ fontSize: '8px', opacity: 0.6, color: matchHRColor, lineHeight: '14px' }}>{matchHits}/{matchesFinished.length}</span>
                               </div>
                             )}
                           </>
@@ -3176,8 +3176,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         borderRadius: '10px', padding: '2px 6px',
                         display: 'flex', alignItems: 'center', gap: '3px'
                       }}>
-                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700' }}>Yield</span>
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: yieldColor }}>
+                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>Yield</span>
+                        <span style={{ fontSize: '9px', fontWeight: '900', color: yieldColor, lineHeight: '14px' }}>
                           {yieldPct !== null ? `${yieldPct > 0 ? '+' : ''}${yieldPct}%` : '—'}
                         </span>
                       </div>
@@ -3309,8 +3309,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           transition: 'all 0.15s'
                         }}
                       >
-                        Tutti <span style={{ fontSize: '9px', opacity: 0.7 }}>{totalAll}</span>
-                        {allHr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: allHr >= 50 ? theme.hitText : theme.missText }}>{allHr}%</span>}
+                        <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalAll}</span>
+                        {allHr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: allHr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{allHr}%</span>}
                       </button>
                       {sourceCounts.map(g => {
                         const isActive = sourceFilter === g.id;
@@ -3328,9 +3328,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               transition: 'all 0.15s'
                             }}
                           >
-                            <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textDim, fontWeight: '700' }}>{g.label}</span>
-                            <span style={{ fontSize: '9px', color: isActive ? g.color : theme.textFaint, fontWeight: '600' }}>{g.total}</span>
-                            {g.hr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: g.hr >= 50 ? theme.hitText : theme.missText }}>{g.hr}%</span>}
+                            <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textDim, fontWeight: '700', lineHeight: '14px' }}>{g.label}</span>
+                            <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textFaint, fontWeight: '600', lineHeight: '14px' }}>{g.total}</span>
+                            {g.hr !== null && <span style={{ fontSize: '10px', fontWeight: '700', color: g.hr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{g.hr}%</span>}
                           </button>
                         );
                       })}
@@ -3375,9 +3375,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           borderRadius: '10px', padding: '2px 6px',
                           display: 'flex', alignItems: 'center', gap: '3px'
                         }}>
-                          <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : clr, fontWeight: '700' }}>{p.label}</span>
-                          <span style={{ fontSize: '10px', fontWeight: '900', color: clr }}>{p.hr}%</span>
-                          <span style={{ fontSize: '8px', opacity: 0.6, color: clr }}>{p.hits}/{p.finished}</span>
+                          <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : clr, fontWeight: '700', lineHeight: '14px' }}>{p.label}</span>
+                          <span style={{ fontSize: '9px', fontWeight: '900', color: clr, lineHeight: '14px' }}>{p.hr}%</span>
+                          <span style={{ fontSize: '8px', opacity: 0.6, color: clr, lineHeight: '14px' }}>{p.hits}/{p.finished}</span>
                         </div>
                       );
                     });
@@ -3406,7 +3406,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       transition: 'all 0.15s'
                     }}
                   >
-                    Tutti <span style={{ fontSize: '9px', opacity: 0.7 }}>{totalAllTips}</span>
+                    <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalAllTips}</span>
                   </button>
                   {capsules.map(c => {
                     if (c.total === 0) return null;
@@ -3426,12 +3426,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           transition: 'all 0.15s'
                         }}
                       >
-                        <span style={{ fontSize: '10px', color: (isActive || c.id === 'nobet') ? c.color : theme.textDim, fontWeight: '700' }}>{c.label}</span>
-                        <span style={{ fontSize: '9px', color: (isActive || c.id === 'nobet') ? c.color : theme.textFaint, fontWeight: '600' }}>{c.total}</span>
+                        <span style={{ fontSize: '10px', color: (isActive || c.id === 'nobet') ? c.color : theme.textDim, fontWeight: '700', lineHeight: '14px' }}>{c.label}</span>
+                        <span style={{ fontSize: '10px', color: (isActive || c.id === 'nobet') ? c.color : theme.textFaint, fontWeight: '600', lineHeight: '14px' }}>{c.total}</span>
                         {c.finished > 0 && clr && (
                           <>
-                            <span style={{ fontSize: '11px', fontWeight: '900', color: clr }}>{c.hr}%</span>
-                            <span style={{ fontSize: '8px', opacity: 0.6, color: clr }}>{c.hits}/{c.finished}</span>
+                            <span style={{ fontSize: '10px', fontWeight: '900', color: clr, lineHeight: '14px' }}>{c.hr}%</span>
+                            <span style={{ fontSize: '9px', opacity: 0.6, color: clr, lineHeight: '14px' }}>{c.hits}/{c.finished}</span>
                           </>
                         )}
                       </button>

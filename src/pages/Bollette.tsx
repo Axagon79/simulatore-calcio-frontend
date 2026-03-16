@@ -698,76 +698,86 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
               <div
                 onClick={() => setCollapsed(prev => ({ ...prev, [b._id]: !prev[b._id] }))}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 16px', cursor: 'pointer',
+                  padding: '10px 16px', cursor: 'pointer',
                   background: headerBg,
                   borderBottom: isCollapsed ? 'none' : rowBorder,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {/* Tondino esito globale + stato */}
-                  {(() => {
-                    const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
-                    const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
-                    const allWin = esitiLive.every(e => e === 'win');
-                    const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
-                    const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
-                    const allPending = esitiLive.every(e => e === 'pending');
+                {/* Riga 1: tondino + stato + quota + freccia */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {(() => {
+                      const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+                      const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
+                      const allWin = esitiLive.every(e => e === 'win');
+                      const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+                      const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
+                      const allPending = esitiLive.every(e => e === 'pending');
 
-                    const color = allPending ? (isLight ? '#ddd' : '#444')
-                      : hasLose ? '#f44336'
-                      : allWin ? '#4caf50'
-                      : '#4caf50';
-                    const blink = anyLive && !allDone && !hasLose;
+                      const color = allPending ? (isLight ? '#ddd' : '#444')
+                        : hasLose ? '#f44336'
+                        : allWin ? '#4caf50'
+                        : '#4caf50';
+                      const blink = anyLive && !allDone && !hasLose;
 
-                    const statusLabel = allPending ? null
-                      : (allDone && hasLose) ? 'PERSA'
-                      : (allDone && allWin) ? 'VINTA!'
-                      : (hasLose && !allDone) ? 'PERSA'
-                      : anyLive ? 'LIVE'
-                      : null;
-                    const statusColor = statusLabel === 'PERSA' ? '#f44336'
-                      : statusLabel === 'VINTA!' ? '#4caf50'
-                      : statusLabel === 'LIVE' ? '#ff9800'
-                      : undefined;
+                      const statusLabel = allPending ? null
+                        : (allDone && hasLose) ? 'PERSA'
+                        : (allDone && allWin) ? 'VINTA!'
+                        : (hasLose && !allDone) ? 'PERSA'
+                        : anyLive ? 'LIVE'
+                        : null;
+                      const statusColor = statusLabel === 'PERSA' ? '#f44336'
+                        : statusLabel === 'VINTA!' ? '#4caf50'
+                        : statusLabel === 'LIVE' ? '#ff9800'
+                        : undefined;
 
-                    return (
-                      <>
-                        <div className={blink ? 'blink-dot' : ''} style={{
-                          width: 14, height: 14, borderRadius: '50%',
-                          background: color, flexShrink: 0,
-                        }} />
-                        {statusLabel && (
-                          <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
-                            fontSize: 11, fontWeight: 800, color: statusColor,
-                            background: `${statusColor}18`, padding: '2px 8px',
-                            borderRadius: 4, letterSpacing: 0.5,
-                          }}>
-                            {statusLabel}
-                          </span>
-                        )}
-                      </>
-                    );
-                  })()}
-                  <span style={{ fontWeight: 700, fontSize: 14, color: textPrimary }}>{b.label}</span>
-                  <span style={{ fontSize: 12, color: textSecondary }}>· {b.selezioni.length} sel.</span>
-                  {(() => {
-                    const esitiSel = b.selezioni.map(s => getEsitoLive(s, liveScores));
-                    const winCount = esitiSel.filter(e => e === 'win' || e === 'live_win').length;
-                    const loseCount = esitiSel.filter(e => e === 'lose' || e === 'live_lose').length;
-                    if (winCount === 0 && loseCount === 0) return null;
-                    return (
-                      <span style={{ fontSize: 11, color: textSecondary, display: 'flex', gap: 4 }}>
-                        {winCount > 0 && <span style={{ color: '#4caf50', fontWeight: 700 }}>{winCount}✓</span>}
-                        {loseCount > 0 && <span style={{ color: '#f44336', fontWeight: 700 }}>{loseCount}✗</span>}
-                      </span>
-                    );
-                  })()}
+                      return (
+                        <>
+                          <div className={blink ? 'blink-dot' : ''} style={{
+                            width: 12, height: 12, borderRadius: '50%',
+                            background: color, flexShrink: 0,
+                          }} />
+                          {statusLabel && (
+                            <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
+                              fontSize: 11, fontWeight: 800, color: statusColor,
+                              background: `${statusColor}18`, padding: '2px 8px',
+                              borderRadius: 4, letterSpacing: 0.5,
+                            }}>
+                              {statusLabel}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: textSecondary }}>Quota</span>
+                    <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>
+                      {b.quota_totale.toFixed(2)}
+                    </span>
+                    <span style={{ color: textSecondary, fontSize: 12 }}>
+                      {isCollapsed ? '▼' : '▲'}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontWeight: 700, fontSize: 16, color: textPrimary }}>
-                    {b.quota_totale.toFixed(2)}
-                  </span>
+                {/* Riga 2: label + sel + win/lose + bottone salva */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{b.label}</span>
+                    <span style={{ fontSize: 11, color: textSecondary }}>· {b.selezioni.length} sel.</span>
+                    {(() => {
+                      const esitiSel = b.selezioni.map(s => getEsitoLive(s, liveScores));
+                      const winCount = esitiSel.filter(e => e === 'win' || e === 'live_win').length;
+                      const loseCount = esitiSel.filter(e => e === 'lose' || e === 'live_lose').length;
+                      if (winCount === 0 && loseCount === 0) return null;
+                      return (
+                        <span style={{ fontSize: 11, display: 'flex', gap: 4 }}>
+                          {winCount > 0 && <span style={{ color: '#4caf50', fontWeight: 700 }}>{winCount}✓</span>}
+                          {loseCount > 0 && <span style={{ color: '#f44336', fontWeight: 700 }}>{loseCount}✗</span>}
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (canSave || isSaved) onSave(b._id, parseFloat(stakes[b._id]) || 0); }}
                     disabled={savingId === b._id || (!canSave && !isSaved)}
@@ -780,7 +790,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                         : (isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)'),
                       borderRadius: 8,
                       cursor: (!canSave && !isSaved) ? 'not-allowed' : 'pointer',
-                      fontSize: 13, padding: '4px 10px',
+                      fontSize: 11, padding: '3px 8px',
                       color: isSaved ? theme.gold : textSecondary,
                       opacity: (!canSave && !isSaved) ? 0.3 : savingId === b._id ? 0.4 : 1,
                       display: 'flex', alignItems: 'center', gap: 4,
@@ -789,9 +799,6 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                   >
                     {isSaved ? '★ Salvata' : anyStarted ? '⏱ Iniziata' : '☆ Salva'}
                   </button>
-                  <span style={{ color: textSecondary, fontSize: 12 }}>
-                    {isCollapsed ? '▼' : '▲'}
-                  </span>
                 </div>
               </div>
 
@@ -941,10 +948,37 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [showAuth, setShowAuth] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<Categoria | null>(null);
+  const [activeCategory, setActiveCategoryRaw] = useState<Categoria | null>(null);
+
+  // Gestione tasto indietro smartphone: apri/chiudi sezione con history
+  const setActiveCategory = useCallback((cat: Categoria | null) => {
+    if (cat) {
+      window.history.pushState({ ticketSection: cat }, '');
+    }
+    setActiveCategoryRaw(cat);
+  }, []);
 
   // Builder state (chat conversazionale)
-  const [showBuilder, setShowBuilder] = useState(false);
+  const [showBuilderRaw, setShowBuilderRaw] = useState(false);
+
+  const setShowBuilder = useCallback((show: boolean) => {
+    if (show) {
+      window.history.pushState({ ticketBuilder: true }, '');
+    }
+    setShowBuilderRaw(show);
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (showBuilderRaw) {
+        setShowBuilderRaw(false);
+      } else if (activeCategory) {
+        setActiveCategoryRaw(null);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [activeCategory, showBuilderRaw]);
   const [builderMsg, setBuilderMsg] = useState('');
   const [builderLoading, setBuilderLoading] = useState(false);
   const [builderResult, setBuilderResult] = useState<Bolletta | null>(null);
@@ -1304,7 +1338,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
           {/* === BANNER: Costruisci il tuo Ticket AI === */}
           {!isStorico && <div
-            onClick={() => { if (!user) { setShowAuth(true); return; } setShowBuilder(!showBuilder); }}
+            onClick={() => { if (!user) { setShowAuth(true); return; } setShowBuilder(!showBuilderRaw); }}
             style={{
               background: isLight
                 ? 'linear-gradient(135deg, #667eea, #764ba2)'
@@ -1325,14 +1359,14 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 🤖 Costruisci il tuo Ticket AI
               </div>
               <div style={{ fontSize: isMobile ? 12 : 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
-                Chiedi a Mistral di comporre una bolletta su misura per te
+                Chiedi all'AI di comporre una bolletta su misura per te
               </div>
             </div>
-            <span style={{ fontSize: 24, color: '#fff' }}>{showBuilder ? '▲' : '▼'}</span>
+            <span style={{ fontSize: 24, color: '#fff' }}>{showBuilderRaw ? '▲' : '▼'}</span>
           </div>}
 
           {/* === BUILDER CHAT === */}
-          {!isStorico && showBuilder && (
+          {!isStorico && showBuilderRaw && (
             <div style={{
               background: isLight ? '#fff' : '#1a1d2e',
               border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',

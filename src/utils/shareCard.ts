@@ -30,57 +30,37 @@ async function renderAndShare(wrapper: HTMLElement, filename: string): Promise<v
     }
     console.log('[shareCard] canvas generato:', canvas.width, 'x', canvas.height);
 
-    let blob: Blob | null = null;
-    try {
-      blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((b) => resolve(b), 'image/png');
-        // Timeout: se toBlob non chiama la callback entro 3s, usa toDataURL
-        setTimeout(() => resolve(null), 3000);
-      });
-    } catch { /* ignore */ }
+    // Usa toDataURL (affidabile su tutti i browser, toBlob si blocca su alcuni desktop)
+    const dataUrl = canvas.toDataURL('image/png');
+    console.log('[shareCard] dataUrl length:', dataUrl.length);
 
-    // Fallback: toDataURL se toBlob fallisce
-    if (!blob) {
-      console.log('[shareCard] toBlob fallito, uso toDataURL');
-      const dataUrl = canvas.toDataURL('image/png');
-      const res = await fetch(dataUrl);
-      blob = await res.blob();
-    }
+    // Converti dataURL in Blob
+    const byteString = atob(dataUrl.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: 'image/png' });
+    console.log('[shareCard] blob size:', blob.size);
 
-    if (!blob) {
-      console.error('shareCard: toBlob ha restituito null');
-      return;
-    }
-
-    // Prova Web Share API con file (mobile nativo — Instagram, Telegram, WhatsApp, ecc.)
+    // Prova Web Share API (mobile HTTPS — Instagram, Telegram, WhatsApp, ecc.)
     try {
       const file = new File([blob], filename, { type: 'image/png' });
-      if (navigator.share) {
-        // Prova prima con file
-        const shareData: ShareData = { files: [file], title: 'AI Simulator', text: 'Pronostici AI gratuiti su aisimulator.vercel.app' };
-        if (navigator.canShare?.(shareData)) {
-          await navigator.share(shareData);
-          return;
-        }
-        // Fallback: share senza file (solo testo + url) — apre comunque il menu nativo
-        await navigator.share({ title: 'AI Simulator', text: 'Pronostici AI gratuiti su aisimulator.vercel.app', url: 'https://aisimulator.vercel.app' });
-        // E scarica anche l'immagine
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'AI Simulator', text: 'Pronostici AI gratuiti su aisimulator.vercel.app' });
+        return;
       }
     } catch (err) {
-      // L'utente ha annullato lo share o non supportato — ignora
       if ((err as Error).name === 'AbortError') return;
     }
 
-    console.log('[shareCard] blob size:', blob.size, 'tentativo download...');
-    // Fallback desktop/HTTP: download diretto
-    const url = URL.createObjectURL(blob);
+    // Download diretto (desktop + fallback)
+    console.log('[shareCard] download diretto...');
     const a = document.createElement('a');
-    a.href = url;
+    a.href = dataUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } finally {
     document.body.removeChild(wrapper);
   }

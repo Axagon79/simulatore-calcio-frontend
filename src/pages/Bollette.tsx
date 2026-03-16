@@ -1129,6 +1129,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   // Storico
   const [showStorico, setShowStorico] = useState(false);
   const [storicoDate, setStoricoDate] = useState('');
+  const [calendarMonth, setCalendarMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
+  const [dateDisponibili, setDateDisponibili] = useState<Set<string>>(new Set());
   const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
   const [storicoStats, setStoricoStats] = useState<any>(null);
   const [storicoLoading, setStoricoLoading] = useState(false);
@@ -1165,6 +1167,14 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   }, [user]);
 
   useEffect(() => { fetchBollette(); }, [fetchBollette]);
+
+  // Carica date disponibili per il calendario
+  useEffect(() => {
+    fetch(`${API_BASE}/bollette/date-disponibili`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setDateDisponibili(new Set(d.dates || [])); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onResize = () => setIsMobile(isMob());
@@ -1387,32 +1397,98 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
         </div>
       </div>
 
-      {/* Pannello calendario storico */}
-      {showStorico && (
-        <div style={{
-          background: isLight ? '#fff' : theme.panelSolid,
-          borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
-          padding: '12px 20px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: textSecondary }}>Seleziona data:</span>
-            <input
-              type="date"
-              value={storicoDate}
-              onChange={(e) => { setStoricoDate(e.target.value); if (e.target.value) fetchStorico(e.target.value); }}
-              style={{
-                padding: '6px 12px', borderRadius: 8,
-                background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)',
-                border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
-                color: textPrimary, fontSize: 14, outline: 'none',
-                colorScheme: isLight ? 'light' : 'dark',
-              }}
-            />
+      {/* Calendario storico — popup/modal */}
+      {showStorico && (() => {
+        const { year, month } = calendarMonth;
+        const firstDay = new Date(year, month, 1).getDay(); // 0=Dom
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const offset = firstDay === 0 ? 6 : firstDay - 1; // Lu=0
+        const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        return (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} onClick={() => setShowStorico(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: isLight ? '#fff' : theme.panelSolid,
+            border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 16, padding: '16px 20px', width: 300, maxWidth: '90vw',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}>
+            {/* Header mese */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <button onClick={() => setCalendarMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 })} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: textSecondary, padding: '4px 8px',
+              }}>◀</button>
+              <span style={{ fontWeight: 700, fontSize: 15, color: textPrimary }}>{monthNames[month]} {year}</span>
+              <button onClick={() => setCalendarMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 })} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: textSecondary, padding: '4px 8px',
+              }}>▶</button>
+            </div>
+            {/* Giorni settimana */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, textAlign: 'center', marginBottom: 4 }}>
+              {['Lu', 'Ma', 'Me', 'Gi', 'Ve', 'Sa', 'Do'].map(d => (
+                <div key={d} style={{ fontSize: 11, color: textSecondary, fontWeight: 600, padding: '4px 0' }}>{d}</div>
+              ))}
+            </div>
+            {/* Griglia giorni */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, textAlign: 'center' }}>
+              {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const hasData = dateDisponibili.has(dateStr);
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === storicoDate;
+                const isFuture = dateStr > todayStr;
+
+                return (
+                  <button
+                    key={day}
+                    disabled={isFuture}
+                    onClick={() => {
+                      if (dateStr === todayStr) {
+                        setStoricoDate('');
+                      } else {
+                        setStoricoDate(dateStr); fetchStorico(dateStr);
+                      }
+                      setShowStorico(false);
+                    }}
+                    style={{
+                      background: isSelected ? (isLight ? '#667eea' : '#11998e')
+                        : isToday ? (isLight ? '#e3f2fd' : 'rgba(17,153,142,0.2)')
+                        : 'transparent',
+                      color: isSelected ? '#fff'
+                        : isFuture ? (isLight ? '#ccc' : '#444')
+                        : isToday ? (isLight ? '#667eea' : '#11998e')
+                        : textPrimary,
+                      border: 'none', borderRadius: 8, padding: '8px 0',
+                      fontSize: 13, fontWeight: isToday || isSelected ? 700 : 400,
+                      cursor: isFuture ? 'default' : 'pointer',
+                      position: 'relative' as const,
+                    }}
+                  >
+                    {day}
+                    {hasData && !isSelected && (
+                      <div style={{
+                        position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
+                        width: 4, height: 4, borderRadius: '50%',
+                        background: isLight ? '#667eea' : '#11998e',
+                      }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Torna a oggi */}
             {isStorico && (
               <button
                 onClick={() => { setStoricoDate(''); setShowStorico(false); }}
                 style={{
-                  padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  marginTop: 10, width: '100%', padding: '8px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: isLight ? '#667eea' : '#11998e', color: '#fff',
                   border: 'none', cursor: 'pointer',
                 }}
@@ -1421,8 +1497,9 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               </button>
             )}
           </div>
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: textSecondary }}>
@@ -1450,10 +1527,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               border: isLight ? '1px solid #c5cae9' : '1px solid rgba(255,255,255,0.1)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => { setStoricoDate(''); }} style={{
+                  background: isLight ? '#667eea' : '#11998e', color: '#fff',
+                  border: 'none', borderRadius: 8, padding: '6px 12px',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>← Oggi</button>
                 <span style={{ fontSize: 20 }}>📅</span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: isMobile ? 14 : 16, color: textPrimary }}>
-                    Storico: {new Date(storicoDate + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date(storicoDate + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                   </div>
                   <div style={{ fontSize: 12, color: textSecondary }}>
                     {bolletteAttive.length} biglietti generati

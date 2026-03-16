@@ -3411,14 +3411,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = isActive ? '' : (isLight ? theme.surfaceSubtle : theme.surfaceSubtle); }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '5px',
-                          background: isActive ? `${c.color}${isLight ? '20' : '25'}` : theme.surfaceSubtle,
-                          border: `1px solid ${isActive ? c.color : theme.surface05}`,
+                          background: (isActive || c.id === 'nobet') ? `${c.color}${isLight ? '20' : '25'}` : theme.surfaceSubtle,
+                          border: `1px solid ${(isActive || c.id === 'nobet') ? c.color : theme.surface05}`,
                           borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
                           transition: 'all 0.15s'
                         }}
                       >
-                        <span style={{ fontSize: '10px', color: isActive ? c.color : theme.textDim, fontWeight: '700' }}>{c.label}</span>
-                        <span style={{ fontSize: '9px', color: isActive ? c.color : theme.textFaint, fontWeight: '600' }}>{c.total}</span>
+                        <span style={{ fontSize: '10px', color: (isActive || c.id === 'nobet') ? c.color : theme.textDim, fontWeight: '700' }}>{c.label}</span>
+                        <span style={{ fontSize: '9px', color: (isActive || c.id === 'nobet') ? c.color : theme.textFaint, fontWeight: '600' }}>{c.total}</span>
                         {c.finished > 0 && clr && (
                           <>
                             <span style={{ fontSize: '11px', fontWeight: '900', color: clr }}>{c.hr}%</span>

@@ -167,7 +167,8 @@ interface Selezione {
 interface Bolletta {
   _id: string;
   date: string;
-  tipo: 'selettiva' | 'bilanciata' | 'ambiziosa';
+  tipo: 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
+  custom?: boolean;
   quota_totale: number;
   label: string;
   selezioni: Selezione[];
@@ -1307,7 +1308,6 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   // Raggruppa — usa storicoBollette se data selezionata, altrimenti bollette di oggi
   const isStorico = !!storicoDate && storicoDate !== new Date().toISOString().split('T')[0];
   const bolletteAttive = isStorico ? storicoBollette : bollette;
-  const today = isStorico ? storicoDate : new Date().toISOString().split('T')[0];
   const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
   for (const b of bolletteAttive) {
     if (b.tipo === 'oggi') {

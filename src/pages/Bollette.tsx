@@ -1081,9 +1081,13 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [activeCategory, setActiveCategoryRaw] = useState<Categoria | null>(null);
 
   // Gestione tasto indietro smartphone: apri/chiudi sezione con history
+  // Ref per sapere se siamo "dentro" una sezione (per popstate)
+  const hasHistoryEntry = useRef(false);
+
   const setActiveCategory = useCallback((cat: Categoria | null) => {
-    if (cat) {
-      window.history.pushState({ ticketSection: cat }, '');
+    if (cat && !hasHistoryEntry.current) {
+      window.history.pushState({ ticketView: 'section' }, '');
+      hasHistoryEntry.current = true;
     }
     setActiveCategoryRaw(cat);
   }, []);
@@ -1092,8 +1096,9 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [showBuilderRaw, setShowBuilderRaw] = useState(false);
 
   const setShowBuilder = useCallback((show: boolean) => {
-    if (show) {
+    if (show && !hasHistoryEntry.current) {
       window.history.pushState({ ticketBuilder: true }, '');
+      hasHistoryEntry.current = true;
     }
     setShowBuilderRaw(show);
   }, []);
@@ -1102,8 +1107,10 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     const onPopState = () => {
       if (showBuilderRaw) {
         setShowBuilderRaw(false);
+        hasHistoryEntry.current = false;
       } else if (activeCategory) {
         setActiveCategoryRaw(null);
+        hasHistoryEntry.current = false;
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -1304,7 +1311,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     if (activeCategory === 'custom') {
       return (
         <MieBollette
-          onBack={() => setActiveCategory(null)}
+          onBack={() => { hasHistoryEntry.current = false; window.history.back(); }}
           liveScores={liveScores}
           user={user}
           getIdToken={getIdToken}
@@ -1319,7 +1326,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
         <VistaDettaglio
           cat={catDef}
           items={items}
-          onBack={() => setActiveCategory(null)}
+          onBack={() => { hasHistoryEntry.current = false; window.history.back(); }}
           savedIds={savedIds}
           onSave={toggleSave}
           savingId={savingId}

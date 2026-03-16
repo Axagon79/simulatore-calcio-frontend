@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getTheme, getThemeMode } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import {
+import { API_BASE } from '../AppDev/costanti';
   commentoGlobale, commentoPerTipo, commentoCategorie,
   commentoGiorni, commentoSettimane, commentoCorrelazioni, commentoFeatures,
   commentoCluster, commentoCampionati,
@@ -12,9 +13,6 @@ import {
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
-  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 // --- COLORI TEMA ---
 const C = isLight ? {

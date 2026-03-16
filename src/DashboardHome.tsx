@@ -2,16 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import AuthModal from './components/AuthModal'
 // --- CONFIGURAZIONE ---
-const isLocal = typeof window !== 'undefined' && (
-  ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
-  window.location.hostname.startsWith('192.168.')
-);
-const API_BASE = isLocal
-  ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:5001/puppals-456c7/us-central1/api`
-  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 // --- TEMA (centralizzato) ---
-import { getTheme, getThemeMode } from './AppDev/costanti';
+import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 import { checkAdmin } from './permissions';
 import StemmaImg from './components/StemmaImg';
 import TopbarPronostici from './components/TopbarPronostici';
@@ -196,7 +189,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
       {/* Sfondo stadio trasparente */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundImage: 'url(/bg-stadium.png)',
+        backgroundImage: 'url(/bg-stadium.webp)',
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
         opacity: isLight ? 0.02 : 0.025,
         filter: 'saturate(3) contrast(1.6) brightness(1.3)',
@@ -238,7 +231,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
             }}>
               <img
-                src="/logo-virgo.png"
+                src="/logo-virgo.webp"
                 alt="Logo"
                 style={{
                   width: isMobile ? 28 : 32,
@@ -736,35 +729,35 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             title: 'Competizioni Selezionate',
             subtitle: 'Solo il meglio, niente compromessi',
             text: 'Ogni competizione è stata scelta perché calibrata al massimo con i nostri algoritmi. Leghe su misura per offrire la massima precisione.',
-            img: '/showcase-competizioni.png',
+            img: '/showcase-competizioni.webp',
             link: { label: 'Esplora le competizioni', action: () => { /* scroll to leagues */ document.querySelector('[data-section="competizioni"]')?.scrollIntoView({ behavior: 'smooth' }); } },
           },
           {
             title: 'Pronostici Intelligenti',
             subtitle: 'Dati che parlano, non opinioni',
             text: 'Algoritmi avanzati analizzano statistiche, quote e tendenze per generare pronostici con livelli di confidenza trasparenti.',
-            img: '/showcase-pronostici.png',
+            img: '/showcase-pronostici.webp',
             link: { label: 'Scopri i pronostici', action: () => { window.location.href = '/best-picks'; } },
           },
           {
             title: 'Simulazione Avanzata',
             subtitle: 'Gioca la partita prima del fischio',
             text: 'Simula qualsiasi match con 6 algoritmi diversi: statistico, tattico, dinamico, Monte Carlo e altri.',
-            img: '/showcase-simulazione.png',
+            img: '/showcase-simulazione.webp',
             link: { label: 'Simula una partita', action: () => { window.location.href = '/simulate'; } },
           },
           {
             title: 'Track Record',
             subtitle: 'La trasparenza, il nostro punto di forza',
             text: 'Risultati verificabili, non promesse. Ogni pronostico viene tracciato e verificato. Consulta lo storico completo con percentuali di successo reali.',
-            img: '/showcase-trackrecord.png',
+            img: '/showcase-trackrecord.webp',
             link: { label: 'Verifica i risultati', action: () => { window.location.href = '/track-record'; } },
           },
           {
             title: 'Assistente AI',
             subtitle: 'Mai più da solo',
             text: 'Un coach personale che analizza partite, risponde alle tue domande e ti guida nelle scelte. Sempre disponibile.',
-            img: '/showcase-assistente.jpg',
+            img: '/showcase-assistente.webp',
             link: { label: 'Chiedi al Coach', action: () => setCoachOpen(true) },
           },
           {
@@ -1070,7 +1063,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             {!isMobile && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <img src="/logo-virgo.png" alt="Logo" style={{
+                  <img src="/logo-virgo.webp" alt="Logo" style={{
                     width: 24, height: 24, objectFit: 'contain',
                     filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
                   }} />
@@ -1583,7 +1576,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src="/coach-ai-robot.png" alt="" style={{ height: '30px', width: 'auto' }} />
+                <img src="/coach-ai-robot.webp" alt="" style={{ height: '30px', width: 'auto' }} />
                 <div>
                   <div style={{ color: isLight ? '#111827' : 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: '14px' }}>Coach AI</div>
                   <div style={{ color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)', fontSize: '10px' }}>Guida al sistema di pronostici</div>
@@ -1605,7 +1598,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               {coachMessages.length === 0 && (
                 <div style={{ padding: '20px 6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                    <img src="/coach-ai-robot.png" alt="" style={{ height: '36px', width: 'auto' }} />
+                    <img src="/coach-ai-robot.webp" alt="" style={{ height: '36px', width: 'auto' }} />
                     <div style={{ color: isLight ? '#111827' : 'rgba(255,255,255,0.9)', fontSize: '15px', fontWeight: 600 }}>Ciao! Sono il tuo assistente.</div>
                   </div>
                   <div style={{

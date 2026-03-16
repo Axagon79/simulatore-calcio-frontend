@@ -8,6 +8,7 @@ type ConfrontoFilter = 'tutte' | 'identiche' | 'diverse' | 'parziali' | 'solo_pr
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode } from './AppDev/costanti';
 import StemmaImg from './components/StemmaImg';
+import { API_BASE } from './AppDev/costanti';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
@@ -15,9 +16,7 @@ const isLight = getThemeMode() === 'light';
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
 
 // --- API BASE ---
-const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
-  : 'https://api-6b34yfzjia-uc.a.run.app';
+
 
 // --- MAPPA LEGA → CARTELLA STEMMI ---
 const LEAGUE_TO_FOLDER: Record<string, string> = {

@@ -180,7 +180,7 @@ export default function ElementoPartita({
               }}
             >
               <img
-                src="/coach-ai-robot.png"
+                src="/coach-ai-robot.webp"
                 alt="Coach AI"
                 style={{
                   height: '55px',

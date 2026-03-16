@@ -3,6 +3,7 @@ import './styles/SimulationAnimation.css';
 import './styles/SimulationAnimation-responsive.css';
 import type { MatchEvent, SimulationResult } from './types';
 import { getTheme, getThemeMode } from './AppDev/costanti';
+import { API_BASE } from './AppDev/costanti';
 
 const appTheme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -333,9 +334,7 @@ export default function CupAnimatedField({
       }, 100);
       
       try {
-        const API_BASE = window.location.hostname === 'localhost' 
-          ? 'http://localhost:5001/puppals-456c7/us-central1/api'
-          : 'https://api-6b34yfzjia-uc.a.run.app';
+        
         
         // STEP 2: CARICA FORMAZIONI (in parallelo)
         const formationsPromise = fetch('https://us-central1-puppals-456c7.cloudfunctions.net/get_formations', {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import './index.css';
@@ -8,30 +8,36 @@ import { AuthProvider } from './contexts/AuthContext';
 
 // Setta data-theme sul body per regole CSS globali (es. stemmi drop-shadow)
 document.body.dataset.theme = getThemeMode();
-import AppDev from './AppDev';
-import TuningMixer from './pages/TuningMixer';
-import TrackRecord from './pages/TrackRecord';
-import PredictionsMixer from './pages/PredictionsMixer';
-import Bankroll from './pages/Bankroll';
-import MoneyManagement from './pages/MoneyManagement';
-import SistemaC from './pages/SistemaC';
-import UnifiedPredictions from './UnifiedPredictions';
-import MoneyTracker from './pages/MoneyTracker';
-import StepSystem from './pages/StepSystem';
-import Settings from './pages/Settings';
-import AnalisiStorica from './pages/AnalisiStorica';
-import SimulazioneRapida from './pages/SimulazioneRapida';
-import Prezzi from './pages/Prezzi';
-import Wallet from './pages/Wallet';
-import Bollette from './pages/Bollette';
-import ContactPage from './pages/ContactPage';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsPage from './pages/TermsPage';
+
+// Componenti sempre caricati (layout globale)
 import WalletBadge from './components/WalletBadge';
 import CookieBanner from './components/ConsentBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import TermsConsentModal from './components/TermsConsentModal';
 import { useAuth } from './contexts/AuthContext';
+
+// Pagine lazy — caricate on-demand quando l'utente naviga
+const AppDev = lazy(() => import('./AppDev'));
+const TuningMixer = lazy(() => import('./pages/TuningMixer'));
+const TrackRecord = lazy(() => import('./pages/TrackRecord'));
+const PredictionsMixer = lazy(() => import('./pages/PredictionsMixer'));
+const Bankroll = lazy(() => import('./pages/Bankroll'));
+const MoneyManagement = lazy(() => import('./pages/MoneyManagement'));
+const SistemaC = lazy(() => import('./pages/SistemaC'));
+const UnifiedPredictions = lazy(() => import('./UnifiedPredictions'));
+const MoneyTracker = lazy(() => import('./pages/MoneyTracker'));
+const StepSystem = lazy(() => import('./pages/StepSystem'));
+const Settings = lazy(() => import('./pages/Settings'));
+const AnalisiStorica = lazy(() => import('./pages/AnalisiStorica'));
+const SimulazioneRapida = lazy(() => import('./pages/SimulazioneRapida'));
+const Prezzi = lazy(() => import('./pages/Prezzi'));
+const Wallet = lazy(() => import('./pages/Wallet'));
+const Bollette = lazy(() => import('./pages/Bollette'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+
+import ErrorBoundary from './components/ErrorBoundary';
 
 const LEGAL_PATHS = ['/termini', '/privacy', '/disclaimer', '/privacy-policy'];
 
@@ -64,9 +70,11 @@ function AppRoot() {
   }, []);
 
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <BrowserRouter>
       <ConsentGate>
+        <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'#0a0e17',color:'#fff',fontSize:'1.1rem'}}>Caricamento...</div>}>
         <Routes>
           {import.meta.env.DEV && (
             <Route path="/mixer" element={<TuningMixer />} />
@@ -93,12 +101,14 @@ function AppRoot() {
           <Route path="/disclaimer" element={<TermsPage />} />
           <Route path="/*" element={<AppDev />} />
         </Routes>
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+        </Suspense>
+      {showSettings && <Suspense fallback={null}><Settings onClose={() => setShowSettings(false)} /></Suspense>}
       <WalletBadge />
       <CookieBanner />
       </ConsentGate>
       </BrowserRouter>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

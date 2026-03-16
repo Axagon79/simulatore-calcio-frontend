@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import CupMatchAnalysis from './CupMatchAnalysis';
 import CupMatchResult from './CupMatchResult';
 import { getTheme, getThemeMode } from './AppDev/costanti';
+import { API_BASE } from './AppDev/costanti';
 
 const appTheme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -79,9 +80,7 @@ export default function CupMatches({ cupId, onOpenCoachAI }: CupMatchesProps) {
   
 
   const theme = cupTheme[cupId];
-  const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5001/puppals-456c7/us-central1/api'
-  : 'https://api-6b34yfzjia-uc.a.run.app';
+  
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -222,9 +221,7 @@ if (viewState === 'analysis' && selectedMatch) {
             
             try {
                 
-              const API_BASE = window.location.hostname === 'localhost' 
-                ? 'http://localhost:5001/puppals-456c7/us-central1/api'
-                : 'https://api-6b34yfzjia-uc.a.run.app';
+              
               
               const response = await fetch(`${API_BASE}/simulation/simulate-cup`, {
                 method: 'POST',

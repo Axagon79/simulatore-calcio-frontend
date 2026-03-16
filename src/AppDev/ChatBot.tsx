@@ -140,7 +140,7 @@ export default function ChatBot({
           <div style={styles.chatHeader}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src="/coach-ai-robot.png" alt="" style={{ height: '32px', width: 'auto' }} />
+                <img src="/coach-ai-robot.webp" alt="" style={{ height: '32px', width: 'auto' }} />
                 <div>
                   <span style={{ fontWeight: 700, fontSize: '15px', letterSpacing: '0.3px' }}>Coach AI</span>
                   {chatMatchContext && (
@@ -164,7 +164,7 @@ export default function ChatBot({
                     {/* Etichetta mittente per bot */}
                     {msg.sender === 'bot' && !msg.isLoading && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px', paddingLeft: '4px' }}>
-                        <img src="/coach-ai-robot.png" alt="" style={{ height: '18px', width: 'auto' }} />
+                        <img src="/coach-ai-robot.webp" alt="" style={{ height: '18px', width: 'auto' }} />
                         <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Coach AI</span>
                       </div>
                     )}
@@ -363,7 +363,7 @@ export default function ChatBot({
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.3s ease'
         }}>
-          <img src="/coach-ai-robot.png" alt="Coach AI" style={{ height: '42px', width: 'auto', pointerEvents: 'none' }} />
+          <img src="/coach-ai-robot.webp" alt="Coach AI" style={{ height: '42px', width: 'auto', pointerEvents: 'none' }} />
         </div>
       </div>
     </>

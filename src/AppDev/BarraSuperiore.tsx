@@ -113,7 +113,7 @@ export default function BarraSuperiore({
         <div style={{ display: 'flex', alignItems: 'center', gap: '36px', paddingLeft: '6px', zIndex: 10 }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
             <img
-              src="/logo-virgo.png"
+              src="/logo-virgo.webp"
               alt="Logo"
               style={{
                 width: 32,

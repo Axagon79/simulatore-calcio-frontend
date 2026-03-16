@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
-import infoIcon from '../assets/info-icon.png';
+import infoIcon from '../assets/info-icon.webp';
 
-import { getTheme } from '../AppDev/costanti';
+import { getTheme, API_BASE } from '../AppDev/costanti';
 const theme = getTheme();
 
-const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
-  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 interface StatsBlock {
   count: number;

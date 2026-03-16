@@ -36,13 +36,13 @@ body {
 
 /* Dark mode: sfondo originale con overlay scuro */
 body[data-theme="dark"] {
-  background: url('/bg-stadium.png') center center / cover no-repeat fixed;
+  background: url('/bg-stadium.webp') center center / cover no-repeat fixed;
   background-color: #0a0c10;
 }
 
 /* Light mode: immagine normale + overlay bianco */
 body[data-theme="light"] {
-  background: url('/bg-stadium.png') center center / cover no-repeat fixed;
+  background: url('/bg-stadium.webp') center center / cover no-repeat fixed;
 }
 
 /* Overlay sfondo per tema — usa ::before per non coprire il contenuto */

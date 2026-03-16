@@ -1,20 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
-import infoIcon from '../assets/info-icon.png';
+import infoIcon from '../assets/info-icon.webp';
 
 // ============================================
 // THEME & CONSTANTS
 // ============================================
 
-import { getTheme } from '../AppDev/costanti';
+import { getTheme, API_BASE } from '../AppDev/costanti';
 const theme = getTheme();
 
-const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-  || window.location.hostname.startsWith('192.168.');
-const API_BASE = isLocal
-  ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:5001/puppals-456c7/us-central1/api`
-  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 const MAX_OPEN_TABS = 5;
 

@@ -3,9 +3,7 @@ import type { League } from '../types';
 // --- CONFIGURAZIONE API ---
 
 // 1. API Node.js
-export const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://127.0.0.1:5001/puppals-456c7/us-central1/api'
-  : 'https://api-6b34yfzjia-uc.a.run.app';
+export const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
 
 // 2. API PYTHON AI -> FORZIAMO IL CLOUD!
 export const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';

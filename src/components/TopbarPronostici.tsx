@@ -3,17 +3,11 @@ import html2canvas from 'html2canvas';
 import { getTheme } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import StemmaImg from './StemmaImg';
+import { API_BASE } from '../AppDev/costanti';
 
 const theme = getTheme();
 const _canSeeTips = checkAdmin() || localStorage.getItem('pp_pu') === '1';
 
-const isLocal = typeof window !== 'undefined' && (
-  ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
-  window.location.hostname.startsWith('192.168.')
-);
-const API_BASE = isLocal
-  ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:5001/puppals-456c7/us-central1/api`
-  : 'https://api-6b34yfzjia-uc.a.run.app';
 
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
 

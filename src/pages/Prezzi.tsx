@@ -162,7 +162,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
-          <img src="/logo-virgo.png" alt="Logo" style={{
+          <img src="/logo-virgo.webp" alt="Logo" style={{
             width: 32, height: 32, objectFit: 'contain',
             filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
           }} />

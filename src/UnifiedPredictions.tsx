@@ -507,6 +507,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   // Funzione filtraggio mercato su prediction
   const predMatchesMarket = (p: Prediction): boolean => {
     if (marketFilter === 'tutti') return true;
+    if (marketFilter === 'nobet') return p.decision === 'NO_BET';
     const mf = MARKET_DEFS.find(m => m.id === marketFilter);
     if (!mf) return true;
     return p.pronostici?.some(mf.filter) ?? false;
@@ -3062,7 +3063,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
             return { ...def, total, finished: verified.length, hits, hr, threshold: avgTh };
           };
-          const capsules = MARKET_DEFS.map(def => capsuleData(def));
+          const capsules = MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
+          // NO BET: conta prediction escluse, non tips
+          const noBetPreds = sourcePreds.filter(p => p.decision === 'NO_BET').filter(predMatchesSource);
+          if (noBetPreds.length > 0) {
+            capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+          }
           const totalAllTips = allTips.length;
           const reHitsTotal = sourceFilteredPreds.filter(p => {
             const es = getEffectiveScore(p);

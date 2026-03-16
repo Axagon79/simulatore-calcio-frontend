@@ -8,6 +8,7 @@ type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng'
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
+import { sharePrediction } from './utils/shareCard';
 import StemmaImg from './components/StemmaImg';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -272,6 +273,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const predCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -1229,6 +1231,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return (
       <div
         key={cardKey}
+        ref={(el) => { predCardRefs.current[cardKey] = el; }}
         style={{
           background: theme.panel,
           border: theme.panelBorder,
@@ -1385,12 +1388,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
                       {quota && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
+                      <span
+                        onClick={(e) => { e.stopPropagation(); sharePrediction({ home: pred.home, away: pred.away, league: pred.league, matchTime: pred.match_time, date: pred.date, pronostico: p.pronostico, tipo: p.tipo, quota: quota ? Number(quota) : undefined, confidence: p.confidence, hit: isHit }); }}
+                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', marginLeft: '4px', background: isLight ? 'rgba(0,119,204,0.12)' : 'rgba(6,182,212,0.15)', borderRadius: '4px', padding: '2px 4px', transition: 'all 0.2s' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,119,204,0.25)' : 'rgba(6,182,212,0.35)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isLight ? 'rgba(0,119,204,0.12)' : 'rgba(6,182,212,0.15)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                        title="Condividi"
+                      >
+                        <img src="/share-icon.png" alt="" style={{ width: '14px', height: '14px', filter: isLight ? 'brightness(0) saturate(100%) invert(30%) sepia(90%) saturate(600%) hue-rotate(190deg)' : 'brightness(0) saturate(100%) invert(65%) sepia(90%) saturate(600%) hue-rotate(150deg)', verticalAlign: 'middle' }} />
+                      </span>
                     </span>
                   );
                 })}
                 </div>
               </div>
-
             </div>
           )}
         </div>

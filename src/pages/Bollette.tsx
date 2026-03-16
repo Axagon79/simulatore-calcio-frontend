@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
+import { shareElement } from '../utils/shareCard';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -350,6 +351,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
   const [filtroStato, setFiltroStato] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>('tutti');
   const [filtroFascia, setFiltroFascia] = useState<'tutti' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'custom'>('tutti');
   const [ordinaData, setOrdinaData] = useState<'recenti' | 'vecchie'>('recenti');
+  const myCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
   const textSecondary = isLight ? '#666' : '#999';
@@ -552,7 +554,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
             const userStake = user ? (b.user_stakes?.[user.uid] || 0) : 0;
 
             return (
-              <div key={b._id} style={{
+              <div key={b._id} ref={(el) => { myCardRefs.current[b._id] = el; }} style={{
                 background: cardBg, border: cardBorder,
                 borderRadius: 12, marginBottom: 14, overflow: 'hidden',
                 boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
@@ -692,6 +694,31 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                           </div>
                         </>
                       )}
+                      {/* Bottone Condividi */}
+                      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const el = myCardRefs.current[b._id];
+                            if (el) shareElement(el, `ai-simulator-${b.label.replace(/\s+/g, '-').toLowerCase()}.png`);
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            background: isLight ? 'rgba(0,119,204,0.08)' : 'rgba(6,182,212,0.1)',
+                            border: isLight ? '1px solid rgba(0,119,204,0.25)' : '1px solid rgba(6,182,212,0.25)',
+                            borderRadius: 8, padding: '7px 18px',
+                            color: isLight ? '#0077cc' : '#06b6d4',
+                            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,119,204,0.2)' : 'rgba(6,182,212,0.25)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = isLight ? 'rgba(0,119,204,0.08)' : 'rgba(6,182,212,0.1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                          <img src="/share-icon.png" alt="" style={{ width: '16px', height: '16px', filter: isLight ? 'invert(35%) sepia(80%) saturate(500%) hue-rotate(180deg)' : 'invert(70%) sepia(50%) saturate(500%) hue-rotate(150deg)' }} />
+                          Condividi
+                        </button>
+                      </div>
                       {/* Bottone elimina */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(b._id); }}
@@ -724,7 +751,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
 // VISTA DETTAGLIO — lista bollette di una categoria
 // ============================================
 
-function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores, userId }: {
+function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores, userId, shareCard }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onBack: () => void;
@@ -733,7 +760,9 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
   savingId: string | null;
   liveScores: LiveScore[];
   userId?: string;
+  shareCard: (el: HTMLElement, label: string) => void;
 }) {
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [stakes, setStakes] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -789,7 +818,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
           const canSave = !isSaved && !anyStarted && hasStake;
 
           return (
-            <div key={b._id} style={{
+            <div key={b._id} ref={(el) => { cardRefs.current[b._id] = el; }} style={{
               background: cardBg, border: cardBorder,
               borderRadius: 12, marginBottom: 14, overflow: 'hidden',
               boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
@@ -1051,6 +1080,31 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                         </span>
                       </div>
                     )}
+                    {/* Bottone Condividi */}
+                    <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const el = cardRefs.current[b._id];
+                          if (el) shareCard(el, b.label);
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          background: isLight ? 'rgba(0,119,204,0.08)' : 'rgba(6,182,212,0.1)',
+                          border: isLight ? '1px solid rgba(0,119,204,0.25)' : '1px solid rgba(6,182,212,0.25)',
+                          borderRadius: 8, padding: '7px 18px',
+                          color: isLight ? '#0077cc' : '#06b6d4',
+                          fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(0,119,204,0.2)' : 'rgba(6,182,212,0.25)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isLight ? 'rgba(0,119,204,0.08)' : 'rgba(6,182,212,0.1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                      >
+                        <img src="/share-icon.png" alt="" style={{ width: '16px', height: '16px', filter: isLight ? 'invert(35%) sepia(80%) saturate(500%) hue-rotate(180deg)' : 'invert(70%) sepia(50%) saturate(500%) hue-rotate(150deg)' }} />
+                        Condividi
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -1346,6 +1400,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           savingId={savingId}
           liveScores={liveScores}
           userId={user?.uid}
+          shareCard={(el, label) => shareElement(el, `ai-simulator-${label.replace(/\s+/g, '-').toLowerCase()}.png`)}
         />
         {showAuth && <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />}
       </>

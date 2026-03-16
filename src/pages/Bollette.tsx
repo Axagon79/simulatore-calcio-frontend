@@ -6,6 +6,19 @@ import { getTheme, getThemeMode } from '../AppDev/costanti';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
+// CSS: nascondi spinner input number + forza caret color
+if (typeof document !== 'undefined' && !document.getElementById('bollette-input-css')) {
+  const style = document.createElement('style');
+  style.id = 'bollette-input-css';
+  style.textContent = `
+    .bollette-stake-input::-webkit-inner-spin-button,
+    .bollette-stake-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .bollette-stake-input[type=number] { -moz-appearance: textfield; }
+    .bollette-stake-input { caret-color: ${isLight ? '#1a1a1a' : '#fff'} !important; }
+  `;
+  document.head.appendChild(style);
+}
+
 // ============================================
 // DIZIONARIO COMPETIZIONI — prefissi abbreviati
 // ============================================
@@ -38,6 +51,12 @@ const LEAGUE_PREFIX: Record<string, string> = {
 function getLeaguePrefix(league?: string): string {
   if (!league) return '';
   return LEAGUE_PREFIX[league] || league.substring(0, 3).toUpperCase();
+}
+
+// Formatta data YYYY-MM-DD in DD/MM/YYYY (formato italiano)
+function formatDateIT(date: string): string {
+  if (!date || date.length < 10) return date || '';
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`;
 }
 
 // ============================================
@@ -329,6 +348,9 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
   const [loadingMy, setLoadingMy] = useState(true);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [filtroStato, setFiltroStato] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>('tutti');
+  const [filtroFascia, setFiltroFascia] = useState<'tutti' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'custom'>('tutti');
+  const [ordinaData, setOrdinaData] = useState<'recenti' | 'vecchie'>('recenti');
 
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
   const textSecondary = isLight ? '#666' : '#999';
@@ -399,27 +421,72 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
 
       <div style={{ padding: '16px', maxWidth: 700, margin: '0 auto' }}>
         {/* Stats */}
-        {stats && (
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
-            marginBottom: 20,
+        {stats && (() => {
+          const chiuse = stats.vinte + stats.perse;
+          const winRate = chiuse > 0 ? ((stats.vinte / chiuse) * 100).toFixed(1) : '—';
+          const roi = stats.totale_stake > 0 ? ((stats.profitto / stats.totale_stake) * 100).toFixed(1) : '—';
+          const quotaMedia = myBollette.length > 0
+            ? (myBollette.reduce((acc, b) => acc + (b.quota_totale || 0), 0) / myBollette.length).toFixed(2)
+            : '—';
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+              {[
+                { label: 'Vinte', value: stats.vinte, color: '#4caf50' },
+                { label: 'Perse', value: stats.perse, color: '#f44336' },
+                { label: 'In corso', value: stats.in_corso, color: '#ff9800' },
+                { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#4caf50' : parseFloat(winRate as string) > 0 ? '#f44336' : textPrimary },
+                { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#4caf50' : '#f44336' },
+                { label: 'Quota media', value: quotaMedia, color: textPrimary },
+                { label: 'Profitto', value: `€${stats.profitto >= 0 ? '+' : ''}${stats.profitto.toFixed(2)}`, color: stats.profitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
+              ].map(s => (
+                <div key={s.label} style={{
+                  background: cardBg, border: cardBorder, borderRadius: 10,
+                  padding: '10px 8px', textAlign: 'center',
+                  gridColumn: (s as any).span ? `span ${(s as any).span}` : undefined,
+                }}>
+                  <div style={{ fontSize: (s as any).span ? 24 : 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: textSecondary, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* Filtri — riga 1: stato + ordine data */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+          {(['tutti', 'vinte', 'perse', 'in_corso'] as const).map(f => (
+            <button key={f} onClick={() => setFiltroStato(f)} style={{
+              background: filtroStato === f ? (isLight ? '#333' : '#fff') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
+              color: filtroStato === f ? (isLight ? '#fff' : '#000') : textSecondary,
+              border: 'none', borderRadius: 16, padding: '5px 12px',
+              fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            }}>
+              {f === 'tutti' ? 'Tutti' : f === 'vinte' ? '✓ Vinte' : f === 'perse' ? '✗ Perse' : '⏳ In corso'}
+            </button>
+          ))}
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setOrdinaData(prev => prev === 'recenti' ? 'vecchie' : 'recenti')} style={{
+            background: isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)',
+            color: textSecondary, border: 'none', borderRadius: 16, padding: '5px 12px',
+            fontSize: 11, fontWeight: 600, cursor: 'pointer',
           }}>
-            {[
-              { label: 'Totale', value: stats.totale, color: textPrimary },
-              { label: 'Vinte', value: stats.vinte, color: '#4caf50' },
-              { label: 'Perse', value: stats.perse, color: '#f44336' },
-              { label: 'Profitto', value: `€${stats.profitto >= 0 ? '+' : ''}${stats.profitto.toFixed(2)}`, color: stats.profitto >= 0 ? '#4caf50' : '#f44336' },
-            ].map(s => (
-              <div key={s.label} style={{
-                background: cardBg, border: cardBorder, borderRadius: 12,
-                padding: '12px', textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: textSecondary, marginTop: 2 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
+            📅 {ordinaData === 'recenti' ? '↓' : '↑'}
+          </button>
+        </div>
+        {/* Filtri — riga 2: fascia */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          {(['tutti', 'selettiva', 'bilanciata', 'ambiziosa', 'custom'] as const).map(f => (
+            <button key={f} onClick={() => setFiltroFascia(f)} style={{
+              background: filtroFascia === f ? (isLight ? '#333' : '#fff') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
+              color: filtroFascia === f ? (isLight ? '#fff' : '#000') : textSecondary,
+              border: 'none', borderRadius: 16, padding: '5px 12px',
+              fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            }}>
+              {f === 'tutti' ? 'Tutte' : f === 'custom' ? '✨ Custom' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
 
         {/* Loading */}
         {loadingMy ? (
@@ -428,8 +495,34 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
           <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>
             Nessuna bolletta salvata. Salva le bollette che ti piacciono dalla pagina principale!
           </div>
-        ) : (
-          myBollette.map(b => {
+        ) : (() => {
+          // Filtra e ordina
+          let filtered = myBollette.filter(b => {
+            const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+            const hasDefinitiveLose = esitiLive.some(e => e === 'lose');
+            const allWin = esitiLive.every(e => e === 'win');
+            const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+
+            if (filtroStato === 'vinte' && !(allDone && allWin)) return false;
+            if (filtroStato === 'perse' && !hasDefinitiveLose) return false;
+            if (filtroStato === 'in_corso' && (allDone || hasDefinitiveLose)) return false;
+
+            if (filtroFascia !== 'tutti') {
+              if (filtroFascia === 'custom' && !b.custom) return false;
+              if (filtroFascia !== 'custom' && b.tipo !== filtroFascia) return false;
+            }
+            return true;
+          });
+
+          if (ordinaData === 'vecchie') {
+            filtered = [...filtered].reverse();
+          }
+
+          if (filtered.length === 0) {
+            return <div style={{ textAlign: 'center', padding: 30, color: textSecondary, fontSize: 13 }}>Nessuna bolletta con questi filtri</div>;
+          }
+
+          return filtered.map(b => {
             const isCollapsedB = collapsed[b._id] ?? false;
             const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
             const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
@@ -469,36 +562,43 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                 <div
                   onClick={() => setCollapsed(prev => ({ ...prev, [b._id]: !prev[b._id] }))}
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '12px 16px', cursor: 'pointer',
+                    padding: '10px 16px', cursor: 'pointer',
                     background: headerBg, borderBottom: isCollapsedB ? 'none' : rowBorder,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div className={blink ? 'blink-dot' : ''} style={{
-                      width: 14, height: 14, borderRadius: '50%', background: dotColor, flexShrink: 0,
-                    }} />
-                    {statusLabel && (
-                      <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
-                        fontSize: 11, fontWeight: 800, color: statusColor,
-                        background: `${statusColor}18`, padding: '2px 8px', borderRadius: 4,
-                      }}>
-                        {statusLabel}
+                  {/* Riga 1: tondino + stato + quota + freccia */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className={blink ? 'blink-dot' : ''} style={{
+                        width: 12, height: 12, borderRadius: '50%', background: dotColor, flexShrink: 0,
+                      }} />
+                      {statusLabel && (
+                        <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
+                          fontSize: 11, fontWeight: 800, color: statusColor,
+                          background: `${statusColor}18`, padding: '2px 8px', borderRadius: 4,
+                        }}>
+                          {statusLabel}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {userStake > 0 && (
+                        <span style={{ fontSize: 12, color: textSecondary }}>€{userStake}</span>
+                      )}
+                      <span style={{ fontSize: 11, color: textSecondary }}>Quota</span>
+                      <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>
+                        {b.quota_totale.toFixed(2)}
                       </span>
-                    )}
-                    <span style={{ fontWeight: 700, fontSize: 14, color: textPrimary }}>{b.label}</span>
-                    <span style={{ fontSize: 12, color: textSecondary }}>· {b.date}</span>
+                      <span style={{ color: textSecondary, fontSize: 12 }}>
+                        {isCollapsedB ? '▼' : '▲'}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {userStake > 0 && (
-                      <span style={{ fontSize: 12, color: textSecondary }}>€{userStake}</span>
-                    )}
-                    <span style={{ fontWeight: 700, fontSize: 16, color: textPrimary }}>
-                      {b.quota_totale.toFixed(2)}
-                    </span>
-                    <span style={{ color: textSecondary, fontSize: 12 }}>
-                      {isCollapsedB ? '▼' : '▲'}
-                    </span>
+                  {/* Riga 2: label + data + selezioni */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{b.label}</span>
+                    <span style={{ fontSize: 11, color: textSecondary }}>· {formatDateIT(b.date)}</span>
+                    <span style={{ fontSize: 11, color: textSecondary }}>· {b.selezioni.length} sel.</span>
                   </div>
                 </div>
 
@@ -559,7 +659,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 16 }}>
                             <div style={{ textAlign: 'right' }}>
                               <div style={{ fontSize: 12, color: textSecondary }}>
-                                {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                                {formatDateIT(s.match_date).slice(0, 5)} - {s.match_time}
                               </div>
                               <div style={{ fontWeight: 700, fontSize: 17, color: textPrimary, marginTop: 2 }}>
                                 {s.quota.toFixed(2)}
@@ -614,8 +714,8 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                 )}
               </div>
             );
-          })
-        )}
+          });
+        })()}
       </div>
     </div>
   );
@@ -686,7 +786,8 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
           const isSaved = savedIds.has(b._id);
           const esitiAll = b.selezioni.map(s => getEsitoLive(s, liveScores));
           const anyStarted = esitiAll.some(e => e !== 'pending');
-          const canSave = !isSaved && !anyStarted;
+          const hasStake = parseFloat(stakes[b._id]) > 0;
+          const canSave = !isSaved && !anyStarted && hasStake;
 
           return (
             <div key={b._id} style={{
@@ -797,7 +898,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       fontWeight: 600,
                     }}
                   >
-                    {isSaved ? '★ Salvata' : anyStarted ? '⏱ Iniziata' : '☆ Salva'}
+                    {isSaved ? '★ Salvata' : anyStarted ? '⏱ Iniziata' : !hasStake ? '€ ?' : '☆ Salva'}
                   </button>
                 </div>
               </div>
@@ -861,7 +962,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 16 }}>
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: 12, color: textSecondary }}>
-                              {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                              {formatDateIT(s.match_date).slice(0, 5)} - {s.match_time}
                             </div>
                             <div style={{ fontWeight: 700, fontSize: 17, color: textPrimary, marginTop: 2 }}>
                               {s.quota.toFixed(2)}
@@ -890,22 +991,51 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     {/* Riga puntata */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                       <span style={{ fontSize: 13, color: textSecondary }}>Puntata €</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={stakes[b._id] || ''}
-                        onChange={(e) => setStakes(prev => ({ ...prev, [b._id]: e.target.value }))}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder=""
-                        style={{
-                          width: 80, textAlign: 'right', padding: '4px 8px',
-                          background: isLight ? '#fff' : 'rgba(255,255,255,0.06)',
-                          border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: 6, fontSize: 15, fontWeight: 700,
-                          color: textPrimary, outline: 'none',
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button onClick={(e) => { e.stopPropagation(); const v = Math.max(0, (parseFloat(stakes[b._id]) || 0) - 1); setStakes(prev => ({ ...prev, [b._id]: v.toFixed(2) })); }} style={{
+                          width: 24, height: 24, minWidth: 24, minHeight: 24, lineHeight: '24px',
+                          flexShrink: 0, borderRadius: '50%', padding: 0, textAlign: 'center' as const,
+                          border: 'none', cursor: 'pointer', background: 'transparent', outline: 'none',
+                          color: isLight ? '#666' : '#aaa', fontSize: 20, fontWeight: 300,
+                        }}>−</button>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={(stakes[b._id] ?? '0.00') + ' €'}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                            const parts = raw.split('.');
+                            if (parts.length > 2) return;
+                            if (parts[1] && parts[1].length > 2) return;
+                            setStakes(prev => ({ ...prev, [b._id]: raw }));
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bollette-stake-input"
+                          onFocus={(e) => {
+                            const val = (stakes[b._id] ?? '0.00');
+                            e.target.value = val === '0.00' || val === '0' ? '' : val;
+                            setStakes(prev => ({ ...prev, [b._id]: val === '0.00' || val === '0' ? '' : val }));
+                          }}
+                          onBlur={(e) => {
+                            let v = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0;
+                            v = Math.round(v * 20) / 20;
+                            setStakes(prev => ({ ...prev, [b._id]: v.toFixed(2) }));
+                          }}
+                          style={{
+                            width: 90, textAlign: 'center', padding: '4px 6px',
+                            background: isLight ? '#fff' : 'rgba(255,255,255,0.06)',
+                            border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: 6, fontSize: 15, fontWeight: 700,
+                            color: isLight ? '#1a1a1a' : '#fff', caretColor: isLight ? '#1a1a1a' : '#fff', outline: 'none',
+                          }}
+                        />
+                        <button onClick={(e) => { e.stopPropagation(); const v = (parseFloat(stakes[b._id]) || 0) + 1; setStakes(prev => ({ ...prev, [b._id]: v.toFixed(2) })); }} style={{
+                          width: 24, height: 24, minWidth: 24, minHeight: 24, lineHeight: '24px',
+                          flexShrink: 0, borderRadius: '50%', padding: 0, textAlign: 'center' as const,
+                          border: 'none', cursor: 'pointer', background: 'transparent', outline: 'none',
+                          color: isLight ? '#666' : '#aaa', fontSize: 20, fontWeight: 300,
+                        }}>+</button>
+                      </div>
                     </div>
                     {/* Vincita potenziale */}
                     {stakes[b._id] && parseFloat(stakes[b._id]) > 0 && (
@@ -1439,16 +1569,25 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           <div
                             onClick={() => setChatTicketCollapsed(prev => ({ ...prev, [i]: !prev[i] }))}
                             style={{
-                              padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
+                              padding: '10px 12px', cursor: 'pointer',
                               background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
-                              fontSize: 13, fontWeight: 700, cursor: 'pointer',
                             }}
                           >
-                            <span>{m.bolletta.tipo} · {m.bolletta.selezioni.length} sel.</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              Quota: {m.bolletta.quota_totale.toFixed(2)}
-                              <span style={{ fontSize: 10 }}>{chatTicketCollapsed[i] ? '▼' : '▲'}</span>
-                            </span>
+                            {/* Riga 1: quota + freccia */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>{m.bolletta.tipo}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 11, color: textSecondary }}>Quota</span>
+                                <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>
+                                  {m.bolletta.quota_totale.toFixed(2)}
+                                </span>
+                                <span style={{ fontSize: 10, color: textSecondary }}>{chatTicketCollapsed[i] ? '▼' : '▲'}</span>
+                              </div>
+                            </div>
+                            {/* Riga 2: selezioni */}
+                            <div style={{ fontSize: 11, color: textSecondary, marginTop: 2 }}>
+                              {m.bolletta.selezioni.length} sel.
+                            </div>
                           </div>
 
                           {/* Selezioni con X rimuovi — collassabile */}
@@ -1493,7 +1632,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
                                 <div style={{ fontSize: 11, color: textSecondary }}>
-                                  {s.match_date.slice(8, 10)}/{s.match_date.slice(5, 7)} - {s.match_time}
+                                  {formatDateIT(s.match_date).slice(0, 5)} - {s.match_time}
                                 </div>
                                 <div style={{ fontWeight: 700, fontSize: 14 }}>{s.quota.toFixed(2)}</div>
                               </div>
@@ -1540,23 +1679,51 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.04)',
                           borderRadius: 8,
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 13, color: textSecondary }}>Puntata €</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, color: textSecondary }}>Puntata</span>
+                            <button onClick={() => { const v = Math.max(0, (parseFloat(builderStake) || 0) - 1); setBuilderStake(v.toFixed(2)); }} style={{
+                              width: 24, height: 24, minWidth: 24, minHeight: 24, lineHeight: '24px',
+                              flexShrink: 0, borderRadius: '50%', padding: 0, textAlign: 'center' as const,
+                              border: 'none', cursor: 'pointer', background: 'transparent', outline: 'none',
+                              color: isLight ? '#666' : '#aaa', fontSize: 20, fontWeight: 300,
+                            }}>−</button>
                             <input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={builderStake}
-                              onChange={(e) => setBuilderStake(e.target.value)}
-                              placeholder="0"
+                              type="text"
+                              inputMode="decimal"
+                              className="bollette-stake-input"
+                              value={(builderStake || '0.00') + ' €'}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                                const parts = raw.split('.');
+                                if (parts.length > 2) return;
+                                if (parts[1] && parts[1].length > 2) return;
+                                setBuilderStake(raw);
+                              }}
+                              onFocus={(e) => {
+                                const val = builderStake || '0.00';
+                                e.target.value = val === '0.00' || val === '0' ? '' : val;
+                                setBuilderStake(val === '0.00' || val === '0' ? '' : val);
+                              }}
+                              onBlur={(e) => {
+                                let v = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0;
+                                v = Math.round(v * 20) / 20;
+                                setBuilderStake(v.toFixed(2));
+                              }}
                               style={{
-                                width: 70, padding: '4px 8px', borderRadius: 6,
+                                width: 90, textAlign: 'center', padding: '4px 6px',
                                 background: isLight ? '#fff' : 'rgba(255,255,255,0.08)',
                                 border: isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.15)',
-                                color: textPrimary, fontSize: 14, fontWeight: 700,
-                                outline: 'none', textAlign: 'right',
+                                borderRadius: 6, fontSize: 14, fontWeight: 700,
+                                color: isLight ? '#1a1a1a' : '#fff', caretColor: isLight ? '#1a1a1a' : '#fff',
+                                outline: 'none',
                               }}
                             />
+                            <button onClick={() => { const v = (parseFloat(builderStake) || 0) + 1; setBuilderStake(v.toFixed(2)); }} style={{
+                              width: 24, height: 24, minWidth: 24, minHeight: 24, lineHeight: '24px',
+                              flexShrink: 0, borderRadius: '50%', padding: 0, textAlign: 'center' as const,
+                              border: 'none', cursor: 'pointer', background: 'transparent', outline: 'none',
+                              color: isLight ? '#666' : '#aaa', fontSize: 20, fontWeight: 300,
+                            }}>+</button>
                           </div>
                           {parseFloat(builderStake) > 0 && m.bolletta.quota_totale && (
                             <span style={{ fontSize: 13, fontWeight: 700, color: '#4caf50' }}>
@@ -1569,14 +1736,18 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                         {!builderSaved ? (
                           <button
                             onClick={handleSaveCustom}
+                            disabled={!parseFloat(builderStake)}
                             style={{
                               marginTop: 8, width: '100%', padding: '10px',
-                              background: isLight ? '#4caf50' : '#2e7d32',
+                              background: !parseFloat(builderStake) ? (isLight ? '#ccc' : '#333') : (isLight ? '#4caf50' : '#2e7d32'),
                               border: 'none', borderRadius: 10,
-                              color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                              color: !parseFloat(builderStake) ? (isLight ? '#999' : '#666') : '#fff',
+                              fontWeight: 700, fontSize: 13,
+                              cursor: !parseFloat(builderStake) ? 'not-allowed' : 'pointer',
+                              opacity: !parseFloat(builderStake) ? 0.6 : 1,
                             }}
                           >
-                            ✅ Salva nelle mie bollette
+                            {!parseFloat(builderStake) ? '⚠️ Inserisci la puntata' : '✅ Salva nelle mie bollette'}
                           </button>
                         ) : (
                           <div style={{

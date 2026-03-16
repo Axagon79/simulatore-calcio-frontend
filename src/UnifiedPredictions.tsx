@@ -4,7 +4,7 @@ import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
-type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're';
+type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're' | 'nobet';
 
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode } from './AppDev/costanti';
@@ -501,6 +501,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     { id: 'dc', label: 'DC', filter: t => t.tipo === 'DOPPIA_CHANCE', color: isLight ? '#9333ea' : '#ab47bc' },
     { id: 'mg', label: 'MG', filter: t => t.tipo === 'GOL' && /^mg\s/i.test(t.pronostico), color: isLight ? '#b45309' : '#f59e0b' },
     { id: 're', label: 'RE', filter: t => t.tipo === 'RISULTATO_ESATTO', color: isLight ? '#0891b2' : '#22d3ee' },
+    { id: 'nobet', label: 'NO BET', filter: t => t.pronostico === 'NO BET', color: isLight ? '#dc2626' : '#ef4444' },
   ];
 
   // Funzione filtraggio mercato su prediction

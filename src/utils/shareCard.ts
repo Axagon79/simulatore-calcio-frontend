@@ -91,11 +91,25 @@ export async function shareElement(element: HTMLElement, filename = 'ai-simulato
   clone.style.margin = '0';
   clone.style.border = 'none';
   clone.style.boxShadow = 'none';
-  // Rimuovi elementi interattivi
-  clone.querySelectorAll('button, input').forEach(el => {
-    const btn = el as HTMLElement;
+  // Converti input puntata in testo statico, rimuovi il resto
+  clone.querySelectorAll('input').forEach(inp => {
+    const input = inp as HTMLInputElement;
+    const val = input.value;
+    if (val && (val.includes('€') || parseFloat(val) > 0)) {
+      // Sostituisci input con span statico
+      const span = document.createElement('span');
+      span.textContent = val;
+      span.style.cssText = input.style.cssText;
+      span.style.display = 'inline-block';
+      input.parentElement?.replaceChild(span, input);
+    } else {
+      input.style.display = 'none';
+    }
+  });
+  // Rimuovi bottoni interattivi
+  clone.querySelectorAll('button').forEach(btn => {
     const t = btn.textContent || '';
-    if (btn.tagName === 'INPUT' || t === '−' || t === '+' || t.includes('Salva') || t.includes('Salvata') ||
+    if (t === '−' || t === '+' || t.includes('Salva') || t.includes('Salvata') ||
         t.includes('Iniziata') || t.includes('€ ?') || t.includes('Condividi') || t.includes('Scommetti')) {
       btn.style.display = 'none';
     }

@@ -94,7 +94,23 @@ function getEsitoLive(sel: Selezione, liveScores: LiveScore[]): EsitoLive {
   if (sel.esito === true) return 'win';
   if (sel.esito === false) return 'lose';
 
-  // Cerca live score
+  // Se real_score arricchito dal backend (fonte definitiva, come pagina pronostici)
+  if ((sel as any).real_score) {
+    const hit = calculateHitFromScore((sel as any).real_score, sel.pronostico, sel.mercato);
+    if (hit !== null) return hit ? 'win' : 'lose';
+  }
+
+  // Se match_finished dal backend ma senza real_score, usa live_score arricchito
+  if ((sel as any).match_finished && (sel as any).live_score) {
+    const hit = calculateHitFromScore((sel as any).live_score, sel.pronostico, sel.mercato);
+    if (hit !== null) return hit ? 'win' : 'lose';
+  }
+  if ((sel as any).live_status === 'Finished' && (sel as any).live_score) {
+    const hit = calculateHitFromScore((sel as any).live_score, sel.pronostico, sel.mercato);
+    if (hit !== null) return hit ? 'win' : 'lose';
+  }
+
+  // Fallback: polling live scores (per partite in corso)
   const live = liveScores.find(s => s.home === sel.home && s.away === sel.away);
   if (!live || !live.live_score) return 'pending';
 
@@ -512,9 +528,16 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                             <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
                               <span>{s.league && <span style={{ fontSize: 10, fontWeight: 600, color: textSecondary, background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away}</span>
                               {(() => {
+                                // Priorità: real_score (backend) > live_score (backend) > polling live
+                                const realScore = (s as any).real_score;
+                                const enrichedLive = (s as any).live_score;
+                                const enrichedStatus = (s as any).live_status;
                                 const live = liveScores.find(l => l.home === s.home && l.away === s.away);
-                                if (!live || !live.live_score) return null;
-                                const fin = live.live_status === 'Finished';
+
+                                const score = realScore || enrichedLive || live?.live_score;
+                                if (!score) return null;
+                                const fin = !!realScore || enrichedStatus === 'Finished' || (s as any).match_finished || live?.live_status === 'Finished';
+                                const minute = live?.live_minute || (s as any).live_minute;
                                 return (
                                   <span style={{
                                     fontSize: 13, fontWeight: 700,
@@ -522,8 +545,8 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                                     background: isLight ? (fin ? '#f0f0f0' : 'rgba(244,67,54,0.08)') : (fin ? 'rgba(255,255,255,0.08)' : 'rgba(244,67,54,0.15)'),
                                     padding: '1px 8px', borderRadius: 6,
                                   }}>
-                                    {live.live_score.replace(':', ' - ')}
-                                    {!fin && live.live_minute ? ` ${live.live_minute}'` : ''}
+                                    {score.replace(':', ' - ')}
+                                    {!fin && minute ? ` ${minute}'` : ''}
                                     {fin ? ' FT' : ''}
                                   </span>
                                 );
@@ -800,9 +823,15 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                           <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span>{s.league && <span style={{ fontSize: 10, fontWeight: 600, color: textSecondary, background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away}</span>
                             {(() => {
+                              const realScore = (s as any).real_score;
+                              const enrichedLive = (s as any).live_score;
+                              const enrichedStatus = (s as any).live_status;
                               const live = liveScores.find(l => l.home === s.home && l.away === s.away);
-                              if (!live || !live.live_score) return null;
-                              const isFinished = live.live_status === 'Finished';
+
+                              const score = realScore || enrichedLive || live?.live_score;
+                              if (!score) return null;
+                              const isFinished = !!realScore || enrichedStatus === 'Finished' || (s as any).match_finished || live?.live_status === 'Finished';
+                              const minute = live?.live_minute || (s as any).live_minute;
                               const scoreColor = isFinished ? textSecondary : '#f44336';
                               return (
                                 <span style={{
@@ -811,8 +840,8 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                                   background: isLight ? (isFinished ? '#f0f0f0' : 'rgba(244,67,54,0.08)') : (isFinished ? 'rgba(255,255,255,0.08)' : 'rgba(244,67,54,0.15)'),
                                   padding: '1px 8px', borderRadius: 6,
                                 }}>
-                                  {live.live_score.replace(':', ' - ')}
-                                  {!isFinished && live.live_minute ? ` ${live.live_minute}'` : ''}
+                                  {score.replace(':', ' - ')}
+                                  {!isFinished && minute ? ` ${minute}'` : ''}
                                   {isFinished ? ' FT' : ''}
                                 </span>
                               );

@@ -30,9 +30,22 @@ async function renderAndShare(wrapper: HTMLElement, filename: string): Promise<v
     }
     console.log('[shareCard] canvas generato:', canvas.width, 'x', canvas.height);
 
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), 'image/png');
-    });
+    let blob: Blob | null = null;
+    try {
+      blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/png');
+        // Timeout: se toBlob non chiama la callback entro 3s, usa toDataURL
+        setTimeout(() => resolve(null), 3000);
+      });
+    } catch { /* ignore */ }
+
+    // Fallback: toDataURL se toBlob fallisce
+    if (!blob) {
+      console.log('[shareCard] toBlob fallito, uso toDataURL');
+      const dataUrl = canvas.toDataURL('image/png');
+      const res = await fetch(dataUrl);
+      blob = await res.blob();
+    }
 
     if (!blob) {
       console.error('shareCard: toBlob ha restituito null');

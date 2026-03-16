@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getTheme, getThemeMode } from '../AppDev/costanti';
+import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import {
-import { API_BASE } from '../AppDev/costanti';
   commentoGlobale, commentoPerTipo, commentoCategorie,
   commentoGiorni, commentoSettimane, commentoCorrelazioni, commentoFeatures,
   commentoCluster, commentoCampionati,

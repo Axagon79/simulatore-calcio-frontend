@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import CupMatchAnalysis from './CupMatchAnalysis';
 import CupMatchResult from './CupMatchResult';
-import { getTheme, getThemeMode } from './AppDev/costanti';
-import { API_BASE } from './AppDev/costanti';
+import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 
 const appTheme = getTheme();
 const isLight = getThemeMode() === 'light';

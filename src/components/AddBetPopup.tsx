@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
 
-import { getTheme } from '../AppDev/costanti';
-import { API_BASE } from '../AppDev/costanti';
+import { getTheme, API_BASE } from '../AppDev/costanti';
 const theme = getTheme();
 
 

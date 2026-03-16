@@ -6,8 +6,7 @@ import AuthModal from '../components/AuthModal';
 // THEME & CONSTANTS
 // ============================================
 
-import { getTheme, getThemeMode } from '../AppDev/costanti';
-import { API_BASE } from '../AppDev/costanti';
+import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 

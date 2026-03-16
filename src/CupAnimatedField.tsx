@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import './styles/SimulationAnimation.css';
 import './styles/SimulationAnimation-responsive.css';
 import type { MatchEvent, SimulationResult } from './types';
-import { getTheme, getThemeMode } from './AppDev/costanti';
-import { API_BASE } from './AppDev/costanti';
+import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 
 const appTheme = getTheme();
 const isLight = getThemeMode() === 'light';

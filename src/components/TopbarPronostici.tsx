@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
-import { getTheme } from '../AppDev/costanti';
+import { getTheme, API_BASE } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import StemmaImg from './StemmaImg';
-import { API_BASE } from '../AppDev/costanti';
 
 const theme = getTheme();
 const _canSeeTips = checkAdmin() || localStorage.getItem('pp_pu') === '1';

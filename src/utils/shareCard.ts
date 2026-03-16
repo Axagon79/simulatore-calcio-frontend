@@ -5,20 +5,30 @@ async function renderAndShare(wrapper: HTMLElement, filename: string): Promise<v
 
   // Forza layout prima del render
   wrapper.offsetHeight;
+  console.log('[shareCard] wrapper size:', wrapper.offsetWidth, 'x', wrapper.offsetHeight, 'children:', wrapper.children.length);
 
   try {
     const canvas = await html2canvas(wrapper, {
       backgroundColor: '#0a0b0f',
       scale: 2,
       useCORS: true,
-      logging: false,
+      logging: true,
       allowTaint: true,
-      // Non usare position fixed — sposta visivamente fuori schermo con left
+      removeContainer: false,
       x: 0,
       y: 0,
       width: wrapper.offsetWidth,
       height: wrapper.offsetHeight,
+    }).catch(err => {
+      console.error('html2canvas errore:', err);
+      return null;
     });
+
+    if (!canvas) {
+      console.error('[shareCard] html2canvas non ha generato il canvas');
+      return;
+    }
+    console.log('[shareCard] canvas generato:', canvas.width, 'x', canvas.height);
 
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob((b) => resolve(b), 'image/png');
@@ -48,6 +58,7 @@ async function renderAndShare(wrapper: HTMLElement, filename: string): Promise<v
       if ((err as Error).name === 'AbortError') return;
     }
 
+    console.log('[shareCard] blob size:', blob.size, 'tentativo download...');
     // Fallback desktop/HTTP: download diretto
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

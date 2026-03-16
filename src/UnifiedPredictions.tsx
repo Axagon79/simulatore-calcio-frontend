@@ -1274,7 +1274,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </span>
             <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             {pred.decision === 'NO_BET' && (
-              <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', padding: '1px 5px', marginLeft: '4px', flexShrink: 0 }}>NO BET</span>
+              isMobile
+                ? <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#e53e3e', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 800, color: '#fff', marginLeft: '4px', flexShrink: 0 }}>NB</span>
+                : <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', padding: '1px 5px', marginLeft: '4px', flexShrink: 0 }}>NO BET</span>
             )}
           </div>
 

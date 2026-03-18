@@ -655,12 +655,14 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
         zIndex: 200002,
         transition: 'all 0.4s ease',
       }} />
-      {/* Label + X per continuare */}
+      {/* Label + X per continuare — sopra se contenuto si espande sotto */}
       <div style={{
         position: 'fixed',
-        ...(spotTop + spotH + 50 < window.innerHeight
-          ? { top: spotTop + spotH + 10 }
-          : { top: spotTop - 60 }),
+        ...(current.clickToOpen
+          ? { top: Math.max(10, spotTop - 50) }
+          : spotTop + spotH + 50 < window.innerHeight
+            ? { top: spotTop + spotH + 10 }
+            : { top: Math.max(10, spotTop - 50) }),
         left: '50%',
         transform: 'translateX(-50%)',
         width: '90%',

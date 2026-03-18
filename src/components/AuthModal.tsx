@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-import { getTheme } from '../AppDev/costanti';
+import { getTheme, getThemeMode } from '../AppDev/costanti';
 const theme = getTheme();
+const isLight = getThemeMode() === 'light';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -113,9 +114,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: theme.panel, border: theme.panelBorder,
+          background: isLight ? '#ffffff' : theme.panel,
+          border: isLight ? '1px solid rgba(0,0,0,0.1)' : theme.panelBorder,
           borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '400px',
-          maxHeight: '90vh', overflowY: 'auto'
+          maxHeight: '90vh', overflowY: 'auto',
+          boxShadow: isLight ? '0 20px 60px rgba(0,0,0,0.15)' : '0 20px 60px rgba(0,0,0,0.5)',
         }}
       >
         {/* Header */}
@@ -137,7 +140,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           disabled={loading}
           style={{
             width: '100%', padding: '14px', borderRadius: '10px',
-            background: 'rgba(255,255,255,0.95)', border: 'none',
+            background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.95)',
+            border: isLight ? '1px solid rgba(0,0,0,0.15)' : 'none',
             color: '#333', fontSize: '15px', fontWeight: '700',
             cursor: loading ? 'wait' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
@@ -158,9 +162,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         <div style={{
           display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px'
         }}>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ flex: 1, height: '1px', background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)' }} />
           <span style={{ color: theme.textDim, fontSize: '12px' }}>oppure</span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ flex: 1, height: '1px', background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)' }} />
         </div>
 
         {/* Email/Password Form */}
@@ -173,7 +177,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             required
             style={{
               width: '100%', padding: '12px 14px', borderRadius: '8px',
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.12)',
               color: theme.text, fontSize: '14px', marginBottom: '10px',
               outline: 'none', boxSizing: 'border-box'
             }}
@@ -186,7 +190,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             required
             style={{
               width: '100%', padding: '12px 14px', borderRadius: '8px',
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.12)',
               color: theme.text, fontSize: '14px', marginBottom: mode === 'signup' ? '10px' : '16px',
               outline: 'none', boxSizing: 'border-box'
             }}
@@ -201,14 +205,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 required
                 style={{
                   width: '100%', padding: '12px 14px', borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                  background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.06)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.12)',
                   color: theme.text, fontSize: '14px', marginBottom: '16px',
                   outline: 'none', boxSizing: 'border-box'
                 }}
               />
 
               {/* 3 Checkbox consensi */}
-              <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.03)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)' }}>
                 <label style={checkboxLabelStyle}>
                   <input type="checkbox" checked={terms} onChange={e => setTerms(e.target.checked)}
                     style={{ width: '16px', height: '16px', accentColor: theme.cyan, flexShrink: 0, marginTop: '1px' }} />
@@ -256,10 +260,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             style={{
               width: '100%', padding: '12px', borderRadius: '10px',
               background: signupDisabled
-                ? 'rgba(255,255,255,0.06)'
+                ? (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)')
                 : `linear-gradient(135deg, ${theme.cyan}20, ${theme.cyan}40)`,
               border: signupDisabled
-                ? '1px solid rgba(255,255,255,0.08)'
+                ? (isLight ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(255,255,255,0.08)')
                 : `1px solid ${theme.cyan}50`,
               color: signupDisabled ? theme.textDim : theme.cyan,
               fontSize: '14px', fontWeight: '700',

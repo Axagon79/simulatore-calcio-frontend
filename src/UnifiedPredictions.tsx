@@ -3785,7 +3785,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* ==================== PRONOSTICI: quota <= 2.50 ==================== */}
             {activeTab === 'pronostici' && filteredPredictions.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
-                {Object.entries(filteredGroupedByLeague).map(([leagueName, preds]) => {
+                {Object.entries(filteredGroupedByLeague).map(([leagueName, preds], leagueIdx) => {
                   const isCollapsed = !collapsedLeagues.has(leagueName);
                   const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
@@ -3834,6 +3834,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   <div key={leagueName} style={{ marginBottom: '16px' }}>
                     {/* HEADER LEGA - CLICCABILE */}
                     <div
+                      {...(leagueIdx === 0 ? { 'data-tour': 'bp-first-league' } : {})}
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
                         background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
@@ -3866,7 +3867,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
 
                     {/* CARDS */}
-                    {!isCollapsed && preds.map((pred) => renderPredictionCard(pred))}
+                    {!isCollapsed && preds.map((pred, predIdx) => (
+                      <div key={`${pred.home}-${pred.away}-${predIdx}`} {...(leagueIdx === 0 && predIdx === 0 ? { 'data-tour': 'bp-first-card' } : {})}>
+                        {renderPredictionCard(pred)}
+                      </div>
+                    ))}
                   </div>
                   );
                 })}

@@ -6,6 +6,19 @@ import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
+// --- CAPITOLI DEL TOUR ---
+const CHAPTERS = [
+  { id: 1, title: 'Campionati e Partite', startStep: 0, endStep: 11 },
+  { id: 2, title: 'Pronostici', startStep: 12, endStep: 15 },
+  { id: 3, title: 'Ticket AI e Bollette', startStep: 14, endStep: 14 }, // placeholder
+  { id: 4, title: 'Simulazione', startStep: 15, endStep: 15 },          // placeholder
+  { id: 5, title: 'Money Management', startStep: 16, endStep: 16 },     // placeholder
+];
+
+function getChapterForStep(step: number) {
+  return CHAPTERS.find(c => step >= c.startStep && step <= c.endStep) || CHAPTERS[0];
+}
+
 // --- Calcola posizione e dimensione di un elemento ---
 function getRect(selector: string): DOMRect | null {
   const el = document.querySelector(selector);
@@ -27,12 +40,15 @@ function waitForEl(selector: string, timeout = 3000): Promise<Element | null> {
 }
 
 // --- MODALE DI BENVENUTO ---
-function WelcomeModal({ onStart, onSkip, onSkipPermanent }: {
-  onStart: () => void;
+function WelcomeModal({ onStartChapter, onSkip, onSkipPermanent }: {
+  onStartChapter: (chapterStartStep: number) => void;
   onSkip: () => void;
   onSkipPermanent: () => void;
 }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [showChapters, setShowChapters] = useState(true);
+  const [selectedChapter, setSelectedChapter] = useState(0); // indice in CHAPTERS
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200000,
@@ -73,13 +89,82 @@ function WelcomeModal({ onStart, onSkip, onSkipPermanent }: {
         <p style={{
           fontSize: '14px', lineHeight: '1.6',
           color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
-          margin: '0 0 28px',
+          margin: '0 0 24px',
         }}>
           In pochi secondi ti mostriamo come funziona tutto — pronostici, simulazioni, biglietti e molto altro. Puoi saltare in qualsiasi momento e riprendere il tour dalle Impostazioni.
         </p>
+
+        {/* Lista capitoli — collapsabile */}
+        <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+          <button
+            onClick={() => setShowChapters(!showChapters)}
+            style={{
+              background: 'none', border: 'none',
+              color: isLight ? '#6b7280' : 'rgba(255,255,255,0.5)',
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'inherit', padding: '4px 0',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              width: '100%',
+            }}
+          >
+            <span style={{
+              transform: showChapters ? 'rotate(90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s', display: 'inline-block', fontSize: '10px',
+            }}>▶</span>
+            Argomenti del tour ({CHAPTERS.length}) — scegli da dove iniziare
+          </button>
+          {showChapters && (
+            <div style={{
+              marginTop: '8px',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+            }}>
+              {CHAPTERS.map((ch, idx) => (
+                <div
+                  key={ch.id}
+                  onClick={() => setSelectedChapter(idx)}
+                  style={{
+                    padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    cursor: 'pointer',
+                    background: idx === selectedChapter
+                      ? (isLight ? `${theme.cyan}10` : `${theme.cyan}15`)
+                      : (isLight ? '#fafafa' : 'rgba(255,255,255,0.02)'),
+                    borderBottom: idx < CHAPTERS.length - 1
+                      ? `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`
+                      : 'none',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '11px', fontWeight: 700, flexShrink: 0,
+                    background: idx === selectedChapter
+                      ? `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`
+                      : (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)'),
+                    color: idx === selectedChapter ? '#fff' : (isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)'),
+                  }}>
+                    {ch.id}
+                  </div>
+                  <span style={{
+                    fontSize: '13px', fontWeight: idx === selectedChapter ? 600 : 400,
+                    color: idx === selectedChapter
+                      ? (isLight ? '#111827' : 'rgba(255,255,255,0.95)')
+                      : (isLight ? '#6b7280' : 'rgba(255,255,255,0.5)'),
+                  }}>
+                    {ch.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <button
-            onClick={onStart}
+            onClick={() => onStartChapter(CHAPTERS[selectedChapter].startStep)}
             style={{
               width: '100%',
               background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
@@ -92,7 +177,9 @@ function WelcomeModal({ onStart, onSkip, onSkipPermanent }: {
             onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
           >
-            Inizia il tour
+            {showChapters && selectedChapter > 0
+              ? `Inizia da: ${CHAPTERS[selectedChapter].title}`
+              : 'Inizia il tour'}
           </button>
           <button
             onClick={() => dontShowAgain ? onSkipPermanent() : onSkip()}
@@ -115,7 +202,6 @@ function WelcomeModal({ onStart, onSkip, onSkipPermanent }: {
           >
             Salta, conosco già la piattaforma
           </button>
-          {/* Checkbox "Non mostrare più" */}
           <label
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -142,31 +228,25 @@ function WelcomeModal({ onStart, onSkip, onSkipPermanent }: {
 }
 
 // --- SPOTLIGHT: buco luminoso su un elemento, tutto il resto opaco ---
-function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, totalSteps = 13, padding = 8, borderRadius = 12, popupPosition = 'auto', scrollable = false, zBase = 200000 }: {
+function Spotlight({ selector, text, onSkip, onTargetClick, onOpenChapters, chapterTitle = '', chapterNum = 1, totalChapters = 5, chapterProgress = 0, padding = 8, borderRadius = 12, popupPosition = 'auto', popupOffset = 0, scrollable = false, zBase = 200000 }: {
   selector: string | null;
   text: string;
   onSkip: () => void;
   onTargetClick: () => void;
-  stepIndex?: number;
-  totalSteps?: number;
+  onOpenChapters?: () => void;
+  chapterTitle?: string;
+  chapterNum?: number;
+  totalChapters?: number;
+  chapterProgress?: number;
   padding?: number;
   borderRadius?: number;
   popupPosition?: 'auto' | 'top' | 'bottom';
-  scrollable?: boolean; // se true, lo spotlight è scrollabile (chat)
-  zBase?: number; // z-index base (alzare per stare sopra sidebar etc.)
+  popupOffset?: number;
+  scrollable?: boolean;
+  zBase?: number;
 }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const animFrame = useRef(0);
-
-  // Quando scrollable, click sull'elemento target avanza il tour
-  useEffect(() => {
-    if (!scrollable || !selector) return;
-    const target = document.querySelector(selector) as HTMLElement;
-    if (!target) return;
-    const handler = () => onTargetClick();
-    target.addEventListener('click', handler);
-    return () => target.removeEventListener('click', handler);
-  }, [scrollable, selector, onTargetClick]);
 
   // Aggiorna posizione spotlight ad ogni frame (segue scroll/resize)
   useEffect(() => {
@@ -194,7 +274,7 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
   const left = rect ? (isCircle ? rect.left - size / 2 : rect.left + rect.width / 2 - width / 2) : 0;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: zBase, pointerEvents: scrollable ? 'none' : 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: zBase, pointerEvents: 'auto' }}>
       {/* Overlay scuro con buco — blocca tutti i click */}
       {selector && rect ? (
         <div style={{
@@ -222,8 +302,8 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
         />
       )}
 
-      {/* Zona cliccabile SOLO sull'elemento target — click passa all'elemento sotto + avanza */}
-      {selector && rect && (
+      {/* Zona cliccabile SOLO sull'elemento target */}
+      {selector && rect && !scrollable && (
         <div
           style={{
             position: 'fixed',
@@ -232,19 +312,16 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
             background: 'transparent',
             cursor: 'pointer',
             zIndex: zBase + 4,
-            pointerEvents: scrollable ? 'none' : 'auto',
+            pointerEvents: 'auto',
             transition: isCircle
               ? 'top 1.2s cubic-bezier(0.34,1.56,0.64,1), left 1.2s cubic-bezier(0.34,1.56,0.64,1)'
               : 'all 0.4s ease',
           }}
           onClick={() => {
-            // Clicca l'elemento target: prima figlio diretto, poi target stesso
             if (selector) {
               const target = document.querySelector(selector) as HTMLElement;
               if (target) {
                 const firstChild = target.firstElementChild as HTMLElement;
-                // Se il target è un wrapper (data-tour), clicca il primo figlio
-                // Se il target è direttamente cliccabile (button, a, ha onClick), cliccalo
                 const tagName = target.tagName.toLowerCase();
                 if (tagName === 'button' || tagName === 'a') {
                   target.click();
@@ -259,6 +336,8 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
           }}
         />
       )}
+
+      {/* Zona scrollabile (chat) — nessun div sovrapposto, l'elemento reale viene alzato sopra l'overlay */}
 
       {/* Bordo glow pulsante attorno allo spotlight */}
       {selector && rect && (
@@ -286,7 +365,7 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
             : rect ? (rect.top > window.innerHeight / 2 ? 'top' : 'bottom')
             : 'bottom';
           return pos === 'top'
-            ? { top: '5%', bottom: 'auto' }
+            ? { top: `calc(5% + ${popupOffset || 0}px)`, bottom: 'auto' }
             : { bottom: '8%', top: 'auto' };
         })()),
         left: '50%',
@@ -317,6 +396,41 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
             background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
             borderRadius: '16px 16px 0 0',
           }} />
+          {/* Header capitolo + barra avanzamento */}
+          {chapterTitle && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                marginBottom: '6px',
+              }}>
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  color: theme.cyan,
+                }}>
+                  {chapterTitle}
+                </span>
+                <span style={{
+                  fontSize: '10px', fontWeight: 600,
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)',
+                }}>
+                  {chapterNum} di {totalChapters}
+                </span>
+              </div>
+              {/* Barra avanzamento */}
+              <div style={{
+                height: '3px', borderRadius: '2px',
+                background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: '2px',
+                  width: `${chapterProgress}%`,
+                  background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+            </div>
+          )}
           {/* Testo */}
           <p style={{
             margin: 0,
@@ -328,7 +442,7 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
           }}
             dangerouslySetInnerHTML={{ __html: text }}
           />
-          {/* Footer: skip + continua (se scrollable) + progress */}
+          {/* Footer: skip + continua (se scrollable) + frecciolina capitoli */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             marginTop: '16px',
@@ -364,20 +478,24 @@ function Spotlight({ selector, text, onSkip, onTargetClick, stepIndex = 0, total
                 Continua →
               </button>
             )}
-            {/* Progress dots */}
-            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-              {Array.from({ length: totalSteps }).map((_, i) => (
-                <div key={i} style={{
-                  width: i <= stepIndex ? '16px' : '6px',
-                  height: '6px',
-                  borderRadius: '3px',
-                  background: i <= stepIndex
-                    ? `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`
-                    : (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'),
-                  transition: 'all 0.3s ease',
-                }} />
-              ))}
-            </div>
+            {onOpenChapters && (
+              <button
+                onClick={onOpenChapters}
+                style={{
+                  background: 'none', border: 'none',
+                  color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)',
+                  fontSize: '11px', fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  padding: '2px 4px',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = isLight ? '#6b7280' : 'rgba(255,255,255,0.5)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = isLight ? '#9ca3af' : 'rgba(255,255,255,0.3)'; }}
+              >
+                ☰ Capitoli
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -413,8 +531,9 @@ export default function OnboardingTour() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Salva flag via API backend
+  // Salva flag via API backend + localStorage come fallback
   const markCompleted = useCallback(async () => {
+    localStorage.setItem('onboarding_completed', '1');
     if (!user) return;
     try {
       const token = await user.getIdToken();
@@ -422,7 +541,7 @@ export default function OnboardingTour() {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-    } catch { /* silenzioso */ }
+    } catch { /* silenzioso — localStorage già salvato */ }
   }, [user]);
 
   // Blocca/sblocca scroll
@@ -435,9 +554,14 @@ export default function OnboardingTour() {
     return () => { document.body.style.overflow = ''; };
   }, [step]);
 
-  // Controlla flag onboarding_completed via API backend
+  // Controlla flag onboarding_completed via localStorage + API backend
   useEffect(() => {
     if (!user) { setLoading(false); return; }
+    // Non mostrare se tour già attivo, in ripresa, o già completato
+    if (step >= 0 || sessionStorage.getItem('tour_step') || localStorage.getItem('onboarding_completed')) {
+      setLoading(false);
+      return;
+    }
     const checkOnboarding = async () => {
       try {
         const token = await user.getIdToken();
@@ -448,14 +572,14 @@ export default function OnboardingTour() {
           const data = await res.json();
           if (!data.onboarding_completed && location.pathname === '/') {
             setShowWelcome(true);
+          } else if (data.onboarding_completed) {
+            localStorage.setItem('onboarding_completed', '1');
           }
         } else if (res.status === 404) {
-          // Endpoint non ancora deployato — mostra tour in locale per test
-          if (location.pathname === '/') setShowWelcome(true);
+          if (location.pathname === '/' && !sessionStorage.getItem('tour_step')) setShowWelcome(true);
         }
       } catch {
-        // API non raggiungibile — mostra tour in locale per test
-        if (location.pathname === '/') setShowWelcome(true);
+        if (location.pathname === '/' && !sessionStorage.getItem('tour_step')) setShowWelcome(true);
       }
       finally { setLoading(false); }
     };
@@ -478,20 +602,30 @@ export default function OnboardingTour() {
     return () => window.removeEventListener('restart-onboarding-tour', handler);
   }, []);
 
-  // Restart tour da sessionStorage
+  // Restart tour o riprendi step da sessionStorage
   useEffect(() => {
     if (sessionStorage.getItem('restart_tour') && location.pathname === '/') {
       sessionStorage.removeItem('restart_tour');
       setTimeout(() => setStep(0), 500);
     }
+    const savedStep = sessionStorage.getItem('tour_step');
+    if (savedStep) {
+      // Non rimuovere subito — il check API potrebbe partire prima del timeout
+      setTimeout(() => {
+        sessionStorage.removeItem('tour_step');
+        setStep(parseInt(savedStep));
+      }, 500);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Desktop: mantieni dropdown aperto durante step 2
+  // Desktop: mantieni dropdown aperto durante step 2 (competizioni) e 13 (pronostici)
   useEffect(() => {
-    if (step !== 2 || isMobile) return;
+    if (isMobile) return;
+    if (step !== 2 && step !== 13) return;
+    const selector = step === 2 ? '[data-tour="nav-competizioni"]' : '[data-tour="nav-pronostici"]';
     const keepOpen = () => {
-      const dd = document.querySelector('[data-tour="nav-competizioni"] [data-dropdown]') as HTMLElement;
+      const dd = document.querySelector(`${selector} [data-dropdown]`) as HTMLElement;
       if (dd) dd.style.display = 'block';
     };
     const interval = setInterval(keepOpen, 100);
@@ -499,9 +633,10 @@ export default function OnboardingTour() {
     return () => clearInterval(interval);
   }, [step, isMobile]);
 
-  // Mobile: alza zIndex pannello hamburger durante step 2
+
+  // Mobile: alza zIndex pannello hamburger durante step 2 e 13
   useEffect(() => {
-    if (step !== 2 || !isMobile) return;
+    if (!isMobile || (step !== 2 && step !== 13)) return;
     const panel = document.querySelector('[data-tour="hamburger-panel"]') as HTMLElement;
     if (panel) panel.style.zIndex = '200005';
     return () => {
@@ -620,10 +755,12 @@ export default function OnboardingTour() {
     await waitForEl('[data-tour="step-1b"]', 3000);
   }, [isMobile]);
 
-  const endTour = useCallback(() => {
+  const _endTour = useCallback(() => {
     setStep(-1);
     markCompleted();
   }, [markCompleted]);
+  // Alias per uso futuro (prossimi step)
+  void _endTour;
 
   const skipTour = useCallback(() => {
     setStep(-1);
@@ -690,9 +827,9 @@ export default function OnboardingTour() {
 
   const handleStep8Click = useCallback(async () => {
     if (isMobile) {
-      // Mobile: Coach AI cliccato → aspetta chat, spotlight sul contenuto
+      // Mobile: Coach AI cliccato → aspetta chat, spotlight sulla X
       setStep(9);
-      await waitForEl('[data-tour="chat-body"]', 3000);
+      await waitForEl('[data-tour="chat-close"]', 3000);
     } else {
       // Desktop: "Torna alla lista" cliccato → aspetta lista, sblocca scroll, spotlight robottino
       document.body.style.overflow = 'auto';
@@ -708,45 +845,73 @@ export default function OnboardingTour() {
 
   const handleStep9Click = useCallback(async () => {
     if (isMobile) {
-      // Mobile: contenuto chat visto → spotlight sulla X
+      // Mobile: chat chiusa → spotlight sull'hamburger dell'app
       setStep(10);
+      await waitForEl('[data-tour="app-hamburger"]', 2000);
     } else {
-      // Desktop: Coach AI cliccato → aspetta chat, spotlight sul contenuto
+      // Desktop: Coach AI cliccato → aspetta chat, spotlight sulla X
       setStep(10);
-      await waitForEl('[data-tour="chat-body"]', 3000);
+      await waitForEl('[data-tour="chat-close"]', 3000);
     }
   }, [isMobile]);
 
   const handleStep10Click = useCallback(async () => {
     if (isMobile) {
-      // Mobile: chat chiusa → spotlight sull'hamburger dell'app
-      setStep(11);
-      await waitForEl('[data-tour="app-hamburger"]', 2000);
-    } else {
-      // Desktop: contenuto chat visto → spotlight sulla X
-      setStep(11);
-    }
-  }, [isMobile]);
-
-  const handleStep11Click = useCallback(async () => {
-    if (isMobile) {
       // Mobile: hamburger cliccato → aspetta menu, spotlight su "Dashboard"
-      setStep(12);
+      setStep(11);
       await waitForEl('[data-tour="menu-dashboard"]', 2000);
     } else {
       // Desktop: chat chiusa → spotlight sul logo
-      setStep(12);
+      setStep(11);
       await waitForEl('[data-tour="app-logo"]', 2000);
     }
   }, [isMobile]);
 
-  const handleStep12Click = useCallback(() => {
-    endTour();
-  }, [endTour]);
+  const handleStep11Click = useCallback(() => {
+    // Click su Dashboard/logo ricarica la pagina → salva step successivo
+    sessionStorage.setItem('tour_step', '12');
+  }, []);
 
-  const startTour = useCallback(() => {
+  // --- PARTE 2: Pronostici ---
+  const handleStep12Click = useCallback(() => {
+    if (isMobile) {
+      // Mobile: hamburger cliccato → aspetta menu, spotlight su Best Picks
+      setTimeout(async () => {
+        await waitForEl('[data-tour="mob-best-picks"]', 2000);
+        setStep(13);
+      }, 300);
+    } else {
+      // Desktop: Pronostici cliccato → apri dropdown, spotlight su Best Picks
+      const nav = document.querySelector('[data-tour="nav-pronostici"]');
+      if (nav) {
+        const dd = nav.querySelector('[data-dropdown]') as HTMLElement;
+        if (dd) dd.style.display = 'block';
+      }
+      setTimeout(() => setStep(13), 150);
+    }
+  }, [isMobile]);
+
+  const handleStep13Click = useCallback(() => {
+    // Click su Best Picks → naviga a /best-picks → salva step
+    sessionStorage.setItem('tour_step', '14');
+  }, []);
+
+  // --- PARTE 2 continua: dentro Best Picks ---
+  const handleStep14Click = useCallback(async () => {
+    // Click sulla prima lega → si espande, spotlight sulla prima card
+    await new Promise(r => setTimeout(r, 300));
+    await waitForEl('[data-tour="bp-first-card"]', 3000);
+    setStep(15);
+  }, []);
+
+  const handleStep15Click = useCallback(() => {
+    // Click sulla prima card → tour capitolo 2 completato (per ora)
+    _endTour();
+  }, [_endTour]);
+
+  const startTourFromStep = useCallback((startStep: number) => {
     setShowWelcome(false);
-    setStep(0);
+    setStep(startStep);
   }, []);
 
   // Step 0: crea un cerchio che si muove random e si ferma
@@ -795,11 +960,30 @@ export default function OnboardingTour() {
     };
   }, [step]);
 
+  // Calcola props capitolo per lo step corrente
+  const chapter = getChapterForStep(step);
+  const chapterStepsTotal = chapter.endStep - chapter.startStep + 1;
+  const chapterStepCurrent = step - chapter.startStep;
+  const chapterProgress = Math.round(((chapterStepCurrent + 1) / chapterStepsTotal) * 100);
+  const chapterProps = {
+    chapterTitle: chapter.title,
+    chapterNum: chapter.id,
+    totalChapters: CHAPTERS.length,
+    chapterProgress,
+  };
+
+  // Menu capitoli — torna al welcome con capitoli aperti
+  const handleOpenChapters = useCallback(() => {
+    setStep(-1);
+    document.body.style.overflow = '';
+    setShowWelcome(true);
+  }, []);
+
   if (loading || !user) return null;
 
   return (
     <>
-      {showWelcome && <WelcomeModal onStart={startTour} onSkip={skipTour} onSkipPermanent={skipTourPermanent} />}
+      {showWelcome && <WelcomeModal onStartChapter={startTourFromStep} onSkip={skipTour} onSkipPermanent={skipTourPermanent} />}
 
       {/* Step 0: Dashboard — mirino 007 che si muove */}
       {step === 0 && (
@@ -807,8 +991,9 @@ export default function OnboardingTour() {
           selector="#tour-random-dot"
           text={`Questa è la tua dashboard. Da qui accedi a tutto: campionati, pronostici, simulazioni e analisi AI.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca il mirino per continuare.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep0Click}
-          stepIndex={0}
           padding={0}
           borderRadius={999}
           popupPosition="bottom"
@@ -824,8 +1009,9 @@ export default function OnboardingTour() {
             : `Da qui esplori tutti i campionati disponibili.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Competizioni.</span>`
           }
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep1Click}
-          stepIndex={1}
           padding={4}
           borderRadius={8}
         />
@@ -837,8 +1023,9 @@ export default function OnboardingTour() {
           selector={isMobile ? '[data-tour="step-1a"]' : '[data-tour="dd-altri-campionati"]'}
           text={`Ma ce ne sono molti di più — 26 leghe da tutto il mondo.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su &ldquo;Altri Campionati&rdquo;.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep2Click}
-          stepIndex={2}
           padding={2}
           borderRadius={6}
         />
@@ -850,8 +1037,9 @@ export default function OnboardingTour() {
           selector={'[data-tour="tour-league-sample"]'}
           text={`26 leghe da tutto il mondo. Proviamo con l'Eredivisie — il campionato olandese.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Eredivisie.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep3Click}
-          stepIndex={3}
           padding={2}
           borderRadius={4}
         />
@@ -863,8 +1051,9 @@ export default function OnboardingTour() {
           selector={'[data-tour="giornata-next"]'}
           text={`Puoi spostarti tra le giornate. Iniziamo dalla prossima.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla giornata successiva.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep4Click}
-          stepIndex={4}
           padding={4}
           borderRadius={20}
         />
@@ -876,8 +1065,9 @@ export default function OnboardingTour() {
           selector={'[data-tour="giornata-previous"]'}
           text={`Bene! Ora torniamo indietro.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla giornata precedente.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep5Click}
-          stepIndex={5}
           padding={4}
           borderRadius={20}
         />
@@ -889,8 +1079,9 @@ export default function OnboardingTour() {
           selector={'[data-tour="giornata-current"]'}
           text={`Perfetto. Ora torna alla giornata in corso.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla giornata corrente.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep6Click}
-          stepIndex={6}
           padding={4}
           borderRadius={20}
         />
@@ -902,8 +1093,9 @@ export default function OnboardingTour() {
           selector={'[data-tour="first-match"]'}
           text={`Ogni partita mostra quote, orario e risultati. Cliccandola puoi vedere le statistiche e simularla.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su questa partita.</span>`}
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep7Click}
-          stepIndex={7}
           padding={4}
           borderRadius={20}
         />
@@ -918,49 +1110,33 @@ export default function OnboardingTour() {
             : `Qui puoi vedere le statistiche della partita. Ora torniamo alla lista per scoprire il Coach AI.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su "Torna alla lista".</span>`
           }
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep8Click}
-          stepIndex={8}
           padding={4}
           borderRadius={isMobile ? 20 : 8}
         />
       )}
 
-      {/* Step 9: Mobile → contenuto chat (scrollabile) / Desktop → robottino Coach AI */}
+      {/* Step 9: Mobile → X chiudi chat / Desktop → robottino Coach AI */}
       {step === 9 && (
         <Spotlight
-          selector={isMobile ? '[data-tour="chat-body"]' : '[data-tour="coach-ai-btn"]'}
+          selector={isMobile ? '[data-tour="chat-close"]' : '[data-tour="coach-ai-btn"]'}
           text={isMobile
-            ? `Il Coach AI analizza la partita e risponde alle tue domande. Scorri per leggere.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per continuare.</span>`
+            ? `Hai scoperto il Coach AI! Ora chiudi la chat.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla X.</span>`
             : `Questo è il Coach AI — il tuo assistente per ogni partita. Ti spiega il pronostico, risponde alle tue domande, analizza tutto.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sul Coach AI.</span>`
           }
           onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
           onTargetClick={handleStep9Click}
-          stepIndex={9}
           padding={isMobile ? 4 : 6}
-          borderRadius={isMobile ? 12 : 20}
-          scrollable={isMobile}
+          borderRadius={isMobile ? 8 : 20}
         />
       )}
 
-      {/* Step 10: Mobile → X chiudi chat / Desktop → contenuto chat (scrollabile) */}
+      {/* Step 10: Mobile → hamburger app / Desktop → X chiudi chat */}
       {step === 10 && (
-        <Spotlight
-          selector={isMobile ? '[data-tour="chat-close"]' : '[data-tour="chat-body"]'}
-          text={isMobile
-            ? `Ora chiudi la chat per continuare.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla X.</span>`
-            : `Il Coach AI analizza la partita e risponde alle tue domande. Scorri per leggere.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per continuare.</span>`
-          }
-          onSkip={skipTour}
-          onTargetClick={handleStep10Click}
-          stepIndex={10}
-          padding={4}
-          borderRadius={isMobile ? 8 : 12}
-          scrollable={!isMobile}
-        />
-      )}
-
-      {/* Step 11: Mobile → hamburger app / Desktop → X chiudi chat */}
-      {step === 11 && (
         <Spotlight
           selector={isMobile ? '[data-tour="app-hamburger"]' : '[data-tour="chat-close"]'}
           text={isMobile
@@ -968,15 +1144,16 @@ export default function OnboardingTour() {
             : `Ora chiudi la chat.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla X.</span>`
           }
           onSkip={skipTour}
-          onTargetClick={handleStep11Click}
-          stepIndex={11}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep10Click}
           padding={4}
           borderRadius={8}
         />
       )}
 
-      {/* Step 12: Mobile → Dashboard nel menu / Desktop → logo */}
-      {step === 12 && (
+      {/* Step 11: Mobile → Dashboard nel menu / Desktop → logo */}
+      {step === 11 && (
         <Spotlight
           selector={isMobile ? '[data-tour="menu-dashboard"]' : '[data-tour="app-logo"]'}
           text={isMobile
@@ -984,12 +1161,75 @@ export default function OnboardingTour() {
             : `Torna alla dashboard per esplorare tutto il resto.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sul logo AI Simulator.</span>`
           }
           onSkip={skipTour}
-          onTargetClick={handleStep12Click}
-          stepIndex={12}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep11Click}
           padding={4}
           borderRadius={8}
           zBase={isMobile ? 200010 : 200000}
           popupPosition="top"
+          popupOffset={isMobile ? 30 : 0}
+        />
+      )}
+
+      {/* === PARTE 2: PRONOSTICI === */}
+
+      {/* Step 12: Mobile → hamburger dashboard / Desktop → "Pronostici" nella navbar */}
+      {step === 12 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="nav-hamburger"]' : '[data-tour="nav-pronostici"]'}
+          text={isMobile
+            ? `Ora scopriamo i pronostici.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Apri il menu.</span>`
+            : `Ora scopriamo i pronostici.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Pronostici.</span>`
+          }
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep12Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 13: Mobile → Best Picks nel menu / Desktop → Best Picks nel dropdown */}
+      {step === 13 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="mob-best-picks"]' : '[data-tour="dd-best-picks"]'}
+          text={`Qui trovi i pronostici migliori di oggi, selezionati dal nostro sistema.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Best Picks.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep13Click}
+          padding={2}
+          borderRadius={6}
+        />
+      )}
+
+      {/* Step 14: Best Picks — spotlight sulla prima lega */}
+      {step === 14 && (
+        <Spotlight
+          selector={'[data-tour="bp-first-league"]'}
+          text={`I pronostici sono organizzati per campionato. Apri una lega per vedere le partite.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su questa lega.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep14Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 15: Best Picks — spotlight sulla prima card partita */}
+      {step === 15 && (
+        <Spotlight
+          selector={'[data-tour="bp-first-card"]'}
+          text={`Ogni card mostra il pronostico, la quota, la confidence e il tipo di scommessa. Cliccandola vedi tutti i dettagli.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su questa partita.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep15Click}
+          padding={4}
+          borderRadius={12}
         />
       )}
     </>

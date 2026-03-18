@@ -463,7 +463,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                       {menu.items.map(item => (
                         <div
                           key={item.label}
-                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : {})}
+                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : {})}
                           onClick={() => { item.onClick(); setMenuOpen(false); }}
                           style={{
                             padding: '10px 8px',
@@ -551,7 +551,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 menu.items ? (
                 <div
                   key={menu.label}
-                  {...(menu.label === 'Competizioni' ? { 'data-tour': 'nav-competizioni' } : {})}
+                  {...(menu.label === 'Competizioni' ? { 'data-tour': 'nav-competizioni' } : menu.label === 'Pronostici' ? { 'data-tour': 'nav-pronostici' } : {})}
                   style={{ position: 'relative' }}
                   onMouseEnter={e => {
                     const dd = e.currentTarget.querySelector('[data-dropdown]') as HTMLElement;
@@ -597,7 +597,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     {menu.items.map(item => (
                       <div
                         key={item.label}
-                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : {})}
+                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : {})}
                         onClick={item.onClick}
                         style={{
                           padding: '8px 14px',

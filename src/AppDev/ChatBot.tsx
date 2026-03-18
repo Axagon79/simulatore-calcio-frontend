@@ -125,7 +125,7 @@ export default function ChatBot({
     <>
       {/* ── Pannello Chat (fisso bottom-right) ── */}
       {chatOpen && (
-        <div style={{ position: 'fixed', bottom: isMobile ? '10px' : '90px', right: '20px', zIndex: 10000,
+        <div data-tour="chat-widget" style={{ position: 'fixed', bottom: isMobile ? '10px' : '90px', right: '20px', zIndex: 10000,
           ...(isMobile ? { left: '10px', right: '10px' } : {}) }}>
         <div style={{
           ...styles.chatWidget,

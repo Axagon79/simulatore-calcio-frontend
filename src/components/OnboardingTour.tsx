@@ -538,6 +538,8 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [visible, setVisible] = useState(false);
+  const [waitingForDismiss, setWaitingForDismiss] = useState(false);
+  const dismissResolve = useRef<(() => void) | null>(null);
   const animFrame = useRef(0);
 
   const current = annotations[currentIdx];
@@ -574,8 +576,9 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
         document.body.style.overflow = 'hidden';
       }
 
-      // Mostra cerchio
+      // Mostra cerchio e aspetta che l'utente prema la X
       setVisible(true);
+      setWaitingForDismiss(true);
       const updateRect = () => {
         const r = (el as HTMLElement).getBoundingClientRect();
         setRect(r);
@@ -583,8 +586,10 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
       };
       updateRect();
 
-      // Aspetta la durata
-      await new Promise(r => setTimeout(r, current.duration || 3000));
+      // Aspetta che l'utente prema la X per continuare
+      await new Promise<void>(resolve => {
+        dismissResolve.current = resolve;
+      });
 
       // Click per chiudere se richiesto
       if (current.clickToClose) {
@@ -594,6 +599,7 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
 
       // Nascondi e passa al prossimo
       setVisible(false);
+      setWaitingForDismiss(false);
       cancelAnimationFrame(animFrame.current);
       await new Promise(r => setTimeout(r, 200));
 
@@ -649,31 +655,56 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
         zIndex: 200002,
         transition: 'all 0.4s ease',
       }} />
-      {/* Label — posizionata sotto o sopra a seconda dello spazio */}
+      {/* Label + X per continuare */}
       <div style={{
         position: 'fixed',
         ...(spotTop + spotH + 50 < window.innerHeight
           ? { top: spotTop + spotH + 10 }
-          : { top: spotTop - 40 }),
-        left: spotLeft + spotW / 2,
+          : { top: spotTop - 60 }),
+        left: '50%',
         transform: 'translateX(-50%)',
+        width: '90%',
+        maxWidth: '400px',
         zIndex: 200003,
-        pointerEvents: 'none',
+        pointerEvents: 'auto',
         animation: 'tour-text-fadein 0.3s ease',
       }}>
         <div style={{
           background: 'rgba(239,68,68,0.9)',
           color: '#fff',
-          padding: '6px 16px',
-          borderRadius: '8px',
+          padding: '10px 14px',
+          borderRadius: '10px',
           fontSize: '12px',
           fontWeight: 600,
           fontFamily: '"Inter", system-ui, sans-serif',
-          whiteSpace: 'nowrap',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          maxWidth: '90vw',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
         }}>
-          {current.label}
+          <span style={{ flex: 1, lineHeight: '1.4' }}>{current.label}</span>
+          {waitingForDismiss && (
+            <button
+              onClick={() => { if (dismissResolve.current) dismissResolve.current(); }}
+              style={{
+                background: 'rgba(255,255,255,0.25)',
+                border: 'none',
+                color: '#fff',
+                width: '22px', height: '22px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
       {/* Animazione CSS */}
@@ -1428,27 +1459,29 @@ export default function OnboardingTour() {
           annotations={[
             {
               selector: '.first-pronostico-pill',
-              label: 'Pronostico — il tip selezionato dal sistema',
-              duration: 3500,
+              label: 'Pronostico: confidence, quota, algoritmo di origine e stake',
+            },
+            {
+              selector: '.first-pronostico-pill',
+              label: 'Clicca la frecciolina per vedere come si è evoluto il pronostico',
+              clickToOpen: true,
+              clickToClose: true,
             },
             {
               selector: '.analysis-match-section',
-              label: 'Approfondisci l\'analisi con l\'intelligenza artificiale',
-              duration: 3500,
+              label: 'Tre strumenti AI per approfondire l\'analisi della partita',
             },
             {
               selector: '.stochastic-engine-header',
               label: 'Statistiche su 100 simulazioni del sistema C',
               clickToOpen: true,
               clickToClose: true,
-              duration: 3500,
             },
             {
               selector: '.detail-section-header',
-              label: 'Strisce, dettaglio segno e gol',
+              label: 'Strisce, dettaglio segno e dettaglio gol',
               clickToOpen: true,
               clickToClose: true,
-              duration: 3500,
             },
           ]}
           onComplete={handleCirclesComplete}

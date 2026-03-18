@@ -9,8 +9,8 @@ const isLight = getThemeMode() === 'light';
 // --- CAPITOLI DEL TOUR ---
 const CHAPTERS = [
   { id: 1, title: 'Campionati e Partite', startStep: 0, endStep: 11 },
-  { id: 2, title: 'Pronostici', startStep: 12, endStep: 17 },
-  { id: 3, title: 'Ticket AI e Bollette', startStep: 14, endStep: 14 }, // placeholder
+  { id: 2, title: 'Pronostici', startStep: 12, endStep: 18 },
+  { id: 3, title: 'Ticket AI e Bollette', startStep: 19, endStep: 19 }, // placeholder
   { id: 4, title: 'Simulazione', startStep: 15, endStep: 15 },          // placeholder
   { id: 5, title: 'Money Management', startStep: 16, endStep: 16 },     // placeholder
 ];
@@ -1140,10 +1140,22 @@ export default function OnboardingTour() {
     setStep(17);
   }, []);
 
-  const handleStep17Click = useCallback(() => {
-    // Click sulla card per chiuderla → tour capitolo 2 completato
-    _endTour();
-  }, [_endTour]);
+  const handleStep17Click = useCallback(async () => {
+    // Click sulla card per chiuderla → scrolla al bottone Dashboard, poi step 18
+    document.body.style.overflow = 'auto';
+    const btn = await waitForEl('[data-tour="bp-back-dashboard"]', 2000);
+    if (btn) {
+      (btn as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 400));
+    }
+    document.body.style.overflow = 'hidden';
+    setStep(18);
+  }, []);
+
+  const handleStep18Click = useCallback(() => {
+    // Click su Dashboard → naviga alla dashboard → salva step per capitolo 3
+    sessionStorage.setItem('tour_step', '19');
+  }, []);
 
   const startTourFromStep = useCallback((startStep: number) => {
     setShowWelcome(false);
@@ -1517,6 +1529,20 @@ export default function OnboardingTour() {
           onTargetClick={handleStep17Click}
           padding={4}
           borderRadius={12}
+        />
+      )}
+
+      {/* Step 18: Torna alla dashboard */}
+      {step === 18 && (
+        <Spotlight
+          selector={'[data-tour="bp-back-dashboard"]'}
+          text={`Torna alla dashboard per continuare il tour.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Dashboard.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep18Click}
+          padding={4}
+          borderRadius={8}
         />
       )}
     </>

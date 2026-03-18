@@ -2782,6 +2782,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {isMobile ? (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
             <button
+              data-tour="bp-back-dashboard"
               onClick={onBack}
               style={{
                 background: theme.surface05,
@@ -2830,6 +2831,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* DESKTOP: layout originale */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <button
+                data-tour="bp-back-dashboard"
                 onClick={onBack}
                 style={{
                   background: theme.surface05,

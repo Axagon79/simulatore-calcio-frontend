@@ -1128,8 +1128,15 @@ export default function OnboardingTour() {
     setStep(16); // step 16 = sequenza cerchi rossi
   }, []);
 
-  const handleCirclesComplete = useCallback(() => {
-    // Cerchi rossi completati → step 17 = chiudi la card
+  const handleCirclesComplete = useCallback(async () => {
+    // Cerchi rossi completati → scrolla alla riga della partita, poi step 17
+    document.body.style.overflow = 'auto';
+    const row = document.querySelector('[data-tour="bp-first-card"] .card-expand-row') as HTMLElement;
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 500));
+    }
+    document.body.style.overflow = 'hidden';
     setStep(17);
   }, []);
 

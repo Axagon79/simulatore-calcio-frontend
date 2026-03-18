@@ -9,7 +9,7 @@ const isLight = getThemeMode() === 'light';
 // --- CAPITOLI DEL TOUR ---
 const CHAPTERS = [
   { id: 1, title: 'Campionati e Partite', startStep: 0, endStep: 11 },
-  { id: 2, title: 'Pronostici', startStep: 12, endStep: 15 },
+  { id: 2, title: 'Pronostici', startStep: 12, endStep: 17 },
   { id: 3, title: 'Ticket AI e Bollette', startStep: 14, endStep: 14 }, // placeholder
   { id: 4, title: 'Simulazione', startStep: 15, endStep: 15 },          // placeholder
   { id: 5, title: 'Money Management', startStep: 16, endStep: 16 },     // placeholder
@@ -515,6 +515,165 @@ function Spotlight({ selector, text, onSkip, onTargetClick, onOpenChapters, chap
   );
 }
 
+// --- ANNOTAZIONE CERCHIO ROSSO (appare, click per aprire/chiudere, poi sparisce) ---
+interface CircleAnnotation {
+  selector: string;         // selettore CSS dell'elemento da cerchiare
+  label: string;            // testo da mostrare
+  clickToOpen?: boolean;    // se true, clicca l'elemento per aprirlo
+  clickToClose?: boolean;   // se true, clicca l'elemento per chiuderlo alla fine
+  duration?: number;        // ms di visibilità (default 3000)
+}
+
+function RedCircleSequence({ annotations, onComplete, parentSelector }: {
+  annotations: CircleAnnotation[];
+  onComplete: () => void;
+  parentSelector?: string; // selettore del container padre (per cercare dentro)
+}) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [visible, setVisible] = useState(false);
+  const animFrame = useRef(0);
+
+  const current = annotations[currentIdx];
+
+  // Trova l'elemento e aggiorna posizione
+  useEffect(() => {
+    if (!current) return;
+    const fullSelector = parentSelector ? `${parentSelector} ${current.selector}` : current.selector;
+
+    const runStep = async () => {
+      // Aspetta che l'elemento esista
+      const el = await waitForEl(fullSelector, 3000);
+      if (!el) {
+        // Elemento non trovato, salta al prossimo
+        if (currentIdx < annotations.length - 1) setCurrentIdx(currentIdx + 1);
+        else onComplete();
+        return;
+      }
+
+      // Scrolla l'elemento al centro dello schermo
+      document.body.style.overflow = 'auto';
+      (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 400));
+      document.body.style.overflow = 'hidden';
+
+      // Click per aprire se richiesto
+      if (current.clickToOpen) {
+        (el as HTMLElement).click();
+        await new Promise(r => setTimeout(r, 500));
+        // Ri-scrolla dopo apertura (il contenuto potrebbe spostare l'elemento)
+        document.body.style.overflow = 'auto';
+        (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 300));
+        document.body.style.overflow = 'hidden';
+      }
+
+      // Mostra cerchio
+      setVisible(true);
+      const updateRect = () => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        setRect(r);
+        animFrame.current = requestAnimationFrame(updateRect);
+      };
+      updateRect();
+
+      // Aspetta la durata
+      await new Promise(r => setTimeout(r, current.duration || 3000));
+
+      // Click per chiudere se richiesto
+      if (current.clickToClose) {
+        (el as HTMLElement).click();
+        await new Promise(r => setTimeout(r, 300));
+      }
+
+      // Nascondi e passa al prossimo
+      setVisible(false);
+      cancelAnimationFrame(animFrame.current);
+      await new Promise(r => setTimeout(r, 200));
+
+      if (currentIdx < annotations.length - 1) {
+        setCurrentIdx(currentIdx + 1);
+      } else {
+        onComplete();
+      }
+    };
+
+    runStep();
+    return () => cancelAnimationFrame(animFrame.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx]);
+
+  if (!visible || !rect || !current) return (
+    // Overlay scuro senza spotlight durante le transizioni
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto', background: 'rgba(0,0,0,0.7)' }} />
+  );
+
+  const padding = 8;
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const radius = Math.max(rect.width, rect.height) / 2 + padding;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+      {/* Overlay scuro */}
+      <div style={{
+        position: 'fixed',
+        top: cy - radius, left: cx - radius,
+        width: radius * 2, height: radius * 2,
+        borderRadius: '50%',
+        boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)',
+        zIndex: 200001,
+        pointerEvents: 'none',
+        transition: 'all 0.4s ease',
+      }} />
+      {/* Cerchio rosso pulsante */}
+      <div style={{
+        position: 'fixed',
+        top: cy - radius, left: cx - radius,
+        width: radius * 2, height: radius * 2,
+        borderRadius: '50%',
+        border: '3px solid #ef4444',
+        boxShadow: '0 0 20px rgba(239,68,68,0.5), inset 0 0 20px rgba(239,68,68,0.1)',
+        animation: 'red-circle-pulse 1.5s ease-in-out infinite',
+        pointerEvents: 'none',
+        zIndex: 200002,
+        transition: 'all 0.4s ease',
+      }} />
+      {/* Label */}
+      <div style={{
+        position: 'fixed',
+        top: cy + radius + 12,
+        left: cx,
+        transform: 'translateX(-50%)',
+        zIndex: 200003,
+        pointerEvents: 'none',
+        animation: 'tour-text-fadein 0.3s ease',
+      }}>
+        <div style={{
+          background: 'rgba(239,68,68,0.9)',
+          color: '#fff',
+          padding: '6px 16px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          fontWeight: 600,
+          fontFamily: '"Inter", system-ui, sans-serif',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        }}>
+          {current.label}
+        </div>
+      </div>
+      {/* Animazione CSS */}
+      <style>{`
+        @keyframes red-circle-pulse {
+          0%, 100% { box-shadow: 0 0 20px rgba(239,68,68,0.5), inset 0 0 20px rgba(239,68,68,0.1); }
+          50% { box-shadow: 0 0 35px rgba(239,68,68,0.7), inset 0 0 25px rgba(239,68,68,0.2); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // --- COMPONENTE PRINCIPALE ---
 export default function OnboardingTour() {
   const { user } = useAuth();
@@ -904,8 +1063,22 @@ export default function OnboardingTour() {
     setStep(15);
   }, []);
 
-  const handleStep15Click = useCallback(() => {
-    // Click sulla prima card → tour capitolo 2 completato (per ora)
+  const handleStep15Click = useCallback(async () => {
+    // Click sulla prima card → la card si espande → avvia sequenza cerchi rossi
+    // Sblocca scroll per permettere alla card di espandersi
+    document.body.style.overflow = 'auto';
+    await new Promise(r => setTimeout(r, 500));
+    document.body.style.overflow = 'hidden';
+    setStep(16); // step 16 = sequenza cerchi rossi
+  }, []);
+
+  const handleCirclesComplete = useCallback(() => {
+    // Cerchi rossi completati → step 17 = chiudi la card
+    setStep(17);
+  }, []);
+
+  const handleStep17Click = useCallback(() => {
+    // Click sulla card per chiuderla → tour capitolo 2 completato
     _endTour();
   }, [_endTour]);
 
@@ -1228,6 +1401,56 @@ export default function OnboardingTour() {
           onOpenChapters={handleOpenChapters}
           {...chapterProps}
           onTargetClick={handleStep15Click}
+          padding={4}
+          borderRadius={12}
+        />
+      )}
+
+      {/* Step 16: Sequenza cerchi rossi automatici sulla card espansa */}
+      {step === 16 && (
+        <RedCircleSequence
+          parentSelector='[data-tour="bp-first-card"]'
+          annotations={[
+            {
+              selector: '[data-tip-area]',
+              label: 'Pronostico — il tip selezionato dal sistema',
+              clickToOpen: true,
+              clickToClose: true,
+              duration: 3500,
+            },
+            {
+              selector: '.analysis-match-section',
+              label: 'Approfondisci l\'analisi con l\'intelligenza artificiale',
+              duration: 3500,
+            },
+            {
+              selector: '.stochastic-engine-header',
+              label: 'Statistiche su 100 simulazioni del sistema C',
+              clickToOpen: true,
+              clickToClose: true,
+              duration: 3500,
+            },
+            {
+              selector: '.detail-section-header',
+              label: 'Strisce, dettaglio segno e gol',
+              clickToOpen: true,
+              clickToClose: true,
+              duration: 3500,
+            },
+          ]}
+          onComplete={handleCirclesComplete}
+        />
+      )}
+
+      {/* Step 17: Chiudi la card */}
+      {step === 17 && (
+        <Spotlight
+          selector={'[data-tour="bp-first-card"]'}
+          text={`Hai visto tutto quello che offre ogni partita. Ora chiudi la card.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla partita per chiuderla.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep17Click}
           padding={4}
           borderRadius={12}
         />

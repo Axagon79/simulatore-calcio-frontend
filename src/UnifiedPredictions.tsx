@@ -1752,7 +1752,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 {hasAnalysis && <div style={isMobile ? { height: '2px', background: 'rgba(17, 56, 93, 0.6)' } : { width: '2px', background: 'rgba(17, 56, 93, 0.6)' }} />}
                 {/* Parte destra — Bottoni Analisi */}
                 {hasAnalysis && (
-                  <div style={{ ...(isMobile ? {} : { flex: 1 }), display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: isMobile ? '6px 12px' : '8px 14px', gap: '6px', background: 'rgba(140, 90, 0, 0.22)' }}>
+                  <div className="analysis-match-section" style={{ ...(isMobile ? {} : { flex: 1 }), display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: isMobile ? '6px 12px' : '8px 14px', gap: '6px', background: 'rgba(140, 90, 0, 0.22)' }}>
                     <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: '1px', textShadow: '0 0 8px rgba(0, 240, 255, 0.3)' }}>
                       Analisi Match
                     </div>
@@ -2143,7 +2143,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 }}>
                   {/* Header collassabile */}
                   <div
-                    className="collapsible-header"
+                    className="collapsible-header stochastic-engine-header"
                     onClick={(e) => toggleSection(mcKey, e)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2230,6 +2230,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               )}
               {hasDetail && (
                 <div
+                  className="detail-section-header"
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
                   onClick={(e) => toggleSection(detailKey, e)}
                 >

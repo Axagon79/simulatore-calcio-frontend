@@ -749,13 +749,14 @@ export default function OnboardingTour() {
   // Ascolta evento custom per rilanciare il tour (da Impostazioni)
   useEffect(() => {
     const handler = () => {
-      setShowWelcome(false);
+      localStorage.removeItem('onboarding_completed');
       if (window.location.pathname !== '/') {
         sessionStorage.setItem('restart_tour', '1');
         window.location.href = '/';
         return;
       }
-      setStep(0);
+      setStep(-1);
+      setShowWelcome(true);
     };
     window.addEventListener('restart-onboarding-tour', handler);
     return () => window.removeEventListener('restart-onboarding-tour', handler);
@@ -765,7 +766,8 @@ export default function OnboardingTour() {
   useEffect(() => {
     if (sessionStorage.getItem('restart_tour') && location.pathname === '/') {
       sessionStorage.removeItem('restart_tour');
-      setTimeout(() => setStep(0), 500);
+      localStorage.removeItem('onboarding_completed');
+      setTimeout(() => setShowWelcome(true), 500);
     }
     const savedStep = sessionStorage.getItem('tour_step');
     if (savedStep) {

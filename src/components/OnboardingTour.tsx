@@ -1503,7 +1503,7 @@ export default function OnboardingTour() {
       {step === 17 && (
         <Spotlight
           selector={'[data-tour="bp-first-card"]'}
-          text={`Hai visto tutto quello che offre ogni partita. Ora chiudi la card.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla partita per chiuderla.</span>`}
+          text={`C'è molto altro da scoprire dentro ogni partita. Per ora chiudi la card.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla partita per chiuderla.</span>`}
           onSkip={skipTour}
           onOpenChapters={handleOpenChapters}
           {...chapterProps}

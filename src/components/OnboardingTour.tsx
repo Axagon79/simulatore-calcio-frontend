@@ -1499,11 +1499,11 @@ export default function OnboardingTour() {
         />
       )}
 
-      {/* Step 17: Chiudi la card */}
+      {/* Step 17: Chiudi la card — evidenzia la riga cliccabile */}
       {step === 17 && (
         <Spotlight
-          selector={'[data-tour="bp-first-card"]'}
-          text={`C'è molto altro da scoprire dentro ogni partita. Per ora chiudi la card.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla partita per chiuderla.</span>`}
+          selector={'[data-tour="bp-first-card"] .card-expand-row'}
+          text={`Bene, ora conosci gli strumenti principali. Chiudi la card.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sulla partita per chiuderla.</span>`}
           onSkip={skipTour}
           onOpenChapters={handleOpenChapters}
           {...chapterProps}

@@ -614,30 +614,34 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
     <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto', background: 'rgba(0,0,0,0.7)' }} />
   );
 
-  const padding = 8;
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const radius = Math.max(rect.width, rect.height) / 2 + padding;
+  const pad = 6;
+  const spotTop = rect.top - pad;
+  const spotLeft = rect.left - pad;
+  const spotW = rect.width + pad * 2;
+  const spotH = rect.height + pad * 2;
+  // Forma: tondo se quasi quadrato, rettangolo arrotondato se largo
+  const ratio = rect.width / rect.height;
+  const bRadius = ratio > 2 || ratio < 0.5 ? '12px' : '50%';
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
-      {/* Overlay scuro */}
+      {/* Overlay scuro con buco sulla forma dell'elemento */}
       <div style={{
         position: 'fixed',
-        top: cy - radius, left: cx - radius,
-        width: radius * 2, height: radius * 2,
-        borderRadius: '50%',
+        top: spotTop, left: spotLeft,
+        width: spotW, height: spotH,
+        borderRadius: bRadius,
         boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)',
         zIndex: 200001,
         pointerEvents: 'none',
         transition: 'all 0.4s ease',
       }} />
-      {/* Cerchio rosso pulsante */}
+      {/* Bordo rosso pulsante */}
       <div style={{
         position: 'fixed',
-        top: cy - radius, left: cx - radius,
-        width: radius * 2, height: radius * 2,
-        borderRadius: '50%',
+        top: spotTop, left: spotLeft,
+        width: spotW, height: spotH,
+        borderRadius: bRadius,
         border: '3px solid #ef4444',
         boxShadow: '0 0 20px rgba(239,68,68,0.5), inset 0 0 20px rgba(239,68,68,0.1)',
         animation: 'red-circle-pulse 1.5s ease-in-out infinite',
@@ -645,11 +649,13 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
         zIndex: 200002,
         transition: 'all 0.4s ease',
       }} />
-      {/* Label */}
+      {/* Label — posizionata sotto o sopra a seconda dello spazio */}
       <div style={{
         position: 'fixed',
-        top: cy + radius + 12,
-        left: cx,
+        ...(spotTop + spotH + 50 < window.innerHeight
+          ? { top: spotTop + spotH + 10 }
+          : { top: spotTop - 40 }),
+        left: spotLeft + spotW / 2,
         transform: 'translateX(-50%)',
         zIndex: 200003,
         pointerEvents: 'none',
@@ -665,6 +671,7 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
           fontFamily: '"Inter", system-ui, sans-serif',
           whiteSpace: 'nowrap',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          maxWidth: '90vw',
         }}>
           {current.label}
         </div>

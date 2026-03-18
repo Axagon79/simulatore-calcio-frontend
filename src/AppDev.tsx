@@ -1697,7 +1697,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               </div>
 
               {/* PARTITE DELLA LEGA */}
-              {group.matches.map(match => {
+              {group.matches.map((match, matchIdx) => {
                 const [hh, mm] = (match.match_time || '').split(':').map(Number);
                 const kickoffMinutes = (!isNaN(hh) && !isNaN(mm)) ? hh * 60 + mm : -1;
                 // Dato reale dal daemon (priorità) oppure fallback calcolo orario
@@ -1708,9 +1708,12 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                   && match.status !== 'Finished'
                 );
 
+                // Prima partita in assoluto → data-tour per il tour guidato
+                const isFirstMatch = filteredData[0]?.league_id === group.league_id && matchIdx === 0;
+
                 return (
+                  <div key={match.id} {...(isFirstMatch ? { 'data-tour': 'first-match' } : {})}>
                   <ElementoPartita
-                    key={match.id}
                     match={match}
                     isMobile={isMobile}
                     isExpanded={expandedMatch === match.id}
@@ -1728,6 +1731,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     onOpenCoachAI={handleOpenCoachAI}
                     leagueName={group.league_name || ''}
                   />
+                  </div>
                 );
               })}
             </div>
@@ -1781,7 +1785,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Nessuna partita trovata</div>
       ) : (
-        matches.map(match => {
+        matches.map((match, matchIdx) => {
           const now = new Date();
           const nowMin = now.getHours() * 60 + now.getMinutes();
           const todayStr = now.toISOString().split('T')[0];
@@ -1791,8 +1795,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
           const isLive = ((match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished') || (matchDate === todayStr && kickoff >= 0 && nowMin >= kickoff && nowMin <= kickoff + 120 && match.status !== 'Finished');
 
           return (
+            <div key={match.id} {...(matchIdx === 0 ? { 'data-tour': 'first-match' } : {})}>
             <ElementoPartita
-              key={match.id}
               match={match}
               isMobile={isMobile}
               isExpanded={expandedMatch === match.id}
@@ -1804,6 +1808,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               onOpenCoachAI={handleOpenCoachAI}
               leagueName={LEAGUES_MAP.find(l => l.id === (league || activeLeague))?.name || league || activeLeague || ''}
             />
+            </div>
           );
         })
       )}
@@ -1867,13 +1872,14 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
   
     return (
       <div style={styles.arenaContent}>
-        <button 
-          onClick={() => setViewState('list')} 
-          style={{ 
-            background: 'transparent', 
-            border: 'none', 
-            color: theme.textDim, 
-            cursor: 'pointer', 
+        <button
+          data-tour="btn-torna-lista"
+          onClick={() => setViewState('list')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: theme.textDim,
+            cursor: 'pointer',
             marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',

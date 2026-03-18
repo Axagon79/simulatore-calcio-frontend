@@ -1433,7 +1433,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             cursor: 'pointer', fontSize: 20, padding: '4px 8px',
           }}>←</button>
         )}
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+        <h1 data-tour="step-5" style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
           🎫 Ticket AI
         </h1>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>

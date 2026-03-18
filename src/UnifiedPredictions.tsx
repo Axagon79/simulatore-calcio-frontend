@@ -2999,7 +2999,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* ==================== VISTA PRINCIPALE ==================== */}
         {(<>
         {/* TAB SWITCHER: Pronostici | Alto Rendimento */}
-        <div style={{
+        <div data-tour="step-4" style={{
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
         }}>
           {[
@@ -3473,7 +3473,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         })()}
 
         {/* CAPSULA FILTRI — collassabile, con titolo dentro */}
-        <div className={activeTab === 'pronostici' ? 'capsula-main-cyan' : 'capsula-main-gold'} style={{
+        <div data-tour="step-6" className={activeTab === 'pronostici' ? 'capsula-main-cyan' : 'capsula-main-gold'} style={{
           position: 'relative',
           background: activeTab === 'pronostici'
             ? (isLight

@@ -99,7 +99,7 @@ export default function BarraLaterale({
   const { credits, shields } = useAuth();
 
   return (
-    <div style={{
+    <div data-tour="sidebar-panel" style={{
       ...(isMobile ? styles.sidebarMobile : styles.sidebar),
       ...(isMobile && mobileMenuOpen ? styles.sidebarMobileOpen : {})
     }}>
@@ -112,6 +112,7 @@ export default function BarraLaterale({
           borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`
         }}>
           <button
+            data-tour="menu-dashboard"
             onClick={() => { setMobileMenuOpen(false); window.location.href = '/'; }}
             style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',

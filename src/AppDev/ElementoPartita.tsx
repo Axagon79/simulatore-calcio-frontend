@@ -155,6 +155,7 @@ export default function ElementoPartita({
               }
             `}</style>
             <div
+              data-tour="coach-ai-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 const dateStr = match.date_obj ? match.date_obj.split('T')[0] : '';
@@ -548,6 +549,7 @@ export default function ElementoPartita({
       {/* Bottone Coach AI — Desktop */}
       {!isMobile && onOpenCoachAI && (
         <button
+          data-tour="coach-ai-btn"
           onClick={(e) => {
             e.stopPropagation();
             const dateStr = match.date_obj ? match.date_obj.split('T')[0] : '';

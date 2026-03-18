@@ -59,6 +59,7 @@ export default function BarraSuperiore({
       {isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 20 }}>
           <button
+            data-tour="app-hamburger"
             onClick={onMobileMenuOpen}
             style={{
               background: 'rgba(0, 240, 255, 0.1)',
@@ -111,7 +112,7 @@ export default function BarraSuperiore({
       {/* 1. SEZIONE SINISTRA: Navigazione e Nome Sito (Desktop) */}
       {!isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '36px', paddingLeft: '6px', zIndex: 10 }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
+          <a data-tour="app-logo" href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
             <img
               src="/logo-virgo.webp"
               alt="Logo"

@@ -8,6 +8,7 @@ import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 import { checkAdmin } from './permissions';
 import StemmaImg from './components/StemmaImg';
 import TopbarPronostici from './components/TopbarPronostici';
+// OnboardingTour spostato a livello globale in main.tsx
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
@@ -200,6 +201,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
+
       {/* BOX CENTRALE CHE CONTIENE TUTTO */}
       <div style={{width: '100%', maxWidth: '1200px', paddingBottom: '40px'}}>
 
@@ -227,7 +229,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             width: '100%',
           }}>
             {/* SINISTRA: Logo */}
-            <div style={{
+            <div data-tour="dashboard-logo" style={{
               display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
             }}>
               <img
@@ -403,7 +405,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
           return isMobile ? (
             /* MOBILE: Hamburger */
             <>
-              <div style={{
+              <div data-tour="nav-hamburger" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
                 padding: '6px 0',
                 borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
@@ -428,7 +430,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               </div>
               {/* PANNELLO HAMBURGER */}
               {menuOpen && (
-                <div style={{
+                <div data-tour="hamburger-panel" style={{
                   position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                   background: isLight ? 'rgba(255,255,255,0.97)' : 'rgb(10,11,15)',
                   zIndex: 9000, overflowY: 'auto',
@@ -461,6 +463,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                       {menu.items.map(item => (
                         <div
                           key={item.label}
+                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : {})}
                           onClick={() => { item.onClick(); setMenuOpen(false); }}
                           style={{
                             padding: '10px 8px',
@@ -548,6 +551,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                 menu.items ? (
                 <div
                   key={menu.label}
+                  {...(menu.label === 'Competizioni' ? { 'data-tour': 'nav-competizioni' } : {})}
                   style={{ position: 'relative' }}
                   onMouseEnter={e => {
                     const dd = e.currentTarget.querySelector('[data-dropdown]') as HTMLElement;
@@ -593,6 +597,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     {menu.items.map(item => (
                       <div
                         key={item.label}
+                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : {})}
                         onClick={item.onClick}
                         style={{
                           padding: '8px 14px',
@@ -645,7 +650,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
         })()}
 
         {/* ===== HERO — Tagline grande ===== */}
-        <div style={{
+        <div data-tour="step-2" style={{
           padding: isMobile ? '36px 4px 28px' : '56px 0 44px',
         }}>
           <h1 style={{
@@ -768,7 +773,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             link: { label: 'Gestisci il bankroll', action: () => setShowBankroll(true) },
           },
         ].map((section, idx) => (
-          <div key={idx} style={{
+          <div key={idx} {...(idx === 1 ? { 'data-tour': 'step-3' } : {})} style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : (idx % 2 === 0 ? 'row' : 'row-reverse'),
             alignItems: 'center',
@@ -917,6 +922,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             ))}
             {/* Altri Campionati */}
             <div
+              data-tour="step-1a"
               onClick={() => setShowOtherLeagues(true)}
               style={{
                 background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.02)',
@@ -1249,7 +1255,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               </button>
             </div>
 
-            <div style={{
+            <div data-tour="step-1b" style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
               gap: '1px',
@@ -1261,6 +1267,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               {otherLeagues.map(league => (
                 <div
                   key={league.id}
+                  {...(league.id === 'EREDIVISIE' ? { 'data-tour': 'tour-league-sample' } : {})}
                   onClick={() => {
                     setShowOtherLeagues(false);
                     onSelectLeague(league.id);

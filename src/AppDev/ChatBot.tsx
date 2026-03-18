@@ -151,11 +151,11 @@ export default function ChatBot({
                 </div>
               </div>
             </div>
-            <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px', padding: '4px' }}>✕</button>
+            <button data-tour="chat-close" onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: theme.text, cursor: 'pointer', fontSize: '18px', padding: '4px' }}>✕</button>
           </div>
 
           {/* Messaggi */}
-          <div style={styles.chatBody}>
+          <div data-tour="chat-body" style={styles.chatBody}>
             {messages.map(msg => (
               <div key={msg.id}>
                 {/* Messaggio normale */}

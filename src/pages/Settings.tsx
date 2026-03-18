@@ -99,6 +99,35 @@ export default function Settings({ onClose }: SettingsProps) {
 
       </Section>
 
+      {/* SEZIONE: GUIDA */}
+      {user && (
+        <Section title="Guida">
+          <SettingRow label="Tour guidato">
+            <button
+              onClick={() => {
+                onClose();
+                setTimeout(() => window.dispatchEvent(new Event('restart-onboarding-tour')), 300);
+              }}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${theme.cyan}`,
+                color: theme.cyan,
+                padding: '8px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 700,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = `${theme.cyan}15`; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              Ripeti tour
+            </button>
+          </SettingRow>
+        </Section>
+      )}
+
       {/* SEZIONE: PROSSIMAMENTE */}
       <Section title="Prossimamente" dimmed>
         <SettingRow label="Lingua" disabled>

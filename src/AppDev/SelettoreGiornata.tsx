@@ -32,6 +32,7 @@ export default function SelettoreGiornata({
 
   return (
     <div
+      data-tour="selettore-giornata"
       key={rounds[0]?.name}
       style={{
         display: 'flex',
@@ -54,6 +55,7 @@ export default function SelettoreGiornata({
         return (
           <button
             key={r.name}
+            data-tour={`giornata-${r.type}`}
             onClick={() => {
               setSelectedRound(r);
 

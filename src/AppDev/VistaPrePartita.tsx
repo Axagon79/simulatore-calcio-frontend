@@ -700,6 +700,7 @@ export default function VistaPrePartita({
           {/* 1. SINISTRA: Tasto Indietro (Bilanciato con il lato destro del monitor) */}
           <div style={{ width: isMobile ? '100%' : '200px', display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', alignItems: 'center', ...(isMobile ? { position: 'relative' as const } : {}), zIndex: 10 }}>
             <button
+              data-tour="btn-lista"
               onClick={() => setViewState('list')}
               style={{
                 height: isMobile ? '23px' : '35px',

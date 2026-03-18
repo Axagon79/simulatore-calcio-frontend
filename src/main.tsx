@@ -38,6 +38,7 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 
 import ErrorBoundary from './components/ErrorBoundary';
+import OnboardingTour from './components/OnboardingTour';
 
 const LEGAL_PATHS = ['/termini', '/privacy', '/disclaimer', '/privacy-policy'];
 
@@ -103,6 +104,7 @@ function AppRoot() {
         </Routes>
         </Suspense>
       {showSettings && <Suspense fallback={null}><Settings onClose={() => setShowSettings(false)} /></Suspense>}
+      <OnboardingTour />
       <WalletBadge />
       <CookieBanner />
       </ConsentGate>

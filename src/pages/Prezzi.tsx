@@ -437,7 +437,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
         </section>
 
         {/* --- DETTAGLIO PACCHETTI CREDITI --- */}
-        <section id="pacchetti-crediti" style={{ marginBottom: '80px' }}>
+        <section id="pacchetti-crediti" data-tour="step-7" style={{ marginBottom: '80px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{
               fontSize: '24px', fontWeight: '600', letterSpacing: '-0.02em', margin: '0 0 8px',

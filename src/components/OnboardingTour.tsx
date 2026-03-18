@@ -523,11 +523,12 @@ function Spotlight({ selector, text, onSkip, onTargetClick, onOpenChapters, chap
 
 // --- ANNOTAZIONE CERCHIO ROSSO (appare, click per aprire/chiudere, poi sparisce) ---
 interface CircleAnnotation {
-  selector: string;         // selettore CSS dell'elemento da cerchiare
-  label: string;            // testo da mostrare
-  clickToOpen?: boolean;    // se true, clicca l'elemento per aprirlo
-  clickToClose?: boolean;   // se true, clicca l'elemento per chiuderlo alla fine
-  duration?: number;        // ms di visibilità (default 3000)
+  selector: string;
+  label: string;
+  clickToOpen?: boolean;
+  clickToClose?: boolean;
+  scrollFree?: boolean;     // se true, lo scroll è libero durante questa annotazione
+  duration?: number;
 }
 
 function RedCircleSequence({ annotations, onComplete, parentSelector }: {
@@ -631,12 +632,13 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
   const spotLeft = rect.left - pad;
   const spotW = rect.width + pad * 2;
   const spotH = rect.height + pad * 2;
-  // Forma: tondo se quasi quadrato, rettangolo arrotondato se largo
   const ratio = rect.width / rect.height;
   const bRadius = ratio > 2 || ratio < 0.5 ? '12px' : '50%';
+  // Scroll libero quando richiesto dall'annotazione
+  const isScrollFree = waitingForDismiss && !!current.scrollFree;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: isScrollFree ? 'none' : 'auto' }}>
       {/* Overlay scuro con buco sulla forma dell'elemento */}
       <div style={{
         position: 'fixed',
@@ -1490,6 +1492,7 @@ export default function OnboardingTour() {
               label: 'Strisce, dettaglio segno e dettaglio gol',
               clickToOpen: true,
               clickToClose: true,
+              scrollFree: true,
             },
           ]}
           onComplete={handleCirclesComplete}

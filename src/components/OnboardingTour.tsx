@@ -1414,10 +1414,8 @@ export default function OnboardingTour() {
           parentSelector='[data-tour="bp-first-card"]'
           annotations={[
             {
-              selector: '[data-tip-area]',
+              selector: '.first-pronostico-pill',
               label: 'Pronostico — il tip selezionato dal sistema',
-              clickToOpen: true,
-              clickToClose: true,
               duration: 3500,
             },
             {

@@ -1415,8 +1415,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {(() => {
               const segnoPreds = pred.pronostici?.filter(p => p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE') || [];
               const golPreds = pred.pronostici?.filter(p => p.tipo === 'GOL' || p.tipo === 'RISULTATO_ESATTO') || [];
+              let pillCounter = 0;
 
               const renderPill = (p: typeof pred.pronostici[0], idx: number) => {
+                const isFirstPill = pillCounter === 0;
+                pillCounter++;
                 const isHit = getEffectiveHit(pred, p);
                 const pillBg = isHit === true ? theme.hitBgSoft : isHit === false ? theme.missBgSoft : (isLight ? '#e0f2fe' : 'rgba(17, 56, 93, 0.45)');
                 const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : (isLight ? '#7dd3fc' : 'rgba(17, 56, 93, 0.7)');
@@ -1428,7 +1431,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const pillKey = `${matchKey}_${p.tipo}_${p.pronostico}`;
                 const isExpanded = versionOpen.has(pillKey);
                 return (
-                  <div key={idx} style={{ marginBottom: '3px' }}>
+                  <div key={idx} className={isFirstPill ? 'first-pronostico-pill' : ''} style={{ marginBottom: '3px' }}>
                     <div style={{
                       background: pillBg, border: `1px solid ${pillBorder}`,
                       borderRadius: isExpanded ? '5px 5px 0 0' : '5px', padding: '3px 8px',

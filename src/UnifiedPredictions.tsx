@@ -1471,6 +1471,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         </span>
                       )}
                       <span
+                        className={isFirstPill ? 'first-pill-arrow' : ''}
                         onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey, matchKey); }}
                         style={{
                           fontSize: '8px', color: theme.textDim, cursor: 'pointer',

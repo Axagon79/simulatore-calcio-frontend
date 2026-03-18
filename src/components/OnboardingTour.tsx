@@ -1462,8 +1462,8 @@ export default function OnboardingTour() {
               label: 'Pronostico: confidence, quota, algoritmo di origine e stake',
             },
             {
-              selector: '.first-pronostico-pill',
-              label: 'Clicca la frecciolina per vedere come si è evoluto il pronostico',
+              selector: '.first-pill-arrow',
+              label: 'Storico: come si è evoluto il pronostico durante la giornata',
               clickToOpen: true,
               clickToClose: true,
             },

@@ -321,14 +321,20 @@ function Spotlight({ selector, text, onSkip, onTargetClick, onOpenChapters, chap
             if (selector) {
               const target = document.querySelector(selector) as HTMLElement;
               if (target) {
-                const firstChild = target.firstElementChild as HTMLElement;
+                // Cerca prima un elemento cliccabile specifico dentro il target
+                const expandRow = target.querySelector('.card-expand-row') as HTMLElement;
+                const btn = target.querySelector('button, a') as HTMLElement;
                 const tagName = target.tagName.toLowerCase();
-                if (tagName === 'button' || tagName === 'a') {
+                if (expandRow) {
+                  expandRow.click();
+                } else if (tagName === 'button' || tagName === 'a') {
                   target.click();
-                } else if (firstChild) {
-                  firstChild.click();
+                } else if (btn) {
+                  btn.click();
                 } else {
-                  target.click();
+                  const firstChild = target.firstElementChild as HTMLElement;
+                  if (firstChild) firstChild.click();
+                  else target.click();
                 }
               }
             }

@@ -1253,6 +1253,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* RIGA UNICA COMPATTA — click ovunque espande */}
         <div
+          className="card-expand-row"
           style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
           onClick={() => setExpandedCards(prev => {
             const next = new Set(prev);

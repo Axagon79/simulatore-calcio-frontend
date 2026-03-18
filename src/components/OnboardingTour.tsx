@@ -576,6 +576,11 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
         document.body.style.overflow = 'hidden';
       }
 
+      // Se clickToOpen, sblocca scroll per permettere di esplorare il contenuto
+      if (current.clickToOpen) {
+        document.body.style.overflow = 'auto';
+      }
+
       // Mostra cerchio e aspetta che l'utente prema la X
       setVisible(true);
       setWaitingForDismiss(true);
@@ -591,7 +596,8 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
         dismissResolve.current = resolve;
       });
 
-      // Click per chiudere se richiesto
+      // Ri-blocca scroll e chiudi se richiesto
+      document.body.style.overflow = 'hidden';
       if (current.clickToClose) {
         (el as HTMLElement).click();
         await new Promise(r => setTimeout(r, 300));

@@ -1186,6 +1186,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [dateDisponibili, setDateDisponibili] = useState<Set<string>>(new Set());
   const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
   const [storicoStats, setStoricoStats] = useState<any>(null);
+  const [filtroEsito, setFiltroEsito] = useState<'tutti' | 'vinte' | 'perse' | 'pending'>('tutti');
   const [storicoLoading, setStoricoLoading] = useState(false);
 
   const fetchBollette = useCallback(async () => {
@@ -1235,7 +1236,14 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Fetch date disponibili per storico
+  // Ricarica storico quando storicoDate cambia (frecce navigazione)
+  useEffect(() => {
+    if (storicoDate && storicoDate !== new Date().toISOString().split('T')[0]) {
+      fetchStorico(storicoDate);
+      setFiltroEsito('tutti');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storicoDate]);
 
   // Fetch storico per data selezionata
   const fetchStorico = async (date: string) => {
@@ -1357,9 +1365,22 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     }
   };
 
+  // Stats oggi (per badge nell'header)
+  const oggiStats = {
+    vinte: bollette.filter(b => b.esito_globale === 'vinta').length,
+    perse: bollette.filter(b => b.esito_globale === 'persa').length,
+    pending: bollette.filter(b => !b.esito_globale).length,
+  };
+
   // Raggruppa — usa storicoBollette se data selezionata, altrimenti bollette di oggi
   const isStorico = !!storicoDate && storicoDate !== new Date().toISOString().split('T')[0];
-  const bolletteAttive = isStorico ? storicoBollette : bollette;
+  const bolletteRaw = isStorico ? storicoBollette : bollette;
+  const bolletteAttive = filtroEsito === 'tutti' ? bolletteRaw : bolletteRaw.filter(b => {
+    if (filtroEsito === 'vinte') return b.esito_globale === 'vinta';
+    if (filtroEsito === 'perse') return b.esito_globale === 'persa';
+    if (filtroEsito === 'pending') return !b.esito_globale;
+    return true;
+  });
   const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
   for (const b of bolletteAttive) {
     if (b.tipo === 'oggi') {
@@ -1417,44 +1438,172 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       background: isLight ? '#f5f5f5' : theme.bg,
       color: textPrimary,
       fontFamily: theme.font,
-      overflowY: 'auto', zIndex: 100,
+      overflow: 'hidden', zIndex: 100,
+      display: 'flex', flexDirection: 'column' as const,
     }}>
       {/* Header */}
       <div style={{
-        zIndex: 10,
+        zIndex: 10, flexShrink: 0,
         background: isLight ? '#fff' : theme.panelSolid,
         borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
-        padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
+        padding: isMobile ? '12px 16px' : '16px 20px',
+        display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 12,
       }}>
-        {onBack && (
-          <button onClick={onBack} style={{
-            background: 'none', border: 'none',
-            color: isLight ? '#333' : theme.cyan,
-            cursor: 'pointer', fontSize: 20, padding: '4px 8px',
-          }}>←</button>
-        )}
-        <h1 data-tour="step-5" style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-          🎫 Ticket AI
-        </h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ color: isLight ? '#999' : theme.textDim, fontSize: 14 }}>
-            {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </span>
-          <button
-            onClick={() => setShowStorico(!showStorico)}
-            style={{
-              background: showStorico ? (isLight ? '#667eea' : '#11998e') : 'none',
-              border: showStorico ? 'none' : (isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.2)'),
-              borderRadius: 8, padding: '6px 12px',
-              color: showStorico ? '#fff' : (isLight ? '#333' : '#fff'),
-              cursor: 'pointer', fontSize: 14, fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            📅 Storico
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+          {onBack && (
+            <button onClick={onBack} style={{
+              background: 'none', border: 'none',
+              color: isLight ? '#333' : theme.cyan,
+              cursor: 'pointer', fontSize: 20, padding: '4px 8px',
+            }}>←</button>
+          )}
+          <h1 data-tour="step-5" style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+            🎫 Ticket AI
+          </h1>
+          {!isMobile && (() => {
+            const currentStats = isStorico ? { vinte: storicoStats?.vinte ?? 0, perse: storicoStats?.perse ?? 0, pending: storicoStats?.pending ?? 0 } : oggiStats;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const currentDateStr = storicoDate || todayStr;
+            const displayDate = new Date(currentDateStr + 'T12:00:00');
+            const isToday = currentDateStr === todayStr;
+            return (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              {/* Badge */}
+              <div style={{ display: 'flex', gap: 11, width: 250, marginRight: 100 }}>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 12, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 12, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
+              </div>
+              {/* Freccia ◀ */}
+              <button onClick={() => {
+                const [y, m, d] = currentDateStr.split('-').map(Number);
+                const prev = new Date(y, m - 1, d - 1);
+                setStoricoDate(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`);
+              }} style={{
+                background: isLight ? 'rgba(102,126,234,0.08)' : 'rgba(0,240,255,0.08)',
+                border: isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)',
+                borderRadius: 8, width: 32, height: 32, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', fontSize: 16, outline: 'none',
+                color: isLight ? '#667eea' : theme.cyan, padding: 0,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = isLight ? 'rgba(102,126,234,0.15)' : 'rgba(0,240,255,0.15)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = isLight ? 'rgba(102,126,234,0.08)' : 'rgba(0,240,255,0.08)'; }}
+              >◀</button>
+              {/* Data */}
+              <div
+                onClick={() => setShowStorico(!showStorico)}
+                style={{
+                  background: isLight
+                    ? 'linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08))'
+                    : 'linear-gradient(135deg, rgba(0,240,255,0.08), rgba(188,19,254,0.08))',
+                  border: isLight
+                    ? '1px solid rgba(102,126,234,0.2)'
+                    : `1px solid rgba(0,240,255,0.15)`,
+                  borderRadius: 10,
+                  padding: '6px 16px',
+                  width: 280, flexShrink: 0,
+                  textAlign: 'center' as const,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = isLight ? 'rgba(102,126,234,0.4)' : 'rgba(0,240,255,0.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = isLight ? 'rgba(102,126,234,0.2)' : 'rgba(0,240,255,0.15)'; }}
+              >
+                <span style={{
+                  color: isLight ? '#4a5568' : 'rgba(255,255,255,0.85)',
+                  fontSize: 14, fontWeight: 700,
+                  textTransform: 'capitalize',
+                  letterSpacing: '0.02em',
+                }}>
+                  📅 {displayDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </span>
+              </div>
+              {/* Freccia ▶ */}
+              <button onClick={() => {
+                if (isToday) return;
+                const [y, m, d] = currentDateStr.split('-').map(Number);
+                const next = new Date(y, m - 1, d + 1);
+                const nextStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+                if (nextStr >= todayStr) { setStoricoDate(''); setFiltroEsito('tutti'); }
+                else setStoricoDate(nextStr);
+              }} style={{
+                background: isToday
+                  ? (isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)')
+                  : (isLight ? 'rgba(102,126,234,0.08)' : 'rgba(0,240,255,0.08)'),
+                border: isToday
+                  ? (isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)')
+                  : (isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)'),
+                borderRadius: 8, width: 32, height: 32, flexShrink: 0, marginRight: 50, outline: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isToday ? (isLight ? '#ddd' : 'rgba(255,255,255,0.15)') : (isLight ? '#667eea' : theme.cyan),
+                padding: 0, fontSize: 16,
+                transition: 'all 0.15s',
+                cursor: isToday ? 'default' : 'pointer',
+              }}>▶</button>
+              {/* Bottone Oggi */}
+              <button onClick={() => { if (isStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
+                background: isStorico ? (isLight ? '#667eea' : '#11998e') : 'transparent',
+                color: isStorico ? '#fff' : 'transparent',
+                border: 'none', borderRadius: 999, padding: '6px 20px', outline: 'none',
+                fontSize: 12, fontWeight: 600, cursor: isStorico ? 'pointer' : 'default',
+                whiteSpace: 'nowrap', width: 60, flexShrink: 0, marginRight: 40,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}>Oggi</button>
+            </div>
+            );
+          })()}
         </div>
+        {isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s' }}>{oggiStats.vinte} V</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s' }}>{oggiStats.perse} P</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 11, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s' }}>{oggiStats.pending} ⏳</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: isLight ? '#999' : theme.textDim, fontSize: 12 }}>
+                {new Date().toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </span>
+              <button
+                onClick={() => setShowStorico(!showStorico)}
+                style={{
+                  background: showStorico ? (isLight ? '#667eea' : '#11998e') : 'none',
+                  border: showStorico ? 'none' : (isLight ? '1px solid #ccc' : '1px solid rgba(255,255,255,0.2)'),
+                  borderRadius: 8, padding: '4px 10px',
+                  color: showStorico ? '#fff' : (isLight ? '#333' : '#fff'),
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                📅
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Barra caricamento */}
+      <div style={{ height: 2, flexShrink: 0, background: isLight ? '#e0e0e0' : 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+        {storicoLoading && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, height: '100%', width: '40%',
+            background: `linear-gradient(90deg, transparent, ${theme.cyan}, transparent)`,
+            animation: 'bollette-loading-bar 1.2s ease-in-out infinite',
+          }} />
+        )}
+      </div>
+      <style>{`
+        @keyframes bollette-loading-bar {
+          0% { left: -40%; }
+          100% { left: 100%; }
+        }
+      `}</style>
+
+      {/* Contenuto scrollabile — sotto l'header */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
 
       {/* Calendario storico — popup/modal */}
       {showStorico && (() => {
@@ -1573,46 +1722,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           } : {}),
         }}>
 
-          {/* Banner storico */}
-          {isStorico && (
-            <div style={{
-              background: isLight
-                ? 'linear-gradient(135deg, #e8eaf6, #c5cae9)'
-                : 'linear-gradient(135deg, #1a1a2e, #2d2d44)',
-              borderRadius: 12, padding: isMobile ? '12px 16px' : '14px 20px',
-              marginBottom: 16,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              flexWrap: 'wrap', gap: 10,
-              border: isLight ? '1px solid #c5cae9' : '1px solid rgba(255,255,255,0.1)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button onClick={() => { setStoricoDate(''); }} style={{
-                  background: isLight ? '#667eea' : '#11998e', color: '#fff',
-                  border: 'none', borderRadius: 8, padding: '6px 12px',
-                  fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                }}>← Oggi</button>
-                <span style={{ fontSize: 20 }}>📅</span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: isMobile ? 14 : 16, color: textPrimary }}>
-                    {new Date(storicoDate + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                  </div>
-                  <div style={{ fontSize: 12, color: textSecondary }}>
-                    {bolletteAttive.length} biglietti generati
-                  </div>
-                </div>
-              </div>
-              {/* Stats compatte */}
-              {storicoStats && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {storicoStats.vinte > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', background: 'rgba(76,175,80,0.15)', padding: '4px 10px', borderRadius: 8 }}>{storicoStats.vinte} Vinte</span>}
-                  {storicoStats.perse > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#f44336', background: 'rgba(244,67,54,0.15)', padding: '4px 10px', borderRadius: 8 }}>{storicoStats.perse} Perse</span>}
-                  {storicoStats.pending > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#ff9800', background: 'rgba(255,152,0,0.15)', padding: '4px 10px', borderRadius: 8 }}>{storicoStats.pending} In corso</span>}
-                </div>
-              )}
-            </div>
-          )}
 
-          {storicoLoading && <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>Caricamento storico...</div>}
 
           {/* === BANNER: Costruisci il tuo Ticket AI === */}
           {!isStorico && <div
@@ -2008,6 +2118,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       )}
 
       {showAuth && <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />}
+      </div>{/* fine contenuto scrollabile */}
     </div>
   );
 }

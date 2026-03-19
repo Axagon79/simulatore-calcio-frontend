@@ -211,14 +211,15 @@ const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: strin
 // QUADRANTE — anteprima categoria
 // ============================================
 
-function Quadrante({ cat, items, onClick, liveScores = [] }: {
+function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPreview = 3 }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onClick: () => void;
   liveScores?: LiveScore[];
+  height?: number;
+  maxPreview?: number;
 }) {
-  // Mostra anteprima: prime 3 bollette, prime 2 selezioni ciascuna
-  const preview = items.slice(0, 3);
+  const preview = items.slice(0, maxPreview);
   const textColor = isLight ? '#333' : '#fff';
   const dimColor = isLight ? '#666' : 'rgba(255,255,255,0.6)';
 
@@ -235,7 +236,7 @@ function Quadrante({ cat, items, onClick, liveScores = [] }: {
         gap: 10,
         transition: 'transform 0.2s, box-shadow 0.2s',
         border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.1)',
-        minHeight: 165,
+        height,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -273,8 +274,8 @@ function Quadrante({ cat, items, onClick, liveScores = [] }: {
             const showStats = vinte > 0 || perse > 0;
             return showStats ? (
               <>
-                {vinte > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: 'rgba(76,175,80,0.2)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>}
-                {perse > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: 'rgba(244,67,54,0.2)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>}
+                {vinte > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>}
+                {perse > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>}
               </>
             ) : null;
           })()}
@@ -305,21 +306,21 @@ function Quadrante({ cat, items, onClick, liveScores = [] }: {
                 <span style={{ fontWeight: 700, color: textColor, fontSize: 13 }}>{b.label}</span>
                 <span style={{ fontWeight: 700, color: textColor }}>{b.quota_totale.toFixed(2)}</span>
               </div>
-              {b.selezioni.slice(0, 2).map((s, j) => (
+              {b.selezioni.slice(0, b.selezioni.length <= 2 ? 2 : 1).map((s, j) => (
                 <div key={j} style={{ color: dimColor, fontSize: 11, lineHeight: 1.4 }}>
                   {s.league && <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.7, marginRight: 4 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away} · {formatMercato(s.mercato, s.pronostico)}
                 </div>
               ))}
               {b.selezioni.length > 2 && (
                 <div style={{ color: dimColor, fontSize: 11, fontStyle: 'italic' }}>
-                  +{b.selezioni.length - 2} altre selezioni...
+                  +{b.selezioni.length - 1} altre selezioni...
                 </div>
               )}
             </div>
           ))}
-          {items.length > 3 && (
+          {items.length > maxPreview && (
             <div style={{ color: dimColor, fontSize: 12, textAlign: 'center', marginTop: 2 }}>
-              +{items.length - 3} altre bollette
+              +{items.length - maxPreview} altre bollette
             </div>
           )}
         </div>
@@ -1724,8 +1725,9 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
 
 
-          {/* === BANNER: Costruisci il tuo Ticket AI === */}
-          {!isStorico && <div
+          {/* === BANNER + CHAT: Costruisci il tuo Ticket AI === */}
+          {!isStorico && (<div style={{ position: 'relative', zIndex: 5, marginBottom: 16 }}>
+          <div
             onClick={() => { if (!user) { setShowAuth(true); return; } setShowBuilder(!showBuilderRaw); }}
             style={{
               background: isLight
@@ -1751,17 +1753,28 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
             <span style={{ fontSize: 24, color: '#fff' }}>{showBuilderRaw ? '▲' : '▼'}</span>
-          </div>}
+          </div>
 
-          {/* === BUILDER CHAT === */}
-          {!isStorico && showBuilderRaw && (
+          {/* === BUILDER CHAT (sovrapposto) === */}
+          {showBuilderRaw && (
             <div style={{
-              background: isLight ? '#fff' : '#1a1d2e',
+              position: 'absolute', left: 0, right: 0, top: '100%',
+              background: isLight ? '#f8f9fa' : '#0d0f18',
               border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 16, marginBottom: 16, overflow: 'hidden',
+              borderRadius: 16, overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
-              maxHeight: '60vh',
+              height: 625,
+              boxShadow: isLight ? '0 12px 40px rgba(0,0,0,0.15)' : '0 12px 40px rgba(0,0,0,0.5)',
+              transition: 'all 0.3s ease',
             }}>
+              {/* Sfondo stadio */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: 'url(/bg-stadium.webp)',
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                opacity: isLight ? 0.04 : 0.06,
+                pointerEvents: 'none', zIndex: 0,
+              }} />
               {/* Suggerimenti rapidi (solo se chat vuota) */}
               {chatMessages.length === 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '16px 16px 8px' }}>
@@ -1792,6 +1805,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               <div style={{
                 flex: 1, overflowY: 'auto', padding: '12px 16px',
                 display: 'flex', flexDirection: 'column', gap: 10,
+                position: 'relative' as const, zIndex: 1,
               }}>
                 {chatMessages.map((m, i) => (
                   <div key={i}>
@@ -1799,17 +1813,21 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                     <div style={{
                       display: 'flex',
                       justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                      marginLeft: isMobile ? 0 : 40,
+                      marginRight: isMobile ? 0 : 40,
                     }}>
                       <div style={{
-                        maxWidth: '80%',
-                        padding: '10px 14px',
+                        maxWidth: isMobile ? '80%' : '60%',
+                        padding: '12px 16px',
                         borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                         background: m.role === 'user'
-                          ? (isLight ? '#667eea' : '#11998e')
-                          : (isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)'),
-                        color: m.role === 'user' ? '#fff' : textPrimary,
-                        fontSize: 14, lineHeight: 1.5,
+                          ? (isLight ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'linear-gradient(135deg, #11998e, #0d7377)')
+                          : (isLight ? '#ebedf2' : '#252838'),
+                        color: m.role === 'user' ? '#fff' : (isLight ? '#1a1a1a' : 'rgba(255,255,255,0.9)'),
+                        fontSize: 14, lineHeight: 1.65,
                         wordBreak: 'break-word',
+                        letterSpacing: '0.01em',
+                        border: m.role === 'user' ? 'none' : (isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.08)'),
                       }}>
                         {m.content}
                       </div>
@@ -1817,10 +1835,10 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
                     {/* Bolletta inline (se presente) */}
                     {m.bolletta && (
-                      <div style={{ marginTop: 8, marginLeft: 0, maxWidth: '95%' }}>
+                      <div style={{ marginTop: 8, marginLeft: isMobile ? 0 : 40, marginRight: isMobile ? 0 : 40, maxWidth: isMobile ? '95%' : '35%' }}>
                         <div style={{
-                          background: isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)',
-                          border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)',
+                          background: isLight ? '#f0f1f4' : '#1e2133',
+                          border: isLight ? '1px solid #d0d0d0' : '1px solid #2d3045',
                           borderRadius: 12, overflow: 'hidden',
                         }}>
                           {/* Header — cliccabile per collassare */}
@@ -1828,7 +1846,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             onClick={() => setChatTicketCollapsed(prev => ({ ...prev, [i]: !prev[i] }))}
                             style={{
                               padding: '10px 12px', cursor: 'pointer',
-                              background: isLight ? '#eee' : 'rgba(255,255,255,0.06)',
+                              background: isLight ? '#e8e9ec' : '#252839',
                             }}
                           >
                             {/* Riga 1: quota + freccia */}
@@ -1900,8 +1918,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           {/* Footer: quota totale */}
                           {!chatTicketCollapsed[i] && <div style={{
                             padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
-                            borderTop: isLight ? '1px solid #ddd' : '1px solid rgba(255,255,255,0.1)',
-                            background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.04)',
+                            borderTop: isLight ? '1px solid #ddd' : '1px solid #2d3045',
+                            background: isLight ? '#f0f0f0' : '#1a1d2e',
                             fontSize: 14, fontWeight: 700,
                           }}>
                             <span>Quota totale</span>
@@ -1922,21 +1940,26 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             <div style={{
                               fontSize: 12, color: textSecondary, marginTop: 4,
                               padding: '8px 10px', lineHeight: 1.5,
-                              background: isLight ? '#fff8e1' : 'rgba(255,152,0,0.08)',
+                              background: isLight ? '#fff8e1' : '#1f1c14',
                               borderRadius: 8,
                             }}>
-                              Alcune selezioni di questo biglietto non fanno parte dei pronostici generati dal sistema AI. Sono state scelte per esaudire la tua richiesta.
+                              Alcune selezioni non sono tra le Best Picks per poter rispettare le tue preferenze su partite e mercati. Ove possibile, le Best Picks rimangono comunque la prima scelta.
                             </div>
                           </details>
                         )}
 
                         {/* Puntata + vincita potenziale */}
                         <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
                           padding: '8px 12px', marginTop: 4,
-                          background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.04)',
-                          borderRadius: 8,
+                          background: isLight ? '#f0f0f0' : '#1a1d2e',
+                          borderRadius: 8, gap: 10,
                         }}>
+                          {parseFloat(builderStake) > 0 && m.bolletta.quota_totale && (
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#4caf50', marginRight: 'auto' }}>
+                              Vincita: €{(parseFloat(builderStake) * m.bolletta.quota_totale).toFixed(2)}
+                            </span>
+                          )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 13, color: textSecondary }}>Puntata</span>
                             <button onClick={() => { const v = Math.max(0, (parseFloat(builderStake) || 0) - 1); setBuilderStake(v.toFixed(2)); }} style={{
@@ -1983,11 +2006,6 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                               color: isLight ? '#666' : '#aaa', fontSize: 20, fontWeight: 300,
                             }}>+</button>
                           </div>
-                          {parseFloat(builderStake) > 0 && m.bolletta.quota_totale && (
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#4caf50' }}>
-                              Vincita: €{(parseFloat(builderStake) * m.bolletta.quota_totale).toFixed(2)}
-                            </span>
-                          )}
                         </div>
 
                         {/* Bottone salva */}
@@ -2080,19 +2098,21 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
           )}
+          </div>)}
 
           {/* === GRIGLIA RESPONSIVE === */}
           {isMobile ? (
             /* Mobile: 1 colonna */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {CATEGORIE.map(cat => (
-                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} />
+                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} />
               ))}
               <Quadrante
                 cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
                 items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                 onClick={() => setActiveCategory('custom' as Categoria)}
                 liveScores={liveScores}
+                height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
               />
             </div>
           ) : (
@@ -2100,16 +2120,17 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 26 }}>
                 {CATEGORIE.slice(0, 3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} />
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} />
+                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} />
                 <Quadrante
                   cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
                   items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                   onClick={() => setActiveCategory('custom' as Categoria)}
                   liveScores={liveScores}
+                  height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
                 />
               </div>
             </>

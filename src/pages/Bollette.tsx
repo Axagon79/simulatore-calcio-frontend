@@ -822,7 +822,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
           const canSave = !isSaved && !anyStarted && hasStake;
 
           return (
-            <div key={b._id} ref={(el) => { cardRefs.current[b._id] = el; }} {...(bIdx === 0 ? { 'data-tour': 'ticket-first-bolletta' } : {})} style={{
+            <div key={b._id} ref={(el) => { cardRefs.current[b._id] = el; }} {...(bIdx === 0 || b._id === 'tour-fake-001' ? { 'data-tour': 'ticket-first-bolletta' } : {})} style={{
               background: cardBg, border: cardBorder,
               borderRadius: 12, marginBottom: 14, overflow: 'hidden',
               boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
@@ -1241,6 +1241,43 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Tour: inietta bollette fake d'esempio quando richiesto
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const fakeBolletta: Bolletta = {
+      _id: 'tour-fake-001',
+      date: today,
+      tipo: 'selettiva',
+      quota_totale: 2.93,
+      label: 'Selettiva',
+      selezioni: [
+        { home: 'Triestina', away: 'Vicenza', league: 'Serie C - Girone A', match_time: '20:45', match_date: today, mercato: 'DOPPIA_CHANCE', pronostico: 'DC 1X', quota: 1.35, confidence: 78, stars: 4, esito: null },
+        { home: 'Arsenal', away: 'Chelsea', league: 'Premier League', match_time: '21:00', match_date: today, mercato: 'GOL', pronostico: 'Under 3.5', quota: 1.40, confidence: 82, stars: 4, esito: null },
+        { home: 'Benfica', away: 'Porto', league: 'Liga Portugal', match_time: '21:30', match_date: today, mercato: 'GOL', pronostico: 'Goal', quota: 1.55, confidence: 75, stars: 3, esito: null },
+      ],
+      esito_globale: null,
+      saved_by: [],
+      stake_amount: 20,
+      pool_size: 3,
+    };
+    const inject = () => {
+      setBollette(prev => {
+        const hasSelettiva = prev.some(b => b.tipo === 'selettiva');
+        if (!hasSelettiva) return [fakeBolletta, ...prev];
+        return prev;
+      });
+    };
+    const remove = () => {
+      setBollette(prev => prev.filter(b => b._id !== 'tour-fake-001'));
+    };
+    window.addEventListener('inject-tour-bollette', inject);
+    window.addEventListener('remove-tour-bollette', remove);
+    return () => {
+      window.removeEventListener('inject-tour-bollette', inject);
+      window.removeEventListener('remove-tour-bollette', remove);
+    };
+  }, []);
+
   // Ricarica storico quando storicoDate cambia (frecce navigazione)
   useEffect(() => {
     if (storicoDate && storicoDate !== new Date().toISOString().split('T')[0]) {
@@ -1456,7 +1493,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           {onBack && (
-            <button onClick={onBack} style={{
+            <button data-tour="ticket-back-btn" onClick={onBack} style={{
               background: isMobile
                 ? (isLight ? 'rgba(102,126,234,0.08)' : 'rgba(0,240,255,0.08)')
                 : 'none',
@@ -1527,7 +1564,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 color: mobileIsToday ? (isLight ? '#ddd' : 'rgba(255,255,255,0.15)') : (isLight ? '#667eea' : theme.cyan),
                 cursor: mobileIsToday ? 'default' : 'pointer', marginRight: 15,
               }}>▶</button>
-              <button onClick={() => { if (mobileIsStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
+              <button data-tour="ticket-btn-oggi" onClick={() => { if (mobileIsStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
                 background: mobileIsStorico ? (isLight ? '#667eea' : '#11998e') : 'transparent',
                 color: mobileIsStorico ? '#fff' : 'transparent',
                 border: 'none', borderRadius: 999, padding: '6px 10px',
@@ -1544,7 +1581,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             const displayDate = new Date(currentDateStr + 'T12:00:00');
             const isToday = currentDateStr === todayStr;
             return (
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <div data-tour="ticket-storico-nav-desktop" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {/* Badge */}
               <div style={{ display: 'flex', gap: 11, width: 250, marginRight: 100 }}>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
@@ -1620,7 +1657,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 cursor: isToday ? 'default' : 'pointer',
               }}>▶</button>
               {/* Bottone Oggi */}
-              <button onClick={() => { if (isStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
+              <button data-tour="ticket-btn-oggi-desktop" onClick={() => { if (isStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
                 background: isStorico ? (isLight ? '#667eea' : '#11998e') : 'transparent',
                 color: isStorico ? '#fff' : 'transparent',
                 border: 'none', borderRadius: 999, padding: '6px 20px', outline: 'none',

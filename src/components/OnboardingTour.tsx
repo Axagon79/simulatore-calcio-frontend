@@ -864,6 +864,17 @@ export default function OnboardingTour() {
     };
   }, [step, isMobile]);
 
+  // Inietta bollette fake durante il capitolo 3 (Ticket AI)
+  useEffect(() => {
+    const isChapter3 = step >= 19 && step <= 27 || (step >= 211 && step <= 2102) || step === 212 || step === 213 || step === 214 || step === 231;
+    if (isChapter3) {
+      window.dispatchEvent(new Event('inject-tour-bollette'));
+    }
+    return () => {
+      window.dispatchEvent(new Event('remove-tour-bollette'));
+    };
+  }, [step]);
+
   // Alza z-index del menu laterale mobile (BarraLaterale) durante step 11 e 12
   useEffect(() => {
     if ((step !== 11 && step !== 12) || !isMobile) return;
@@ -1453,7 +1464,20 @@ export default function OnboardingTour() {
   }, [step]);
 
   const handleStep24Click = useCallback(async () => {
-    // Storico → spotlight su Selettiva per entrare
+    // Storico cliccato → simula click sulla freccia ◀ per andare nello storico
+    const leftArrow = document.querySelector('[data-tour="ticket-storico-nav"] button, [data-tour="ticket-storico-nav-desktop"] button') as HTMLElement;
+    if (leftArrow) leftArrow.click();
+    await new Promise(r => setTimeout(r, 500));
+    // Ora spotlight su "Oggi" per tornare
+    setStep(241);
+  }, []);
+
+  const handleStep241Click = useCallback(async () => {
+    // Click su "Oggi" → torna a oggi → spotlight su Selettiva
+    // Resetta storicoDate via click sul bottone Oggi
+    const oggiBtn = document.querySelector('[data-tour="ticket-storico-nav"] button:last-child, [data-tour="ticket-storico-nav-desktop"] button:last-child') as HTMLElement;
+    if (oggiBtn) oggiBtn.click();
+    await new Promise(r => setTimeout(r, 500));
     document.body.style.overflow = 'auto';
     const el = await waitForEl('[data-tour="ticket-quadrante-selettiva"]', 3000);
     if (el) {
@@ -2101,7 +2125,7 @@ export default function OnboardingTour() {
       {/* Step 24: Spotlight sulla navigazione storico */}
       {step === 24 && (
         <Spotlight
-          selector={'[data-tour="ticket-storico-nav"]'}
+          selector={isMobile ? '[data-tour="ticket-storico-nav"]' : '[data-tour="ticket-storico-nav-desktop"]'}
           text={`Naviga nello storico giorno per giorno con le frecce, oppure apri il calendario per scegliere una data.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per continuare.</span>`}
           onSkip={skipTour}
           onOpenChapters={handleOpenChapters}
@@ -2109,6 +2133,20 @@ export default function OnboardingTour() {
           onTargetClick={handleStep24Click}
           padding={4}
           borderRadius={8}
+        />
+      )}
+
+      {/* Step 241: Spotlight su "Oggi" per tornare alla giornata corrente */}
+      {step === 241 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="ticket-btn-oggi"]' : '[data-tour="ticket-btn-oggi-desktop"]'}
+          text={`Sei nello storico. Ora torna alla giornata di oggi.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Oggi.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep241Click}
+          padding={4}
+          borderRadius={20}
         />
       )}
 
@@ -2151,7 +2189,7 @@ export default function OnboardingTour() {
       {/* Step 27: Torna alla dashboard */}
       {step === 27 && (
         <Spotlight
-          selector={'[data-tour="step-5"]'}
+          selector={'[data-tour="ticket-back-btn"]'}
           text={`Torna alla dashboard per continuare il tour.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su ← per tornare indietro.</span>`}
           onSkip={skipTour}
           onOpenChapters={handleOpenChapters}

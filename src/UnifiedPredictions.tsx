@@ -1275,9 +1275,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {pred.away}
             </span>
             <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            {pred.decision === 'NO_BET' && !isMobile && (
-              <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', padding: '1px 5px', marginLeft: '4px', flexShrink: 0 }}>NO BET</span>
-            )}
           </div>
 
           {/* Diamante RE + Risultato + Freccia — spinto a destra */}
@@ -1313,17 +1310,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         </div>
 
-        {/* Badge "Tip" o "NB" — ABSOLUTE, sganciato dal flex */}
-        {pred.decision === 'NO_BET' ? (
+        {/* Badge "NB" (mobile: bollino tondo, desktop: rettangolino) al posto del tasto Tip */}
+        {pred.decision === 'NO_BET' && (
         <div
           style={{
             position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '75px' : '100px',
             zIndex: 5
           }}
         >
-          <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e53e3e', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 800, color: '#fff' }}>NB</span>
+          {isMobile ? (
+            <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e53e3e', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 800, color: '#fff' }}>NB</span>
+          ) : (
+            <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', padding: '4px 10px' }}>NO BET</span>
+          )}
         </div>
-        ) : (
+        )}
+        {/* Badge "Tip" — solo per partite con pronostico */}
+        {pred.decision !== 'NO_BET' && (
         <div
           style={{
             position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '75px' : '100px',

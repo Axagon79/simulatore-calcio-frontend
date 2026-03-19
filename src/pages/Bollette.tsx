@@ -2097,9 +2097,9 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             color: isLight ? '#2e7d32' : '#66bb6a',
                           }}>
                             ✅ Salvata!
+                            {/* Tag nascosto per il tour */}
+                            <span className="builder-saved-tag" style={{ display: 'none' }} />
                           </div>
-                          {/* Tag nascosto per il tour */}
-                          <span className="builder-saved-tag" style={{ display: 'none' }} />
                         )}
                         </>}
                       </div>

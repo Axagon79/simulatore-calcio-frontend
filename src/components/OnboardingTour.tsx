@@ -322,10 +322,13 @@ function Spotlight({ selector, text, onSkip, onTargetClick, onOpenChapters, chap
               const target = document.querySelector(selector) as HTMLElement;
               if (target) {
                 // Cerca prima un elemento cliccabile specifico dentro il target
+                const matchTarget = target.querySelector('.match-click-target') as HTMLElement;
                 const expandRow = target.querySelector('.card-expand-row') as HTMLElement;
                 const btn = target.querySelector('button, a') as HTMLElement;
                 const tagName = target.tagName.toLowerCase();
-                if (expandRow) {
+                if (matchTarget) {
+                  matchTarget.click();
+                } else if (expandRow) {
                   expandRow.click();
                 } else if (tagName === 'button' || tagName === 'a') {
                   target.click();

@@ -55,6 +55,7 @@ export default function ElementoPartita({
 
   return (
     <div
+      className="match-click-target"
       onClick={() => {
         if (isMobile) {
           onToggleExpand();

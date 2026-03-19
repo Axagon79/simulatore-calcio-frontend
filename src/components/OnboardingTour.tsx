@@ -1337,7 +1337,10 @@ export default function OnboardingTour() {
           await new Promise(r => setTimeout(r, 120));
         }
         stakeInput.dispatchEvent(new Event('blur', { bubbles: true }));
-        await new Promise(r => setTimeout(r, 300));
+        stakeInput.blur();
+        // Focus su un elemento neutro per chiudere la tastiera mobile
+        (document.activeElement as HTMLElement)?.blur();
+        await new Promise(r => setTimeout(r, 500));
         scrollChatToBottom();
       }
 

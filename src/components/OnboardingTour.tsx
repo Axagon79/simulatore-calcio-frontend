@@ -1185,16 +1185,12 @@ export default function OnboardingTour() {
     sessionStorage.setItem('tour_step', '21');
   }, []);
 
-  // Helper: scrolla la chat in fondo
+  // Helper: scrolla la chat in fondo (solo il container della chat, non la pagina)
   const scrollChatToBottom = useCallback(() => {
-    // Cerca tutti i possibili container scrollabili della chat
-    const containers = document.querySelectorAll('[data-tour="ticket-chat-scroll"], [style*="overflow"]');
-    containers.forEach(el => {
-      const htmlEl = el as HTMLElement;
-      if (htmlEl.scrollHeight > htmlEl.clientHeight && htmlEl.scrollHeight > 200) {
-        htmlEl.scrollTop = htmlEl.scrollHeight;
-      }
-    });
+    const chatScroll = document.querySelector('[data-tour="ticket-chat-scroll"]') as HTMLElement;
+    if (chatScroll) {
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
   }, []);
 
   // Helper: typewriter su textarea
@@ -1238,7 +1234,7 @@ export default function OnboardingTour() {
     scrollChatToBottom();
 
     // Messaggio 2: rispondi alla domanda dell'AI
-    await typewriterTextarea('Quota massimo 3, solo partite di oggi');
+    await typewriterTextarea('Quota massimo 3, partite di domani');
 
     // Aspetta il biglietto (max 20 secondi)
     for (let i = 0; i < 40; i++) {
@@ -1365,13 +1361,42 @@ export default function OnboardingTour() {
   }, []);
 
   const handleStep23Click = useCallback(async () => {
-    // Le mie bollette → spotlight su navigazione storico
+    // Le mie bollette cliccato → aspetta la vista, cerchio rosso sulla prima bolletta salvata
+    await new Promise(r => setTimeout(r, 800));
+    // Cerca la prima bolletta nella vista "Le mie bollette"
     document.body.style.overflow = 'auto';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    await new Promise(r => setTimeout(r, 400));
+    const firstBolletta = await waitForEl('[data-tour="mia-prima-bolletta"]', 3000);
+    if (firstBolletta) {
+      (firstBolletta as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 400));
+    }
     document.body.style.overflow = 'hidden';
-    setStep(24);
+    setStep(231); // cerchio rosso sulla bolletta salvata
   }, []);
+
+  // Step 231: Cerchio rosso sulla prima bolletta salvata
+  const [step231Waiting, setStep231Waiting] = useState(false);
+  const step231DismissRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (step !== 231) return;
+    const run = async () => {
+      setStep231Waiting(true);
+      await new Promise<void>(resolve => { step231DismissRef.current = resolve; });
+      setStep231Waiting(false);
+      // Torna indietro alla vista quadranti
+      window.history.back();
+      await new Promise(r => setTimeout(r, 500));
+      // Spotlight su navigazione storico
+      document.body.style.overflow = 'auto';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await new Promise(r => setTimeout(r, 400));
+      document.body.style.overflow = 'hidden';
+      setStep(24);
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const handleStep24Click = useCallback(async () => {
     // Storico → spotlight su Selettiva per entrare
@@ -1893,14 +1918,12 @@ export default function OnboardingTour() {
 
       {/* Step 214: Cerchio rosso su "Salvata!" */}
       {step === 214 && step214Waiting && (() => {
-        const el = document.querySelector('.builder-btn-salva')?.nextElementSibling?.previousElementSibling
-          || document.querySelector('[style*="Salvata"]')
-          || document.querySelector('.builder-saved-tag')?.parentElement;
         // Cerca il div "Salvata!"
-        const allDivs = document.querySelectorAll('div');
-        let savedDiv: HTMLElement | null = null;
-        allDivs.forEach(d => { if (d.textContent?.includes('✅ Salvata!') && d.textContent.length < 20) savedDiv = d as HTMLElement; });
-        const rect = savedDiv?.getBoundingClientRect() || el?.getBoundingClientRect();
+        const savedDiv = Array.from(document.querySelectorAll('div')).find(
+          d => d.textContent?.includes('✅ Salvata!') && (d.textContent?.length ?? 0) < 20
+        ) as HTMLElement | undefined;
+        const fallbackEl = document.querySelector('.builder-saved-tag')?.parentElement as HTMLElement | null;
+        const rect = savedDiv?.getBoundingClientRect() || fallbackEl?.getBoundingClientRect();
         if (!rect) return null;
         const pad = 6;
         return (
@@ -1956,6 +1979,27 @@ export default function OnboardingTour() {
           borderRadius={16}
         />
       )}
+
+      {/* Step 231: Cerchio rosso sulla prima bolletta salvata in "Le mie bollette" */}
+      {step === 231 && step231Waiting && (() => {
+        const el = document.querySelector('[data-tour="mia-prima-bolletta"]') as HTMLElement | null;
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return null;
+        const pad = 6;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '12px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)', zIndex: 200001, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '12px', border: '3px solid #4caf50', boxShadow: '0 0 20px rgba(76,175,80,0.5)', animation: 'green-circle-pulse 1.5s ease-in-out infinite', pointerEvents: 'none', zIndex: 200002 }} />
+            <div style={{ position: 'fixed', top: Math.max(10, rect.top - 55), left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '400px', zIndex: 200003, pointerEvents: 'auto', animation: 'tour-text-fadein 0.3s ease' }}>
+              <div style={{ background: 'rgba(76,175,80,0.9)', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600, fontFamily: '"Inter", system-ui, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ flex: 1, lineHeight: '1.4' }}>Ecco la bolletta che hai appena salvato — la trovi sempre qui tra le tue bollette</span>
+                <button onClick={() => { if (step231DismissRef.current) step231DismissRef.current(); }} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+              </div>
+            </div>
+            <style>{`@keyframes green-circle-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(76,175,80,0.5); } 50% { box-shadow: 0 0 35px rgba(76,175,80,0.7); } }`}</style>
+          </div>
+        );
+      })()}
 
       {/* Step 24: Spotlight sulla navigazione storico */}
       {step === 24 && (

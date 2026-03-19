@@ -174,6 +174,7 @@ interface Bolletta {
   esito_globale: string | null;
   saved_by: string[];
   user_stakes?: Record<string, number>;
+  stake_amount?: number;
   reasoning?: string;
   pool_size: number;
 }
@@ -526,7 +527,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
             return <div style={{ textAlign: 'center', padding: 30, color: textSecondary, fontSize: 13 }}>Nessuna bolletta con questi filtri</div>;
           }
 
-          return filtered.map(b => {
+          return filtered.map((b, bIdx) => {
             const isCollapsedB = collapsed[b._id] ?? false;
             const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
             const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
@@ -554,10 +555,10 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
               : statusLabel === 'LIVE' ? '#ff9800'
               : undefined;
 
-            const userStake = user ? (b.user_stakes?.[user.uid] || 0) : 0;
+            const userStake = user ? (b.user_stakes?.[user.uid] || b.stake_amount || 0) : 0;
 
             return (
-              <div key={b._id} ref={(el) => { myCardRefs.current[b._id] = el; }} style={{
+              <div key={b._id} {...(bIdx === 0 ? { 'data-tour': 'mia-prima-bolletta' } : {})} ref={(el) => { myCardRefs.current[b._id] = el; }} style={{
                 background: cardBg, border: cardBorder,
                 borderRadius: 12, marginBottom: 14, overflow: 'hidden',
                 boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
@@ -771,7 +772,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
     const initial: Record<string, string> = {};
     if (userId) {
       for (const b of items) {
-        const saved = b.user_stakes?.[userId];
+        const saved = b.user_stakes?.[userId] || b.stake_amount || 0;
         if (saved && saved > 0) initial[b._id] = String(saved);
       }
     }

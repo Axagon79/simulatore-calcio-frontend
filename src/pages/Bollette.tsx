@@ -211,13 +211,14 @@ const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: strin
 // QUADRANTE — anteprima categoria
 // ============================================
 
-function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPreview = 3 }: {
+function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPreview = 3, dataTour }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onClick: () => void;
   liveScores?: LiveScore[];
   height?: number;
   maxPreview?: number;
+  dataTour?: string;
 }) {
   const preview = items.slice(0, maxPreview);
   const textColor = isLight ? '#333' : '#fff';
@@ -226,6 +227,7 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
   return (
     <div
       onClick={onClick}
+      {...(dataTour ? { 'data-tour': dataTour } : {})}
       style={{
         background: isLight ? cat.gradientLight : cat.gradient,
         borderRadius: 16,
@@ -810,7 +812,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
 
       {/* Bollette */}
       <div style={{ padding: '12px', maxWidth: 700, margin: '0 auto' }}>
-        {items.map(b => {
+        {items.map((b, bIdx) => {
           const isCollapsed = collapsed[b._id] ?? false;
           const isSaved = savedIds.has(b._id);
           const esitiAll = b.selezioni.map(s => getEsitoLive(s, liveScores));
@@ -819,7 +821,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
           const canSave = !isSaved && !anyStarted && hasStake;
 
           return (
-            <div key={b._id} ref={(el) => { cardRefs.current[b._id] = el; }} style={{
+            <div key={b._id} ref={(el) => { cardRefs.current[b._id] = el; }} {...(bIdx === 0 ? { 'data-tour': 'ticket-first-bolletta' } : {})} style={{
               background: cardBg, border: cardBorder,
               borderRadius: 12, marginBottom: 14, overflow: 'hidden',
               boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
@@ -909,6 +911,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                     })()}
                   </div>
                   <button
+                    {...(bIdx === 0 ? { className: 'ticket-btn-salva' } : {})}
                     onClick={(e) => { e.stopPropagation(); if (canSave || isSaved) onSave(b._id, parseFloat(stakes[b._id]) || 0); }}
                     disabled={savingId === b._id || (!canSave && !isSaved)}
                     style={{
@@ -1008,7 +1011,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                   })}
 
                   {/* Footer: quota + puntata + vincita */}
-                  <div style={{
+                  <div {...(bIdx === 0 ? { className: 'ticket-footer-puntata' } : {})} style={{
                     padding: '10px 16px', borderTop: rowBorder, background: headerBg,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1082,7 +1085,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       </div>
                     )}
                     {/* Bottone Condividi */}
-                    <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+                    <div {...(bIdx === 0 ? { className: 'ticket-btn-condividi' } : {})} style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1478,7 +1481,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             const mobileIsToday = currentDateStr === todayStr;
             const mobileIsStorico = !!storicoDate && storicoDate !== todayStr;
             return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+            <div data-tour="ticket-storico-nav" style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
               <button onClick={() => {
                 const [y, m, d] = currentDateStr.split('-').map(Number);
                 const prev = new Date(y, m - 1, d - 1);
@@ -1785,6 +1788,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           {/* === BANNER + CHAT: Costruisci il tuo Ticket AI === */}
           {!isStorico && (<div style={{ position: 'relative', zIndex: 5, marginBottom: 16 }}>
           <div
+            data-tour="ticket-builder-banner"
             onClick={() => { if (!user) { setShowAuth(true); return; } setShowBuilder(!showBuilderRaw); }}
             style={{
               background: isLight
@@ -2168,7 +2172,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             /* Mobile: 1 colonna */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {CATEGORIE.map(cat => (
-                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} />
+                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
               ))}
               <Quadrante
                 cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
@@ -2176,6 +2180,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 onClick={() => setActiveCategory('custom' as Categoria)}
                 liveScores={liveScores}
                 height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
+                dataTour="ticket-mie-bollette"
               />
             </div>
           ) : (
@@ -2183,17 +2188,18 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 26 }}>
                 {CATEGORIE.slice(0, 3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} />
+                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour="ticket-quadrante-ambiziosa" />
                 <Quadrante
                   cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
                   items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                   onClick={() => setActiveCategory('custom' as Categoria)}
                   liveScores={liveScores}
                   height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
+                  dataTour="ticket-mie-bollette"
                 />
               </div>
             </>

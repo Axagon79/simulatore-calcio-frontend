@@ -10,9 +10,9 @@ const isLight = getThemeMode() === 'light';
 const CHAPTERS = [
   { id: 1, title: 'Campionati e Partite', startStep: 0, endStep: 11 },
   { id: 2, title: 'Pronostici', startStep: 12, endStep: 18 },
-  { id: 3, title: 'Ticket AI e Bollette', startStep: 19, endStep: 19 }, // placeholder
-  { id: 4, title: 'Simulazione', startStep: 15, endStep: 15 },          // placeholder
-  { id: 5, title: 'Money Management', startStep: 16, endStep: 16 },     // placeholder
+  { id: 3, title: 'Ticket AI e Bollette', startStep: 19, endStep: 27 },
+  { id: 4, title: 'Simulazione', startStep: 28, endStep: 28 },          // placeholder
+  { id: 5, title: 'Money Management', startStep: 29, endStep: 29 },     // placeholder
 ];
 
 function getChapterForStep(step: number) {
@@ -736,6 +736,7 @@ export default function OnboardingTour() {
   const [step, setStep] = useState(-1); // -1 = inattivo
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [step21Auto, setStep21Auto] = useState(false);
 
   // Segui resize per mobile/desktop
   useEffect(() => {
@@ -834,10 +835,10 @@ export default function OnboardingTour() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Desktop: mantieni dropdown aperto durante step 2 (competizioni) e 13 (pronostici)
+  // Desktop: mantieni dropdown aperto durante step 2 (competizioni), 13 e 20 (pronostici)
   useEffect(() => {
     if (isMobile) return;
-    if (step !== 2 && step !== 13) return;
+    if (step !== 2 && step !== 13 && step !== 20) return;
     const selector = step === 2 ? '[data-tour="nav-competizioni"]' : '[data-tour="nav-pronostici"]';
     const keepOpen = () => {
       const dd = document.querySelector(`${selector} [data-dropdown]`) as HTMLElement;
@@ -849,9 +850,9 @@ export default function OnboardingTour() {
   }, [step, isMobile]);
 
 
-  // Mobile: alza zIndex pannello hamburger durante step 2 e 13
+  // Mobile: alza zIndex pannello hamburger durante step 2, 13 e 20
   useEffect(() => {
-    if (!isMobile || (step !== 2 && step !== 13)) return;
+    if (!isMobile || (step !== 2 && step !== 13 && step !== 20)) return;
     const panel = document.querySelector('[data-tour="hamburger-panel"]') as HTMLElement;
     if (panel) panel.style.zIndex = '200005';
     return () => {
@@ -1155,6 +1156,181 @@ export default function OnboardingTour() {
   const handleStep18Click = useCallback(() => {
     // Click su Dashboard → naviga alla dashboard → salva step per capitolo 3
     sessionStorage.setItem('tour_step', '19');
+  }, []);
+
+  // --- PARTE 3: Ticket AI e Bollette ---
+  const handleStep19Click = useCallback(() => {
+    if (isMobile) {
+      // Mobile: hamburger cliccato → aspetta menu, spotlight su Ticket AI
+      setTimeout(async () => {
+        await waitForEl('[data-tour="mob-ticket-ai"]', 2000);
+        setStep(20);
+      }, 300);
+    } else {
+      // Desktop: Pronostici cliccato → apri dropdown, spotlight su Ticket AI
+      const nav = document.querySelector('[data-tour="nav-pronostici"]');
+      if (nav) {
+        const dd = nav.querySelector('[data-dropdown]') as HTMLElement;
+        if (dd) dd.style.display = 'block';
+      }
+      setTimeout(() => setStep(20), 150);
+    }
+  }, [isMobile]);
+
+  const handleStep20Click = useCallback(() => {
+    // Click su Ticket AI → naviga a /ticket-ai → salva step
+    sessionStorage.setItem('tour_step', '21');
+  }, []);
+
+  const handleStep21Click = useCallback(async () => {
+    // Click sul banner → apri la chat
+    const banner = document.querySelector('[data-tour="ticket-builder-banner"]') as HTMLElement;
+    if (banner) banner.click();
+    await new Promise(r => setTimeout(r, 500));
+
+    // Effetto typewriter nel campo input
+    const msg = 'Voglio un biglietto sicuro';
+    const textarea = document.querySelector('textarea[placeholder="Scrivi un messaggio..."]') as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
+      for (let i = 0; i < msg.length; i++) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+        nativeInputValueSetter?.call(textarea, msg.slice(0, i + 1));
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 40));
+      }
+      await new Promise(r => setTimeout(r, 300));
+
+      // Invia il messaggio simulando Enter
+      textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // Aspetta la prima risposta dell'AI (max 15 secondi)
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        const bubbles = document.querySelectorAll('[style*="flex-start"] > div');
+        if (bubbles.length >= 1) break;
+      }
+      await new Promise(r => setTimeout(r, 4000));
+
+      // Secondo messaggio automatico: rispondi alla domanda dell'AI
+      const msg2 = 'Quota massimo 3, solo partite di oggi';
+      const textarea2 = document.querySelector('textarea[placeholder="Scrivi un messaggio..."]') as HTMLTextAreaElement;
+      if (textarea2) {
+        textarea2.focus();
+        for (let i = 0; i < msg2.length; i++) {
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+          setter?.call(textarea2, msg2.slice(0, i + 1));
+          textarea2.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea2.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise(r => setTimeout(r, 40));
+        }
+        await new Promise(r => setTimeout(r, 300));
+        textarea2.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+        // Aspetta il biglietto (max 20 secondi)
+        for (let i = 0; i < 40; i++) {
+          await new Promise(r => setTimeout(r, 500));
+          // Il biglietto ha un div con "Quota totale"
+          const ticket = document.querySelector('[style*="flex-start"] [style*="Quota totale"], [style*="flex-start"] span[style*="fontWeight: 700"]');
+          if (ticket) break;
+        }
+      }
+
+      // Scroll al biglietto nella chat
+      await new Promise(r => setTimeout(r, 2000));
+      const chatArea = document.querySelector('[style*="overflowY: auto"][style*="flex: 1"]') as HTMLElement;
+      if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Inserisci 15€ nell'input puntata con effetto typewriter
+      const stakeInput = document.querySelector('.bollette-stake-input') as HTMLInputElement;
+      if (stakeInput) {
+        stakeInput.focus();
+        const stakeMsg = '15.00';
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        for (let i = 0; i < stakeMsg.length; i++) {
+          setter?.call(stakeInput, stakeMsg.slice(0, i + 1));
+          stakeInput.dispatchEvent(new Event('input', { bubbles: true }));
+          stakeInput.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise(r => setTimeout(r, 80));
+        }
+        // Trigger blur per formattare
+        stakeInput.dispatchEvent(new Event('blur', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 500));
+
+        // Scroll giù per vedere puntata
+        if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    // Mostra spotlight per chiudere la chat
+    setStep21Auto(false);
+    setStep(211);
+  }, []);
+
+  const handleStep211Click = useCallback(async () => {
+    // Chiudi la chat
+    const banner = document.querySelector('[data-tour="ticket-builder-banner"]') as HTMLElement;
+    if (banner) banner.click();
+    await new Promise(r => setTimeout(r, 500));
+    // Avvia cerchi rossi sui quadranti
+    setStep(22);
+  }, []);
+
+  const handleStep22Complete = useCallback(async () => {
+    // Cerchi rossi completati → spotlight su Le mie bollette
+    document.body.style.overflow = 'auto';
+    const el = await waitForEl('[data-tour="ticket-mie-bollette"]', 3000);
+    if (el) {
+      (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 400));
+    }
+    document.body.style.overflow = 'hidden';
+    setStep(23);
+  }, []);
+
+  const handleStep23Click = useCallback(async () => {
+    // Le mie bollette → spotlight su navigazione storico
+    document.body.style.overflow = 'auto';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await new Promise(r => setTimeout(r, 400));
+    document.body.style.overflow = 'hidden';
+    setStep(24);
+  }, []);
+
+  const handleStep24Click = useCallback(async () => {
+    // Storico → spotlight su Selettiva per entrare
+    document.body.style.overflow = 'auto';
+    const el = await waitForEl('[data-tour="ticket-quadrante-selettiva"]', 3000);
+    if (el) {
+      (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 400));
+    }
+    document.body.style.overflow = 'hidden';
+    setStep(25);
+  }, []);
+
+  const handleStep25Click = useCallback(async () => {
+    // Click su Selettiva → si espande, aspetta la prima bolletta
+    await new Promise(r => setTimeout(r, 500));
+    await waitForEl('[data-tour="ticket-first-bolletta"]', 3000);
+    setStep(26); // cerchi rossi sulla bolletta
+  }, []);
+
+  const handleStep26Complete = useCallback(async () => {
+    // Cerchi rossi completati → spotlight sul bottone back
+    document.body.style.overflow = 'auto';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await new Promise(r => setTimeout(r, 400));
+    document.body.style.overflow = 'hidden';
+    setStep(27);
+  }, []);
+
+  const handleStep27Click = useCallback(() => {
+    // Click su back → torna alla dashboard → fine capitolo 3
+    sessionStorage.setItem('tour_step', '28');
   }, []);
 
   const startTourFromStep = useCallback((startStep: number) => {
@@ -1541,6 +1717,170 @@ export default function OnboardingTour() {
           onOpenChapters={handleOpenChapters}
           {...chapterProps}
           onTargetClick={handleStep18Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* === PARTE 3: TICKET AI E BOLLETTE === */}
+
+      {/* Step 19: Mobile → hamburger / Desktop → "Pronostici" nella navbar */}
+      {step === 19 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="nav-hamburger"]' : '[data-tour="nav-pronostici"]'}
+          text={isMobile
+            ? `Ora scopriamo i biglietti pronti.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Apri il menu.</span>`
+            : `Ora scopriamo i biglietti pronti.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Pronostici.</span>`
+          }
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep19Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 20: Mobile → Ticket AI nel menu / Desktop → Ticket AI nel dropdown */}
+      {step === 20 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="mob-ticket-ai"]' : '[data-tour="dd-ticket-ai"]'}
+          text={`Bollette già pronte da giocare, oppure creane una su misura con l'AI.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Ticket AI.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep20Click}
+          padding={2}
+          borderRadius={6}
+        />
+      )}
+
+      {/* Step 21: Spotlight sul banner → poi demo automatica chat */}
+      {step === 21 && !step21Auto && (
+        <Spotlight
+          selector={'[data-tour="ticket-builder-banner"]'}
+          text={`Chiedi all'AI di comporre una bolletta su misura per te. Scegli il numero di partite, la quota, il tipo di scommessa — l'AI fa il resto.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per vedere come funziona.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={() => { setStep21Auto(true); handleStep21Click(); }}
+          padding={4}
+          borderRadius={16}
+        />
+      )}
+
+      {/* Step 211: Chiudi la chat */}
+      {step === 211 && (
+        <Spotlight
+          selector={'[data-tour="ticket-builder-banner"]'}
+          text={`Hai visto? L'AI ha creato una bolletta su misura in pochi secondi. Ora chiudi la chat per continuare.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca per chiudere la chat.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep211Click}
+          padding={4}
+          borderRadius={16}
+        />
+      )}
+
+      {/* Step 22: Cerchi rossi sui quadranti */}
+      {step === 22 && (
+        <RedCircleSequence
+          annotations={[
+            {
+              selector: '[data-tour="ticket-quadrante-oggi"]',
+              label: 'Bollette con le partite in programma oggi',
+            },
+            {
+              selector: '[data-tour="ticket-quadrante-selettiva"]',
+              label: 'Selettiva — quote basse, bollette più sicure',
+            },
+            {
+              selector: '[data-tour="ticket-quadrante-bilanciata"]',
+              label: 'Bilanciata — quote medie, buon equilibrio rischio/rendimento',
+            },
+            {
+              selector: '[data-tour="ticket-quadrante-ambiziosa"]',
+              label: 'Ambiziosa — quote alte, potenziale vincita elevata',
+            },
+          ]}
+          onComplete={handleStep22Complete}
+        />
+      )}
+
+      {/* Step 23: Spotlight su "Le mie bollette" */}
+      {step === 23 && (
+        <Spotlight
+          selector={'[data-tour="ticket-mie-bollette"]'}
+          text={`Qui trovi le bollette che hai salvato e quelle personalizzate.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per continuare.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep23Click}
+          padding={4}
+          borderRadius={16}
+        />
+      )}
+
+      {/* Step 24: Spotlight sulla navigazione storico */}
+      {step === 24 && (
+        <Spotlight
+          selector={'[data-tour="ticket-storico-nav"]'}
+          text={`Naviga nello storico giorno per giorno con le frecce, oppure apri il calendario per scegliere una data.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per continuare.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep24Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 25: Click su Selettiva per entrare */}
+      {step === 25 && (
+        <Spotlight
+          selector={'[data-tour="ticket-quadrante-selettiva"]'}
+          text={`Entriamo nella sezione Selettiva per vedere i biglietti.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Selettiva.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep25Click}
+          padding={4}
+          borderRadius={16}
+        />
+      )}
+
+      {/* Step 26: Cerchi rossi dentro la bolletta (salva, puntata, condividi) */}
+      {step === 26 && (
+        <RedCircleSequence
+          parentSelector='[data-tour="ticket-first-bolletta"]'
+          annotations={[
+            {
+              selector: '.ticket-btn-salva',
+              label: 'Salva il biglietto tra le tue bollette personali',
+            },
+            {
+              selector: '.ticket-footer-puntata',
+              label: 'Imposta la puntata e visualizza la vincita potenziale',
+            },
+            {
+              selector: '.ticket-btn-condividi',
+              label: 'Condividi il biglietto con chi vuoi',
+            },
+          ]}
+          onComplete={handleStep26Complete}
+        />
+      )}
+
+      {/* Step 27: Torna alla dashboard */}
+      {step === 27 && (
+        <Spotlight
+          selector={'[data-tour="step-5"]'}
+          text={`Torna alla dashboard per continuare il tour.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su ← per tornare indietro.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep27Click}
           padding={4}
           borderRadius={8}
         />

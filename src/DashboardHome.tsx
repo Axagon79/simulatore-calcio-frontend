@@ -463,7 +463,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                       {menu.items.map(item => (
                         <div
                           key={item.label}
-                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : {})}
+                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'mob-ticket-ai' } : {})}
                           onClick={() => { item.onClick(); setMenuOpen(false); }}
                           style={{
                             padding: '10px 8px',
@@ -597,7 +597,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     {menu.items.map(item => (
                       <div
                         key={item.label}
-                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : {})}
+                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'dd-ticket-ai' } : {})}
                         onClick={item.onClick}
                         style={{
                           padding: '8px 14px',

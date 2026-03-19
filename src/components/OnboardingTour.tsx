@@ -1185,93 +1185,163 @@ export default function OnboardingTour() {
     sessionStorage.setItem('tour_step', '21');
   }, []);
 
+  // Helper: scrolla la chat in fondo
+  const scrollChatToBottom = useCallback(() => {
+    // Cerca tutti i possibili container scrollabili della chat
+    const containers = document.querySelectorAll('[data-tour="ticket-chat-scroll"], [style*="overflow"]');
+    containers.forEach(el => {
+      const htmlEl = el as HTMLElement;
+      if (htmlEl.scrollHeight > htmlEl.clientHeight && htmlEl.scrollHeight > 200) {
+        htmlEl.scrollTop = htmlEl.scrollHeight;
+      }
+    });
+  }, []);
+
+  // Helper: typewriter su textarea
+  const typewriterTextarea = useCallback(async (msg: string) => {
+    const textarea = document.querySelector('textarea[placeholder="Scrivi un messaggio..."]') as HTMLTextAreaElement;
+    if (!textarea) return;
+    textarea.focus();
+    for (let i = 0; i < msg.length; i++) {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      setter?.call(textarea, msg.slice(0, i + 1));
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      textarea.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 40));
+    }
+    await new Promise(r => setTimeout(r, 300));
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await new Promise(r => setTimeout(r, 200));
+    scrollChatToBottom();
+  }, [scrollChatToBottom]);
+
   const handleStep21Click = useCallback(async () => {
     // Click sul banner → apri la chat
     const banner = document.querySelector('[data-tour="ticket-builder-banner"]') as HTMLElement;
     if (banner) banner.click();
     await new Promise(r => setTimeout(r, 500));
 
-    // Effetto typewriter nel campo input
-    const msg = 'Voglio un biglietto sicuro';
-    const textarea = document.querySelector('textarea[placeholder="Scrivi un messaggio..."]') as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.focus();
-      for (let i = 0; i < msg.length; i++) {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-        nativeInputValueSetter?.call(textarea, msg.slice(0, i + 1));
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        textarea.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise(r => setTimeout(r, 40));
-      }
-      await new Promise(r => setTimeout(r, 300));
+    // Avvia scroll polling: segui sempre l'ultimo messaggio
+    const scrollInterval = setInterval(scrollChatToBottom, 800);
 
-      // Invia il messaggio simulando Enter
-      textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    // Messaggio 1: typewriter
+    await typewriterTextarea('Voglio un biglietto sicuro');
 
-      // Aspetta la prima risposta dell'AI (max 15 secondi)
-      for (let i = 0; i < 30; i++) {
-        await new Promise(r => setTimeout(r, 500));
-        const bubbles = document.querySelectorAll('[style*="flex-start"] > div');
-        if (bubbles.length >= 1) break;
-      }
-      await new Promise(r => setTimeout(r, 4000));
+    // Aspetta la prima risposta dell'AI (max 15 secondi)
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      scrollChatToBottom();
+      const bubbles = document.querySelectorAll('[style*="flex-start"] > div');
+      if (bubbles.length >= 1) break;
+    }
+    await new Promise(r => setTimeout(r, 4000));
+    scrollChatToBottom();
 
-      // Secondo messaggio automatico: rispondi alla domanda dell'AI
-      const msg2 = 'Quota massimo 3, solo partite di oggi';
-      const textarea2 = document.querySelector('textarea[placeholder="Scrivi un messaggio..."]') as HTMLTextAreaElement;
-      if (textarea2) {
-        textarea2.focus();
-        for (let i = 0; i < msg2.length; i++) {
-          const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-          setter?.call(textarea2, msg2.slice(0, i + 1));
-          textarea2.dispatchEvent(new Event('input', { bubbles: true }));
-          textarea2.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise(r => setTimeout(r, 40));
-        }
-        await new Promise(r => setTimeout(r, 300));
-        textarea2.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    // Messaggio 2: rispondi alla domanda dell'AI
+    await typewriterTextarea('Quota massimo 3, solo partite di oggi');
 
-        // Aspetta il biglietto (max 20 secondi)
-        for (let i = 0; i < 40; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          // Il biglietto ha un div con "Quota totale"
-          const ticket = document.querySelector('[style*="flex-start"] [style*="Quota totale"], [style*="flex-start"] span[style*="fontWeight: 700"]');
-          if (ticket) break;
-        }
-      }
+    // Aspetta il biglietto (max 20 secondi)
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      scrollChatToBottom();
+      const stakeInput = document.querySelector('.builder-stake-input');
+      if (stakeInput) break;
+    }
 
-      // Scroll al biglietto nella chat
-      await new Promise(r => setTimeout(r, 2000));
-      const chatArea = document.querySelector('[style*="overflowY: auto"][style*="flex: 1"]') as HTMLElement;
-      if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
-      await new Promise(r => setTimeout(r, 2000));
+    // Ferma scroll polling
+    clearInterval(scrollInterval);
 
-      // Inserisci 15€ nell'input puntata con effetto typewriter
-      const stakeInput = document.querySelector('.bollette-stake-input') as HTMLInputElement;
+    // Scroll al biglietto
+    await new Promise(r => setTimeout(r, 2000));
+    scrollChatToBottom();
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Step intermedio: cerchio rosso sull'input puntata
+    setStep21Auto(false);
+    setStep(212); // step 212 = cerchio rosso puntata
+  }, [scrollChatToBottom, typewriterTextarea]);
+
+  // Step 212: Cerchio rosso su input puntata → typewriter 15€ → X per continuare
+  const [step212Waiting, setStep212Waiting] = useState(false);
+  const step212DismissRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (step !== 212) return;
+    const run = async () => {
+      // Scrolla al biglietto
+      scrollChatToBottom();
+      await new Promise(r => setTimeout(r, 500));
+
+      // Trova input puntata e typewriter 15
+      const stakeInput = document.querySelector('.builder-stake-input') as HTMLInputElement;
       if (stakeInput) {
         stakeInput.focus();
-        const stakeMsg = '15.00';
+        // Pulisci prima
         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        setter?.call(stakeInput, '');
+        stakeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 200));
+
+        const stakeMsg = '15';
         for (let i = 0; i < stakeMsg.length; i++) {
           setter?.call(stakeInput, stakeMsg.slice(0, i + 1));
           stakeInput.dispatchEvent(new Event('input', { bubbles: true }));
           stakeInput.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise(r => setTimeout(r, 80));
+          await new Promise(r => setTimeout(r, 120));
         }
-        // Trigger blur per formattare
         stakeInput.dispatchEvent(new Event('blur', { bubbles: true }));
-        await new Promise(r => setTimeout(r, 500));
-
-        // Scroll giù per vedere puntata
-        if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+        await new Promise(r => setTimeout(r, 300));
+        scrollChatToBottom();
       }
-      await new Promise(r => setTimeout(r, 1000));
-    }
 
-    // Mostra spotlight per chiudere la chat
-    setStep21Auto(false);
-    setStep(211);
-  }, []);
+      // Mostra cerchio rosso e aspetta X
+      setStep212Waiting(true);
+      await new Promise<void>(resolve => { step212DismissRef.current = resolve; });
+      setStep212Waiting(false);
+
+      // Avanza a step 213 (spotlight su Salva)
+      setStep(213);
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Step 213: Spotlight su "Salva nelle mie bollette" → utente clicca
+  const handleStep213Click = useCallback(async () => {
+    // Clicca il bottone salva
+    const btn = document.querySelector('.builder-btn-salva') as HTMLElement;
+    if (btn) btn.click();
+    await new Promise(r => setTimeout(r, 800));
+    scrollChatToBottom();
+
+    // Step 214: cerchio rosso su "Salvata!"
+    setStep(214);
+  }, [scrollChatToBottom]);
+
+  // Step 214: Cerchio rosso su "Salvata!" → X → chiudi chat
+  const [step214Waiting, setStep214Waiting] = useState(false);
+  const step214DismissRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (step !== 214) return;
+    const run = async () => {
+      scrollChatToBottom();
+      await new Promise(r => setTimeout(r, 300));
+      setStep214Waiting(true);
+      await new Promise<void>(resolve => { step214DismissRef.current = resolve; });
+      setStep214Waiting(false);
+
+      // Chiudi la chat
+      const banner = document.querySelector('[data-tour="ticket-builder-banner"]') as HTMLElement;
+      if (banner) banner.click();
+      await new Promise(r => setTimeout(r, 500));
+
+      // Avvia cerchi rossi sui quadranti
+      setStep(22);
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const handleStep211Click = useCallback(async () => {
     // Chiudi la chat
@@ -1772,7 +1842,7 @@ export default function OnboardingTour() {
         />
       )}
 
-      {/* Step 211: Chiudi la chat */}
+      {/* Step 211: Chiudi la chat (solo desktop) */}
       {step === 211 && (
         <Spotlight
           selector={'[data-tour="ticket-builder-banner"]'}
@@ -1785,6 +1855,68 @@ export default function OnboardingTour() {
           borderRadius={16}
         />
       )}
+
+      {/* Step 212: Cerchio rosso su input puntata (mobile) */}
+      {step === 212 && step212Waiting && (() => {
+        const el = document.querySelector('.builder-stake-input');
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return null;
+        const pad = 6;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '10px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)', zIndex: 200001, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '10px', border: '3px solid #ef4444', boxShadow: '0 0 20px rgba(239,68,68,0.5)', animation: 'red-circle-pulse 1.5s ease-in-out infinite', pointerEvents: 'none', zIndex: 200002 }} />
+            <div style={{ position: 'fixed', top: Math.max(10, rect.top - 55), left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '400px', zIndex: 200003, pointerEvents: 'auto', animation: 'tour-text-fadein 0.3s ease' }}>
+              <div style={{ background: 'rgba(239,68,68,0.9)', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600, fontFamily: '"Inter", system-ui, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ flex: 1, lineHeight: '1.4' }}>Inserisci qui la tua puntata</span>
+                <button onClick={() => { if (step212DismissRef.current) step212DismissRef.current(); }} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+              </div>
+            </div>
+            <style>{`@keyframes red-circle-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(239,68,68,0.5); } 50% { box-shadow: 0 0 35px rgba(239,68,68,0.7); } }`}</style>
+          </div>
+        );
+      })()}
+
+      {/* Step 213: Spotlight su Salva nelle mie bollette */}
+      {step === 213 && (
+        <Spotlight
+          selector={'.builder-btn-salva'}
+          text={`Salva il biglietto tra le tue bollette personali.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Salva.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep213Click}
+          padding={4}
+          borderRadius={10}
+        />
+      )}
+
+      {/* Step 214: Cerchio rosso su "Salvata!" */}
+      {step === 214 && step214Waiting && (() => {
+        const el = document.querySelector('.builder-btn-salva')?.nextElementSibling?.previousElementSibling
+          || document.querySelector('[style*="Salvata"]')
+          || document.querySelector('.builder-saved-tag')?.parentElement;
+        // Cerca il div "Salvata!"
+        const allDivs = document.querySelectorAll('div');
+        let savedDiv: HTMLElement | null = null;
+        allDivs.forEach(d => { if (d.textContent?.includes('✅ Salvata!') && d.textContent.length < 20) savedDiv = d as HTMLElement; });
+        const rect = savedDiv?.getBoundingClientRect() || el?.getBoundingClientRect();
+        if (!rect) return null;
+        const pad = 6;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '10px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)', zIndex: 200001, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '10px', border: '3px solid #4caf50', boxShadow: '0 0 20px rgba(76,175,80,0.5)', animation: 'green-circle-pulse 1.5s ease-in-out infinite', pointerEvents: 'none', zIndex: 200002 }} />
+            <div style={{ position: 'fixed', top: Math.max(10, rect.top - 55), left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '400px', zIndex: 200003, pointerEvents: 'auto', animation: 'tour-text-fadein 0.3s ease' }}>
+              <div style={{ background: 'rgba(76,175,80,0.9)', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600, fontFamily: '"Inter", system-ui, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ flex: 1, lineHeight: '1.4' }}>La tua bolletta è stata salvata!</span>
+                <button onClick={() => { if (step214DismissRef.current) step214DismissRef.current(); }} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+              </div>
+            </div>
+            <style>{`@keyframes green-circle-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(76,175,80,0.5); } 50% { box-shadow: 0 0 35px rgba(76,175,80,0.7); } }`}</style>
+          </div>
+        );
+      })()}
 
       {/* Step 22: Cerchi rossi sui quadranti */}
       {step === 22 && (

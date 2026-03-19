@@ -1865,7 +1865,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               )}
 
               {/* Area chat scrollabile */}
-              <div style={{
+              <div data-tour="ticket-chat-scroll" style={{
                 flex: 1, overflowY: 'auto', padding: '12px 16px',
                 display: 'flex', flexDirection: 'column', gap: 10,
                 position: 'relative' as const, zIndex: 1,
@@ -2034,7 +2034,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             <input
                               type="text"
                               inputMode="decimal"
-                              className="bollette-stake-input"
+                              className="bollette-stake-input builder-stake-input"
                               value={(builderStake || '0.00') + ' €'}
                               onChange={(e) => {
                                 const raw = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
@@ -2074,6 +2074,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                         {/* Bottone salva */}
                         {!builderSaved ? (
                           <button
+                            className="builder-btn-salva"
                             onClick={handleSaveCustom}
                             disabled={!parseFloat(builderStake)}
                             style={{
@@ -2097,6 +2098,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                           }}>
                             ✅ Salvata!
                           </div>
+                          {/* Tag nascosto per il tour */}
+                          <span className="builder-saved-tag" style={{ display: 'none' }} />
                         )}
                         </>}
                       </div>

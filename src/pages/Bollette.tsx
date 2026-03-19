@@ -799,7 +799,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
         borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
         padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
       }}>
-        <button onClick={onBack} style={{
+        <button data-tour="ticket-vista-back" onClick={onBack} style={{
           background: 'none', border: 'none',
           color: isLight ? '#333' : theme.cyan,
           cursor: 'pointer', fontSize: 20, padding: '4px 8px',
@@ -1262,9 +1262,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     };
     const inject = () => {
       setBollette(prev => {
-        const hasSelettiva = prev.some(b => b.tipo === 'selettiva');
-        if (!hasSelettiva) return [fakeBolletta, ...prev];
-        return prev;
+        if (prev.some(b => b._id === 'tour-fake-001')) return prev;
+        return [fakeBolletta, ...prev];
       });
     };
     const remove = () => {
@@ -1588,7 +1587,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 12, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 12, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
               </div>
-              {/* Freccia ◀ */}
+              {/* Frecce + Data */}
+              <div data-tour="ticket-date-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <button onClick={() => {
                 const [y, m, d] = currentDateStr.split('-').map(Number);
                 const prev = new Date(y, m - 1, d - 1);
@@ -1656,6 +1656,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 transition: 'all 0.15s',
                 cursor: isToday ? 'default' : 'pointer',
               }}>▶</button>
+              </div>{/* chiude ticket-date-nav-desktop */}
               {/* Bottone Oggi */}
               <button data-tour="ticket-btn-oggi-desktop" onClick={() => { if (isStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
                 background: isStorico ? (isLight ? '#667eea' : '#11998e') : 'transparent',

@@ -532,6 +532,7 @@ interface CircleAnnotation {
   clickToClose?: boolean;
   scrollFree?: boolean;     // se true, lo scroll è libero durante questa annotazione
   duration?: number;
+  forceRadius?: string;     // forza borderRadius (es. '12px' per rettangolo)
 }
 
 function RedCircleSequence({ annotations, onComplete, parentSelector }: {
@@ -636,7 +637,7 @@ function RedCircleSequence({ annotations, onComplete, parentSelector }: {
   const spotW = rect.width + pad * 2;
   const spotH = rect.height + pad * 2;
   const ratio = rect.width / rect.height;
-  const bRadius = ratio > 2 || ratio < 0.5 ? '12px' : '50%';
+  const bRadius = current.forceRadius || (ratio > 2 || ratio < 0.5 ? '12px' : '50%');
   // Scroll libero quando richiesto dall'annotazione
   const isScrollFree = waitingForDismiss && !!current.scrollFree;
 
@@ -1491,12 +1492,34 @@ export default function OnboardingTour() {
   const handleStep25Click = useCallback(async () => {
     // Click su Selettiva → si espande, aspetta la prima bolletta
     await new Promise(r => setTimeout(r, 500));
-    await waitForEl('[data-tour="ticket-first-bolletta"]', 3000);
+    const bolletta = await waitForEl('[data-tour="ticket-first-bolletta"]', 3000);
+    if (bolletta) {
+      // Inserisci importo nell'input puntata della bolletta fake
+      const stakeInput = (bolletta as HTMLElement).querySelector('.bollette-stake-input') as HTMLInputElement;
+      if (stakeInput) {
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        setter?.call(stakeInput, '20');
+        stakeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        stakeInput.dispatchEvent(new Event('change', { bubbles: true }));
+        stakeInput.dispatchEvent(new Event('blur', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
     setStep(26); // cerchi rossi sulla bolletta
   }, []);
 
   const handleStep26Complete = useCallback(async () => {
-    // Cerchi rossi completati → spotlight sul bottone back
+    // Cerchi rossi completati → spotlight sul bottone ← per uscire dalla Selettiva
+    document.body.style.overflow = 'auto';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await new Promise(r => setTimeout(r, 400));
+    document.body.style.overflow = 'hidden';
+    setStep(261);
+  }, []);
+
+  const handleStep261Click = useCallback(async () => {
+    // Click su ← dentro Selettiva → torna ai quadranti → spotlight back dashboard
+    await new Promise(r => setTimeout(r, 500));
     document.body.style.overflow = 'auto';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     await new Promise(r => setTimeout(r, 400));
@@ -2069,18 +2092,22 @@ export default function OnboardingTour() {
             {
               selector: '[data-tour="ticket-quadrante-oggi"]',
               label: 'Bollette con le partite in programma oggi',
+              forceRadius: '16px',
             },
             {
               selector: '[data-tour="ticket-quadrante-selettiva"]',
               label: 'Selettiva — quote basse, bollette più sicure',
+              forceRadius: '16px',
             },
             {
               selector: '[data-tour="ticket-quadrante-bilanciata"]',
               label: 'Bilanciata — quote medie, buon equilibrio rischio/rendimento',
+              forceRadius: '16px',
             },
             {
               selector: '[data-tour="ticket-quadrante-ambiziosa"]',
               label: 'Ambiziosa — quote alte, potenziale vincita elevata',
+              forceRadius: '16px',
             },
           ]}
           onComplete={handleStep22Complete}
@@ -2125,7 +2152,7 @@ export default function OnboardingTour() {
       {/* Step 24: Spotlight sulla navigazione storico */}
       {step === 24 && (
         <Spotlight
-          selector={isMobile ? '[data-tour="ticket-storico-nav"]' : '[data-tour="ticket-storico-nav-desktop"]'}
+          selector={isMobile ? '[data-tour="ticket-storico-nav"]' : '[data-tour="ticket-date-nav-desktop"]'}
           text={`Naviga nello storico giorno per giorno con le frecce, oppure apri il calendario per scegliere una data.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Tocca per continuare.</span>`}
           onSkip={skipTour}
           onOpenChapters={handleOpenChapters}
@@ -2170,12 +2197,12 @@ export default function OnboardingTour() {
           parentSelector='[data-tour="ticket-first-bolletta"]'
           annotations={[
             {
-              selector: '.ticket-btn-salva',
-              label: 'Salva il biglietto tra le tue bollette personali',
-            },
-            {
               selector: '.ticket-footer-puntata',
               label: 'Imposta la puntata e visualizza la vincita potenziale',
+            },
+            {
+              selector: '.ticket-btn-salva',
+              label: 'Salva il biglietto tra le tue bollette personali',
             },
             {
               selector: '.ticket-btn-condividi',
@@ -2183,6 +2210,20 @@ export default function OnboardingTour() {
             },
           ]}
           onComplete={handleStep26Complete}
+        />
+      )}
+
+      {/* Step 261: Esci dalla Selettiva — spotlight su ← */}
+      {step === 261 && (
+        <Spotlight
+          selector={'[data-tour="ticket-vista-back"]'}
+          text={`Torna alla vista principale.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su ← per uscire.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep261Click}
+          padding={4}
+          borderRadius={8}
         />
       )}
 

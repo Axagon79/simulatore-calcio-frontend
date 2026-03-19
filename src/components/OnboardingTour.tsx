@@ -1207,6 +1207,8 @@ export default function OnboardingTour() {
     }
     await new Promise(r => setTimeout(r, 300));
     textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    // Chiudi la tastiera mobile togliendo il focus
+    textarea.blur();
     await new Promise(r => setTimeout(r, 200));
     scrollChatToBottom();
   }, [scrollChatToBottom]);
@@ -1252,10 +1254,59 @@ export default function OnboardingTour() {
     scrollChatToBottom();
     await new Promise(r => setTimeout(r, 1000));
 
-    // Step intermedio: cerchio rosso sull'input puntata
+    // Step intermedi: cerchio verde su messaggio AI, poi bolletta, poi puntata
     setStep21Auto(false);
-    setStep(212); // step 212 = cerchio rosso puntata
+    setStep(2101); // cerchio verde su messaggio AI
   }, [scrollChatToBottom, typewriterTextarea]);
+
+  // Step 2101: Cerchio verde sul messaggio di spiegazione dell'AI
+  const [step2101Waiting, setStep2101Waiting] = useState(false);
+  const step2101DismissRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (step !== 2101) return;
+    const run = async () => {
+      scrollChatToBottom();
+      await new Promise(r => setTimeout(r, 300));
+      // Trova l'ultimo messaggio AI (la spiegazione prima della bolletta)
+      const aiBubbles = document.querySelectorAll('.chat-ai-bubble');
+      const lastAiBubble = aiBubbles[aiBubbles.length - 1] as HTMLElement;
+      if (lastAiBubble) {
+        lastAiBubble.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 400));
+      }
+      setStep2101Waiting(true);
+      await new Promise<void>(resolve => { step2101DismissRef.current = resolve; });
+      setStep2101Waiting(false);
+      setStep(2102);
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Step 2102: Cerchio verde sulla bolletta
+  const [step2102Waiting, setStep2102Waiting] = useState(false);
+  const step2102DismissRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (step !== 2102) return;
+    const run = async () => {
+      const card = document.querySelector('.chat-bolletta-card') as HTMLElement;
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 400));
+      }
+      setStep2102Waiting(true);
+      await new Promise<void>(resolve => { step2102DismissRef.current = resolve; });
+      setStep2102Waiting(false);
+      // Ora vai all'input puntata
+      scrollChatToBottom();
+      await new Promise(r => setTimeout(r, 300));
+      setStep(212);
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   // Step 212: Cerchio rosso su input puntata → typewriter 15€ → X per continuare
   const [step212Waiting, setStep212Waiting] = useState(false);
@@ -1880,6 +1931,49 @@ export default function OnboardingTour() {
           borderRadius={16}
         />
       )}
+
+      {/* Step 2101: Cerchio verde sul messaggio AI */}
+      {step === 2101 && step2101Waiting && (() => {
+        const aiBubbles = document.querySelectorAll('.chat-ai-bubble');
+        const el = aiBubbles[aiBubbles.length - 1] as HTMLElement | undefined;
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return null;
+        const pad = 6;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '12px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)', zIndex: 200001, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '12px', border: '3px solid #4caf50', boxShadow: '0 0 20px rgba(76,175,80,0.5)', animation: 'green-circle-pulse 1.5s ease-in-out infinite', pointerEvents: 'none', zIndex: 200002 }} />
+            <div style={{ position: 'fixed', top: Math.max(10, rect.top - 55), left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '400px', zIndex: 200003, pointerEvents: 'auto', animation: 'tour-text-fadein 0.3s ease' }}>
+              <div style={{ background: 'rgba(76,175,80,0.9)', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600, fontFamily: '"Inter", system-ui, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ flex: 1, lineHeight: '1.4' }}>L'intelligenza artificiale spiega le motivazioni dietro ogni selezione</span>
+                <button onClick={() => { if (step2101DismissRef.current) step2101DismissRef.current(); }} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+              </div>
+            </div>
+            <style>{`@keyframes green-circle-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(76,175,80,0.5); } 50% { box-shadow: 0 0 35px rgba(76,175,80,0.7); } }`}</style>
+          </div>
+        );
+      })()}
+
+      {/* Step 2102: Cerchio verde sulla bolletta */}
+      {step === 2102 && step2102Waiting && (() => {
+        const el = document.querySelector('.chat-bolletta-card') as HTMLElement | null;
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return null;
+        const pad = 6;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200000, pointerEvents: 'auto' }}>
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '12px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)', zIndex: 200001, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, borderRadius: '12px', border: '3px solid #4caf50', boxShadow: '0 0 20px rgba(76,175,80,0.5)', animation: 'green-circle-pulse 1.5s ease-in-out infinite', pointerEvents: 'none', zIndex: 200002 }} />
+            <div style={{ position: 'fixed', bottom: '8%', left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '400px', zIndex: 200003, pointerEvents: 'auto', animation: 'tour-text-fadein 0.3s ease' }}>
+              <div style={{ background: 'rgba(76,175,80,0.9)', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600, fontFamily: '"Inter", system-ui, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ flex: 1, lineHeight: '1.4' }}>Questa è la bolletta creata dall'intelligenza artificiale</span>
+                <button onClick={() => { if (step2102DismissRef.current) step2102DismissRef.current(); }} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+              </div>
+            </div>
+            <style>{`@keyframes green-circle-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(76,175,80,0.5); } 50% { box-shadow: 0 0 35px rgba(76,175,80,0.7); } }`}</style>
+          </div>
+        );
+      })()}
 
       {/* Step 212: Cerchio rosso su input puntata (mobile) */}
       {step === 212 && step212Waiting && (() => {

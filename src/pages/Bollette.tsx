@@ -1872,7 +1872,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 position: 'relative' as const, zIndex: 1,
               }}>
                 {chatMessages.map((m, i) => (
-                  <div key={i}>
+                  <div key={i} className={m.role === 'assistant' ? `chat-ai-msg chat-ai-msg-${i}` : ''}>
                     {/* Bubble messaggio */}
                     <div style={{
                       display: 'flex',
@@ -1880,7 +1880,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                       marginLeft: isMobile ? 0 : 40,
                       marginRight: isMobile ? 0 : 40,
                     }}>
-                      <div style={{
+                      <div className={m.role === 'assistant' ? 'chat-ai-bubble' : ''} style={{
                         maxWidth: isMobile ? '80%' : '60%',
                         padding: '12px 16px',
                         borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
@@ -1899,7 +1899,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
                     {/* Bolletta inline (se presente) */}
                     {m.bolletta && (
-                      <div style={{ marginTop: 8, marginLeft: isMobile ? 0 : 40, marginRight: isMobile ? 0 : 40, maxWidth: isMobile ? '95%' : '35%' }}>
+                      <div className="chat-bolletta-card" style={{ marginTop: 8, marginLeft: isMobile ? 0 : 40, marginRight: isMobile ? 0 : 40, maxWidth: isMobile ? '95%' : '35%' }}>
                         <div style={{
                           background: isLight ? '#f0f1f4' : '#1e2133',
                           border: isLight ? '1px solid #d0d0d0' : '1px solid #2d3045',

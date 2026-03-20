@@ -1312,7 +1312,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         </div>
 
         {/* Badge "NB" (mobile: bollino tondo, desktop: rettangolino) al posto del tasto Tip */}
-        {pred.decision === 'NO_BET' && (
+        {/* Guarda pronostici[] reali, non decision (che può essere stale dopo pre-match update) */}
+        {!(pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET')) && (
         <div
           style={{
             position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '84px' : '100px',
@@ -1327,7 +1328,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         </div>
         )}
         {/* Badge "Tip" — solo per partite con pronostico */}
-        {pred.decision !== 'NO_BET' && (
+        {pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET') && (
         <div
           style={{
             position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '84px' : '100px',

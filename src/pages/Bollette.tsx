@@ -7,6 +7,15 @@ import { shareElement } from '../utils/shareCard';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
+function AnimatedDots() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setCount(c => (c + 1) % 4), 600);
+    return () => clearInterval(interval);
+  }, []);
+  return <span style={{ display: 'inline-block', width: '1.2em', textAlign: 'left' }}>{'.'.repeat(count)}</span>;
+}
+
 // CSS: nascondi spinner input number + forza caret color
 if (typeof document !== 'undefined' && !document.getElementById('bollette-input-css')) {
   const style = document.createElement('style');
@@ -586,7 +595,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                           fontSize: 11, fontWeight: 800, color: statusColor,
                           background: `${statusColor}18`, padding: '2px 8px', borderRadius: 4,
                         }}>
-                          {statusLabel}
+                          {statusLabel === 'IN CORSO...' ? (anyLive ? <>IN CORSO<AnimatedDots /></> : 'IN CORSO...') : statusLabel}
                         </span>
                       )}
                     </div>
@@ -885,7 +894,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                               background: `${statusColor}18`, padding: '2px 8px',
                               borderRadius: 4, letterSpacing: 0.5,
                             }}>
-                              {statusLabel}
+                              {statusLabel === 'IN CORSO...' ? (anyLive ? <>IN CORSO<AnimatedDots /></> : 'IN CORSO...') : statusLabel}
                             </span>
                           )}
                         </>

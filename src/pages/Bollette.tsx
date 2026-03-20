@@ -1471,22 +1471,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     }
   };
 
-  // Stats oggi (per badge nell'header) — usa dati live per accuratezza
-  const oggiStats = (() => {
-    let vinte = 0, perse = 0, pending = 0;
-    for (const b of bollette) {
-      if (b.esito_globale === 'vinta') { vinte++; continue; }
-      if (b.esito_globale === 'persa') { perse++; continue; }
-      const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
-      const hasDefLose = esitiLive.some(e => e === 'lose');
-      const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
-      const allWin = esitiLive.every(e => e === 'win');
-      if (hasDefLose) perse++;
-      else if (allDone && allWin) vinte++;
-      else pending++;
-    }
-    return { vinte, perse, pending };
-  })();
+  // oggiStats calcolato dopo grouped (vedi sotto)
 
   // Raggruppa — usa storicoBollette se data selezionata, altrimenti bollette di oggi
   const isStorico = !!storicoDate && storicoDate !== new Date().toISOString().split('T')[0];
@@ -1514,6 +1499,24 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       else grouped.ambiziosa.push(b);
     }
   }
+
+  // Stats header — solo bollette AI (escluse "Le mie bollette")
+  const aiBollette = [...grouped.oggi, ...grouped.selettiva, ...grouped.bilanciata, ...grouped.ambiziosa];
+  const oggiStats = (() => {
+    let vinte = 0, perse = 0, pending = 0;
+    for (const b of aiBollette) {
+      if (b.esito_globale === 'vinta') { vinte++; continue; }
+      if (b.esito_globale === 'persa') { perse++; continue; }
+      const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+      const hasDefLose = esitiLive.some(e => e === 'lose');
+      const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+      const allWin = esitiLive.every(e => e === 'win');
+      if (hasDefLose) perse++;
+      else if (allDone && allWin) vinte++;
+      else pending++;
+    }
+    return { vinte, perse, pending };
+  })();
 
   // Se una categoria è attiva, mostra il dettaglio
   if (activeCategory) {
@@ -1655,7 +1658,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             );
           })()}
           {!isMobile && (() => {
-            const currentStats = isStorico ? { vinte: storicoStats?.vinte ?? 0, perse: storicoStats?.perse ?? 0, pending: storicoStats?.pending ?? 0 } : oggiStats;
+            const currentStats = oggiStats;
             const todayStr = new Date().toISOString().split('T')[0];
             const currentDateStr = storicoDate || todayStr;
             const displayDate = new Date(currentDateStr + 'T12:00:00');
@@ -1753,7 +1756,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           })()}
         </div>
         {isMobile && (() => {
-          const mobileStats = isStorico ? { vinte: storicoStats?.vinte ?? 0, perse: storicoStats?.perse ?? 0, pending: storicoStats?.pending ?? 0 } : oggiStats;
+          const mobileStats = oggiStats;
           return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', gap: 8 }}>

@@ -1534,33 +1534,43 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             </thead>
                             <tbody>
                               {(() => {
-                                const vL: Record<string, string> = { nightly: 'Notte', update_3h: '-3h', update_1h: '-1h' };
-                                const existing = (['update_1h', 'update_3h', 'nightly'] as const).filter(v => (versionCache[matchKey] || []).find((d: any) => d.version === v));
+                                // Tutte le versioni ordinate: più recente prima
+                                const allVersions = (versionCache[matchKey] || [])
+                                  .slice()
+                                  .sort((a: any, b: any) => {
+                                    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+                                    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+                                    return tb - ta;
+                                  });
                                 const rows: React.ReactNode[] = [];
-                                existing.forEach((ver, verIdx) => {
-                                  const doc = (versionCache[matchKey] || []).find((v: any) => v.version === ver)!;
+                                allVersions.forEach((doc: any, verIdx: number) => {
+                                  const ver = doc.version || 'nightly';
                                   const isNB = doc.status === 'NO_BET' || !doc.pronostici?.length;
                                   const isCurrent = verIdx === 0;
                                   const ts = doc.created_at ? new Date(doc.created_at) : null;
                                   const tsLabel = ts ? `${ts.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : '';
-                                  const verLabel = isCurrent ? `Attuale${tsLabel ? ` (${tsLabel})` : ''}` : `${vL[ver]}${tsLabel ? ` · ${tsLabel}` : ''}`;
+                                  // Label versione
+                                  let verTypeLabel = 'Notte';
+                                  if (ver.startsWith('nightly')) verTypeLabel = 'Notte';
+                                  else if (ver === 'update_3h') verTypeLabel = '-3h';
+                                  else if (ver === 'update_1h') verTypeLabel = '-1h';
+                                  const verLabel = isCurrent ? `Attuale${tsLabel ? ` (${tsLabel})` : ''}` : `${verTypeLabel}${tsLabel ? ` · ${tsLabel}` : ''}`;
                                   if (isNB) {
                                     rows.push(
-                                      <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                      <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
                                         <td style={{ padding: '3px 4px', color: theme.danger, fontWeight: 700 }}>NO BET</td>
                                         <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
                                         <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
                                       </tr>
                                     );
                                   } else {
-                                    // Filtra pronostici per mercato coerente con la pill corrente
                                     const isSegnoCol = p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE';
                                     const filtered = (doc.pronostici || []).filter((pr: any) =>
                                       isSegnoCol ? (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') : (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO')
                                     );
                                     if (filtered.length === 0) {
                                       rows.push(
-                                        <tr key={ver} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                        <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
                                           <td style={{ padding: '3px 4px', color: theme.textDim, fontWeight: 700 }}>—</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
@@ -1569,7 +1579,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                     }
                                     filtered.forEach((pr: any, prIdx: number) => {
                                       rows.push(
-                                        <tr key={`${ver}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                        <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
                                           <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>{pr.pronostico || '—'}</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{prIdx === 0 ? verLabel : ''}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{pr.stake || '—'}</td>

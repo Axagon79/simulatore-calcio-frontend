@@ -62,9 +62,9 @@ export default function BarraSuperiore({
             data-tour="app-hamburger"
             onClick={onMobileMenuOpen}
             style={{
-              background: 'rgba(0, 240, 255, 0.1)',
-              border: '1px solid rgba(0, 240, 255, 0.3)',
-              color: theme.cyan,
+              background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0, 240, 255, 0.1)',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0, 240, 255, 0.3)'}`,
+              color: isLight ? '#374151' : theme.cyan,
               padding: '8px 12px',
               borderRadius: '8px',
               fontSize: '20px',
@@ -79,7 +79,7 @@ export default function BarraSuperiore({
             display: 'flex',
             background: theme.surface05,
             borderRadius: '16px',
-            border: '1px solid rgba(0, 240, 255, 0.2)',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(0, 240, 255, 0.2)'}`,
             padding: '2px',
             gap: '2px'
           }}>
@@ -93,8 +93,8 @@ export default function BarraSuperiore({
                     padding: '5px 10px',
                     borderRadius: '14px',
                     border: 'none',
-                    background: isActive ? theme.cyan : 'transparent',
-                    color: isActive ? (isLight ? '#fff' : '#000') : theme.textFaint,
+                    background: isActive ? (isLight ? '#374151' : theme.cyan) : 'transparent',
+                    color: isActive ? '#fff' : theme.textFaint,
                     fontWeight: isActive ? 800 : 600,
                     fontSize: '10px',
                     cursor: 'pointer',
@@ -137,7 +137,7 @@ export default function BarraSuperiore({
             display: 'flex',
             background: theme.surface05,
             borderRadius: '20px',
-            border: '1px solid rgba(0, 240, 255, 0.2)',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(0, 240, 255, 0.2)'}`,
             padding: '3px',
             gap: '2px',
             marginLeft: '120px',
@@ -152,8 +152,8 @@ export default function BarraSuperiore({
                     padding: '6px 14px',
                     borderRadius: '16px',
                     border: 'none',
-                    background: isActive ? theme.cyan : 'transparent',
-                    color: isActive ? (isLight ? '#fff' : '#000') : theme.textFaint,
+                    background: isActive ? (isLight ? '#374151' : theme.cyan) : 'transparent',
+                    color: isActive ? '#fff' : theme.textFaint,
                     fontWeight: isActive ? 800 : 600,
                     fontSize: '11px',
                     cursor: 'pointer',
@@ -205,7 +205,7 @@ export default function BarraSuperiore({
               Partite di Oggi
             </span>
             {!isMobile && (
-              <span style={{ fontSize: '11px', color: theme.cyan, fontWeight: 'bold', opacity: 0.9, letterSpacing: '1px' }}>
+              <span style={{ fontSize: '11px', color: isLight ? '#6b7280' : theme.cyan, fontWeight: 'bold', opacity: 0.9, letterSpacing: '1px' }}>
                 {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
             )}
@@ -241,7 +241,7 @@ export default function BarraSuperiore({
                 height: isMobile ? '30px' : '42px',
                 width: 'auto',
                 objectFit: 'contain',
-                filter: 'drop-shadow(0 0 10px rgba(0, 240, 255, 0.4))'
+                filter: isLight ? 'drop-shadow(0 0 6px rgba(0,0,0,0.15))' : 'drop-shadow(0 0 10px rgba(0, 240, 255, 0.4))'
               }}
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
@@ -250,7 +250,7 @@ export default function BarraSuperiore({
               <span style={{
                 fontSize: isMobile ? '12px' : '15px',
                 fontWeight: '900',
-                color: 'white',
+                color: isLight ? '#111827' : 'white',
                 lineHeight: '1.1',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
@@ -264,7 +264,7 @@ export default function BarraSuperiore({
               {!isMobile && (
                 <span style={{
                   fontSize: '10px',
-                  color: theme.cyan,
+                  color: isLight ? '#6b7280' : theme.cyan,
                   fontWeight: 'bold',
                   opacity: 0.9,
                   letterSpacing: '2px',
@@ -312,7 +312,7 @@ export default function BarraSuperiore({
             }}
           >
             <span style={{ color: theme.textDim }}>
-              <span style={{ color: theme.cyan, fontWeight: 700 }}>{credits}</span> crediti
+              <span style={{ color: isLight ? '#0077cc' : theme.cyan, fontWeight: 700 }}>{credits}</span> crediti
             </span>
             <span style={{ color: theme.textDim }}>
               <span style={{ color: '#f0c040', fontWeight: 700 }}>{shields}</span> Shield

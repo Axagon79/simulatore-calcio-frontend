@@ -1589,7 +1589,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             onChange={e => setTodayLeagueFilter(e.target.value)}
             style={{
               background: theme.popoverBg, color: theme.text,
-              border: '1px solid rgba(0,240,255,0.3)', borderRadius: '10px',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(0,240,255,0.3)'}`, borderRadius: '10px',
               padding: '8px 12px', fontSize: '12px', fontWeight: 700,
               cursor: 'pointer', minWidth: '160px'
             }}
@@ -1610,8 +1610,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 style={{
                   padding: '6px 12px', borderRadius: '16px',
                   border: isActive ? 'none' : `1px solid ${theme.surface15}`,
-                  background: isActive ? 'rgba(0,240,255,0.15)' : 'transparent',
-                  color: isActive ? theme.cyan : theme.textFaint,
+                  background: isActive ? (isLight ? 'rgba(225,230,245,0.8)' : 'rgba(0,240,255,0.15)') : 'transparent',
+                  color: isActive ? (isLight ? '#374151' : theme.cyan) : theme.textFaint,
                   fontWeight: isActive ? 800 : 600, fontSize: '11px',
                   cursor: 'pointer', transition: 'all 0.2s'
                 }}
@@ -1660,8 +1660,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 <button
                   onClick={() => { setTodayLeagueFilter(''); setTodayTimeFilter('tutti'); }}
                   style={{
-                    background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
-                    color: theme.cyan, padding: '6px 16px', borderRadius: '8px',
+                    background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(0,240,255,0.1)', border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(0,240,255,0.3)'}`,
+                    color: isLight ? '#374151' : theme.cyan, padding: '6px 16px', borderRadius: '8px',
                     cursor: 'pointer', fontSize: '12px'
                   }}
                 >
@@ -1677,7 +1677,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '8px 12px', marginBottom: '6px',
-                borderBottom: '1px solid rgba(0,240,255,0.15)'
+                borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(0,240,255,0.15)'}`
               }}>
                 <img
                   src={STEMMI_CAMPIONATI[group.league_id] || ''}
@@ -1688,7 +1688,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                 <span style={{ fontSize: '13px', fontWeight: 800, color: theme.text, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
                   {group.league_name}
                 </span>
-                <span style={{ fontSize: '10px', color: 'rgba(0,240,255,0.6)', fontWeight: 700 }}>
+                <span style={{ fontSize: '10px', color: isLight ? '#6b7280' : 'rgba(0,240,255,0.6)', fontWeight: 700 }}>
                   {group.country}
                 </span>
                 <span style={{ marginLeft: 'auto', fontSize: '11px', color: theme.textFaint, fontWeight: 600 }}>

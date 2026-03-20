@@ -276,8 +276,8 @@ export default function ElementoPartita({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(111, 149, 170, 0.13)',
-            border: '1px solid rgba(0, 240, 255, 0.1)',
+            background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(111, 149, 170, 0.13)',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.10)' : 'rgba(0, 240, 255, 0.1)'}`,
             borderRadius: '8px',
             padding: '2px 8px',
             height: '24px',
@@ -559,9 +559,9 @@ export default function ElementoPartita({
           title="Approfondisci con Coach AI"
           style={{
             width: '32px', height: '32px', borderRadius: '50%',
-            background: 'rgba(0, 240, 255, 0.1)',
-            border: `1px solid ${theme.cyan}44`,
-            color: theme.cyan,
+            background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0, 240, 255, 0.1)',
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.15)' : theme.cyan + '44'}`,
+            color: isLight ? '#374151' : theme.cyan,
             cursor: 'pointer',
             fontSize: '16px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -570,11 +570,11 @@ export default function ElementoPartita({
             transition: 'all 0.2s ease'
           }}
           onMouseEnter={(e) => {
-            (e.target as HTMLButtonElement).style.background = 'rgba(0, 240, 255, 0.25)';
-            (e.target as HTMLButtonElement).style.boxShadow = `0 0 10px ${theme.cyan}44`;
+            (e.target as HTMLButtonElement).style.background = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(0, 240, 255, 0.25)';
+            (e.target as HTMLButtonElement).style.boxShadow = isLight ? '0 0 8px rgba(0,0,0,0.1)' : `0 0 10px ${theme.cyan}44`;
           }}
           onMouseLeave={(e) => {
-            (e.target as HTMLButtonElement).style.background = 'rgba(0, 240, 255, 0.1)';
+            (e.target as HTMLButtonElement).style.background = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0, 240, 255, 0.1)';
             (e.target as HTMLButtonElement).style.boxShadow = 'none';
           }}
         >
@@ -791,7 +791,7 @@ export default function ElementoPartita({
               fontWeight: 'bold',
               fontSize: '14px',
               cursor: 'pointer',
-              boxShadow: `0 0 15px rgba(0, 240, 255, 0.3)`
+              boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.15)' : '0 0 15px rgba(0, 240, 255, 0.3)'
             }}
           >
             👁️ ANALIZZA PARTITA

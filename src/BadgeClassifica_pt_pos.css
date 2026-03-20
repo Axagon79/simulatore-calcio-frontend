@@ -81,3 +81,23 @@
       order: 2; /* Assicura che i punti (es. 25pt) stiano a destra */
   }
 }
+
+/* --- LIGHT MODE --- */
+body[data-theme="light"] .badge-classifica {
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+body[data-theme="light"] .badge-points {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+body[data-theme="light"] .badge-classifica.home .badge-rank {
+  color: #0077cc;
+  text-shadow: none;
+}
+
+body[data-theme="light"] .badge-classifica.away .badge-rank {
+  color: #c2600a;
+  text-shadow: none;
+}

@@ -155,10 +155,10 @@ export default function BarraLaterale({
       {isLoadingNations ? (
         <div style={{
           padding: '10px',
-          color: theme.cyan,
+          color: isLight ? '#6b7280' : theme.cyan,
           fontSize: '11px',
           fontStyle: 'italic',
-          background: 'rgba(0, 240, 255, 0.05)',
+          background: isLight ? 'rgba(225, 230, 245, 0.6)' : 'rgba(0, 240, 255, 0.05)',
           borderRadius: '6px'
         }}>
           ⏳ Caricamento nazioni...
@@ -264,10 +264,10 @@ export default function BarraLaterale({
           style={{
             flex: 1,
             padding: '15px 4px',
-            background: isLight ? 'rgba(5,249,182,0.15)' : 'rgba(5,249,182,0.08)',
-            border: isLight ? '1px solid rgba(5,249,182,0.7)' : '1px solid rgba(5,249,182,0.25)',
+            background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(5,249,182,0.08)',
+            border: isLight ? '1px solid rgba(0,0,0,0.10)' : '1px solid rgba(5,249,182,0.25)',
             borderRadius: '8px',
-            color: appTheme.success,
+            color: isLight ? '#15803d' : appTheme.success,
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '700',
@@ -275,11 +275,11 @@ export default function BarraLaterale({
             transition: 'all 0.2s'
           }}
           onMouseEnter={!isMobile ? (e) => {
-            e.currentTarget.style.background = isLight ? 'rgba(5,249,182,0.28)' : 'rgba(5,249,182,0.18)';
+            e.currentTarget.style.background = isLight ? 'rgba(215,220,240,0.8)' : 'rgba(5,249,182,0.18)';
             e.currentTarget.style.transform = 'translateY(-1px)';
           } : undefined}
           onMouseLeave={!isMobile ? (e) => {
-            e.currentTarget.style.background = isLight ? 'rgba(5,249,182,0.15)' : 'rgba(5,249,182,0.08)';
+            e.currentTarget.style.background = isLight ? 'rgba(225,230,245,0.6)' : 'rgba(5,249,182,0.08)';
             e.currentTarget.style.transform = 'translateY(0)';
           } : undefined}
         >
@@ -290,10 +290,10 @@ export default function BarraLaterale({
           style={{
             flex: 1,
             padding: '15px 4px',
-            background: isLight ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.08)',
-            border: isLight ? '1px solid rgba(255,215,0,0.7)' : '1px solid rgba(255,215,0,0.25)',
+            background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(255,215,0,0.08)',
+            border: isLight ? '1px solid rgba(0,0,0,0.10)' : '1px solid rgba(255,215,0,0.25)',
             borderRadius: '8px',
-            color: appTheme.gold,
+            color: isLight ? '#92400e' : appTheme.gold,
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '700',
@@ -301,11 +301,11 @@ export default function BarraLaterale({
             transition: 'all 0.2s'
           }}
           onMouseEnter={!isMobile ? (e) => {
-            e.currentTarget.style.background = isLight ? 'rgba(255,215,0,0.28)' : 'rgba(255,215,0,0.18)';
+            e.currentTarget.style.background = isLight ? 'rgba(215,220,240,0.8)' : 'rgba(255,215,0,0.18)';
             e.currentTarget.style.transform = 'translateY(-1px)';
           } : undefined}
           onMouseLeave={!isMobile ? (e) => {
-            e.currentTarget.style.background = isLight ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.08)';
+            e.currentTarget.style.background = isLight ? 'rgba(225,230,245,0.6)' : 'rgba(255,215,0,0.08)';
             e.currentTarget.style.transform = 'translateY(0)';
           } : undefined}
         >
@@ -347,9 +347,9 @@ export default function BarraLaterale({
           width: '100%',
           padding: '14px 12px',
           background: isLight
-            ? `linear-gradient(135deg, rgba(188, 19, 254, 0.15), rgba(0, 180, 200, 0.12))`
+            ? 'rgba(225, 230, 245, 0.8)'
             : `linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))`,
-          border: isLight ? '1px solid rgba(188, 19, 254, 0.6)' : 'revert',
+          border: isLight ? '1px solid rgba(0,0,0,0.12)' : 'revert',
           borderRadius: '10px',
           color: appTheme.text,
           cursor: 'pointer',
@@ -361,21 +361,21 @@ export default function BarraLaterale({
           justifyContent: 'space-between',
           gap: '8px',
           transition: 'all 0.2s',
-          boxShadow: '0 2px 8px rgba(188, 19, 254, 0.3)'
+          boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.12)' : '0 2px 8px rgba(188, 19, 254, 0.3)'
         }}
         onMouseEnter={!isMobile ? (e) => {
           e.currentTarget.style.background = isLight
-            ? 'linear-gradient(135deg, rgba(188, 19, 254, 0.25), rgba(0, 180, 200, 0.20))'
+            ? 'rgba(215, 220, 240, 0.95)'
             : 'linear-gradient(135deg, rgba(188, 19, 254, 0.35), rgba(0, 255, 255, 0.18))';
           e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.boxShadow = isLight ? '0 4px 12px rgba(188, 19, 254, 0.25)' : '0 4px 12px rgba(188, 19, 254, 0.4)';
+          e.currentTarget.style.boxShadow = isLight ? '0 4px 12px rgba(0,0,0,0.15)' : '0 4px 12px rgba(188, 19, 254, 0.4)';
         } : undefined}
         onMouseLeave={!isMobile ? (e) => {
           e.currentTarget.style.background = isLight
-            ? 'linear-gradient(135deg, rgba(188, 19, 254, 0.15), rgba(0, 180, 200, 0.12))'
+            ? 'rgba(225, 230, 245, 0.8)'
             : 'linear-gradient(135deg, rgba(188, 19, 254, 0.2), rgba(0, 255, 255, 0.1))';
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(188, 19, 254, 0.3)';
+          e.currentTarget.style.boxShadow = isLight ? '0 2px 8px rgba(0,0,0,0.12)' : '0 2px 8px rgba(188, 19, 254, 0.3)';
         } : undefined}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -397,8 +397,8 @@ export default function BarraLaterale({
           style={{
           marginTop: '5px',
           padding: '10px',
-          background: 'rgba(0, 240, 255, 0.05)',
-          border: `1px solid ${selectedCup ? '#0066cc' : theme.cyan}`,
+          background: isLight ? 'rgba(225, 230, 245, 0.6)' : 'rgba(0, 240, 255, 0.05)',
+          border: `1px solid ${selectedCup ? '#0066cc' : (isLight ? 'rgba(0,0,0,0.12)' : theme.cyan)}`,
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
@@ -407,11 +407,11 @@ export default function BarraLaterale({
           transition: 'all 0.2s'
         }}
         onMouseEnter={!isMobile ? (e) => {
-          e.currentTarget.style.background = isLight ? 'rgba(0, 120, 200, 0.10)' : 'rgba(0, 240, 255, 0.12)';
+          e.currentTarget.style.background = isLight ? 'rgba(215, 220, 240, 0.8)' : 'rgba(0, 240, 255, 0.12)';
           e.currentTarget.style.transform = 'translateY(-1px)';
         } : undefined}
         onMouseLeave={!isMobile ? (e) => {
-          e.currentTarget.style.background = 'rgba(0, 240, 255, 0.05)';
+          e.currentTarget.style.background = isLight ? 'rgba(225, 230, 245, 0.6)' : 'rgba(0, 240, 255, 0.05)';
           e.currentTarget.style.transform = 'translateY(0)';
         } : undefined}
         >
@@ -432,7 +432,7 @@ export default function BarraLaterale({
             <div style={{
               fontSize: '14px',
               fontWeight: '800',
-              color: 'white',
+              color: appTheme.text,
               lineHeight: '1.2'
             }}>
               {selectedCup
@@ -457,7 +457,7 @@ export default function BarraLaterale({
       {/* 🔥 BOX RIEPILOGO - APPARE SIA PER MASSIVO CHE SINGOLO */}
       {((configMode >= 1 && configMode <= 3 && matches.length > 0) ||
         (configMode === 4 && selectedMatchForConfig)) && (
-          <div style={{marginTop:'20px', borderTop:'1px solid #333', paddingTop:'15px'}}>
+          <div style={{marginTop:'20px', borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : '#333'}`, paddingTop:'15px'}}>
               <label style={{
                   display:'block',
                   color: appTheme.gold,
@@ -473,7 +473,7 @@ export default function BarraLaterale({
                   maxHeight: '180px',
                   overflowY: 'auto',
                   background: appTheme.popoverBg,
-                  border: '1px solid rgba(255, 215, 0, 0.2)',
+                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255, 215, 0, 0.2)'}`,
                   borderRadius: '6px',
                   padding: '8px'
               }}>
@@ -625,6 +625,7 @@ export default function BarraLaterale({
                 onClick={() => window.location.href = '/best-picks'}
                 style={{
                   ...styles.card,
+                  ...(isLight ? { background: 'rgba(225, 230, 245, 0.6)', border: '1px solid rgba(0,0,0,0.10)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } : {}),
                   padding: '13px 12px',
                   position: 'relative',
                   marginBottom: '6px',

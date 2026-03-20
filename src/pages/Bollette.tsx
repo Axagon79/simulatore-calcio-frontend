@@ -85,7 +85,8 @@ type EsitoLive = 'pending' | 'win' | 'lose' | 'live_win' | 'live_lose';
 
 function calculateHitFromScore(score: string, pronostico: string, tipo: string): boolean | null {
   if (!score) return null;
-  const parts = score.split(':');
+  const normalized = score.replace(/\s/g, '').replace('-', ':');
+  const parts = normalized.split(':');
   if (parts.length !== 2) return null;
   const home = parseInt(parts[0]), away = parseInt(parts[1]);
   if (isNaN(home) || isNaN(away)) return null;
@@ -1470,12 +1471,22 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     }
   };
 
-  // Stats oggi (per badge nell'header)
-  const oggiStats = {
-    vinte: bollette.filter(b => b.esito_globale === 'vinta').length,
-    perse: bollette.filter(b => b.esito_globale === 'persa').length,
-    pending: bollette.filter(b => !b.esito_globale).length,
-  };
+  // Stats oggi (per badge nell'header) — usa dati live per accuratezza
+  const oggiStats = (() => {
+    let vinte = 0, perse = 0, pending = 0;
+    for (const b of bollette) {
+      if (b.esito_globale === 'vinta') { vinte++; continue; }
+      if (b.esito_globale === 'persa') { perse++; continue; }
+      const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+      const hasDefLose = esitiLive.some(e => e === 'lose');
+      const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+      const allWin = esitiLive.every(e => e === 'win');
+      if (hasDefLose) perse++;
+      else if (allDone && allWin) vinte++;
+      else pending++;
+    }
+    return { vinte, perse, pending };
+  })();
 
   // Raggruppa — usa storicoBollette se data selezionata, altrimenti bollette di oggi
   const isStorico = !!storicoDate && storicoDate !== new Date().toISOString().split('T')[0];
@@ -1483,7 +1494,12 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const bolletteAttive = filtroEsito === 'tutti' ? bolletteRaw : bolletteRaw.filter(b => {
     if (filtroEsito === 'vinte') return b.esito_globale === 'vinta';
     if (filtroEsito === 'perse') return b.esito_globale === 'persa';
-    if (filtroEsito === 'pending') return !b.esito_globale;
+    if (filtroEsito === 'pending') {
+      if (b.esito_globale) return false;
+      const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+      if (esitiLive.some(e => e === 'lose')) return false;
+      return !esitiLive.every(e => e === 'win' || e === 'lose');
+    }
     return true;
   });
   const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };

@@ -1237,7 +1237,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           background: theme.panel,
           border: theme.panelBorder,
           borderRadius: '10px',
-          padding: isMobile ? '6px 10px' : '8px 14px',
+          padding: isMobile ? '6px 18px 6px 10px' : '8px 14px',
           marginBottom: '4px',
           position: 'relative',
           zIndex: isTipsOpen ? 50 : 'auto' as any,
@@ -1266,28 +1266,28 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
 
           {/* Squadre — larghezza naturale, si restringe se serve */}
-          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '25px' : undefined }}>
+          <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '35px' : undefined, ...(isMobile ? { maxWidth: 'calc(100% - 150px)' } : {}) }}>
             <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(isMobile ? { maxWidth: '80px', display: 'inline-block' } : {}) }}>
               {pred.home}
             </span>
             <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>vs</span>
-            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: '700', color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(isMobile ? { maxWidth: '80px', display: 'inline-block' } : {}) }}>
               {pred.away}
             </span>
             <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
 
           {/* Diamante RE + Risultato + Freccia — spinto a destra */}
-          <div style={{ marginLeft: 'auto', marginRight: isMobile ? '-6px' : undefined, display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
+          <div style={{ marginLeft: 'auto', marginRight: isMobile ? '-12px' : undefined, display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
             {/* 💎 RE badge: pre-match = diamante, hit = diamante+check, miss = sparisce */}
             {reMatchKeys.has(`${pred.home}|${pred.away}`) && (() => {
               const reHit = effScore && (pred.pronostici || []).some((pr: any) => pr.tipo === 'RISULTATO_ESATTO' && normalizeScore(pr.pronostico) === normalizeScore(effScore));
               const reMiss = effScore && !reHit;
               if (reMiss) return null; // miss: diamante sparisce
               return reHit
-                ? <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>💎✓RE</span>
-                : <span style={{ fontSize: isMobile ? '10px' : '11px', lineHeight: 1 }}>💎</span>;
+                ? <span style={{ fontSize: isMobile ? '7px' : '8px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px 0.5px 3px', lineHeight: 1, height: '15.5px', display: 'inline-flex', alignItems: 'center', position: 'relative', top: '1.5px', border: `1px solid ${theme.hitBorder}` }}>💎✓RE</span>
+                : <span style={{ fontSize: isMobile ? '9px' : '10px', lineHeight: 1, height: '16px', display: 'inline-flex', alignItems: 'center', position: 'relative', top: '1.5px' }}>💎</span>;
             })()}
             {effScore ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: effPredHit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
@@ -1315,7 +1315,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {pred.decision === 'NO_BET' && (
         <div
           style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '75px' : '100px',
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '84px' : '100px',
             zIndex: 5
           }}
         >
@@ -1330,7 +1330,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {pred.decision !== 'NO_BET' && (
         <div
           style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '75px' : '100px',
+            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '84px' : '100px',
             zIndex: 5
           }}
           onClick={(e) => e.stopPropagation()}
@@ -1341,7 +1341,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               display: 'inline-flex', alignItems: 'baseline', gap: isMobile ? '3px' : '6px', cursor: 'pointer',
               background: isTipsOpen ? 'rgba(0,240,255,0.15)' : 'rgba(0,240,255,0.06)',
               border: `1px solid ${isTipsOpen ? 'rgba(0,240,255,0.4)' : 'rgba(0,240,255,0.18)'}`,
-              borderRadius: '4px', padding: isMobile ? '3px 6px' : '4px 12px',
+              borderRadius: '4px', padding: isMobile ? '2px 2px' : '4px 7px',
               transition: 'all 0.2s', userSelect: 'none' as const
             }}
             onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
@@ -1601,6 +1601,27 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               };
 
               return (
+                <>
+                {/* Capsula nomi squadre */}
+                <div style={{
+                  marginLeft: '8px', marginBottom: '6px',
+                  padding: isMobile ? '8px 10px' : '10px 16px',
+                  background: isLight
+                    ? 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(241,245,249,0.95))'
+                    : 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.8))',
+                  border: `1px solid ${isLight ? 'rgba(148,163,184,0.3)' : 'rgba(100,116,139,0.3)'}`,
+                  borderRadius: '8px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                }}>
+                  <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 500, color: theme.textDim, letterSpacing: '0.3px' }}>{pred.match_time} · {pred.league}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? '6px' : '10px' }}>
+                    <img src={getStemmaUrl(pred.home_mongo_id, pred.league)} alt="" style={{ width: isMobile ? '18px' : '22px', height: isMobile ? '18px' : '22px', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 700, color: theme.text }}>{pred.home}</span>
+                    <span style={{ fontSize: isMobile ? '9px' : '11px', fontWeight: 500, color: theme.textDim }}>vs</span>
+                    <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 700, color: theme.text }}>{pred.away}</span>
+                    <img src={getStemmaUrl(pred.away_mongo_id, pred.league)} alt="" style={{ width: isMobile ? '18px' : '22px', height: isMobile ? '18px' : '22px', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  </div>
+                </div>
                 <div style={{
                   marginLeft: '8px', marginBottom: '8px',
                   padding: '10px 12px',
@@ -1649,6 +1670,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   </div>
                 </div>
+                </>
               );
             })()}
             {/* Shield Badge + Attivazione */}

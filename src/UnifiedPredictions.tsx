@@ -1292,7 +1292,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {effScore ? (
               <span style={{ fontSize: '13px', fontWeight: '900', color: effPredHit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {effScore.replace(':', ' - ')}
-                {((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(effScore!)) &&
+                {!reMatchKeys.has(`${pred.home}|${pred.away}`) && ((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(effScore!)) &&
                   <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (

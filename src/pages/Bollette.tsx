@@ -222,7 +222,7 @@ const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: strin
 // QUADRANTE — anteprima categoria
 // ============================================
 
-function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPreview = 3, dataTour }: {
+function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPreview = 3, dataTour, filtroStato, onFiltroStato }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onClick: () => void;
@@ -230,8 +230,19 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
   height?: number;
   maxPreview?: number;
   dataTour?: string;
+  filtroStato?: 'tutti' | 'vinte' | 'perse' | 'in_corso';
+  onFiltroStato?: (f: 'tutti' | 'vinte' | 'perse' | 'in_corso') => void;
 }) {
-  const preview = items.slice(0, maxPreview);
+  const filteredItems = (!filtroStato || filtroStato === 'tutti') ? items : items.filter(b => {
+    const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+    const hasDefLose = esitiLive.some(e => e === 'lose');
+    const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+    const allWin = esitiLive.every(e => e === 'win');
+    if (b.esito_globale === 'vinta' || (allDone && allWin)) return filtroStato === 'vinte';
+    if (b.esito_globale === 'persa' || hasDefLose) return filtroStato === 'perse';
+    return filtroStato === 'in_corso';
+  });
+  const preview = filteredItems.slice(0, maxPreview);
   const textColor = isLight ? '#333' : '#fff';
   const dimColor = isLight ? '#666' : 'rgba(255,255,255,0.6)';
 
@@ -302,8 +313,41 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
         </div>
       </div>
 
+      {/* Filtri — solo per Le mie bollette */}
+      {onFiltroStato && (() => {
+          let vinte = 0, perse = 0, inCorso = 0;
+          for (const b of items) {
+            const el = b.selezioni.map(s => getEsitoLive(s, liveScores));
+            const hasDefLose = el.some(e => e === 'lose');
+            const allDone = el.every(e => e === 'win' || e === 'lose');
+            const allWin = el.every(e => e === 'win');
+            if (b.esito_globale === 'vinta' || (allDone && allWin)) vinte++;
+            else if (b.esito_globale === 'persa' || hasDefLose) perse++;
+            else inCorso++;
+          }
+          return (
+            <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
+              {([
+                { key: 'tutti' as const, label: `Tutti ${items.length}`, color: undefined },
+                { key: 'vinte' as const, label: `✓ ${vinte}`, color: '#4caf50' },
+                { key: 'perse' as const, label: `✗ ${perse}`, color: '#f44336' },
+                { key: 'in_corso' as const, label: `⏳ ${inCorso}`, color: '#ff9800' },
+              ]).map(f => (
+                <button key={f.key} onClick={() => onFiltroStato!(filtroStato === f.key ? 'tutti' : f.key)} style={{
+                  background: filtroStato === f.key ? (f.color || (isLight ? '#333' : '#fff')) : (isLight ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.1)'),
+                  color: filtroStato === f.key ? '#fff' : (f.color || dimColor),
+                  border: 'none', borderRadius: 12, padding: '2px 8px',
+                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                }}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
       {/* Anteprima bollette */}
-      {items.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: dimColor, fontSize: 14 }}>
           Nessuna bolletta
         </div>
@@ -331,9 +375,9 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
               )}
             </div>
           ))}
-          {items.length > maxPreview && (
+          {filteredItems.length > maxPreview && (
             <div style={{ color: dimColor, fontSize: 12, textAlign: 'center', marginTop: 2 }}>
-              +{items.length - maxPreview} altre bollette
+              +{filteredItems.length - maxPreview} altre bollette
             </div>
           )}
         </div>
@@ -351,18 +395,19 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
 // LE MIE BOLLETTE — Pagina personale con storico e stats
 // ============================================
 
-function MieBollette({ onBack, liveScores, user, getIdToken }: {
+function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tutti' }: {
   onBack: () => void;
   liveScores: LiveScore[];
   user: any;
   getIdToken: () => Promise<string | null>;
+  initialFiltro?: 'tutti' | 'vinte' | 'perse' | 'in_corso';
 }) {
   const [myBollette, setMyBollette] = useState<Bolletta[]>([]);
   const [stats, setStats] = useState<{ vinte: number; perse: number; in_corso: number; totale: number; totale_stake: number; profitto: number } | null>(null);
   const [loadingMy, setLoadingMy] = useState(true);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [filtroStato, setFiltroStato] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>('tutti');
+  const [filtroStato, setFiltroStato] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>(initialFiltro);
   const [filtroFascia, setFiltroFascia] = useState<'tutti' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'custom'>('tutti');
   const [ordinaData, setOrdinaData] = useState<'recenti' | 'vecchie'>('recenti');
   const myCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -1210,6 +1255,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
   const [storicoStats, setStoricoStats] = useState<any>(null);
   const [filtroEsito, setFiltroEsito] = useState<'tutti' | 'vinte' | 'perse' | 'pending'>('tutti');
+  const [filtroStatoMie, setFiltroStatoMie] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>('tutti');
   const [storicoLoading, setStoricoLoading] = useState(false);
 
   const fetchBollette = useCallback(async () => {
@@ -1463,6 +1509,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           liveScores={liveScores}
           user={user}
           getIdToken={getIdToken}
+          initialFiltro={filtroStatoMie}
         />
       );
     }
@@ -2241,6 +2288,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 liveScores={liveScores}
                 height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
                 dataTour="ticket-mie-bollette"
+                filtroStato={filtroStatoMie}
+                onFiltroStato={setFiltroStatoMie}
               />
             </div>
           ) : (
@@ -2260,6 +2309,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                   liveScores={liveScores}
                   height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
                   dataTour="ticket-mie-bollette"
+                  filtroStato={filtroStatoMie}
+                  onFiltroStato={setFiltroStatoMie}
                 />
               </div>
             </>

@@ -988,6 +988,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
   const getEffectiveHit = (pred: { date: string; match_time: string; real_score?: string | null; live_score?: string | null; live_status?: string | null }, p: { hit?: boolean | null; pronostico: string; tipo: string }): boolean | null => {
+    if (p.hit === true || p.hit === false) return p.hit;
     if (pred.real_score) return p.hit ?? null;
     if (pred.live_score && isMatchOver(pred)) return calculateHitFromScore(pred.live_score, p.pronostico, p.tipo);
     return null;

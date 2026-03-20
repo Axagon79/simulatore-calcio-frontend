@@ -263,6 +263,9 @@ interface UnifiedPredictionsProps {
   onNavigateToLeague?: (leagueName: string) => void;
 }
 
+/** Controlla se una prediction ha almeno un pronostico reale (non NO BET) */
+const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET') ?? false;
+
 export default function UnifiedPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
   const [date, setDate] = useState(getToday());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -507,7 +510,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   // Funzione filtraggio mercato su prediction
   const predMatchesMarket = (p: Prediction): boolean => {
     if (marketFilter === 'tutti') return true;
-    if (marketFilter === 'nobet') return p.decision === 'NO_BET';
+    if (marketFilter === 'nobet') return !hasRealTip(p);
     const mf = MARKET_DEFS.find(m => m.id === marketFilter);
     if (!mf) return true;
     return p.pronostici?.some(mf.filter) ?? false;
@@ -1114,7 +1117,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const filterCounts = useMemo(() => {
     const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
     const source = activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-    const marketFiltered = source.filter(p => p.decision !== 'NO_BET').filter(predMatchesMarket).filter(predMatchesSource);
+    const marketFiltered = source.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
     const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 're') => {
       counts.tutte++;
       const s = getMatchStatus(item);
@@ -3048,8 +3051,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
         }}>
           {[
-            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.filter(p => p.decision !== 'NO_BET').reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🏆', color: theme.cyan },
-            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.filter(p => p.decision !== 'NO_BET').reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: theme.gold }
+            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🏆', color: theme.cyan },
+            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
@@ -3105,7 +3108,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           };
           // FlatMap tutti i tips — filtrati per source (per rendimento dinamico)
           const sourcePreds = activeTab === 'alto_rendimento' ? altoRendimentoPreds : normalPredictions;
-          const sourceFilteredPreds = sourcePreds.filter(p => p.decision !== 'NO_BET').filter(predMatchesSource);
+          const sourceFilteredPreds = sourcePreds.filter(p => hasRealTip(p)).filter(predMatchesSource);
           const allTips = sourceFilteredPreds.flatMap(p =>
             (p.pronostici || []).map(t => ({
               ...t,
@@ -3130,7 +3133,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           };
           const capsules = MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
           // NO BET: conta prediction escluse, non tips
-          const noBetPreds = sourcePreds.filter(p => p.decision === 'NO_BET').filter(predMatchesSource);
+          const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
           if (noBetPreds.length > 0) {
             capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
           }
@@ -3191,7 +3194,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => p.decision !== 'NO_BET').filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
+                        const matchesFinished = (activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
                         const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
                           if (p.real_score) return pr.hit === true;
                           return calculateHitFromScore(p.live_score!, pr.pronostico, pr.tipo) === true;
@@ -3557,7 +3560,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700',
                     marginLeft: '8px'
                   }}>
-                    {filteredPredictions.filter(p => p.decision !== 'NO_BET').reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
+                    {filteredPredictions.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
                   </span>
                 </>
               ) : (
@@ -3576,7 +3579,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     padding: '2px 10px', borderRadius: '20px', fontWeight: '700',
                     marginLeft: '8px'
                   }}>
-                    {filteredAltoRendimento.filter(p => p.decision !== 'NO_BET').reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
+                    {filteredAltoRendimento.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)}
                   </span>
                 </>
               )}
@@ -3751,7 +3754,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
-                  const predsActive = preds.filter(p => p.decision !== 'NO_BET');
+                  const predsActive = preds.filter(p => hasRealTip(p));
                   const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === true).length, 0);
                   const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
@@ -3836,7 +3839,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
                   // Conteggio per singolo pronostico (escludi NO BET)
-                  const predsActive = preds.filter(p => p.decision !== 'NO_BET');
+                  const predsActive = preds.filter(p => hasRealTip(p));
                   const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === true).length, 0);
                   const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;

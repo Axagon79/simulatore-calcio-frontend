@@ -3728,8 +3728,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;
                   const toPlay = preds.length - finished - live;
                   const predsActive = preds.filter(p => p.decision !== 'NO_BET');
-                  const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
-                  const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
+                  const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === true).length, 0);
+                  const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
                   const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;
@@ -3813,8 +3813,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const toPlay = preds.length - finished - live;
                   // Conteggio per singolo pronostico (escludi NO BET)
                   const predsActive = preds.filter(p => p.decision !== 'NO_BET');
-                  const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === true).length, 0);
-                  const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => getEffectiveHit(pred, p) === false).length, 0);
+                  const hits = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === true).length, 0);
+                  const misses = predsActive.reduce((c, pred) => c + (pred.pronostici || []).filter(p => p.tipo !== 'RISULTATO_ESATTO' && getEffectiveHit(pred, p) === false).length, 0);
                   const verifiedP = hits + misses;
                   const hitRateVal = verifiedP > 0 ? Math.round((hits / verifiedP) * 1000) / 10 : null;
                   const statusBg = finished === 0 ? theme.surface05 : finished === preds.length ? `${theme.success}30` : `${theme.warning}30`;

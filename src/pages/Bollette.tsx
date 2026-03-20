@@ -81,29 +81,30 @@ function calculateHitFromScore(score: string, pronostico: string, tipo: string):
   const home = parseInt(parts[0]), away = parseInt(parts[1]);
   if (isNaN(home) || isNaN(away)) return null;
   const total = home + away;
+  const t = tipo.toUpperCase();
 
-  if (tipo === 'SEGNO') {
+  if (t === 'SEGNO' || t === '1X2 ESITO FINALE' || t === '1X2') {
     const sign = home > away ? '1' : home === away ? 'X' : '2';
     return pronostico === sign;
   }
-  if (tipo === 'DOPPIA_CHANCE') {
+  if (t === 'DOPPIA_CHANCE' || t === 'DOPPIA CHANCE') {
     const sign = home > away ? '1' : home === away ? 'X' : '2';
     if (pronostico === '1X') return sign === '1' || sign === 'X';
     if (pronostico === 'X2') return sign === 'X' || sign === '2';
     if (pronostico === '12') return sign === '1' || sign === '2';
     return null;
   }
-  if (tipo === 'GOL') {
+  if (t === 'GOL' || t === 'GOAL' || t === 'GOAL/NOGOAL' || t === 'U/O') {
     const p = pronostico.toLowerCase();
     if (p.startsWith('over')) { const thr = parseFloat(pronostico.split(' ')[1]); return total > thr; }
     if (p.startsWith('under')) { const thr = parseFloat(pronostico.split(' ')[1]); return total < thr; }
-    if (p === 'goal') return home > 0 && away > 0;
-    if (p === 'nogoal') return home === 0 || away === 0;
+    if (p === 'goal' || p === 'si') return home > 0 && away > 0;
+    if (p === 'nogoal' || p === 'no') return home === 0 || away === 0;
     const mg = pronostico.match(/^MG\s+(\d+)-(\d+)/i);
     if (mg) return total >= parseInt(mg[1]) && total <= parseInt(mg[2]);
     return null;
   }
-  if (tipo === 'RISULTATO_ESATTO') {
+  if (t === 'RISULTATO_ESATTO' || t === 'RISULTATO ESATTO') {
     return `${home}:${away}` === pronostico.replace('-', ':');
   }
   return null;
@@ -536,23 +537,26 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
             const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
             const allPending = esitiLive.every(e => e === 'pending');
 
-            const dotColor = allPending ? (isLight ? '#ddd' : '#444')
-              : hasLose ? '#f44336' : allWin ? '#4caf50' : '#4caf50';
-            const blink = anyLive && !allDone;
-
             const hasDefinitiveLose = esitiLive.some(e => e === 'lose');
             const hasLiveLose = esitiLive.some(e => e === 'live_lose');
+            const allLiveWin = anyLive && !hasLiveLose && !hasDefinitiveLose;
+            const blink = anyLive && !allDone;
 
+            const dotColor = allPending ? (isLight ? '#ddd' : '#444')
+              : hasDefinitiveLose ? '#f44336'
+              : (allDone && allWin) ? '#4caf50'
+              : anyLive ? (allLiveWin ? '#4caf50' : '#f44336')
+              : '#4caf50';
+
+            const hasPending = esitiLive.some(e => e === 'pending');
             const statusLabel = allPending ? null
               : hasDefinitiveLose ? 'PERSA'
               : (allDone && allWin) ? 'VINTA!'
-              : hasLiveLose ? 'A RISCHIO'
-              : anyLive ? 'LIVE'
+              : (anyLive || hasPending) ? 'IN CORSO...'
               : null;
             const statusColor = statusLabel === 'PERSA' ? '#f44336'
               : statusLabel === 'VINTA!' ? '#4caf50'
-              : statusLabel === 'A RISCHIO' ? '#ff9800'
-              : statusLabel === 'LIVE' ? '#ff9800'
+              : statusLabel === 'IN CORSO...' ? '#ff9800'
               : undefined;
 
             const userStake = user ? (b.user_stakes?.[user.uid] || b.stake_amount || 0) : 0;
@@ -574,11 +578,11 @@ function MieBollette({ onBack, liveScores, user, getIdToken }: {
                   {/* Riga 1: tondino + stato + quota + freccia */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div className={blink ? 'blink-dot' : ''} style={{
+                      <div className={statusLabel === 'IN CORSO...' && anyLive ? 'blink-dot' : ''} style={{
                         width: 12, height: 12, borderRadius: '50%', background: dotColor, flexShrink: 0,
                       }} />
                       {statusLabel && (
-                        <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
+                        <span className={statusLabel === 'IN CORSO...' && anyLive ? 'blink-dot' : ''} style={{
                           fontSize: 11, fontWeight: 800, color: statusColor,
                           background: `${statusColor}18`, padding: '2px 8px', borderRadius: 4,
                         }}>
@@ -847,31 +851,36 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
                       const allPending = esitiLive.every(e => e === 'pending');
 
-                      const color = allPending ? (isLight ? '#ddd' : '#444')
-                        : hasLose ? '#f44336'
-                        : allWin ? '#4caf50'
-                        : '#4caf50';
-                      const blink = anyLive && !allDone && !hasLose;
+                      const hasDefinitiveLose2 = esitiLive.some(e => e === 'lose');
+                      const hasLiveLose2 = esitiLive.some(e => e === 'live_lose');
+                      const allLiveWin2 = anyLive && !hasLiveLose2 && !hasDefinitiveLose2;
+                      const blink = anyLive && !allDone;
 
+                      const color = allPending ? (isLight ? '#ddd' : '#444')
+                        : hasDefinitiveLose2 ? '#f44336'
+                        : (allDone && allWin) ? '#4caf50'
+                        : anyLive ? (allLiveWin2 ? '#4caf50' : '#f44336')
+                        : '#4caf50';
+
+                      const hasPending2 = esitiLive.some(e => e === 'pending');
                       const statusLabel = allPending ? null
-                        : (allDone && hasLose) ? 'PERSA'
+                        : hasDefinitiveLose2 ? 'PERSA'
                         : (allDone && allWin) ? 'VINTA!'
-                        : (hasLose && !allDone) ? 'PERSA'
-                        : anyLive ? 'LIVE'
+                        : (anyLive || hasPending2) ? 'IN CORSO...'
                         : null;
                       const statusColor = statusLabel === 'PERSA' ? '#f44336'
                         : statusLabel === 'VINTA!' ? '#4caf50'
-                        : statusLabel === 'LIVE' ? '#ff9800'
+                        : statusLabel === 'IN CORSO...' ? '#ff9800'
                         : undefined;
 
                       return (
                         <>
-                          <div className={blink ? 'blink-dot' : ''} style={{
+                          <div className={statusLabel === 'IN CORSO...' && anyLive ? 'blink-dot' : ''} style={{
                             width: 12, height: 12, borderRadius: '50%',
                             background: color, flexShrink: 0,
                           }} />
                           {statusLabel && (
-                            <span className={statusLabel === 'LIVE' ? 'blink-dot' : ''} style={{
+                            <span className={statusLabel === 'IN CORSO...' && anyLive ? 'blink-dot' : ''} style={{
                               fontSize: 11, fontWeight: 800, color: statusColor,
                               background: `${statusColor}18`, padding: '2px 8px',
                               borderRadius: 4, letterSpacing: 0.5,

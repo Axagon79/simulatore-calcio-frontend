@@ -106,6 +106,8 @@ const TABS: { key: Tab; label: string }[] = [
 // STATS BLOCK
 // ============================================
 function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
+  const [mercatiExpanded, setMercatiExpanded] = useState(false);
+
   if (!bollette.length) {
     return <div style={{ textAlign: 'center', padding: 40, color: textSecondary, fontSize: 13 }}>Nessuna bolletta disponibile</div>;
   }
@@ -116,7 +118,6 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
   let bestVincitaEuro = 0;
   let worstPerditaEuro = 0;
   const mercatiStats: Record<string, { win: number; total: number }> = {};
-  const [mercatiExpanded, setMercatiExpanded] = useState(false);
 
   const sorted = [...bollette].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 

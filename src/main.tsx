@@ -33,6 +33,7 @@ const SimulazioneRapida = lazy(() => import('./pages/SimulazioneRapida'));
 const Prezzi = lazy(() => import('./pages/Prezzi'));
 const Wallet = lazy(() => import('./pages/Wallet'));
 const Bollette = lazy(() => import('./pages/Bollette'));
+const BolletteStats = lazy(() => import('./pages/BolletteStats'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
@@ -95,6 +96,7 @@ function AppRoot() {
           <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
           <Route path="/wallet" element={<ProtectedRoute><Wallet onBack={() => window.history.back()} /></ProtectedRoute>} />
           <Route path="/ticket-ai" element={<ProtectedRoute><Bollette onBack={() => window.history.back()} /></ProtectedRoute>} />
+          <Route path="/ticket-stats" element={<ProtectedRoute><BolletteStats onBack={() => window.history.back()} /></ProtectedRoute>} />
           <Route path="/contatti" element={<ContactPage onBack={() => window.history.back()} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={() => window.history.back()} />} />
           <Route path="/termini" element={<TermsPage />} />

@@ -327,14 +327,14 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
             else inCorso++;
           }
           return (
-            <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 4 }}>
               {([
                 { key: 'tutti' as const, label: `Tutti ${items.length}`, color: undefined },
                 { key: 'vinte' as const, label: `✓ ${vinte}`, color: '#4caf50' },
                 { key: 'perse' as const, label: `✗ ${perse}`, color: '#f44336' },
                 { key: 'in_corso' as const, label: `⏳ ${inCorso}`, color: '#ff9800' },
               ]).map(f => (
-                <button key={f.key} onClick={() => onFiltroStato!(filtroStato === f.key ? 'tutti' : f.key)} style={{
+                <button key={f.key} onClick={(e) => { e.stopPropagation(); onFiltroStato!(filtroStato === f.key ? 'tutti' : f.key); }} style={{
                   background: filtroStato === f.key ? (f.color || (isLight ? '#333' : 'rgba(255,255,255,0.25)')) : (isLight ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.1)'),
                   color: filtroStato === f.key ? '#fff' : (f.color || dimColor),
                   border: filtroStato === f.key && !f.color ? `1px solid rgba(255,255,255,0.4)` : '1px solid transparent',
@@ -412,6 +412,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
   const [filtroStato, setFiltroStato] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>(initialFiltro);
   const [filtroFascia, setFiltroFascia] = useState<'tutti' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'custom'>('tutti');
   const [ordinaData, setOrdinaData] = useState<'recenti' | 'vecchie'>('recenti');
+  const [mercatiExpanded, setMercatiExpanded] = useState(false);
   const myCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
@@ -486,31 +487,103 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
         {myBollette.length > 0 && (() => {
           let liveVinte = 0, livePerse = 0, liveInCorso = 0, liveTotaleStake = 0, liveProfitto = 0;
           const uid = user?.uid || '';
-          for (const b of myBollette) {
+
+          // Dati per streak, best/worst, mercati
+          const risultati: ('W' | 'L')[] = [];
+          let bestQuotaVinta = 0;
+          let bestVincitaEuro = 0;
+          let worstPerditaEuro = 0;
+          const mercatiStats: Record<string, { win: number; total: number }> = {};
+
+          // Ordina per data per calcolare streak correttamente
+          const sorted = [...myBollette].sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.generated_at || '').localeCompare(b.generated_at || ''));
+
+          for (const b of sorted) {
             const esitiLive = b.selezioni.map((s: any) => getEsitoLive(s, liveScores));
             const hasDefLose = esitiLive.some((e: string) => e === 'lose');
             const allDone = esitiLive.every((e: string) => e === 'win' || e === 'lose');
             const allWin = esitiLive.every((e: string) => e === 'win');
             const stake = b.user_stakes?.[uid] || b.stake_amount || 1;
             liveTotaleStake += stake;
+            const isWin = b.esito_globale === 'vinta' || (allDone && allWin);
+            const isLoss = b.esito_globale === 'persa' || hasDefLose;
 
-            if (b.esito_globale === 'vinta' || (allDone && allWin)) {
+            if (isWin) {
               liveVinte++;
-              liveProfitto += stake * ((b.quota_totale || 1) - 1);
-            } else if (b.esito_globale === 'persa' || hasDefLose) {
+              const vincita = stake * ((b.quota_totale || 1) - 1);
+              liveProfitto += vincita;
+              risultati.push('W');
+              if ((b.quota_totale || 0) > bestQuotaVinta) bestQuotaVinta = b.quota_totale || 0;
+              if (vincita > bestVincitaEuro) bestVincitaEuro = vincita;
+            } else if (isLoss) {
               livePerse++;
               liveProfitto -= stake;
+              risultati.push('L');
+              if (stake > worstPerditaEuro) worstPerditaEuro = stake;
             } else {
               liveInCorso++;
             }
+
+            // Analisi mercati — ogni selezione, raggruppata per pronostico
+            for (let si = 0; si < b.selezioni.length; si++) {
+              const s = b.selezioni[si];
+              const raw = s.pronostico || s.mercato || 'Altro';
+              // Raggruppa 1/X/2 in "1X2" e 1X/X2/12 in "Doppie Chance"
+              const key = ['1', 'X', '2'].includes(raw) ? '1X2'
+                : ['1X', 'X2', '12'].includes(raw) ? 'Doppie Chance'
+                : raw;
+              if (!mercatiStats[key]) mercatiStats[key] = { win: 0, total: 0 };
+              const esito = esitiLive[si];
+              if (esito === 'win') { mercatiStats[key].win++; mercatiStats[key].total++; }
+              else if (esito === 'lose') { mercatiStats[key].total++; }
+            }
           }
+
+          // Streak
+          let currentStreak = 0;
+          let currentStreakType: 'W' | 'L' | null = null;
+          let bestWinStreak = 0;
+          let worstLossStreak = 0;
+          let tempStreak = 0;
+          let tempType: 'W' | 'L' | null = null;
+          for (const r of risultati) {
+            if (r === tempType) { tempStreak++; }
+            else { tempStreak = 1; tempType = r; }
+            if (r === 'W' && tempStreak > bestWinStreak) bestWinStreak = tempStreak;
+            if (r === 'L' && tempStreak > worstLossStreak) worstLossStreak = tempStreak;
+          }
+          // Current streak (dalla fine)
+          if (risultati.length > 0) {
+            currentStreakType = risultati[risultati.length - 1];
+            currentStreak = 1;
+            for (let i = risultati.length - 2; i >= 0; i--) {
+              if (risultati[i] === currentStreakType) currentStreak++;
+              else break;
+            }
+          }
+
           const chiuse = liveVinte + livePerse;
           const winRate = chiuse > 0 ? ((liveVinte / chiuse) * 100).toFixed(1) : '—';
           const roi = liveTotaleStake > 0 ? ((liveProfitto / liveTotaleStake) * 100).toFixed(1) : '—';
           const quotaMedia = (myBollette.reduce((acc: number, b: any) => acc + (b.quota_totale || 0), 0) / myBollette.length).toFixed(2);
 
-          return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+          // Mercati ordinati per % successo
+          // Assicura che tutti i mercati/pronostici siano presenti
+          for (const m of ['1X2', 'Doppie Chance', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Under 1.5', 'Under 2.5', 'Under 3.5', 'Goal', 'No Goal', 'MG 1-2', 'MG 2-3', 'MG 3-4', 'MG 4+']) {
+            if (!mercatiStats[m]) mercatiStats[m] = { win: 0, total: 0 };
+          }
+          const mercatiSorted = Object.entries(mercatiStats)
+            .sort((a, b) => b[1].total === a[1].total
+              ? (b[1].total > 0 ? b[1].win / b[1].total : 0) - (a[1].total > 0 ? a[1].win / a[1].total : 0)
+              : b[1].total - a[1].total);
+
+          const streakText = currentStreak > 0
+            ? `${currentStreak} ${currentStreakType === 'W' ? 'vinte' : 'perse'} di fila`
+            : '—';
+          const streakColor = currentStreakType === 'W' ? '#4caf50' : currentStreakType === 'L' ? '#f44336' : textPrimary;
+
+          return (<>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
               {[
                 { label: 'Vinte', value: liveVinte, color: '#4caf50' },
                 { label: 'Perse', value: livePerse, color: '#f44336' },
@@ -530,7 +603,69 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
                 </div>
               ))}
             </div>
-          );
+
+            {/* Streak & Record + Best/Worst */}
+            {chiuse > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: streakColor }}>{streakText}</div>
+                <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Serie attuale</div>
+              </div>
+              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#4caf50' }}>{bestWinStreak}</div>
+                <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Record vinte</div>
+              </div>
+              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#f44336' }}>{worstLossStreak}</div>
+                <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Record perse</div>
+              </div>
+              {bestQuotaVinta > 0 && (<>
+                <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#4caf50' }}>{bestQuotaVinta.toFixed(2)}</div>
+                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Top quota vinta</div>
+                </div>
+                <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#4caf50' }}>€{bestVincitaEuro.toFixed(0)}</div>
+                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Top vincita</div>
+                </div>
+                <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#f44336' }}>€{worstPerditaEuro.toFixed(0)}</div>
+                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Peggior perdita</div>
+                </div>
+              </>)}
+            </div>
+            )}
+
+            {/* Analisi mercati — collassabile */}
+            {mercatiSorted.length > 0 && (() => {
+              const bestWithData = mercatiSorted.find(([, d]) => d.total > 0);
+              const renderRow = ([mercato, data]: [string, { win: number; total: number }]) => {
+                const pct = data.total > 0 ? Math.round((data.win / data.total) * 100) : 0;
+                const pctColor = data.total === 0 ? textSecondary : pct >= 60 ? '#4caf50' : pct >= 40 ? '#ff9800' : '#f44336';
+                return (
+                  <div key={mercato} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: textPrimary, width: 100, flexShrink: 0 }}>{mercato.replace('_', ' ')}</span>
+                    <div style={{ flex: 1, height: 5, background: isLight ? '#e0e0e0' : 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: pctColor, borderRadius: 3 }} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: pctColor, width: 30, textAlign: 'right' }}>{data.total > 0 ? `${pct}%` : '—'}</span>
+                    <span style={{ fontSize: 9, color: textSecondary, width: 28 }}>{data.win}/{data.total}</span>
+                  </div>
+                );
+              };
+              return (
+              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '8px 10px', marginBottom: 16, cursor: 'pointer' }}
+                onClick={() => setMercatiExpanded(prev => !prev)}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: mercatiExpanded ? 6 : (bestWithData ? 6 : 0) }}>
+                  <span style={{ fontSize: 9, color: textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Successo per mercato</span>
+                  <span style={{ fontSize: 10, color: textSecondary }}>{mercatiExpanded ? '▲' : '▼'}</span>
+                </div>
+                {!mercatiExpanded && bestWithData && renderRow(bestWithData)}
+                {mercatiExpanded && mercatiSorted.map(entry => renderRow(entry))}
+              </div>
+              );
+            })()}
+          </>);
         })()}
 
         {/* Filtri — riga 1: stato + ordine data */}
@@ -1691,6 +1826,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 12, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 12, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
+                <span style={{ width: 1, height: 23, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 4, marginRight: 4, position: 'relative', top: 2 }} />
+                <span onClick={() => { window.location.href = '/ticket-stats'; }} style={{ fontSize: 12, fontWeight: 700, padding: '4px 14px', borderRadius: 6, cursor: 'pointer', background: isLight ? 'rgba(102,126,234,0.1)' : 'rgba(0,240,255,0.1)', border: isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)', color: isLight ? '#667eea' : theme.cyan, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }} title="Statistiche">📊 Stats</span>
               </div>
               {/* Frecce + Data */}
               <div data-tour="ticket-date-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1784,6 +1921,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s' }}>{mobileStats.vinte} Vinte</span>
               <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s' }}>{mobileStats.perse} Perse</span>
               <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 11, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s' }}>{mobileStats.pending} In corso</span>
+              <span style={{ width: 1, height: 21, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 2, marginRight: 2, position: 'relative', top: 2 }} />
+              <span onClick={() => { window.location.href = '/ticket-stats'; }} style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, cursor: 'pointer', background: isLight ? 'rgba(102,126,234,0.1)' : 'rgba(0,240,255,0.1)', border: isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)', color: isLight ? '#667eea' : theme.cyan, display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }} title="Statistiche">📊 Stats</span>
             </div>
           </div>
           );

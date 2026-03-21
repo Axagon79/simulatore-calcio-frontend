@@ -93,9 +93,10 @@ const textSecondary = isLight ? '#666' : 'rgba(255,255,255,0.5)';
 const cardBg = isLight ? '#fff' : 'rgba(255,255,255,0.04)';
 const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.08)';
 
-type Tab = 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
+type Tab = 'tutti' | 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'tutti', label: 'Tutti' },
   { key: 'oggi', label: 'Oggi' },
   { key: 'selettiva', label: 'Selettiva' },
   { key: 'bilanciata', label: 'Bilanciata' },
@@ -233,7 +234,7 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
           { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#4caf50' : parseFloat(winRate as string) > 0 ? '#f44336' : textPrimary },
           { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#4caf50' : '#f44336' },
           { label: 'Quota media', value: quotaMedia, color: textPrimary },
-          { label: 'Profitto', value: `${totaleProfitto >= 0 ? '+' : ''}${totaleProfitto.toFixed(2)}`, color: totaleProfitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
+          { label: 'Profitto (stake 1\u20AC)', value: `\u20AC${totaleProfitto >= 0 ? '+' : ''}${totaleProfitto.toFixed(2)}`, color: totaleProfitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
         ].map(s => (
           <div key={s.label} style={{
             background: cardBg, border: cardBorder, borderRadius: 10,
@@ -298,7 +299,7 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
 // MAIN PAGE
 // ============================================
 export default function BolletteStats({ onBack }: { onBack: () => void }) {
-  const [tab, setTab] = useState<Tab>('oggi');
+  const [tab, setTab] = useState<Tab>('tutti');
   const [allBollette, setAllBollette] = useState<Bolletta[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -315,11 +316,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
     })();
   }, []);
 
-  const today = new Date().toISOString().split('T')[0];
-
-  const filtered = tab === 'oggi'
-    ? allBollette.filter(b => b.date === today)
-    : allBollette.filter(b => b.tipo === tab);
+  const filtered = tab === 'tutti' ? allBollette : allBollette.filter(b => b.tipo === tab);
 
   return (
     <div style={{

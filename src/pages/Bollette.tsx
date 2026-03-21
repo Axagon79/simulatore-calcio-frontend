@@ -285,7 +285,7 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {(() => {
-            let vinte = 0, perse = 0;
+            let vinte = 0, perse = 0, inCorso = 0;
             for (const b of items) {
               if (b.esito_globale === 'vinta') { vinte++; continue; }
               if (b.esito_globale === 'persa') { perse++; continue; }
@@ -295,14 +295,15 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
               const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
               if (hasDefinitiveLose) { perse++; continue; }
               if (allDone && esitiLive.every(e => e === 'win')) { vinte++; continue; }
+              inCorso++;
             }
-            const showStats = vinte > 0 || perse > 0;
-            return showStats ? (
+            return (
               <>
-                {vinte > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>}
-                {perse > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>}
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#ff9800', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{inCorso}⏳</span>
               </>
-            ) : null;
+            );
           })()}
           <div style={{
             background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
@@ -405,7 +406,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
   initialFiltro?: 'tutti' | 'vinte' | 'perse' | 'in_corso';
 }) {
   const [myBollette, setMyBollette] = useState<Bolletta[]>([]);
-  const [stats, setStats] = useState<{ vinte: number; perse: number; in_corso: number; totale: number; totale_stake: number; profitto: number } | null>(null);
+  const [, setStats] = useState<{ vinte: number; perse: number; in_corso: number; totale: number; totale_stake: number; profitto: number } | null>(null);
   const [loadingMy, setLoadingMy] = useState(true);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -496,7 +497,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
           const mercatiStats: Record<string, { win: number; total: number }> = {};
 
           // Ordina per data per calcolare streak correttamente
-          const sorted = [...myBollette].sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.generated_at || '').localeCompare(b.generated_at || ''));
+          const sorted = [...myBollette].sort((a, b) => (a.date || '').localeCompare(b.date || '') || ((a as any).generated_at || '').localeCompare((b as any).generated_at || ''));
 
           for (const b of sorted) {
             const esitiLive = b.selezioni.map((s: any) => getEsitoLive(s, liveScores));
@@ -742,7 +743,6 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
           return filtered.map((b, bIdx) => {
             const isCollapsedB = collapsed[b._id] ?? false;
             const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
-            const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
             const allWin = esitiLive.every(e => e === 'win');
             const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
             const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
@@ -751,7 +751,6 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
             const hasDefinitiveLose = esitiLive.some(e => e === 'lose');
             const hasLiveLose = esitiLive.some(e => e === 'live_lose');
             const allLiveWin = anyLive && !hasLiveLose && !hasDefinitiveLose;
-            const blink = anyLive && !allDone;
 
             const dotColor = allPending ? (isLight ? '#ddd' : '#444')
               : hasDefinitiveLose ? '#f44336'
@@ -1056,7 +1055,6 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {(() => {
                       const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
-                      const hasLose = esitiLive.some(e => e === 'lose' || e === 'live_lose');
                       const allWin = esitiLive.every(e => e === 'win');
                       const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
                       const anyLive = esitiLive.some(e => e === 'live_win' || e === 'live_lose');
@@ -1065,7 +1063,6 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       const hasDefinitiveLose2 = esitiLive.some(e => e === 'lose');
                       const hasLiveLose2 = esitiLive.some(e => e === 'live_lose');
                       const allLiveWin2 = anyLive && !hasLiveLose2 && !hasDefinitiveLose2;
-                      const blink = anyLive && !allDone;
 
                       const color = allPending ? (isLight ? '#ddd' : '#444')
                         : hasDefinitiveLose2 ? '#f44336'
@@ -1410,7 +1407,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const [calendarMonth, setCalendarMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [dateDisponibili, setDateDisponibili] = useState<Set<string>>(new Set());
   const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
-  const [storicoStats, setStoricoStats] = useState<any>(null);
+  const [, setStoricoStats] = useState<any>(null);
   const [filtroEsito, setFiltroEsito] = useState<'tutti' | 'vinte' | 'perse' | 'pending'>('tutti');
   const [filtroStatoMie, setFiltroStatoMie] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>('tutti');
   const [storicoLoading, setStoricoLoading] = useState(false);
@@ -1822,7 +1819,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             return (
             <div data-tour="ticket-storico-nav-desktop" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {/* Badge */}
-              <div style={{ display: 'flex', gap: 11, width: 250, marginRight: 100 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 220 }}>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 12, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
                 <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 12, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
@@ -1891,7 +1888,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 border: isToday
                   ? (isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)')
                   : (isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)'),
-                borderRadius: 8, width: 32, height: 32, flexShrink: 0, marginRight: 50, outline: 'none',
+                borderRadius: 8, width: 32, height: 32, flexShrink: 0, outline: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: isToday ? (isLight ? '#ddd' : 'rgba(255,255,255,0.15)') : (isLight ? '#667eea' : theme.cyan),
                 padding: 0, fontSize: 16,
@@ -1905,7 +1902,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 color: isStorico ? '#fff' : 'transparent',
                 border: 'none', borderRadius: 999, padding: '6px 20px', outline: 'none',
                 fontSize: 12, fontWeight: 600, cursor: isStorico ? 'pointer' : 'default',
-                whiteSpace: 'nowrap', width: 60, flexShrink: 0, marginRight: 40,
+                whiteSpace: 'nowrap', width: 60, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.15s',
               }}>Oggi</button>

@@ -1252,7 +1252,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {/* BARRA LATERALE */}
         <div style={{
           position: 'absolute', top: 0, left: 0, width: '3px', height: '100%',
-          background: barColor
+          background: getMatchStatus(pred) === 'live' ? '#fbbf24' : barColor,
+          animation: getMatchStatus(pred) === 'live' ? `${isMobile ? 'pulseBar' : 'pulseBarDesktop'} ${isMobile ? '1.5s' : '2.8s'} ease-in-out infinite` : undefined
         }} />
 
         {/* RIGA UNICA COMPATTA — click ovunque espande */}
@@ -1266,7 +1267,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             return next;
           })}
         >
-          <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0 }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
+          {getMatchStatus(pred) === 'live' ? (
+            <span style={{ fontSize: '13px', fontWeight: 900, flexShrink: 0, width: isMobile ? '32px' : '50px', textAlign: 'center', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? `${isMobile ? 'pulse' : 'pulseLiveScore'} 1.5s ease-in-out infinite` : undefined }}>
+              {pred.live_status === 'HT' ? 'HT' : `${pred.live_minute || ''}'`}
+            </span>
+          ) : (
+            <span style={{ fontSize: '10px', color: theme.textDim, flexShrink: 0, width: isMobile ? '32px' : '50px', textAlign: 'center' }}>{isMobile ? pred.match_time : `🕐 ${pred.match_time}`}</span>
+          )}
 
           {/* Squadre — larghezza naturale, si restringe se serve */}
           <div style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', marginRight: isMobile ? '35px' : undefined, ...(isMobile ? { maxWidth: 'calc(100% - 150px)' } : {}) }}>
@@ -1299,13 +1306,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}
               </span>
             ) : getMatchStatus(pred) === 'live' ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? 'pulse 1.5s ease-in-out infinite' : undefined }}>
-                  {pred.live_score ? pred.live_score.replace(':', ' - ') : '– : –'}
-                </span>
-                {pred.live_score && (!isMobile || pred.live_status === 'HT') && <span style={{ fontSize: '8px', fontWeight: 900, color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444' }}>
-                  {pred.live_status === 'HT' ? 'INT' : `${pred.live_minute || ''}'`}
-                </span>}
+              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? `${isMobile ? 'pulse' : 'pulseLiveScore'} 1.5s ease-in-out infinite` : undefined, display: 'inline-block' }}>
+                {pred.live_score ? pred.live_score.replace(':', ' - ') : '– : –'}
               </span>
             ) : (
               <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
@@ -1319,7 +1321,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         {!(pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET')) && (
         <div
           style={{
-            position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '84px' : '100px',
+            position: 'absolute', top: isMobile ? '1px' : '4px', right: isMobile ? '90px' : '100px',
             zIndex: 5
           }}
         >
@@ -2750,6 +2752,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        @keyframes pulseLiveScore { 0% { opacity: 0.4; color: #c53030; } 50% { opacity: 1; color: #ff3333; text-shadow: 0 0 8px #ff3333; } 100% { opacity: 0.4; color: #c53030; } }
+        @keyframes pulseBar { 0% { background: #7a4d00; } 50% { background: #fbbf24; } 100% { background: #7a4d00; } }
+        @keyframes pulseBarDesktop { 0% { background: #f0d030; } 50% { background: #fff44f; box-shadow: 0 0 10px #fff44f, 0 0 3px #fff44f; } 100% { background: #f0d030; } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         @keyframes pulse-dot { 0%, 100% { opacity: 0.5; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
         .capsula-main-cyan::before, .capsula-main-gold::before {

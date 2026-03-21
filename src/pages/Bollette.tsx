@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
+import { checkAdmin } from '../permissions';
 import { shareElement } from '../utils/shareCard';
 
 const theme = getTheme();
@@ -285,23 +286,24 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {(() => {
-            let vinte = 0, perse = 0, inCorso = 0;
+            let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0;
             for (const b of items) {
               if (b.esito_globale === 'vinta') { vinte++; continue; }
               if (b.esito_globale === 'persa') { perse++; continue; }
-              // Calcola da live scores
               const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
               const hasDefinitiveLose = esitiLive.some(e => e === 'lose');
               const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
               if (hasDefinitiveLose) { perse++; continue; }
               if (allDone && esitiLive.every(e => e === 'win')) { vinte++; continue; }
-              inCorso++;
+              const allPending = esitiLive.every(e => e === 'pending');
+              if (allPending) { daGiocare++; } else { inCorso++; }
             }
             return (
               <>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#ff9800', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{inCorso}⏳</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#2196f3', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{daGiocare}🕐</span>
               </>
             );
           })()}
@@ -969,7 +971,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
 // VISTA DETTAGLIO — lista bollette di una categoria
 // ============================================
 
-function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores, userId, shareCard }: {
+function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveScores, userId, shareCard, onAdminDelete }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onBack: () => void;
@@ -979,6 +981,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
   liveScores: LiveScore[];
   userId?: string;
   shareCard: (el: HTMLElement, label: string) => void;
+  onAdminDelete?: (id: string) => void;
 }) {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -1303,7 +1306,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                       </div>
                     )}
                     {/* Bottone Condividi */}
-                    <div {...(bIdx === 0 ? { className: 'ticket-btn-condividi' } : {})} style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+                    <div {...(bIdx === 0 ? { className: 'ticket-btn-condividi' } : {})} style={{ marginTop: 8, display: 'flex', justifyContent: 'center', gap: 8 }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1326,6 +1329,22 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                         <img src="/share-icon.png" alt="" style={{ width: '16px', height: '16px', filter: isLight ? 'invert(35%) sepia(80%) saturate(500%) hue-rotate(180deg)' : 'invert(70%) sepia(50%) saturate(500%) hue-rotate(150deg)' }} />
                         Condividi
                       </button>
+                      {onAdminDelete && checkAdmin() && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); if (confirm('Eliminare questa bolletta?')) onAdminDelete(b._id); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            background: 'rgba(244,67,54,0.1)',
+                            border: '1px solid rgba(244,67,54,0.3)',
+                            borderRadius: 8, padding: '7px 14px',
+                            color: '#f44336',
+                            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          🗑
+                        </button>
+                      )}
                     </div>
                   </div>
                 </>
@@ -1561,6 +1580,20 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     setSavingId(null);
   };
 
+  const handleAdminDelete = async (id: string) => {
+    if (!user) return;
+    try {
+      const token = await getIdToken();
+      await fetch(`${API_BASE}/bollette/${id}/admin-delete`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'x-admin-key': '000128' },
+      });
+      setBollette(prev => prev.filter(b => b._id !== id));
+    } catch (err) {
+      console.error('Errore eliminazione admin:', err);
+    }
+  };
+
   // Builder: invia messaggio nella chat
   const handleGenerate = async () => {
     if (!user) { setShowAuth(true); return; }
@@ -1700,6 +1733,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           liveScores={liveScores}
           userId={user?.uid}
           shareCard={(el, label) => shareElement(el, `ai-simulator-${label.replace(/\s+/g, '-').toLowerCase()}.png`)}
+          onAdminDelete={handleAdminDelete}
         />
         {showAuth && <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />}
       </>

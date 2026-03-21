@@ -113,7 +113,7 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
     return <div style={{ textAlign: 'center', padding: 40, color: textSecondary, fontSize: 13 }}>Nessuna bolletta disponibile</div>;
   }
 
-  let vinte = 0, perse = 0, inCorso = 0, totaleProfitto = 0;
+  let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0, totaleProfitto = 0;
   const risultati: ('W' | 'L')[] = [];
   let bestQuotaVinta = 0;
   let bestVincitaEuro = 0;
@@ -145,7 +145,8 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
       risultati.push('L');
       if (stake > worstPerditaEuro) worstPerditaEuro = stake;
     } else {
-      inCorso++;
+      const allPending = esiti.every(e => e === 'pending');
+      if (allPending) { daGiocare++; } else { inCorso++; }
     }
 
     for (let si = 0; si < b.selezioni.length; si++) {
@@ -226,25 +227,34 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
         {bollette.length} bollette totali
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
         {[
           { label: 'Vinte', value: vinte, color: '#4caf50' },
           { label: 'Perse', value: perse, color: '#f44336' },
           { label: 'In corso', value: inCorso, color: '#ff9800' },
-          { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#4caf50' : parseFloat(winRate as string) > 0 ? '#f44336' : textPrimary },
-          { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#4caf50' : '#f44336' },
-          { label: 'Quota media', value: quotaMedia, color: textPrimary },
-          { label: 'Profitto (stake 1\u20AC)', value: `\u20AC${totaleProfitto >= 0 ? '+' : ''}${totaleProfitto.toFixed(2)}`, color: totaleProfitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
+          { label: 'Da giocare', value: daGiocare, color: '#2196f3' },
         ].map(s => (
-          <div key={s.label} style={{
-            background: cardBg, border: cardBorder, borderRadius: 10,
-            padding: '10px 8px', textAlign: 'center',
-            gridColumn: (s as any).span ? `span ${(s as any).span}` : undefined,
-          }}>
-            <div style={{ fontSize: (s as any).span ? 24 : 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+          <div key={s.label} style={{ background: cardBg, border: cardBorder, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 10, color: textSecondary, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
           </div>
         ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+        {[
+          { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#4caf50' : parseFloat(winRate as string) > 0 ? '#f44336' : textPrimary },
+          { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#4caf50' : '#f44336' },
+          { label: 'Quota media', value: quotaMedia, color: textPrimary },
+        ].map(s => (
+          <div key={s.label} style={{ background: cardBg, border: cardBorder, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 10, color: textSecondary, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ background: cardBg, border: cardBorder, borderRadius: 10, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 24, fontWeight: 700, color: totaleProfitto >= 0 ? '#4caf50' : '#f44336' }}>{`\u20AC${totaleProfitto >= 0 ? '+' : ''}${totaleProfitto.toFixed(2)}`}</div>
+        <div style={{ fontSize: 10, color: textSecondary, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>Profitto (stake 1\u20AC)</div>
       </div>
 
       {/* Streak & Record */}

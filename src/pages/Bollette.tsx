@@ -335,9 +335,10 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
                 { key: 'in_corso' as const, label: `⏳ ${inCorso}`, color: '#ff9800' },
               ]).map(f => (
                 <button key={f.key} onClick={() => onFiltroStato!(filtroStato === f.key ? 'tutti' : f.key)} style={{
-                  background: filtroStato === f.key ? (f.color || (isLight ? '#333' : '#fff')) : (isLight ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.1)'),
+                  background: filtroStato === f.key ? (f.color || (isLight ? '#333' : 'rgba(255,255,255,0.25)')) : (isLight ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.1)'),
                   color: filtroStato === f.key ? '#fff' : (f.color || dimColor),
-                  border: 'none', borderRadius: 12, padding: '2px 8px',
+                  border: filtroStato === f.key && !f.color ? `1px solid rgba(255,255,255,0.4)` : '1px solid transparent',
+                  borderRadius: 12, padding: '2px 8px',
                   fontSize: 10, fontWeight: 700, cursor: 'pointer',
                 }}>
                   {f.label}
@@ -518,9 +519,10 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
         <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
           {(['tutti', 'vinte', 'perse', 'in_corso'] as const).map(f => (
             <button key={f} onClick={() => setFiltroStato(f)} style={{
-              background: filtroStato === f ? (isLight ? '#333' : '#fff') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
-              color: filtroStato === f ? (isLight ? '#fff' : '#000') : textSecondary,
-              border: 'none', borderRadius: 16, padding: '5px 12px',
+              background: filtroStato === f ? (isLight ? '#333' : 'rgba(255,255,255,0.25)') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
+              color: filtroStato === f ? '#fff' : textSecondary,
+              border: filtroStato === f ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
+              borderRadius: 16, padding: '5px 12px',
               fontSize: 11, fontWeight: 600, cursor: 'pointer',
             }}>
               {f === 'tutti' ? 'Tutti' : f === 'vinte' ? '✓ Vinte' : f === 'perse' ? '✗ Perse' : '⏳ In corso'}
@@ -539,9 +541,10 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
           {(['tutti', 'selettiva', 'bilanciata', 'ambiziosa', 'custom'] as const).map(f => (
             <button key={f} onClick={() => setFiltroFascia(f)} style={{
-              background: filtroFascia === f ? (isLight ? '#333' : '#fff') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
-              color: filtroFascia === f ? (isLight ? '#fff' : '#000') : textSecondary,
-              border: 'none', borderRadius: 16, padding: '5px 12px',
+              background: filtroFascia === f ? (isLight ? '#333' : 'rgba(255,255,255,0.25)') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
+              color: filtroFascia === f ? '#fff' : textSecondary,
+              border: filtroFascia === f ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
+              borderRadius: 16, padding: '5px 12px',
               fontSize: 11, fontWeight: 600, cursor: 'pointer',
             }}>
               {f === 'tutti' ? 'Tutte' : f === 'custom' ? '✨ Custom' : f.charAt(0).toUpperCase() + f.slice(1)}

@@ -482,25 +482,43 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
       </div>
 
       <div style={{ padding: '16px', maxWidth: 700, margin: '0 auto' }}>
-        {/* Stats */}
-        {stats && (() => {
-          const chiuse = stats.vinte + stats.perse;
-          const winRate = chiuse > 0 ? ((stats.vinte / chiuse) * 100).toFixed(1) : '—';
-          const roi = stats.totale_stake > 0 ? ((stats.profitto / stats.totale_stake) * 100).toFixed(1) : '—';
-          const quotaMedia = myBollette.length > 0
-            ? (myBollette.reduce((acc, b) => acc + (b.quota_totale || 0), 0) / myBollette.length).toFixed(2)
-            : '—';
+        {/* Stats — calcolate dal frontend con esiti live */}
+        {myBollette.length > 0 && (() => {
+          let liveVinte = 0, livePerse = 0, liveInCorso = 0, liveTotaleStake = 0, liveProfitto = 0;
+          const uid = user?.uid || '';
+          for (const b of myBollette) {
+            const esitiLive = b.selezioni.map((s: any) => getEsitoLive(s, liveScores));
+            const hasDefLose = esitiLive.some((e: string) => e === 'lose');
+            const allDone = esitiLive.every((e: string) => e === 'win' || e === 'lose');
+            const allWin = esitiLive.every((e: string) => e === 'win');
+            const stake = b.user_stakes?.[uid] || b.stake_amount || 1;
+            liveTotaleStake += stake;
+
+            if (b.esito_globale === 'vinta' || (allDone && allWin)) {
+              liveVinte++;
+              liveProfitto += stake * ((b.quota_totale || 1) - 1);
+            } else if (b.esito_globale === 'persa' || hasDefLose) {
+              livePerse++;
+              liveProfitto -= stake;
+            } else {
+              liveInCorso++;
+            }
+          }
+          const chiuse = liveVinte + livePerse;
+          const winRate = chiuse > 0 ? ((liveVinte / chiuse) * 100).toFixed(1) : '—';
+          const roi = liveTotaleStake > 0 ? ((liveProfitto / liveTotaleStake) * 100).toFixed(1) : '—';
+          const quotaMedia = (myBollette.reduce((acc: number, b: any) => acc + (b.quota_totale || 0), 0) / myBollette.length).toFixed(2);
 
           return (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
               {[
-                { label: 'Vinte', value: stats.vinte, color: '#4caf50' },
-                { label: 'Perse', value: stats.perse, color: '#f44336' },
-                { label: 'In corso', value: stats.in_corso, color: '#ff9800' },
+                { label: 'Vinte', value: liveVinte, color: '#4caf50' },
+                { label: 'Perse', value: livePerse, color: '#f44336' },
+                { label: 'In corso', value: liveInCorso, color: '#ff9800' },
                 { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#4caf50' : parseFloat(winRate as string) > 0 ? '#f44336' : textPrimary },
                 { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#4caf50' : '#f44336' },
                 { label: 'Quota media', value: quotaMedia, color: textPrimary },
-                { label: 'Profitto', value: `€${stats.profitto >= 0 ? '+' : ''}${stats.profitto.toFixed(2)}`, color: stats.profitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
+                { label: 'Profitto', value: `€${liveProfitto >= 0 ? '+' : ''}${liveProfitto.toFixed(2)}`, color: liveProfitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
               ].map(s => (
                 <div key={s.label} style={{
                   background: cardBg, border: cardBorder, borderRadius: 10,

@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 
 /** Wrapper per usare useNavigate dentro il Router */
-function BackToHome({ children }: { children: (goBack: () => void) => React.ReactNode }) {
+function BackToHome({ children }: { children: (goBack: () => void, navigate: (path: string) => void) => React.ReactNode }) {
   const navigate = useNavigate();
-  return <>{children(() => navigate('/'))}</>;
+  return <>{children(() => navigate('/'), navigate)}</>;
 }
 import './index.css';
 
@@ -82,7 +82,7 @@ function AppRoot() {
     <AuthProvider>
       <BrowserRouter>
       <ConsentGate>
-      <BackToHome>{(goBack) => (<>
+      <BackToHome>{(goBack, navigate) => (<>
         <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'#0a0e17',color:'#fff',fontSize:'1.1rem'}}>Caricamento...</div>}>
         <Routes>
           {import.meta.env.DEV && (
@@ -103,7 +103,7 @@ function AppRoot() {
           <Route path="/prezzi" element={<Prezzi onBack={goBack} />} />
           <Route path="/wallet" element={<ProtectedRoute><Wallet onBack={goBack} /></ProtectedRoute>} />
           <Route path="/ticket-ai" element={<ProtectedRoute><Bollette onBack={goBack} /></ProtectedRoute>} />
-          <Route path="/ticket-stats" element={<ProtectedRoute><BolletteStats onBack={goBack} /></ProtectedRoute>} />
+          <Route path="/ticket-stats" element={<ProtectedRoute><BolletteStats onBack={() => navigate('/ticket-ai')} /></ProtectedRoute>} />
           <Route path="/contatti" element={<ContactPage onBack={goBack} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={goBack} />} />
           <Route path="/termini" element={<TermsPage />} />

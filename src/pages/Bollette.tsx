@@ -216,8 +216,8 @@ function formatMercato(mercato: string, pronostico: string): string {
 const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: string; gradient: string; gradientLight: string }[] = [
   { key: 'oggi', emoji: '📅', label: 'Oggi', subtitle: 'Solo partite di oggi', gradient: 'linear-gradient(135deg, #1a237e, #283593)', gradientLight: 'linear-gradient(135deg, #e3f2fd, #bbdefb)' },
   { key: 'elite', emoji: '👑', label: 'Elite', subtitle: 'Pattern vincenti', gradient: 'linear-gradient(135deg, #b8860b, #d4a017)', gradientLight: 'linear-gradient(135deg, #fff8e1, #ffecb3)' },
-  { key: 'selettiva', emoji: '🎯', label: 'Selettiva', subtitle: 'Quota max 3.50', gradient: 'linear-gradient(135deg, #004d40, #00695c)', gradientLight: 'linear-gradient(135deg, #e0f2f1, #b2dfdb)' },
-  { key: 'bilanciata', emoji: '⚖️', label: 'Bilanciata', subtitle: 'Quota 3.50 — 8.0', gradient: 'linear-gradient(135deg, #4a148c, #6a1b9a)', gradientLight: 'linear-gradient(135deg, #f3e5f5, #e1bee7)' },
+  { key: 'selettiva', emoji: '🎯', label: 'Selettiva', subtitle: 'Quota max 5.00', gradient: 'linear-gradient(135deg, #004d40, #00695c)', gradientLight: 'linear-gradient(135deg, #e0f2f1, #b2dfdb)' },
+  { key: 'bilanciata', emoji: '⚖️', label: 'Bilanciata', subtitle: 'Quota 5.00 — 8.0', gradient: 'linear-gradient(135deg, #4a148c, #6a1b9a)', gradientLight: 'linear-gradient(135deg, #f3e5f5, #e1bee7)' },
   { key: 'ambiziosa', emoji: '🚀', label: 'Ambiziosa', subtitle: 'Quota 8.0+', gradient: 'linear-gradient(135deg, #b71c1c, #c62828)', gradientLight: 'linear-gradient(135deg, #fce4ec, #f8bbd0)' },
 ];
 
@@ -1689,7 +1689,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     } else {
       // Smista per quota reale — soglie allineate con prompt Mistral
       const q = b.quota_totale ?? 0;
-      if (q < 3.5) grouped.selettiva.push(b);
+      if (q < 5.0) grouped.selettiva.push(b);
       else if (q < 8.0) grouped.bilanciata.push(b);
       else grouped.ambiziosa.push(b);
     }

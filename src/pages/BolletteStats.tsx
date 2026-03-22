@@ -449,23 +449,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
   }, []);
 
   const filtered = tab === 'tutti' ? allBollette : allBollette.filter(b => b.tipo === tab);
-  const activeTab = TABS.find(t => t.key === tab)!;
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-  // Mini stats per header mobile
-  const headerStats = (() => {
-    let w = 0, l = 0;
-    for (const b of allBollette) {
-      const esiti = b.selezioni.map((s: any) => getEsitoSel(s, liveScores));
-      const isWin = b.esito_globale === 'vinta' || (esiti.every(e => e === 'win' || e === 'lose') && esiti.every(e => e === 'win'));
-      const isLoss = b.esito_globale === 'persa' || esiti.some(e => e === 'lose');
-      if (isWin) w++;
-      else if (isLoss) l++;
-    }
-    const chiuse = w + l;
-    const wr = chiuse > 0 ? Math.round((w / chiuse) * 100) : 0;
-    return { totale: allBollette.length, winRate: wr, chiuse };
-  })();
 
   return (
     <div style={{

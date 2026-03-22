@@ -2868,7 +2868,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <h1 style={{
               fontSize: '16px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px', flex: 1, textAlign: 'center'
             }}>
-              <span>🏆</span>
+              <img src="/logo-virgo.webp" alt="" style={{ width: 24, height: 24, verticalAlign: 'middle', marginRight: 5, filter: isLight ? 'none' : 'invert(1) brightness(2)' }} />
               <span style={{
                 background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
@@ -2894,70 +2894,77 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         ) : (
           <>
-            {/* DESKTOP: layout originale */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <button
-                data-tour="bp-back-dashboard"
-                onClick={onBack}
-                style={{
-                  background: theme.surface05,
-                  border: `1px solid ${theme.borderSubtle}`,
-                  color: theme.textDim,
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = theme.borderSubtle; }}
-              >
-                ← Dashboard
-              </button>
-              <h1 style={{
-                fontSize: '30px', fontWeight: '900', margin: 0, letterSpacing: '-1px'
-              }}>
-                <span>🏆</span>
-                <span style={{
-                  background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-                }}> Best Picks</span>
-              </h1>
-              <button
-                onClick={() => window.location.href = '/bankroll'}
-                style={{
-                  background: theme.surface05,
-                  border: `1px solid ${theme.borderSubtle}`,
-                  color: theme.textDim,
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = theme.borderSubtle; }}
-              >
-                Bankroll →
-              </button>
+            {/* DESKTOP: top bar fissa */}
+            <div style={{
+              position: 'fixed' as const, top: 0, left: 0, right: '17px', zIndex: 1000,
+              background: isLight ? '#f0f2f5' : '#0a0e14',
+              borderBottom: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
+              padding: '16px 40px 12px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' as const }}>
+                <button
+                  data-tour="bp-back-dashboard"
+                  onClick={onBack}
+                  style={{
+                    background: theme.surface05,
+                    border: `1px solid ${theme.borderSubtle}`,
+                    color: theme.textDim,
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = theme.borderSubtle; }}
+                >
+                  ← Dashboard
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '-900px' }}>
+                  <img src="/logo-virgo.webp" alt="" style={{ width: 36, height: 36, filter: isLight ? 'none' : 'invert(1) brightness(2)' }} />
+                  <span style={{ color: theme.textDim, fontSize: '13px', fontWeight: 500 }}>
+                    Mixture of Experts — i migliori pronostici da 3 sistemi AI
+                  </span>
+                </div>
+                <h1 style={{
+                  fontSize: '30px', fontWeight: '900', margin: 0, letterSpacing: '-1px',
+                  position: 'absolute' as const, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none'
+                }}>
+                  <span style={{
+                    background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                  }}>Best Picks</span>
+                </h1>
+                <button
+                  onClick={() => window.location.href = '/bankroll'}
+                  style={{
+                    background: theme.surface05,
+                    border: `1px solid ${theme.borderSubtle}`,
+                    color: theme.textDim,
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = theme.cyan; e.currentTarget.style.borderColor = theme.cyan; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = theme.textDim; e.currentTarget.style.borderColor = theme.borderSubtle; }}
+                >
+                  Bankroll →
+                </button>
+              </div>
+{/* Mixture of Experts rimosso dalla top bar */}
             </div>
-
-            {/* Banner modalità rimossi — Unified non ha SANDBOX/CONFRONTO */}
           </>
         )}
 
-        {/* HEADER — subtitle only (title moved to nav row) */}
-        <div style={{ textAlign: 'center', marginBottom: isMobile ? '6px' : '10px' }}>
-          {activeTab === 'alto_rendimento' ? null : (
-            !isMobile && (
-              <p style={{ color: theme.textDim, fontSize: '14px', margin: 0 }}>
-                Mixture of Experts — i migliori pronostici da 3 sistemi AI
-              </p>
-            )
-          )}
+        {/* Spacer per compensare la top bar fissa desktop */}
+        {!isMobile && <div style={{ height: '90px' }} />}
 
+        {/* HEADER — subtitle only (mobile) */}
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? '6px' : '10px' }}>
           {/* Toggle PROD/SANDBOX/CONFRONTO rimosso — Unified non ha modalità */}
         </div>
 

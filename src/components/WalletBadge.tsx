@@ -37,8 +37,8 @@ export default function WalletBadge() {
       onClick={() => navigate('/wallet')}
       style={{
         position: 'fixed',
-        top: '12px',
-        right: '100px',
+        top: '18px',
+        right: '220px',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',

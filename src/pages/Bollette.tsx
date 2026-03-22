@@ -213,19 +213,29 @@ function formatMercato(mercato: string, pronostico: string): string {
   }
 }
 
-const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: string; gradient: string; gradientLight: string }[] = [
-  { key: 'oggi', emoji: '📅', label: 'Oggi', subtitle: 'Solo partite di oggi', gradient: 'linear-gradient(135deg, #1a237e, #283593)', gradientLight: 'linear-gradient(135deg, #e3f2fd, #bbdefb)' },
-  { key: 'elite', emoji: '👑', label: 'Elite', subtitle: 'Pattern vincenti', gradient: 'linear-gradient(135deg, #b8860b, #d4a017)', gradientLight: 'linear-gradient(135deg, #fff8e1, #ffecb3)' },
-  { key: 'selettiva', emoji: '🎯', label: 'Selettiva', subtitle: 'Quota max 5.00', gradient: 'linear-gradient(135deg, #004d40, #00695c)', gradientLight: 'linear-gradient(135deg, #e0f2f1, #b2dfdb)' },
-  { key: 'bilanciata', emoji: '⚖️', label: 'Bilanciata', subtitle: 'Quota 5.00 — 8.0', gradient: 'linear-gradient(135deg, #4a148c, #6a1b9a)', gradientLight: 'linear-gradient(135deg, #f3e5f5, #e1bee7)' },
-  { key: 'ambiziosa', emoji: '🚀', label: 'Ambiziosa', subtitle: 'Quota 8.0+', gradient: 'linear-gradient(135deg, #b71c1c, #c62828)', gradientLight: 'linear-gradient(135deg, #fce4ec, #f8bbd0)' },
+const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: string; gradient: string; gradientLight: string; accent: string; accentLight: string }[] = [
+  { key: 'oggi', emoji: '', label: 'Oggi', subtitle: 'Solo partite di oggi', gradient: 'linear-gradient(135deg, #1e293b, #334155)', gradientLight: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', accent: '#60a5fa', accentLight: '#3b82f6' },
+  { key: 'elite', emoji: '', label: 'Elite', subtitle: 'Pattern vincenti', gradient: 'linear-gradient(135deg, #44403c, #57534e)', gradientLight: 'linear-gradient(135deg, #fefce8, #fef9c3)', accent: '#fbbf24', accentLight: '#d97706' },
+  { key: 'selettiva', emoji: '', label: 'Selettiva', subtitle: 'Quota max 5.00', gradient: 'linear-gradient(135deg, #14532d, #166534)', gradientLight: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', accent: '#4ade80', accentLight: '#16a34a' },
+  { key: 'bilanciata', emoji: '', label: 'Bilanciata', subtitle: 'Quota 5.00 — 8.0', gradient: 'linear-gradient(135deg, #312e81, #3730a3)', gradientLight: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', accent: '#a78bfa', accentLight: '#7c3aed' },
+  { key: 'ambiziosa', emoji: '', label: 'Ambiziosa', subtitle: 'Quota 8.0+', gradient: 'linear-gradient(135deg, #7f1d1d, #991b1b)', gradientLight: 'linear-gradient(135deg, #fef2f2, #fee2e2)', accent: '#f87171', accentLight: '#dc2626' },
 ];
 
 // ============================================
 // QUADRANTE — anteprima categoria
 // ============================================
 
-function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPreview = 3, dataTour, filtroStato, onFiltroStato }: {
+// Icone SVG per categorie (al posto delle emoji)
+const CAT_ICONS: Record<string, React.ReactNode> = {
+  oggi: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  elite: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>,
+  selettiva: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+  bilanciata: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  ambiziosa: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  custom: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+};
+
+function Quadrante({ cat, items, onClick, liveScores = [], height = 317, maxPreview = 3, dataTour, filtroStato, onFiltroStato }: {
   cat: typeof CATEGORIE[0];
   items: Bolletta[];
   onClick: () => void;
@@ -246,46 +256,51 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
     return filtroStato === 'in_corso';
   });
   const preview = filteredItems.slice(0, maxPreview);
-  const textColor = isLight ? '#333' : '#fff';
-  const dimColor = isLight ? '#666' : 'rgba(255,255,255,0.6)';
+  const textColor = isLight ? '#1e293b' : '#f1f5f9';
+  const dimColor = isLight ? '#64748b' : 'rgba(255,255,255,0.55)';
+  const accent = isLight ? (cat as any).accentLight || '#667eea' : (cat as any).accent || '#60a5fa';
 
   return (
     <div
       onClick={onClick}
       {...(dataTour ? { 'data-tour': dataTour } : {})}
       style={{
-        background: isLight ? cat.gradientLight : cat.gradient,
-        borderRadius: 16,
-        padding: '12px 10px',
+        background: isLight ? '#f8f9fc' : '#141720',
+        borderRadius: 14,
+        padding: '16px 14px 12px',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.1)',
+        transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+        border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.06)',
+        borderLeft: `3px solid ${accent}`,
         height,
         position: 'relative',
         overflow: 'hidden',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-3px)';
-        e.currentTarget.style.boxShadow = isLight ? '0 8px 24px rgba(0,0,0,0.12)' : '0 8px 24px rgba(0,0,0,0.4)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = isLight ? '0 6px 20px rgba(0,0,0,0.08)' : '0 6px 20px rgba(0,0,0,0.35)';
+        e.currentTarget.style.borderColor = accent;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.borderColor = isLight ? '#d0d5dd' : 'rgba(255,255,255,0.06)';
+        e.currentTarget.style.borderLeftColor = accent;
       }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ color: accent, display: 'flex', alignItems: 'center' }}>{CAT_ICONS[cat.key] || null}</div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: textColor }}>{cat.label}</div>
-            <div style={{ fontSize: 11, color: dimColor }}>{cat.subtitle}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: textColor, letterSpacing: '-0.01em' }}>{cat.label}</div>
+            <div style={{ fontSize: 11, color: dimColor, marginTop: 1 }}>{cat.subtitle}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           {(() => {
             let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0;
             for (const b of items) {
@@ -300,18 +315,18 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
               if (allPending) { daGiocare++; } else { inCorso++; }
             }
             return (
-              <>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{vinte}✓</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{perse}✗</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#ff9800', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{inCorso}⏳</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#2196f3', background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: 6 }}>{daGiocare}🕐</span>
-              </>
+              <div style={{ display: 'flex', gap: 3 }}>
+                {vinte > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#15803d' : '#16a34a', background: isLight ? '#dcfce7' : 'rgba(22,163,74,0.15)', padding: '2px 6px', borderRadius: 4 }}>{vinte}W</span>}
+                {perse > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#b91c1c' : '#dc2626', background: isLight ? '#fee2e2' : 'rgba(220,38,38,0.15)', padding: '2px 6px', borderRadius: 4 }}>{perse}L</span>}
+                {inCorso > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#b45309' : '#d97706', background: isLight ? '#fef3c7' : 'rgba(217,119,6,0.15)', padding: '2px 6px', borderRadius: 4 }}>{inCorso}</span>}
+                {daGiocare > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#475569' : '#94a3b8', background: isLight ? '#e2e8f0' : 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>{daGiocare}</span>}
+              </div>
             );
           })()}
           <div style={{
-            background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
-            borderRadius: 20, padding: '4px 12px',
-            fontSize: 13, fontWeight: 700, color: textColor,
+            background: `${accent}18`,
+            borderRadius: 6, padding: '3px 10px',
+            fontSize: 13, fontWeight: 700, color: accent,
           }}>
             {items.length}
           </div>
@@ -334,16 +349,17 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
             <div style={{ display: 'flex', gap: 4 }}>
               {([
                 { key: 'tutti' as const, label: `Tutti ${items.length}`, color: undefined },
-                { key: 'vinte' as const, label: `✓ ${vinte}`, color: '#4caf50' },
-                { key: 'perse' as const, label: `✗ ${perse}`, color: '#f44336' },
-                { key: 'in_corso' as const, label: `⏳ ${inCorso}`, color: '#ff9800' },
+                { key: 'vinte' as const, label: `${vinte} W`, color: '#16a34a' },
+                { key: 'perse' as const, label: `${perse} L`, color: '#dc2626' },
+                { key: 'in_corso' as const, label: `${inCorso} Live`, color: '#d97706' },
               ]).map(f => (
                 <button key={f.key} onClick={(e) => { e.stopPropagation(); onFiltroStato!(filtroStato === f.key ? 'tutti' : f.key); }} style={{
-                  background: filtroStato === f.key ? (f.color || (isLight ? '#333' : 'rgba(255,255,255,0.25)')) : (isLight ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.1)'),
+                  background: filtroStato === f.key ? (f.color || (isLight ? '#1e293b' : 'rgba(255,255,255,0.2)')) : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)'),
                   color: filtroStato === f.key ? '#fff' : (f.color || dimColor),
-                  border: filtroStato === f.key && !f.color ? `1px solid rgba(255,255,255,0.4)` : '1px solid transparent',
-                  borderRadius: 12, padding: '2px 8px',
-                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                  border: '1px solid transparent',
+                  borderRadius: 6, padding: '3px 8px',
+                  fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                  transition: 'all 0.15s',
                 }}>
                   {f.label}
                 </button>
@@ -354,44 +370,46 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 322, maxPrev
 
       {/* Anteprima bollette */}
       {filteredItems.length === 0 ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: dimColor, fontSize: 14 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: dimColor, fontSize: 13 }}>
           Nessuna bolletta
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
           {preview.map((b) => (
             <div key={b._id} style={{
-              background: isLight ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
-              borderRadius: 8, padding: '6px 10px',
+              background: isLight ? '#eef1f6' : 'rgba(255,255,255,0.04)',
+              borderRadius: 8, padding: '5px 10px',
               fontSize: 12,
+              border: isLight ? '1px solid #dde1e9' : '1px solid rgba(255,255,255,0.04)',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontWeight: 700, color: textColor, fontSize: 13 }}>{b.label}</span>
-                <span style={{ fontWeight: 700, color: textColor }}>{b.quota_totale.toFixed(2)}</span>
+                <span style={{ fontWeight: 600, color: textColor, fontSize: 12 }}>{b.label}</span>
+                <span style={{ fontWeight: 700, color: accent, fontSize: 13 }}>{b.quota_totale.toFixed(2)}</span>
               </div>
               {b.selezioni.slice(0, b.selezioni.length <= 2 ? 2 : 1).map((s, j) => (
-                <div key={j} style={{ color: dimColor, fontSize: 11, lineHeight: 1.4 }}>
-                  {s.league && <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.7, marginRight: 4 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away} · {formatMercato(s.mercato, s.pronostico)}
+                <div key={j} style={{ color: dimColor, fontSize: 11, lineHeight: 1.5 }}>
+                  {s.league && <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.6, marginRight: 4 }}>{getLeaguePrefix(s.league)}</span>}{s.home} - {s.away} · {formatMercato(s.mercato, s.pronostico)}
                 </div>
               ))}
               {b.selezioni.length > 2 && (
-                <div style={{ color: dimColor, fontSize: 11, fontStyle: 'italic' }}>
-                  +{b.selezioni.length - 1} altre selezioni...
+                <div style={{ color: dimColor, fontSize: 11, opacity: 0.7 }}>
+                  +{b.selezioni.length - 1} selezioni
                 </div>
               )}
             </div>
           ))}
           {filteredItems.length > maxPreview && (
-            <div style={{ color: dimColor, fontSize: 12, textAlign: 'center', marginTop: 2 }}>
-              +{filteredItems.length - maxPreview} altre bollette
+            <div style={{ color: dimColor, fontSize: 11, textAlign: 'center', marginTop: 2 }}>
+              +{filteredItems.length - maxPreview} altre
             </div>
           )}
         </div>
       )}
 
-      {/* Freccia */}
-      <div style={{ textAlign: 'right', color: dimColor, fontSize: 14 }}>
-        Apri ›
+      {/* Footer */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', color: accent, fontSize: 12, fontWeight: 600, gap: 4 }}>
+        <span>Apri</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
   );
@@ -421,10 +439,10 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
 
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
   const textSecondary = isLight ? '#666' : '#999';
-  const cardBg = isLight ? '#ffffff' : '#1a1d2e';
-  const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)';
-  const rowBorder = isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)';
-  const headerBg = isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)';
+  const cardBg = isLight ? '#ffffff' : '#141720';
+  const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.06)';
+  const rowBorder = isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.04)';
+  const headerBg = isLight ? '#f8f9fa' : '#0f1219';
 
   const fetchMy = useCallback(async () => {
     if (!user) return;
@@ -466,27 +484,40 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: isLight ? '#f5f5f5' : theme.bg,
+      background: isLight ? '#eef1f6' : theme.bg,
       color: textPrimary, fontFamily: theme.font,
       overflowY: 'auto', zIndex: 110,
     }}>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: 'url(/bg-stadium.webp)',
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+        opacity: isLight ? 0.02 : 0.045,
+        filter: 'saturate(3) contrast(1.6) brightness(1.3)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
       {/* Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
-        background: isLight ? '#fff' : theme.panelSolid,
-        borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
+        background: isLight ? '#f8f9fc' : theme.panelSolid,
+        borderBottom: isLight ? '1px solid #c8cdd5' : theme.panelBorder,
         padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <button onClick={onBack} style={{
-          background: 'none', border: 'none',
-          color: isLight ? '#333' : theme.cyan,
-          cursor: 'pointer', fontSize: 20, padding: '4px 8px',
+          background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+          border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
+          color: isLight ? '#475569' : '#64748b',
+          borderRadius: 8, width: 34, height: 34,
+          cursor: 'pointer', fontSize: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 0, outline: 'none',
         }}>←</button>
-        <span style={{ fontSize: 22 }}>✨</span>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Le mie bollette</h1>
+        <div style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'flex', alignItems: 'center' }}>{CAT_ICONS.custom}</div>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>Le mie bollette</h1>
       </div>
 
-      <div style={{ padding: '16px', maxWidth: 700, margin: '0 auto' }}>
+      <div style={{ padding: '16px', maxWidth: 700, margin: '0 auto', position: 'relative' as const, zIndex: 1 }}>
         {/* Stats — calcolate dal frontend con esiti live */}
         {myBollette.length > 0 && (() => {
           let liveVinte = 0, livePerse = 0, liveInCorso = 0, liveTotaleStake = 0, liveProfitto = 0;
@@ -954,7 +985,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
                           opacity: deletingId === b._id ? 0.5 : 1,
                         }}
                       >
-                        {deletingId === b._id ? 'Eliminando...' : '🗑 Elimina bolletta'}
+                        {deletingId === b._id ? 'Eliminando...' : 'Elimina bolletta'}
                       </button>
                     </div>
                   </>
@@ -998,39 +1029,52 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
   });
   const textPrimary = isLight ? '#1a1a1a' : '#fff';
   const textSecondary = isLight ? '#666' : '#999';
-  const cardBg = isLight ? '#ffffff' : '#1a1d2e';
-  const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)';
-  const rowBorder = isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.06)';
-  const headerBg = isLight ? '#f8f9fa' : 'rgba(255,255,255,0.04)';
+  const cardBg = isLight ? '#ffffff' : '#141720';
+  const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.06)';
+  const rowBorder = isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.04)';
+  const headerBg = isLight ? '#f8f9fa' : '#0f1219';
 
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: isLight ? '#f5f5f5' : theme.bg,
+      background: isLight ? '#eef1f6' : theme.bg,
       color: textPrimary, fontFamily: theme.font,
       overflowY: 'auto', zIndex: 110,
     }}>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: 'url(/bg-stadium.webp)',
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+        opacity: isLight ? 0.02 : 0.045,
+        filter: 'saturate(3) contrast(1.6) brightness(1.3)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
       {/* Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
-        background: isLight ? '#fff' : theme.panelSolid,
-        borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
+        background: isLight ? '#f8f9fc' : theme.panelSolid,
+        borderBottom: isLight ? '1px solid #c8cdd5' : theme.panelBorder,
         padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <button data-tour="ticket-vista-back" onClick={onBack} style={{
-          background: 'none', border: 'none',
-          color: isLight ? '#333' : theme.cyan,
-          cursor: 'pointer', fontSize: 20, padding: '4px 8px',
+          background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+          border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
+          color: isLight ? '#475569' : '#64748b',
+          borderRadius: 8, width: 34, height: 34,
+          cursor: 'pointer', fontSize: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 0, outline: 'none',
         }}>←</button>
-        <span style={{ fontSize: 22 }}>{cat.emoji}</span>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{cat.label}</h1>
-        <span style={{ color: textSecondary, fontSize: 14 }}>
-          {items.length} bollette
+        <div style={{ color: isLight ? (cat as any).accentLight || '#667eea' : (cat as any).accent || '#60a5fa', display: 'flex', alignItems: 'center' }}>{CAT_ICONS[cat.key] || null}</div>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>{cat.label}</h1>
+        <span style={{ color: textSecondary, fontSize: 13, fontWeight: 500 }}>
+          {items.length} ticket
         </span>
       </div>
 
       {/* Bollette */}
-      <div style={{ padding: '12px', maxWidth: 700, margin: '0 auto' }}>
+      <div style={{ padding: '12px', maxWidth: 700, margin: '0 auto', position: 'relative' as const, zIndex: 1 }}>
         {items.map((b, bIdx) => {
           const isCollapsed = collapsed[b._id] ?? false;
           const isSaved = savedIds.has(b._id);
@@ -1756,40 +1800,45 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: isLight ? '#f5f5f5' : theme.bg,
+      background: isLight ? '#eef1f6' : theme.bg,
       color: textPrimary,
       fontFamily: theme.font,
       overflow: 'hidden', zIndex: 100,
       display: 'flex', flexDirection: 'column' as const,
     }}>
+      {/* Sfondo stadio trasparente */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: 'url(/bg-stadium.webp)',
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+        opacity: isLight ? 0.02 : 0.045,
+        filter: 'saturate(3) contrast(1.6) brightness(1.3)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
       {/* Header */}
       <div style={{
         zIndex: 10, flexShrink: 0,
-        background: isLight ? '#fff' : theme.panelSolid,
-        borderBottom: isLight ? '1px solid #e0e0e0' : theme.panelBorder,
+        background: isLight ? '#f8f9fc' : theme.panelSolid,
+        borderBottom: isLight ? '1px solid #c8cdd5' : theme.panelBorder,
         padding: isMobile ? '12px 16px' : '16px 20px',
         display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 12,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           {onBack && (
             <button data-tour="ticket-back-btn" onClick={onBack} style={{
-              background: isMobile
-                ? (isLight ? 'rgba(102,126,234,0.08)' : 'rgba(0,240,255,0.08)')
-                : 'none',
-              border: isMobile
-                ? (isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)')
-                : 'none',
-              borderRadius: 8,
-              color: isLight ? '#333' : theme.cyan,
-              cursor: 'pointer', fontSize: 20,
-              padding: isMobile ? '4px 10px' : '4px 8px',
+              background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+              border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
+              color: isLight ? '#475569' : '#64748b',
+              borderRadius: 8, width: 34, height: 34,
+              cursor: 'pointer', fontSize: 18,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              outline: 'none', lineHeight: 1,
-              width: isMobile ? 34 : 'auto', height: isMobile ? 34 : 'auto',
-            }}><span style={{ position: 'relative', top: isMobile ? -2 : 0, fontSize: isMobile ? 22 : 20 }}>←</span></button>
+              padding: 0, outline: 'none',
+            }}>←</button>
           )}
-          <h1 data-tour="step-5" style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-            🎫 Ticket AI
+          <img src="/logo-virgo.webp" alt="" style={{ width: 24, height: 24, objectFit: 'contain', filter: isLight ? 'none' : 'invert(1)' }} />
+          <h1 data-tour="step-5" style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
+            Ticket AI
           </h1>
           {isMobile && (() => {
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1844,11 +1893,12 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 cursor: mobileIsToday ? 'default' : 'pointer', marginRight: 15,
               }}>▶</button>
               <button data-tour="ticket-btn-oggi" onClick={() => { if (mobileIsStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
-                background: mobileIsStorico ? (isLight ? '#667eea' : '#11998e') : 'transparent',
-                color: mobileIsStorico ? '#fff' : 'transparent',
-                border: 'none', borderRadius: 999, padding: '6px 10px',
-                fontSize: 10, fontWeight: 600, cursor: mobileIsStorico ? 'pointer' : 'default',
-                outline: 'none', marginLeft: 2,
+                background: mobileIsStorico ? (isLight ? 'rgba(102,126,234,0.12)' : 'rgba(0,240,255,0.12)') : 'transparent',
+                color: mobileIsStorico ? (isLight ? '#667eea' : theme.cyan) : 'transparent',
+                border: mobileIsStorico ? (isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)') : '1px solid transparent',
+                borderRadius: 8, padding: '0 10px',
+                fontSize: 11, fontWeight: 600, cursor: mobileIsStorico ? 'pointer' : 'default',
+                outline: 'none', marginLeft: 2, height: 26,
               }}>Oggi</button>
             </div>
             );
@@ -1863,14 +1913,16 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             <div data-tour="ticket-storico-nav-desktop" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {/* Badge */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 220 }}>
-                <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
-                <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 12, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
-                <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 12, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#15803d' : '#16a34a', background: filtroEsito === 'vinte' ? (isLight ? '#dcfce7' : 'rgba(22,163,74,0.25)') : (isLight ? '#f0fdf4' : 'rgba(22,163,74,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? (isLight ? '1px solid #86efac' : '1px solid rgba(22,163,74,0.4)') : (isLight ? '1px solid #bbf7d0' : '1px solid rgba(22,163,74,0.15)'), transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#b91c1c' : '#dc2626', background: filtroEsito === 'perse' ? (isLight ? '#fee2e2' : 'rgba(220,38,38,0.25)') : (isLight ? '#fef2f2' : 'rgba(220,38,38,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? (isLight ? '1px solid #fca5a5' : '1px solid rgba(220,38,38,0.4)') : (isLight ? '1px solid #fecaca' : '1px solid rgba(220,38,38,0.15)'), transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#b45309' : '#d97706', background: filtroEsito === 'pending' ? (isLight ? '#fef3c7' : 'rgba(217,119,6,0.25)') : (isLight ? '#fffbeb' : 'rgba(217,119,6,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? (isLight ? '1px solid #fcd34d' : '1px solid rgba(217,119,6,0.4)') : (isLight ? '1px solid #fde68a' : '1px solid rgba(217,119,6,0.15)'), transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
                 <span style={{ width: 1, height: 23, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 4, marginRight: 4, position: 'relative', top: 2 }} />
-                <span onClick={() => { window.location.href = '/ticket-stats'; }} style={{ fontSize: 12, fontWeight: 700, padding: '4px 14px', borderRadius: 6, cursor: 'pointer', background: isLight ? 'rgba(102,126,234,0.1)' : 'rgba(0,240,255,0.1)', border: isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)', color: isLight ? '#667eea' : theme.cyan, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }} title="Statistiche">📊 Stats</span>
+                <button onClick={() => { window.location.href = '/ticket-stats'; }} style={{ background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)', color: isLight ? '#666' : '#64748b', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', padding: 0, outline: 'none' }} title="Statistiche">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+                </button>
               </div>
               {/* Frecce + Data */}
-              <div data-tour="ticket-date-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div data-tour="ticket-date-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 5, marginRight: 100 }}>
               <button onClick={() => {
                 const [y, m, d] = currentDateStr.split('-').map(Number);
                 const prev = new Date(y, m - 1, d - 1);
@@ -1941,11 +1993,12 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               </div>{/* chiude ticket-date-nav-desktop */}
               {/* Bottone Oggi */}
               <button data-tour="ticket-btn-oggi-desktop" onClick={() => { if (isStorico) { setStoricoDate(''); setFiltroEsito('tutti'); } }} style={{
-                background: isStorico ? (isLight ? '#667eea' : '#11998e') : 'transparent',
-                color: isStorico ? '#fff' : 'transparent',
-                border: 'none', borderRadius: 999, padding: '6px 20px', outline: 'none',
-                fontSize: 12, fontWeight: 600, cursor: isStorico ? 'pointer' : 'default',
-                whiteSpace: 'nowrap', width: 60, flexShrink: 0,
+                background: isStorico ? (isLight ? 'rgba(102,126,234,0.12)' : 'rgba(0,240,255,0.12)') : 'transparent',
+                color: isStorico ? (isLight ? '#667eea' : theme.cyan) : 'transparent',
+                border: isStorico ? (isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)') : '1px solid transparent',
+                borderRadius: 8, padding: '0 12px', outline: 'none',
+                fontSize: 11, fontWeight: 600, cursor: isStorico ? 'pointer' : 'default',
+                whiteSpace: 'nowrap', height: 32, flexShrink: 0, position: 'relative' as const, right: 50,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.15s',
               }}>Oggi</button>
@@ -1958,11 +2011,13 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 11, fontWeight: 700, color: '#4caf50', background: filtroEsito === 'vinte' ? 'rgba(76,175,80,0.35)' : 'rgba(76,175,80,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'vinte' ? '1px solid #4caf50' : '1px solid transparent', transition: 'all 0.15s' }}>{mobileStats.vinte} Vinte</span>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 11, fontWeight: 700, color: '#f44336', background: filtroEsito === 'perse' ? 'rgba(244,67,54,0.35)' : 'rgba(244,67,54,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'perse' ? '1px solid #f44336' : '1px solid transparent', transition: 'all 0.15s' }}>{mobileStats.perse} Perse</span>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 11, fontWeight: 700, color: '#ff9800', background: filtroEsito === 'pending' ? 'rgba(255,152,0,0.35)' : 'rgba(255,152,0,0.15)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer', border: filtroEsito === 'pending' ? '1px solid #ff9800' : '1px solid transparent', transition: 'all 0.15s' }}>{mobileStats.pending} In corso</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#15803d' : '#16a34a', background: filtroEsito === 'vinte' ? (isLight ? '#dcfce7' : 'rgba(22,163,74,0.25)') : (isLight ? '#f0fdf4' : 'rgba(22,163,74,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? (isLight ? '1px solid #86efac' : '1px solid rgba(22,163,74,0.4)') : (isLight ? '1px solid #bbf7d0' : '1px solid rgba(22,163,74,0.15)'), transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.vinte} Vinte</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#b91c1c' : '#dc2626', background: filtroEsito === 'perse' ? (isLight ? '#fee2e2' : 'rgba(220,38,38,0.25)') : (isLight ? '#fef2f2' : 'rgba(220,38,38,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? (isLight ? '1px solid #fca5a5' : '1px solid rgba(220,38,38,0.4)') : (isLight ? '1px solid #fecaca' : '1px solid rgba(220,38,38,0.15)'), transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.perse} Perse</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#b45309' : '#d97706', background: filtroEsito === 'pending' ? (isLight ? '#fef3c7' : 'rgba(217,119,6,0.25)') : (isLight ? '#fffbeb' : 'rgba(217,119,6,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? (isLight ? '1px solid #fcd34d' : '1px solid rgba(217,119,6,0.4)') : (isLight ? '1px solid #fde68a' : '1px solid rgba(217,119,6,0.15)'), transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.pending} In corso</span>
               <span style={{ width: 1, height: 21, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 2, marginRight: 2, position: 'relative', top: 2 }} />
-              <span onClick={() => { window.location.href = '/ticket-stats'; }} style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, cursor: 'pointer', background: isLight ? 'rgba(102,126,234,0.1)' : 'rgba(0,240,255,0.1)', border: isLight ? '1px solid rgba(102,126,234,0.2)' : '1px solid rgba(0,240,255,0.15)', color: isLight ? '#667eea' : theme.cyan, display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }} title="Statistiche">📊 Stats</span>
+              <button onClick={() => { window.location.href = '/ticket-stats'; }} style={{ background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)', color: isLight ? '#666' : '#64748b', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', padding: 0, outline: 'none', flexShrink: 0 }} title="Statistiche">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+              </button>
             </div>
           </div>
           );
@@ -2005,7 +2060,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }} onClick={() => setShowStorico(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{
-            background: isLight ? '#fff' : theme.panelSolid,
+            background: isLight ? '#f8f9fc' : theme.panelSolid,
             border: isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.15)',
             borderRadius: 16, padding: '16px 20px', width: 300, maxWidth: '90vw',
             boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -2128,12 +2183,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            <div>
-              <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700, color: '#fff' }}>
-                🤖 Costruisci il tuo Ticket AI
-              </div>
-              <div style={{ fontSize: isMobile ? 12 : 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
-                Chiedi all'AI di comporre una bolletta su misura per te
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src="/coach-ai-robot.png" alt="" style={{ width: isMobile ? 45 : 55, height: isMobile ? 45 : 55, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>
+                  Costruisci il tuo Ticket
+                </div>
+                <div style={{ fontSize: isMobile ? 12 : 13, color: 'rgba(255,255,255,0.65)', marginTop: 3 }}>
+                  Chiedi all'AI di comporre una bolletta su misura
+                </div>
               </div>
             </div>
             <span style={{ fontSize: 24, color: '#fff' }}>{showBuilderRaw ? '▲' : '▼'}</span>
@@ -2410,7 +2468,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                               opacity: !parseFloat(builderStake) ? 0.6 : 1,
                             }}
                           >
-                            {!parseFloat(builderStake) ? '⚠️ Inserisci la puntata' : '✅ Salva nelle mie bollette'}
+                            {!parseFloat(builderStake) ? 'Inserisci la puntata' : 'Salva nelle mie bollette'}
                           </button>
                         ) : (
                           <div style={{
@@ -2419,7 +2477,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                             borderRadius: 10, fontWeight: 700, fontSize: 13,
                             color: isLight ? '#2e7d32' : '#66bb6a',
                           }}>
-                            ✅ Salvata!
+                            Salvata!
                             {/* Tag nascosto per il tour */}
                             <span className="builder-saved-tag" style={{ display: 'none' }} />
                           </div>
@@ -2438,7 +2496,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                       background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.08)',
                       fontSize: 14, color: textSecondary,
                     }}>
-                      ⏳ Sto pensando...
+                      Sto pensando...
                     </div>
                   </div>
                 )}
@@ -2486,7 +2544,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                     opacity: !builderMsg.trim() ? 0.5 : 1,
                   }}
                 >
-                  {builderLoading ? '⏳' : '➤'}
+                  {builderLoading ? '...' : '→'}
                 </button>
               </div>
             </div>
@@ -2498,14 +2556,14 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             /* Mobile: 1 colonna */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {CATEGORIE.map(cat => (
-                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
               ))}
               <Quadrante
-                cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+                cat={{ key: 'custom' as Categoria, emoji: '', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)', accent: '#94a3b8', accentLight: '#64748b' } as any}
                 items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                 onClick={() => setActiveCategory('custom' as Categoria)}
                 liveScores={liveScores}
-                height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
+                height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2}
                 dataTour="ticket-mie-bollette"
                 filtroStato={filtroStatoMie}
                 onFiltroStato={setFiltroStatoMie}
@@ -2516,19 +2574,19 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 26 }}>
                 {CATEGORIE.slice(0, 3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 {CATEGORIE.slice(3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
                 ))}
                 <Quadrante
-                  cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
+                  cat={{ key: 'custom' as Categoria, emoji: '', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)', accent: '#94a3b8', accentLight: '#64748b' } as any}
                   items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                   onClick={() => setActiveCategory('custom' as Categoria)}
                   liveScores={liveScores}
-                  height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2}
+                  height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2}
                   dataTour="ticket-mie-bollette"
                   filtroStato={filtroStatoMie}
                   onFiltroStato={setFiltroStatoMie}

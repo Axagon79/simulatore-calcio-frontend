@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import './index.css';
 
 import { getThemeMode } from './AppDev/costanti';
@@ -56,6 +56,8 @@ function ConsentGate({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoot() {
+  const navigate = useNavigate();
+  const goBack = () => navigate('/');
   const [showSettings, setShowSettings] = useState(() => {
     const wasOpen = sessionStorage.getItem('settings_open');
     if (wasOpen) {
@@ -81,24 +83,24 @@ function AppRoot() {
           {import.meta.env.DEV && (
             <Route path="/mixer" element={<TuningMixer />} />
           )}
-          <Route path="/track-record" element={<TrackRecord onBack={() => window.history.back()} />} />
+          <Route path="/track-record" element={<TrackRecord onBack={goBack} />} />
           {import.meta.env.DEV && (
             <Route path="/predictions-mixer" element={<PredictionsMixer />} />
           )}
-          <Route path="/bankroll" element={<Bankroll onBack={() => window.history.back()} />} />
-          <Route path="/money-management" element={<MoneyManagement onBack={() => window.history.back()} />} />
-          <Route path="/money-tracker" element={<MoneyTracker onBack={() => window.history.back()} />} />
-          <Route path="/step-system" element={<ProtectedRoute><StepSystem onBack={() => window.history.back()} /></ProtectedRoute>} />
+          <Route path="/bankroll" element={<Bankroll onBack={goBack} />} />
+          <Route path="/money-management" element={<MoneyManagement onBack={goBack} />} />
+          <Route path="/money-tracker" element={<MoneyTracker onBack={goBack} />} />
+          <Route path="/step-system" element={<ProtectedRoute><StepSystem onBack={goBack} /></ProtectedRoute>} />
           <Route path="/sistema-c" element={<SistemaC />} />
-          <Route path="/best-picks" element={<ProtectedRoute><UnifiedPredictions onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/analisi-storica" element={<AnalisiStorica onBack={() => window.history.back()} />} />
-          <Route path="/simulate" element={<SimulazioneRapida onBack={() => window.history.back()} />} />
-          <Route path="/prezzi" element={<Prezzi onBack={() => window.history.back()} />} />
-          <Route path="/wallet" element={<ProtectedRoute><Wallet onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/ticket-ai" element={<ProtectedRoute><Bollette onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/ticket-stats" element={<ProtectedRoute><BolletteStats onBack={() => window.history.back()} /></ProtectedRoute>} />
-          <Route path="/contatti" element={<ContactPage onBack={() => window.history.back()} />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy onBack={() => window.history.back()} />} />
+          <Route path="/best-picks" element={<ProtectedRoute><UnifiedPredictions onBack={goBack} /></ProtectedRoute>} />
+          <Route path="/analisi-storica" element={<AnalisiStorica onBack={goBack} />} />
+          <Route path="/simulate" element={<SimulazioneRapida onBack={goBack} />} />
+          <Route path="/prezzi" element={<Prezzi onBack={goBack} />} />
+          <Route path="/wallet" element={<ProtectedRoute><Wallet onBack={goBack} /></ProtectedRoute>} />
+          <Route path="/ticket-ai" element={<ProtectedRoute><Bollette onBack={goBack} /></ProtectedRoute>} />
+          <Route path="/ticket-stats" element={<ProtectedRoute><BolletteStats onBack={goBack} /></ProtectedRoute>} />
+          <Route path="/contatti" element={<ContactPage onBack={goBack} />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy onBack={goBack} />} />
           <Route path="/termini" element={<TermsPage />} />
           <Route path="/privacy" element={<TermsPage />} />
           <Route path="/disclaimer" element={<TermsPage />} />

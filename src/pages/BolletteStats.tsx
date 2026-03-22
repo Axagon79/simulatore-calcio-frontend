@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 
 const theme = getTheme();
@@ -36,6 +36,14 @@ interface Bolletta {
 // ============================================
 // LIVE SCORES
 // ============================================
+interface LiveScore {
+  home: string;
+  away: string;
+  live_score: string;
+  live_status: string;
+  live_minute: number;
+}
+
 function calculateHitFromScore(score: string, pronostico: string, tipo: string): boolean | null {
   if (!score) return null;
   const normalized = score.replace(/\s/g, '').replace('-', ':');
@@ -73,16 +81,33 @@ function calculateHitFromScore(score: string, pronostico: string, tipo: string):
   return null;
 }
 
-function getEsitoSel(sel: any): 'pending' | 'win' | 'lose' {
+function getEsitoSel(sel: any, liveScores: LiveScore[] = []): 'pending' | 'win' | 'lose' | 'live' {
   if (sel.esito === true) return 'win';
   if (sel.esito === false) return 'lose';
-  const score = sel.real_score || sel.live_score;
-  if (!score) return 'pending';
-  const finished = sel.match_finished || sel.live_status === 'Finished';
-  if (!finished) return 'pending';
-  const hit = calculateHitFromScore(score, sel.pronostico, sel.mercato);
-  if (hit === null) return 'pending';
-  return hit ? 'win' : 'lose';
+
+  // real_score dal backend (fonte definitiva)
+  if (sel.real_score) {
+    const hit = calculateHitFromScore(sel.real_score, sel.pronostico, sel.mercato);
+    if (hit !== null) return hit ? 'win' : 'lose';
+  }
+
+  // match_finished o live_status Finished dal backend
+  if ((sel.match_finished || sel.live_status === 'Finished') && sel.live_score) {
+    const hit = calculateHitFromScore(sel.live_score, sel.pronostico, sel.mercato);
+    if (hit !== null) return hit ? 'win' : 'lose';
+  }
+
+  // Polling live scores (partite in corso)
+  const live = liveScores.find((s: LiveScore) => s.home === sel.home && s.away === sel.away);
+  if (live && live.live_score) {
+    if (live.live_status === 'Finished') {
+      const hit = calculateHitFromScore(live.live_score, sel.pronostico, sel.mercato);
+      if (hit !== null) return hit ? 'win' : 'lose';
+    }
+    return 'live'; // partita in corso
+  }
+
+  return 'pending';
 }
 
 // ============================================
@@ -106,7 +131,7 @@ const TABS: { key: Tab; label: string }[] = [
 // ============================================
 // STATS BLOCK
 // ============================================
-function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
+function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores: LiveScore[] }) {
   const [mercatiExpanded, setMercatiExpanded] = useState(false);
 
   if (!bollette.length) {
@@ -123,7 +148,7 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
   const sorted = [...bollette].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   for (const b of sorted) {
-    const esiti = b.selezioni.map((s: any) => getEsitoSel(s));
+    const esiti = b.selezioni.map((s: any) => getEsitoSel(s, liveScores));
     const hasDefLose = esiti.some(e => e === 'lose');
     const allDone = esiti.every(e => e === 'win' || e === 'lose');
     const allWin = esiti.every(e => e === 'win');
@@ -145,8 +170,8 @@ function StatsBlock({ bollette }: { bollette: Bolletta[] }) {
       risultati.push('L');
       if (stake > worstPerditaEuro) worstPerditaEuro = stake;
     } else {
-      const allPending = esiti.every(e => e === 'pending');
-      if (allPending) { daGiocare++; } else { inCorso++; }
+      const hasLive = esiti.some(e => e === 'live');
+      if (hasLive) { inCorso++; } else { daGiocare++; }
     }
 
     for (let si = 0; si < b.selezioni.length; si++) {
@@ -312,6 +337,8 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('tutti');
   const [allBollette, setAllBollette] = useState<Bolletta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [liveScores, setLiveScores] = useState<LiveScore[]>([]);
+  const liveInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -324,6 +351,21 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
       }
       setLoading(false);
     })();
+  }, []);
+
+  // Polling live scores ogni 30s (come Bollette.tsx)
+  useEffect(() => {
+    const pollLive = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const res = await fetch(`${API_BASE}/live-scores?date=${today}`);
+        const data = await res.json();
+        if (data.success && data.scores) setLiveScores(data.scores);
+      } catch (_) {}
+    };
+    pollLive();
+    liveInterval.current = setInterval(pollLive, 30000);
+    return () => { if (liveInterval.current) clearInterval(liveInterval.current); };
   }, []);
 
   const filtered = tab === 'tutti' ? allBollette : allBollette.filter(b => b.tipo === tab);
@@ -373,7 +415,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>Caricamento...</div>
         ) : (
-          <StatsBlock bollette={filtered} />
+          <StatsBlock bollette={filtered} liveScores={liveScores} />
         )}
       </div>
     </div>

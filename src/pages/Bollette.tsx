@@ -1382,6 +1382,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     if (cat && !hasHistoryEntry.current) {
       window.history.pushState({ ticketView: 'section' }, '');
       hasHistoryEntry.current = true;
+    } else if (!cat && hasHistoryEntry.current) {
+      hasHistoryEntry.current = false;
     }
     setActiveCategoryRaw(cat);
   }, []);
@@ -1582,7 +1584,6 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
   const handleAdminDelete = async (id: string) => {
     if (!user) return;
-    if (!window.confirm('Eliminare questa bolletta?')) return;
     try {
       const token = await getIdToken();
       const res = await fetch(`${API_BASE}/bollette/${id}/admin-delete`, {
@@ -1591,6 +1592,8 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       });
       if (res.ok) {
         setBollette(prev => prev.filter(b => b._id !== id));
+        setStoricoBollette(prev => prev.filter(b => b._id !== id));
+        setCustomBollette(prev => prev.filter(b => b._id !== id));
       }
     } catch (err) {
       console.error('Errore eliminazione admin:', err);
@@ -1713,7 +1716,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     if (activeCategory === 'custom') {
       return (
         <MieBollette
-          onBack={() => { hasHistoryEntry.current = false; window.history.back(); }}
+          onBack={() => { hasHistoryEntry.current = false; setActiveCategoryRaw(null); }}
           liveScores={liveScores}
           user={user}
           getIdToken={getIdToken}
@@ -1729,7 +1732,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
         <VistaDettaglio
           cat={catDef}
           items={items}
-          onBack={() => { hasHistoryEntry.current = false; window.history.back(); }}
+          onBack={() => { hasHistoryEntry.current = false; setActiveCategoryRaw(null); }}
           savedIds={savedIds}
           onSave={toggleSave}
           savingId={savingId}

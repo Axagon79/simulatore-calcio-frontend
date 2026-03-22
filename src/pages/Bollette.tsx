@@ -191,7 +191,7 @@ interface Bolletta {
   pool_size: number;
 }
 
-type Categoria = 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'custom';
+type Categoria = 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa' | 'elite' | 'custom';
 
 // ============================================
 // HELPERS
@@ -215,8 +215,9 @@ function formatMercato(mercato: string, pronostico: string): string {
 
 const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: string; gradient: string; gradientLight: string }[] = [
   { key: 'oggi', emoji: '📅', label: 'Oggi', subtitle: 'Solo partite di oggi', gradient: 'linear-gradient(135deg, #1a237e, #283593)', gradientLight: 'linear-gradient(135deg, #e3f2fd, #bbdefb)' },
-  { key: 'selettiva', emoji: '🎯', label: 'Selettiva', subtitle: 'Quota 1.5 — 3.0', gradient: 'linear-gradient(135deg, #004d40, #00695c)', gradientLight: 'linear-gradient(135deg, #e0f2f1, #b2dfdb)' },
-  { key: 'bilanciata', emoji: '⚖️', label: 'Bilanciata', subtitle: 'Quota 3.0 — 8.0', gradient: 'linear-gradient(135deg, #4a148c, #6a1b9a)', gradientLight: 'linear-gradient(135deg, #f3e5f5, #e1bee7)' },
+  { key: 'elite', emoji: '👑', label: 'Elite', subtitle: 'Pattern vincenti', gradient: 'linear-gradient(135deg, #b8860b, #d4a017)', gradientLight: 'linear-gradient(135deg, #fff8e1, #ffecb3)' },
+  { key: 'selettiva', emoji: '🎯', label: 'Selettiva', subtitle: 'Quota max 3.50', gradient: 'linear-gradient(135deg, #004d40, #00695c)', gradientLight: 'linear-gradient(135deg, #e0f2f1, #b2dfdb)' },
+  { key: 'bilanciata', emoji: '⚖️', label: 'Bilanciata', subtitle: 'Quota 3.50 — 8.0', gradient: 'linear-gradient(135deg, #4a148c, #6a1b9a)', gradientLight: 'linear-gradient(135deg, #f3e5f5, #e1bee7)' },
   { key: 'ambiziosa', emoji: '🚀', label: 'Ambiziosa', subtitle: 'Quota 8.0+', gradient: 'linear-gradient(135deg, #b71c1c, #c62828)', gradientLight: 'linear-gradient(135deg, #fce4ec, #f8bbd0)' },
 ];
 
@@ -1679,21 +1680,23 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     }
     return true;
   });
-  const grouped: Record<Categoria, Bolletta[]> = { oggi: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
+  const grouped: Record<Categoria, Bolletta[]> = { oggi: [], elite: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
   for (const b of bolletteAttive) {
     if (b.tipo === 'oggi') {
       grouped.oggi.push(b);
+    } else if (b.tipo === 'elite') {
+      grouped.elite.push(b);
     } else {
-      // Smista per quota reale, indipendentemente da cosa dice Mistral
+      // Smista per quota reale — soglie allineate con prompt Mistral
       const q = b.quota_totale ?? 0;
-      if (q < 3.0) grouped.selettiva.push(b);
-      else if (q < 6.0) grouped.bilanciata.push(b);
+      if (q < 3.5) grouped.selettiva.push(b);
+      else if (q < 8.0) grouped.bilanciata.push(b);
       else grouped.ambiziosa.push(b);
     }
   }
 
   // Stats header — solo bollette AI (escluse "Le mie bollette")
-  const aiBollette = [...grouped.oggi, ...grouped.selettiva, ...grouped.bilanciata, ...grouped.ambiziosa];
+  const aiBollette = [...grouped.oggi, ...grouped.elite, ...grouped.selettiva, ...grouped.bilanciata, ...grouped.ambiziosa];
   const oggiStats = (() => {
     let vinte = 0, perse = 0, pending = 0;
     for (const b of aiBollette) {
@@ -2509,15 +2512,17 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               />
             </div>
           ) : (
-            /* Desktop: 3+2 */
+            /* Desktop: 3+3 */
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 26 }}>
                 {CATEGORIE.slice(0, 3).map(cat => (
                   <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
                 ))}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                <Quadrante cat={CATEGORIE[3]} items={grouped.ambiziosa} onClick={() => setActiveCategory('ambiziosa')} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour="ticket-quadrante-ambiziosa" />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                {CATEGORIE.slice(3).map(cat => (
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 322 : 267} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                ))}
                 <Quadrante
                   cat={{ key: 'custom' as Categoria, emoji: '✨', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)' }}
                   items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}

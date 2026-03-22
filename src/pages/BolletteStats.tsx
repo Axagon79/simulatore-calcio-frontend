@@ -118,11 +118,12 @@ const textSecondary = isLight ? '#666' : 'rgba(255,255,255,0.5)';
 const cardBg = isLight ? '#fff' : 'rgba(255,255,255,0.04)';
 const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.08)';
 
-type Tab = 'tutti' | 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
+type Tab = 'tutti' | 'oggi' | 'elite' | 'selettiva' | 'bilanciata' | 'ambiziosa';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'tutti', label: 'Tutti' },
   { key: 'oggi', label: 'Oggi' },
+  { key: 'elite', label: 'Elite' },
   { key: 'selettiva', label: 'Selettiva' },
   { key: 'bilanciata', label: 'Bilanciata' },
   { key: 'ambiziosa', label: 'Ambiziosa' },

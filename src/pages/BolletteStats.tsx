@@ -24,7 +24,7 @@ interface Selezione {
 interface Bolletta {
   _id: string;
   date: string;
-  tipo: 'oggi' | 'selettiva' | 'bilanciata' | 'ambiziosa';
+  tipo: 'oggi' | 'elite' | 'selettiva' | 'bilanciata' | 'ambiziosa';
   custom?: boolean;
   quota_totale: number;
   label: string;

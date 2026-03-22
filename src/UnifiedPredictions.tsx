@@ -1168,7 +1168,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (pred.real_score) return p.hit === true;
       return calculateHitFromScore(pred.live_score!, p.pronostico, p.tipo) === true;
     }) ?? null : null;
-    const barColor = effScore ? (effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
+    const isNoBet = !hasRealTip(pred);
+    const barColor = effScore ? (isNoBet ? theme.textDim : effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
@@ -1300,7 +1301,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 : <span style={{ fontSize: isMobile ? '9px' : '10px', lineHeight: 1, height: '16px', display: 'inline-flex', alignItems: 'center', position: 'relative', top: '1.5px' }}>💎</span>;
             })()}
             {effScore ? (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: effPredHit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: isNoBet ? theme.textDim : effPredHit ? theme.hitText : theme.missText, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 {effScore.replace(':', ' - ')}
                 {!reMatchKeys.has(`${pred.home}|${pred.away}`) && ((pred as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(effScore!)) &&
                   <span style={{ fontSize: isMobile ? '8px' : '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 3px', lineHeight: 1 }}>✓RE</span>}

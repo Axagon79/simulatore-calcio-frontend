@@ -122,7 +122,7 @@ interface Prediction {
     tipo: string; pronostico: string; confidence: number; stars: number; quota?: number; hit?: boolean | null;
     probabilita_stimata?: number | null; stake?: number; edge?: number; profit_loss?: number | null;
     prob_mercato?: number | null; prob_modello?: number | null; has_odds?: boolean;
-    mc_position?: number; mc_count?: number; mc_sum?: number;
+    mc_position?: number; mc_count?: number; mc_sum?: number; elite?: boolean;
   }>;
   confidence_segno: number;
   confidence_gol: number;
@@ -1416,6 +1416,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
+                      {activeTab !== 'elite' && p.elite && <span title="Elite" style={{ fontSize: '10px', marginLeft: '2px' }}>👑</span>}
                       {quota && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                       <span
@@ -1474,6 +1475,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>
                         {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
                       </span>
+                      {activeTab !== 'elite' && p.elite && <span title="Elite" style={{ fontSize: '10px' }}>👑</span>}
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                       {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {source && (
@@ -1606,7 +1608,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                     filtered.forEach((pr: any, prIdx: number) => {
                                       rows.push(
                                         <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
-                                          <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>{pr.pronostico || '—'}</td>
+                                          <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>{pr.pronostico || '—'}{pr.elite && <span title="Elite" style={{ fontSize: '9px', marginLeft: '3px' }}>👑</span>}</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{prIdx === 0 ? verLabel : ''}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{pr.stake || '—'}</td>
                                         </tr>
@@ -3854,7 +3856,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             {/* ==================== PRONOSTICI: quota <= 2.50 ==================== */}
             {activeTab === 'elite' && filteredElite.length > 0 && (
               <div style={{ animation: 'fadeIn 0.4s ease' }}>
-                {Object.entries(filteredEliteByLeague).map(([leagueName, preds], leagueIdx) => {
+                {Object.entries(filteredEliteByLeague).map(([leagueName, preds]) => {
                   const isCollapsed = !collapsedLeagues.has(leagueName);
                   const finished = preds.filter(p => getMatchStatus(p) === 'finished').length;
                   const live = preds.filter(p => getMatchStatus(p) === 'live').length;

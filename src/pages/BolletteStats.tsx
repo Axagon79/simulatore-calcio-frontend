@@ -366,7 +366,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
               borderRadius: 20, padding: '8px 0',
               fontSize: 12, fontWeight: 600, cursor: 'pointer',
               transition: 'all 0.2s',
-            }}>{t.label}</button>
+            }}>{t.label} ({t.key === 'tutti' ? allBollette.length : allBollette.filter(b => b.tipo === t.key).length})</button>
           ))}
         </div>
 

@@ -1582,13 +1582,16 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
   const handleAdminDelete = async (id: string) => {
     if (!user) return;
+    if (!window.confirm('Eliminare questa bolletta?')) return;
     try {
       const token = await getIdToken();
-      await fetch(`${API_BASE}/bollette/${id}/admin-delete`, {
+      const res = await fetch(`${API_BASE}/bollette/${id}/admin-delete`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}`, 'x-admin-key': '000128' },
       });
-      setBollette(prev => prev.filter(b => b._id !== id));
+      if (res.ok) {
+        setBollette(prev => prev.filter(b => b._id !== id));
+      }
     } catch (err) {
       console.error('Errore eliminazione admin:', err);
     }

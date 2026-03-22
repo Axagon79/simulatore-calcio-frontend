@@ -1,6 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+
+/** Wrapper per usare useNavigate dentro il Router */
+function BackToHome({ children }: { children: (goBack: () => void) => React.ReactNode }) {
+  const navigate = useNavigate();
+  return <>{children(() => navigate('/'))}</>;
+}
 import './index.css';
 
 import { getThemeMode } from './AppDev/costanti';
@@ -56,8 +62,6 @@ function ConsentGate({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoot() {
-  const navigate = useNavigate();
-  const goBack = () => navigate('/');
   const [showSettings, setShowSettings] = useState(() => {
     const wasOpen = sessionStorage.getItem('settings_open');
     if (wasOpen) {
@@ -78,6 +82,7 @@ function AppRoot() {
     <AuthProvider>
       <BrowserRouter>
       <ConsentGate>
+      <BackToHome>{(goBack) => (<>
         <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'#0a0e17',color:'#fff',fontSize:'1.1rem'}}>Caricamento...</div>}>
         <Routes>
           {import.meta.env.DEV && (
@@ -111,6 +116,7 @@ function AppRoot() {
       <OnboardingTour />
       <WalletBadge />
       <CookieBanner />
+      </>)}</BackToHome>
       </ConsentGate>
       </BrowserRouter>
     </AuthProvider>

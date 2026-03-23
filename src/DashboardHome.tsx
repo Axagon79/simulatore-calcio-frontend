@@ -455,10 +455,10 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                         padding: '10px 10px', borderRadius: '6px',
                         borderBottom: `2px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
                       }}>{menu.label}</div>
-                      {menu.items.map(item => (
+                      {menu.items.map((item, itemIdx) => (
                         <div
                           key={item.label}
-                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'mob-ticket-ai' } : {})}
+                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'mob-ticket-ai' } : (menu.label === 'Competizioni' && itemIdx === 0) ? { 'data-tour': 'mob-first-league' } : {})}
                           onClick={() => { item.onClick(); setMenuOpen(false); }}
                           style={{
                             padding: '10px 8px',
@@ -589,10 +589,10 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     boxShadow: isLight ? '0 8px 30px rgba(0,0,0,0.12)' : '0 8px 30px rgba(0,0,0,0.5)',
                     zIndex: 200,
                   }}>
-                    {menu.items.map(item => (
+                    {menu.items.map((item, itemIdx) => (
                       <div
                         key={item.label}
-                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'dd-ticket-ai' } : {})}
+                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'dd-ticket-ai' } : (menu.label === 'Competizioni' && itemIdx === 0) ? { 'data-tour': 'dd-first-league' } : {})}
                         onClick={item.onClick}
                         style={{
                           padding: '8px 14px',

@@ -12,8 +12,8 @@ const CHAPTERS = [
   { id: 1, title: 'Campionati e Partite', startStep: 0, endStep: 11 },
   { id: 2, title: 'Pronostici', startStep: 12, endStep: 18 },
   { id: 3, title: 'Ticket AI e Bollette', startStep: 19, endStep: 27 },
-  { id: 4, title: 'Simulazione', startStep: 28, endStep: 28 },          // placeholder
-  { id: 5, title: 'Money Management', startStep: 29, endStep: 29 },     // placeholder
+  { id: 4, title: 'Simulazione', startStep: 28, endStep: 351 },
+  { id: 5, title: 'Money Management', startStep: 352, endStep: 352 },     // placeholder
 ];
 
 function getChapterForStep(step: number) {
@@ -828,17 +828,24 @@ export default function OnboardingTour() {
       // Non rimuovere subito — il check API potrebbe partire prima del timeout
       setTimeout(() => {
         sessionStorage.removeItem('tour_step');
-        setStep(parseInt(savedStep));
+        if (savedStep === 'chapters') {
+          // Fine capitolo → mostra selezione capitoli
+          setStep(-1);
+          document.body.style.overflow = '';
+          setShowWelcome(true);
+        } else {
+          setStep(parseInt(savedStep));
+        }
       }, 500);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Desktop: mantieni dropdown aperto durante step 2 (competizioni), 13 e 20 (pronostici)
+  // Desktop: mantieni dropdown aperto durante step 2, 29 (competizioni), 13 e 20 (pronostici)
   useEffect(() => {
     if (isMobile) return;
-    if (step !== 2 && step !== 13 && step !== 20) return;
-    const selector = step === 2 ? '[data-tour="nav-competizioni"]' : '[data-tour="nav-pronostici"]';
+    if (step !== 2 && step !== 13 && step !== 20 && step !== 29) return;
+    const selector = (step === 2 || step === 29) ? '[data-tour="nav-competizioni"]' : '[data-tour="nav-pronostici"]';
     const keepOpen = () => {
       const dd = document.querySelector(`${selector} [data-dropdown]`) as HTMLElement;
       if (dd) dd.style.display = 'block';
@@ -1527,6 +1534,148 @@ export default function OnboardingTour() {
   const handleStep27Click = useCallback(() => {
     // Click su back → torna alla dashboard → fine capitolo 3
     sessionStorage.setItem('tour_step', '28');
+  }, []);
+
+  // --- PARTE 4: Simulazione ---
+  const handleStep28Click = useCallback(() => {
+    if (isMobile) {
+      // Mobile: hamburger cliccato → aspetta menu, spotlight sul primo campionato
+      setTimeout(async () => {
+        await waitForEl('[data-tour="mob-first-league"]', 2000);
+        setStep(29);
+      }, 300);
+    } else {
+      // Desktop: Competizioni cliccato → apri dropdown, spotlight sul primo campionato
+      const nav = document.querySelector('[data-tour="nav-competizioni"]');
+      if (nav) {
+        const dd = nav.querySelector('[data-dropdown]') as HTMLElement;
+        if (dd) dd.style.display = 'block';
+      }
+      setTimeout(() => setStep(29), 150);
+    }
+  }, [isMobile]);
+
+  const handleStep29Click = useCallback(async () => {
+    // Click sul campionato → carica AppDev, aspetta lista partite
+    if (!isMobile) {
+      const dd = document.querySelector('[data-tour="nav-competizioni"] [data-dropdown]') as HTMLElement;
+      if (dd) dd.style.display = 'none';
+    }
+    await new Promise(r => setTimeout(r, 800));
+    document.body.style.overflow = 'auto';
+    const el = await waitForEl('[data-tour="first-match"]', 5000);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 500));
+    }
+    document.body.style.overflow = 'hidden';
+    setStep(30);
+  }, [isMobile]);
+
+  const handleStep30Click = useCallback(async () => {
+    if (isMobile) {
+      // Mobile: partita espansa → aspetta bottone "ANALIZZA PARTITA"
+      await new Promise(r => setTimeout(r, 400));
+      await waitForEl('[data-tour="match-analizza-btn"]', 3000);
+      setStep(301);
+    } else {
+      // Desktop: click apre direttamente la pre-match view
+      await new Promise(r => setTimeout(r, 500));
+      await waitForEl('[data-tour="sim-algo-select"]', 5000);
+      // Auto-imposta algo 3 e animata
+      const sel = document.querySelector('[data-tour="sim-algo-select"]') as HTMLSelectElement;
+      if (sel) {
+        sel.value = '3';
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      const animBtn = document.querySelector('[data-tour="sim-mode-animated"]') as HTMLElement;
+      if (animBtn) animBtn.click();
+      await new Promise(r => setTimeout(r, 300));
+      setStep(31);
+    }
+  }, [isMobile]);
+
+  const handleStep301Click = useCallback(async () => {
+    // Mobile: "ANALIZZA PARTITA" cliccato → apre pre-match, auto-imposta algo+mode
+    await new Promise(r => setTimeout(r, 500));
+    await waitForEl('[data-tour="sim-algo-select"]', 5000);
+    const sel = document.querySelector('[data-tour="sim-algo-select"]') as HTMLSelectElement;
+    if (sel) {
+      sel.value = '3';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const animBtn = document.querySelector('[data-tour="sim-mode-animated"]') as HTMLElement;
+    if (animBtn) animBtn.click();
+    await new Promise(r => setTimeout(r, 300));
+    setStep(31);
+  }, []);
+
+  const handleStep32Click = useCallback(async () => {
+    // Click su "AVVIA SIMULAZIONE" → simulazione parte
+    setStep(33);
+  }, []);
+
+  // Step 33: attende fine simulazione → rileva PopupRiepilogo
+  useEffect(() => {
+    if (step !== 33) return;
+    document.body.style.overflow = 'auto';
+    const poll = setInterval(async () => {
+      const closeBtn = document.querySelector('[data-tour="popup-riepilogo-close"]') as HTMLElement;
+      if (closeBtn) {
+        clearInterval(poll);
+        await new Promise(r => setTimeout(r, 500));
+        document.body.style.overflow = 'hidden';
+        setStep(331);
+      }
+    }, 1000);
+    return () => clearInterval(poll);
+  }, [step]);
+
+  // Step 331: utente chiude il PopupRiepilogo → poi spotlight su "Torna alla lista"
+  const handleStep331Click = useCallback(async () => {
+    // Popup chiuso dall'utente → aspetta che sparisca e trovi "Torna alla lista"
+    await new Promise(r => setTimeout(r, 600));
+    document.body.style.overflow = 'auto';
+    const btn = await waitForEl('[data-tour="sim-torna-lista"]', 3000) as HTMLElement | null;
+    if (btn) {
+      btn.style.marginLeft = '0';
+      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise(r => setTimeout(r, 800));
+    }
+    document.body.style.overflow = 'hidden';
+    setStep(34);
+  }, []);
+
+  const handleStep34Click = useCallback(async () => {
+    // Click su "Torna alla lista" → torna alla lista partite
+    await new Promise(r => setTimeout(r, 500));
+    document.body.style.overflow = 'auto';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await new Promise(r => setTimeout(r, 400));
+    document.body.style.overflow = 'hidden';
+    if (isMobile) {
+      setStep(35);
+      await waitForEl('[data-tour="app-hamburger"]', 2000);
+    } else {
+      setStep(35);
+      await waitForEl('[data-tour="app-logo"]', 2000);
+    }
+  }, [isMobile]);
+
+  const handleStep35Click = useCallback(async () => {
+    if (isMobile) {
+      // Mobile: hamburger cliccato → aspetta menu, spotlight su Dashboard
+      setStep(351);
+      await waitForEl('[data-tour="menu-dashboard"]', 2000);
+    } else {
+      // Desktop: logo cliccato → torna alla dashboard → fine capitolo
+      sessionStorage.setItem('tour_step', 'chapters');
+    }
+  }, [isMobile]);
+
+  const handleStep351Click = useCallback(() => {
+    // Mobile: Dashboard cliccato → torna alla dashboard → fine capitolo
+    sessionStorage.setItem('tour_step', 'chapters');
   }, []);
 
   const startTourFromStep = useCallback((startStep: number) => {
@@ -2235,6 +2384,188 @@ export default function OnboardingTour() {
           onTargetClick={handleStep27Click}
           padding={4}
           borderRadius={8}
+        />
+      )}
+
+      {/* === PARTE 4: SIMULAZIONE === */}
+
+      {/* Step 28: Dashboard → Competizioni (hamburger mobile / nav desktop) */}
+      {step === 28 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="nav-hamburger"]' : '[data-tour="nav-competizioni"]'}
+          text={isMobile
+            ? `Ora simuliamo una partita! Apri il menu per scegliere un campionato.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Apri il menu.</span>`
+            : `Ora simuliamo una partita! Scegli un campionato.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Competizioni.</span>`
+          }
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep28Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 29: Spotlight sul primo campionato nel dropdown/menu */}
+      {step === 29 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="mob-first-league"]' : '[data-tour="dd-first-league"]'}
+          text={`Scegliamo questo campionato per la simulazione.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sul campionato.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep29Click}
+          padding={2}
+          borderRadius={6}
+        />
+      )}
+
+      {/* Step 30: Lista partite → clicca sulla prima partita */}
+      {step === 30 && (
+        <Spotlight
+          selector={'[data-tour="first-match"]'}
+          text={isMobile
+            ? `Ecco le partite del campionato. Scegli una partita da simulare.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su questa partita.</span>`
+            : `Ecco le partite. Clicca su una partita per analizzarla e simulare.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su questa partita.</span>`
+          }
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep30Click}
+          padding={4}
+          borderRadius={isMobile ? 20 : 8}
+        />
+      )}
+
+      {/* Step 301 (mobile): Bottone "ANALIZZA PARTITA" */}
+      {step === 301 && (
+        <Spotlight
+          selector={'[data-tour="match-analizza-btn"]'}
+          text={`Questo bottone ti porta all'analisi completa della partita.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Analizza Partita.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep301Click}
+          padding={4}
+          borderRadius={10}
+        />
+      )}
+
+      {/* Step 31: Pre-match → impostazioni (algo 3 + animata già settati) — Spotlight */}
+      {step === 31 && (
+        <Spotlight
+          selector={'[data-tour="sim-algo-select"]'}
+          text={`Abbiamo selezionato l'<b style="color:${theme.cyan}">Algoritmo 3 (Tattico)</b> e la modalità <b style="color:${theme.cyan}">Animata</b> per mostrarti la simulazione in tempo reale.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca per continuare.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={() => setStep(32)}
+          padding={6}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 32: Spotlight su "AVVIA SIMULAZIONE" */}
+      {step === 32 && (
+        <Spotlight
+          selector={'[data-tour="sim-avvia-btn"]'}
+          text={`Tutto pronto! Avvia la simulazione e guarda la partita in diretta.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Avvia Simulazione.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep32Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 33: Simulazione in corso — overlay bloccante + banner */}
+      {step === 33 && (
+        <>
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 199999,
+            background: 'transparent',
+          }} />
+          <div style={{
+            position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+            background: `linear-gradient(135deg, rgba(10,12,30,0.95), rgba(20,24,60,0.95))`,
+            border: `1px solid ${theme.cyan}50`, borderRadius: '12px',
+            padding: '12px 24px', zIndex: 200000,
+            boxShadow: `0 8px 32px rgba(0,0,0,0.5)`,
+            display: 'flex', alignItems: 'center', gap: '10px',
+            pointerEvents: 'none',
+          }}>
+            <div style={{
+              width: 16, height: 16, border: `2px solid ${theme.cyan}`,
+              borderTopColor: 'transparent', borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600 }}>
+              Simulazione in corso... attendi la fine della partita
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* Step 331: PopupRiepilogo — fai vedere le statistiche e chiudi */}
+      {step === 331 && (
+        <Spotlight
+          selector={'[data-tour="popup-riepilogo-close"]'}
+          text={`Ecco il riepilogo della partita con risultato e statistiche!<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Chiudi il popup per continuare.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep331Click}
+          padding={4}
+          borderRadius={8}
+          zBase={200010}
+        />
+      )}
+
+      {/* Step 34: Fine simulazione → "Torna alla lista partite" */}
+      {step === 34 && (
+        <Spotlight
+          selector={'[data-tour="sim-torna-lista"]'}
+          text={`Simulazione completata! Ora torna alla lista delle partite.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Torna alla Lista Partite.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep34Click}
+          padding={4}
+          borderRadius={8}
+        />
+      )}
+
+      {/* Step 35: Mobile → hamburger / Desktop → logo */}
+      {step === 35 && (
+        <Spotlight
+          selector={isMobile ? '[data-tour="app-hamburger"]' : '[data-tour="app-logo"]'}
+          text={isMobile
+            ? `Ottimo! Torniamo alla dashboard.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Apri il menu.</span>`
+            : `Ottimo! Torniamo alla dashboard.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca sul logo AI Simulator.</span>`
+          }
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep35Click}
+          padding={4}
+          borderRadius={8}
+          zBase={isMobile ? 200010 : 200000}
+        />
+      )}
+
+      {/* Step 351 (mobile): Dashboard nel menu */}
+      {step === 351 && (
+        <Spotlight
+          selector={'[data-tour="menu-dashboard"]'}
+          text={`Torna alla dashboard per completare il capitolo.<br/><br/><span style="color:${theme.cyan};font-weight:600">👆 Clicca su Dashboard.</span>`}
+          onSkip={skipTour}
+          onOpenChapters={handleOpenChapters}
+          {...chapterProps}
+          onTargetClick={handleStep351Click}
+          padding={4}
+          borderRadius={8}
+          zBase={200010}
         />
       )}
     </>

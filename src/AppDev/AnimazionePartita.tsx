@@ -1151,6 +1151,7 @@ const AnimazionePartita: React.FC<AnimazionePartitaProps> = (props) => {
             </button>
 
             <button
+              data-tour="sim-torna-lista"
               onClick={() => {
                 setViewState('list');
                 setSimulationEnded(false);

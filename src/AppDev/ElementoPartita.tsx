@@ -776,6 +776,7 @@ export default function ElementoPartita({
 
           {/* BOTTONE ANALIZZA */}
           <button
+            data-tour="match-analizza-btn"
             onClick={(e) => {
               e.stopPropagation();
               onPrepareSimulation();

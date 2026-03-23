@@ -1115,6 +1115,7 @@ export default function VistaPrePartita({
                 </div>
 
                 <select
+                  data-tour="sim-algo-select"
                   value={configAlgo}
                   onChange={(e) => setConfigAlgo(Number(e.target.value))}
                   disabled={isFlashActive || viewState === 'simulating'}
@@ -1162,6 +1163,7 @@ export default function VistaPrePartita({
                   </button>
 
                   <button
+                    data-tour="sim-mode-animated"
                     onClick={() => setSimMode('animated')}
                     disabled={isFlashActive}
                     style={{
@@ -1183,6 +1185,7 @@ export default function VistaPrePartita({
                 </div>
 
                 <button
+                  data-tour="sim-avvia-btn"
                   onClick={() => startSimulation()}
                   disabled={viewState === 'simulating'}
                   style={{

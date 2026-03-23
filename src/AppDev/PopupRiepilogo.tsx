@@ -77,6 +77,7 @@ export default function PopupRiepilogo({
             📊 RIEPILOGO PARTITA
           </h2>
           <button
+            data-tour="popup-riepilogo-close"
             onClick={onClose}
             style={{
               background: 'transparent',

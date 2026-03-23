@@ -22,3 +22,31 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Appunti e documentazione locale (non codice)
+AI_SIMULATOR_*.md
+GUIDA_*.md
+ISTRUZIONI_*.md
+MODIFICA_*.md
+PIANO_*.md
+PUPPALS_*.md
+SUGGERIMENTI_*.md
+TASK_*.md
+*_spec.md
+feedback_loop_*.md
+gate_accesso_*.md
+pagina_contatti_*.md
+scout-websearch-rotation.md
+football-sites-dictionary.md
+google-cse-domains.md
+
+# Screenshot e immagini di prova
+Screenshot*.jpg
+Screenshot*.png
+pngegg.png
+icons8-*.png
+
+# Mockup HTML
+mockup-*.html
+preview-*.html
+public/test-*.html

@@ -1422,7 +1422,9 @@ export default function OnboardingTour() {
   }, []);
 
   const handleStep23Click = useCallback(async () => {
-    // Le mie bollette cliccato → aspetta la vista, cerchio rosso sulla prima bolletta salvata
+    // Le mie bollette cliccato → simula click reale per aprire la sezione, poi cerchio rosso sulla prima bolletta
+    const el = document.querySelector('[data-tour="ticket-mie-bollette"]') as HTMLElement | null;
+    if (el) el.click();
     await new Promise(r => setTimeout(r, 800));
     // Cerca la prima bolletta nella vista "Le mie bollette"
     document.body.style.overflow = 'auto';

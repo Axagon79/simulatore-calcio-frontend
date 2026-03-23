@@ -428,7 +428,11 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   padding: '20px',
                   fontFamily: '"Inter", "Segoe UI", sans-serif',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <LogoVirgo size={28} />
+                      <span style={{ fontSize: 17, fontWeight: 700, color: isLight ? '#1a1a1a' : '#fff', letterSpacing: '-0.02em' }}>AI Simulator</span>
+                    </div>
                     <button
                       onClick={() => setMenuOpen(false)}
                       style={{

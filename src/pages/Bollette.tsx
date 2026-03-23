@@ -1486,6 +1486,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   // Storico
   const [showStorico, setShowStorico] = useState(false);
   const [showPlInfo, setShowPlInfo] = useState(false);
+  const [bannerTab, setBannerTab] = useState<'ai' | 'pl'>('ai');
   const [storicoDate, setStoricoDate] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [dateDisponibili, setDateDisponibili] = useState<Set<string>>(new Set());
@@ -2084,7 +2085,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'vinte' ? '#fff' : (isLight ? '#15803d' : '#16a34a'), background: filtroEsito === 'vinte' ? '#16a34a' : (isLight ? 'rgba(22,163,74,0.08)' : 'rgba(22,163,74,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? '2px solid #15803d' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.vinte} Vinte</span>
               <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'perse' ? '#fff' : (isLight ? '#b91c1c' : '#dc2626'), background: filtroEsito === 'perse' ? '#dc2626' : (isLight ? 'rgba(220,38,38,0.08)' : 'rgba(220,38,38,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? '2px solid #b91c1c' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.perse} Perse</span>
               <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'pending' ? '#fff' : (isLight ? '#b45309' : '#d97706'), background: filtroEsito === 'pending' ? '#d97706' : (isLight ? 'rgba(217,119,6,0.08)' : 'rgba(217,119,6,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? '2px solid #b45309' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.pending} In corso</span>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'daGiocare' ? 'tutti' : 'daGiocare')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'daGiocare' ? '#fff' : (isLight ? '#4338ca' : '#818cf8'), background: filtroEsito === 'daGiocare' ? '#6366f1' : (isLight ? 'rgba(99,102,241,0.08)' : 'rgba(129,140,248,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'daGiocare' ? '2px solid #4338ca' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.daGiocare} Da cominciare</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'daGiocare' ? 'tutti' : 'daGiocare')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'daGiocare' ? '#fff' : (isLight ? '#4338ca' : '#818cf8'), background: filtroEsito === 'daGiocare' ? '#6366f1' : (isLight ? 'rgba(99,102,241,0.08)' : 'rgba(129,140,248,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'daGiocare' ? '2px solid #4338ca' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.daGiocare} Next</span>
               <span style={{ width: 1, height: 21, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 2, marginRight: 2, position: 'relative', top: 2 }} />
               <button onClick={() => { window.location.href = '/ticket-stats'; }} style={{ background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)', color: isLight ? '#666' : '#64748b', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', padding: 0, outline: 'none', flexShrink: 0 }} title="Statistiche">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
@@ -2234,8 +2235,45 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
 
 
-          {/* === BANNER + CHAT: Costruisci il tuo Ticket AI === */}
+          {/* === BANNER AI / P/L TOGGLE === */}
           {!isStorico && (<div style={{ position: 'relative', zIndex: 5, marginBottom: 16 }}>
+          {/* Toggle AI / P/L */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 10 }}>
+            {(['ai', 'pl'] as const).map(tab => (
+              <button key={tab} onClick={() => setBannerTab(tab)} style={{
+                flex: 1, padding: '6px 0', fontSize: 12, fontWeight: 700,
+                background: bannerTab === tab
+                  ? (tab === 'ai'
+                    ? (isLight ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'linear-gradient(135deg, #2d1b69, #11998e)')
+                    : (isLight ? '#e6f5ec' : '#0f2f1f'))
+                  : (isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)'),
+                color: bannerTab === tab
+                  ? (tab === 'ai' ? '#fff' : (isLight ? '#16a34a' : '#4ade80'))
+                  : (isLight ? '#64748b' : 'rgba(255,255,255,0.4)'),
+                border: bannerTab === tab
+                  ? (isLight ? '1px solid rgba(0,0,0,0.2)' : '1px solid transparent')
+                  : (isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)'),
+                borderLeft: bannerTab === 'ai' && tab === 'ai' ? (isLight ? (isMobile ? '4px solid #5a67d8' : '6px solid #5a67d8') : '4px solid #11998e') : undefined,
+                borderRight: bannerTab === 'pl' && tab === 'pl' ? (isLight ? (isMobile ? '4px solid #059669' : '6px solid #059669') : '4px solid #4ade80') : undefined,
+                boxShadow: (bannerTab === tab && !isMobile)
+                  ? (tab === 'ai'
+                    ? (isLight
+                      ? '-3px 0 6px -2px rgba(90,103,216,0.7), inset 10px 0 12px -5px rgba(90,103,216,0.35)'
+                      : '-3px 0 6px -2px rgba(17,153,142,0.8), inset 10px 0 12px -5px rgba(17,153,142,0.35)')
+                    : (isLight
+                      ? '3px 0 6px -2px rgba(5,150,105,0.7), inset -10px 0 12px -5px rgba(5,150,105,0.35)'
+                      : '3px 0 6px -2px rgba(74,222,128,0.8), inset -10px 0 12px -5px rgba(74,222,128,0.35)'))
+                  : 'none',
+                borderRadius: tab === 'ai' ? '10px 0 0 10px' : '0 10px 10px 0',
+                cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                textTransform: 'uppercase', letterSpacing: 0.5,
+              }}>
+                {tab === 'ai' ? 'Ticket AI' : 'P/L Giornaliero'}
+              </button>
+            ))}
+          </div>
+          {bannerTab === 'ai' ? (<>
+          {/* Banner AI originale */}
           <div
             data-tour="ticket-builder-banner"
             onClick={() => { if (!user) { setShowAuth(true); return; } setShowBuilder(!showBuilderRaw); }}
@@ -2244,7 +2282,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 ? 'linear-gradient(135deg, #667eea, #764ba2)'
                 : 'linear-gradient(135deg, #2d1b69, #11998e)',
               borderRadius: 16,
-              padding: isMobile ? '14px 16px' : '20px 24px',
+              padding: isMobile ? '6px 16px' : '3.5px 24px',
               marginBottom: 16,
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2255,7 +2293,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src="/coach-ai-robot.png" alt="" style={{ width: isMobile ? 45 : 55, height: isMobile ? 45 : 55, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+              <img src="/coach-ai-robot.png" alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
               <div>
                 <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>
                   Costruisci il tuo Ticket
@@ -2620,54 +2658,59 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
           )}
-          </div>)}
-
-          {/* === P/L GIORNALIERO === */}
-          {plPerSezione.totale.chiuse > 0 && (
+          </>) : (
+          /* Tab P/L nella giornata odierna */
+          plPerSezione.totale.totale > 0 ? (
             isMobile ? (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{
-                background: isLight
-                  ? `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)'}, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.03)' : 'rgba(220,38,38,0.03)'})`
-                  : `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)'}, transparent)`,
-                border: isLight
-                  ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}`
-                  : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}`,
-                borderRadius: 12, padding: '10px 12px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 8,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
-                  <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 16, height: 16, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: textSecondary, cursor: 'pointer', flexShrink: 0 }}>?</span>
-                  <span style={{ fontSize: 11, color: textSecondary }}>{plPerSezione.totale.vinte}V / {plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? ` / ${plPerSezione.totale.inCorso} in corso` : ''}</span>
-                  {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, maxWidth: 280, cursor: 'pointer' }}>
-                    Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
-                  </div>}
+            <div style={{
+              marginBottom: 16,
+              background: isLight
+                ? `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}, transparent)`
+                : `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)'}, transparent)`,
+              border: isLight
+                ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`
+                : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`,
+              borderRadius: 12, padding: '4px 10px', height: 57, boxSizing: 'border-box', position: 'relative',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden',
+            }}>
+              {/* Riga 1: titolo + ? + V/P + totale */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2, lineHeight: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: textPrimary }}>P/L</span>
+                  <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 14, height: 14, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>?</span>
+                  <span style={{ fontSize: 9, color: textSecondary }}>{plPerSezione.totale.vinte}V/{plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? `/${plPerSezione.totale.inCorso}?` : ''}</span>
                 </div>
-                <span style={{ fontSize: 16, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626' }}>
                   {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+              {/* Riga 2: sezioni inline */}
+              <div style={{ display: 'flex', gap: 3 }}>
                 {([
                   { key: 'oggi', label: 'Start', color: isLight ? '#0369a1' : '#38bdf8' },
                   { key: 'elite', label: 'Elite', color: isLight ? '#b45309' : '#fbbf24' },
-                  { key: 'selettiva', label: 'Selettiva', color: isLight ? '#16a34a' : '#4ade80' },
-                  { key: 'bilanciata', label: 'Bilanciata', color: isLight ? '#7c3aed' : '#a78bfa' },
-                  { key: 'ambiziosa', label: 'Ambiziosa', color: isLight ? '#dc2626' : '#f87171' },
+                  { key: 'selettiva', label: 'Sel.', color: isLight ? '#16a34a' : '#4ade80' },
+                  { key: 'bilanciata', label: 'Bil.', color: isLight ? '#7c3aed' : '#a78bfa' },
+                  { key: 'ambiziosa', label: 'Amb.', color: isLight ? '#dc2626' : '#f87171' },
                 ] as const).map(s => {
                   const data = plPerSezione.sezioni[s.key];
                   if (data.totale === 0) return null;
                   return (
-                    <div key={s.key} style={{ background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: s.color, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.3 }}>{s.label}</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</div>
-                      <div style={{ fontSize: 9, color: textSecondary }}>{data.vinte}V/{data.perse}P{data.inCorso > 0 ? `/${data.inCorso}?` : ''}</div>
+                    <div key={s.key} style={{
+                      background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                      border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: 5, padding: '1px 5px', textAlign: 'center', flex: 1, lineHeight: 1.2,
+                    }}>
+                      <div style={{ fontSize: 7, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: 0.2 }}>{s.label}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</div>
                     </div>
                   );
                 })}
               </div>
+              {/* Tooltip */}
+              {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, cursor: 'pointer' }}>
+                Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
+              </div>}
             </div>
             ) : (
             <div style={{
@@ -2678,19 +2721,22 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               border: isLight
                 ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`
                 : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`,
-              borderRadius: 16, padding: '20px 24px', minHeight: 53,
-              display: 'flex', alignItems: 'center', gap: 12, position: 'relative',
+              borderRadius: 16, padding: '3.5px 20px', height: 56.5, boxSizing: 'border-box',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2, position: 'relative', overflow: 'hidden',
             }}>
-              {/* Titolo + ? */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
-                <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 18, height: 18, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', flexShrink: 0 }}>?</span>
+              {/* Riga 1: titolo + ? + V/P + totale */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', lineHeight: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
+                  <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 15, height: 15, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>?</span>
+                  <span style={{ fontSize: 10, color: textSecondary }}>{plPerSezione.totale.vinte}V/{plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? `/${plPerSezione.totale.inCorso}?` : ''}</span>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626' }}>
+                  {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
+                </span>
               </div>
-              <span style={{ fontSize: 11, color: textSecondary, flexShrink: 0 }}>{plPerSezione.totale.vinte}V/{plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? `/${plPerSezione.totale.inCorso}?` : ''}</span>
-              {/* Separatore */}
-              <span style={{ width: 1, height: 18, background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
-              {/* Sezioni inline */}
-              <div style={{ display: 'flex', gap: 6, flex: 1 }}>
+              {/* Riga 2: sezioni inline */}
+              <div style={{ display: 'flex', gap: 4 }}>
                 {([
                   { key: 'oggi', label: 'Start', color: isLight ? '#0369a1' : '#38bdf8' },
                   { key: 'elite', label: 'Elite', color: isLight ? '#b45309' : '#fbbf24' },
@@ -2704,23 +2750,108 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                     <div key={s.key} style={{
                       background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
                       border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: 8, padding: '4px 12px', textAlign: 'center',
-                      flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+                      borderRadius: 5, padding: '1px 6px', textAlign: 'center', flex: 1, lineHeight: 1.2,
                     }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: 0.3 }}>{s.label}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</span>
-                      <span style={{ fontSize: 9, color: textSecondary }}>{data.vinte}V/{data.perse}P</span>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: 0.2 }}>{s.label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</div>
                     </div>
                   );
                 })}
               </div>
-              {/* Separatore */}
-              <span style={{ width: 1, height: 18, background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
-              {/* Totale */}
-              <span style={{ fontSize: 18, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
-                {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
-              </span>
-              {/* Tooltip info */}
+              {/* Tooltip */}
+              {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, maxWidth: 320, cursor: 'pointer' }}>
+                Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
+              </div>}
+            </div>
+            )
+          ) : null)}
+          </div>)}
+
+          {/* P/L per storico (senza toggle) */}
+          {isStorico && plPerSezione.totale.totale > 0 && (
+            isMobile ? (
+            <div style={{
+              marginBottom: 16,
+              background: isLight
+                ? `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}, transparent)`
+                : `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)'}, transparent)`,
+              border: isLight
+                ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`
+                : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`,
+              borderRadius: 12, padding: '8px 10px', position: 'relative',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
+                  <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 16, height: 16, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>?</span>
+                  <span style={{ fontSize: 10, color: textSecondary }}>{plPerSezione.totale.vinte}V/{plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? `/${plPerSezione.totale.inCorso}?` : ''}</span>
+                </div>
+                <span style={{ fontSize: 15, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626' }}>
+                  {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {([
+                  { key: 'oggi', label: 'Start', color: isLight ? '#0369a1' : '#38bdf8' },
+                  { key: 'elite', label: 'Elite', color: isLight ? '#b45309' : '#fbbf24' },
+                  { key: 'selettiva', label: 'Sel.', color: isLight ? '#16a34a' : '#4ade80' },
+                  { key: 'bilanciata', label: 'Bil.', color: isLight ? '#7c3aed' : '#a78bfa' },
+                  { key: 'ambiziosa', label: 'Amb.', color: isLight ? '#dc2626' : '#f87171' },
+                ] as const).map(s => {
+                  const data = plPerSezione.sezioni[s.key];
+                  if (data.totale === 0) return null;
+                  return (
+                    <div key={s.key} style={{ background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)', borderRadius: 6, padding: '3px 6px', textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: 0.2 }}>{s.label}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, cursor: 'pointer' }}>
+                Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
+              </div>}
+            </div>
+            ) : (
+            <div style={{
+              marginBottom: 16,
+              background: isLight
+                ? `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}, transparent)`
+                : `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)'}, transparent)`,
+              border: isLight
+                ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`
+                : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`,
+              borderRadius: 16, padding: '10px 20px', minHeight: 53,
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, position: 'relative',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
+                  <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 18, height: 18, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer' }}>?</span>
+                  <span style={{ fontSize: 11, color: textSecondary }}>{plPerSezione.totale.vinte}V/{plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? `/${plPerSezione.totale.inCorso}?` : ''}</span>
+                </div>
+                <span style={{ fontSize: 18, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626' }}>
+                  {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([
+                  { key: 'oggi', label: 'Start', color: isLight ? '#0369a1' : '#38bdf8' },
+                  { key: 'elite', label: 'Elite', color: isLight ? '#b45309' : '#fbbf24' },
+                  { key: 'selettiva', label: 'Selettiva', color: isLight ? '#16a34a' : '#4ade80' },
+                  { key: 'bilanciata', label: 'Bilanciata', color: isLight ? '#7c3aed' : '#a78bfa' },
+                  { key: 'ambiziosa', label: 'Ambiziosa', color: isLight ? '#dc2626' : '#f87171' },
+                ] as const).map(s => {
+                  const data = plPerSezione.sezioni[s.key];
+                  if (data.totale === 0) return null;
+                  return (
+                    <div key={s.key} style={{ background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)', borderRadius: 6, padding: '3px 8px', textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: 0.2 }}>{s.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</div>
+                    </div>
+                  );
+                })}
+              </div>
               {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, maxWidth: 320, cursor: 'pointer' }}>
                 Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
               </div>}

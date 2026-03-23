@@ -730,7 +730,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundImage: 'url(/bg-stadium.webp)',
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
-        opacity: isLight ? 0.02 : 0.045,
+        opacity: isLight ? 0.06 : 0.045,
         filter: 'saturate(3) contrast(1.6) brightness(1.3)',
         pointerEvents: 'none',
         zIndex: 0,

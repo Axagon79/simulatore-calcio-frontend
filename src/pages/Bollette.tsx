@@ -508,7 +508,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundImage: 'url(/bg-stadium.webp)',
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
-        opacity: isLight ? 0.02 : 0.045,
+        opacity: isLight ? 0.06 : 0.045,
         filter: 'saturate(3) contrast(1.6) brightness(1.3)',
         pointerEvents: 'none',
         zIndex: 0,
@@ -516,27 +516,29 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
       {/* Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
-        background: isLight ? '#f8f9fc' : theme.panelSolid,
-        borderBottom: isLight ? '1px solid #c8cdd5' : theme.panelBorder,
-        padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
+        background: isLight ? 'rgba(248,249,252,0.92)' : 'rgba(13,17,23,0.92)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.12)',
+        padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <button onClick={onBack} style={{
           background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
           border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
           color: isLight ? '#475569' : '#64748b',
-          borderRadius: 8, width: 34, height: 34,
+          borderRadius: 10, width: 36, height: 36,
           cursor: 'pointer', fontSize: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: 0, outline: 'none',
+          transition: 'all 0.15s',
         }}>←</button>
         <div style={{ color: isLight ? '#64748b' : '#94a3b8', display: 'flex', alignItems: 'center' }}>{CAT_ICONS.custom}</div>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>Le mie bollette</h1>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em' }}>Le mie bollette</h1>
       </div>
 
       <div style={{ padding: '16px', maxWidth: 700, margin: '0 auto', position: 'relative' as const, zIndex: 1 }}>
         {/* Stats — calcolate dal frontend con esiti live */}
         {myBollette.length > 0 && (() => {
-          let liveVinte = 0, livePerse = 0, liveInCorso = 0, liveTotaleStake = 0, liveProfitto = 0;
+          let liveVinte = 0, livePerse = 0, liveInCorso = 0, liveDaGiocare = 0, liveTotaleStake = 0, liveProfitto = 0;
           const uid = user?.uid || '';
 
           // Dati per streak, best/worst, mercati
@@ -572,7 +574,14 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
               risultati.push('L');
               if (stake > worstPerditaEuro) worstPerditaEuro = stake;
             } else {
-              liveInCorso++;
+              // In corso = nessuna selezione persa + almeno 1 partita già iniziata (live o finita vincente)
+              // Da giocare = tutte le partite pending (non ancora iniziate)
+              const anyStarted = esitiLive.some((e: string) => e === 'live_win' || e === 'live_lose' || e === 'win');
+              if (anyStarted) {
+                liveInCorso++;
+              } else {
+                liveDaGiocare++;
+              }
             }
 
             // Analisi mercati — ogni selezione, raggruppata per pronostico
@@ -633,127 +642,233 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
             : '—';
           const streakColor = currentStreakType === 'W' ? '#4caf50' : currentStreakType === 'L' ? '#f44336' : textPrimary;
 
+          const mySectionBg = isLight ? '#f8f9fc' : '#0d1117';
+          const mySectionBorder = isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.12)';
+
           return (<>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+            {/* Totale bollette */}
+            <div style={{ textAlign: 'center', marginBottom: 16, fontSize: 12, color: textSecondary, fontWeight: 500 }}>
+              {myBollette.length} bollette totali
+            </div>
+
+            {/* === PROFITTO HERO === */}
+            <div style={{
+              background: isLight
+                ? (liveProfitto >= 0 ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)')
+                : (liveProfitto >= 0 ? 'linear-gradient(135deg, #0a1a0f, #081408)' : 'linear-gradient(135deg, #1a0a0a, #140808)'),
+              border: isLight
+                ? (liveProfitto >= 0 ? '1px solid #bbf7d0' : '1px solid #fecaca')
+                : (liveProfitto >= 0 ? '1px solid #14532d' : '1px solid #7f1d1d'),
+              borderRadius: 14, padding: '20px 16px', textAlign: 'center', marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: textSecondary, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 6 }}>
+                Profitto Totale
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: liveProfitto >= 0 ? '#16a34a' : '#dc2626', letterSpacing: '-0.02em' }}>
+                {liveProfitto >= 0 ? '+' : ''}{liveProfitto.toFixed(2)}€
+              </div>
+              <div style={{ fontSize: 11, color: textSecondary, marginTop: 4 }}>
+                su €{liveTotaleStake.toFixed(0)} puntati
+              </div>
+            </div>
+
+            {/* === CONTEGGI 4 CARD === */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
               {[
-                { label: 'Vinte', value: liveVinte, color: '#4caf50' },
-                { label: 'Perse', value: livePerse, color: '#f44336' },
-                { label: 'In corso', value: liveInCorso, color: '#ff9800' },
-                { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#4caf50' : parseFloat(winRate as string) > 0 ? '#f44336' : textPrimary },
-                { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#4caf50' : '#f44336' },
-                { label: 'Quota media', value: quotaMedia, color: textPrimary },
-                { label: 'Profitto', value: `€${liveProfitto >= 0 ? '+' : ''}${liveProfitto.toFixed(2)}`, color: liveProfitto >= 0 ? '#4caf50' : '#f44336', span: 3 },
+                { label: 'Vinte', value: liveVinte, color: '#16a34a', bg: isLight ? '#f0fdf4' : '#0a1a0f', borderC: isLight ? '#bbf7d0' : '#14532d',
+                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> },
+                { label: 'Perse', value: livePerse, color: '#dc2626', bg: isLight ? '#fef2f2' : '#1a0a0a', borderC: isLight ? '#fecaca' : '#7f1d1d',
+                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> },
+                { label: 'In corso', value: liveInCorso, color: '#d97706', bg: isLight ? '#fffbeb' : '#1a1408', borderC: isLight ? '#fde68a' : '#78350f',
+                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+                { label: 'Da giocare', value: liveDaGiocare, color: '#3b82f6', bg: isLight ? '#eff6ff' : '#0a1020', borderC: isLight ? '#bfdbfe' : '#1e3a5f',
+                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
               ].map(s => (
                 <div key={s.label} style={{
-                  background: cardBg, border: cardBorder, borderRadius: 10,
-                  padding: '10px 8px', textAlign: 'center',
-                  gridColumn: (s as any).span ? `span ${(s as any).span}` : undefined,
+                  background: s.bg, border: `1px solid ${s.borderC}`,
+                  borderRadius: 12, padding: '12px 8px', textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: (s as any).span ? 24 : 20, fontWeight: 700, color: s.color }}>{s.value}</div>
-                  <div style={{ fontSize: 10, color: textSecondary, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>{s.icon}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.02em' }}>{s.value}</div>
+                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 3, textTransform: 'uppercase' as const, letterSpacing: '0.05em', fontWeight: 600 }}>{s.label}</div>
                 </div>
               ))}
             </div>
 
-            {/* Streak & Record + Best/Worst */}
-            {chiuse > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
-              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: streakColor }}>{streakText}</div>
-                <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Serie attuale</div>
+            {/* === METRICHE === */}
+            <div style={{
+              background: mySectionBg, border: mySectionBorder,
+              borderRadius: 14, padding: '16px', marginBottom: 16,
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                {[
+                  { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate as string) >= 50 ? '#16a34a' : parseFloat(winRate as string) > 0 ? '#dc2626' : textPrimary, pct: parseFloat(winRate as string) || 0 },
+                  { label: 'ROI', value: `${roi}%`, color: parseFloat(roi as string) >= 0 ? '#16a34a' : '#dc2626', pct: Math.min(100, Math.max(0, (parseFloat(roi as string) || 0) + 50)) },
+                  { label: 'Quota media', value: quotaMedia, color: textPrimary, pct: Math.min(100, ((parseFloat(quotaMedia) || 0) / 10) * 100) },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.02em' }}>{s.value}</div>
+                    <div style={{ height: 3, background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
+                      <div style={{ width: `${s.pct}%`, height: '100%', background: s.color, borderRadius: 2, transition: 'width 0.5s' }} />
+                    </div>
+                    <div style={{ fontSize: 9, color: textSecondary, marginTop: 5, textTransform: 'uppercase' as const, letterSpacing: '0.05em', fontWeight: 600 }}>{s.label}</div>
+                  </div>
+                ))}
               </div>
-              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#4caf50' }}>{bestWinStreak}</div>
-                <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Record vinte</div>
-              </div>
-              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#f44336' }}>{worstLossStreak}</div>
-                <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Record perse</div>
-              </div>
-              {bestQuotaVinta > 0 && (<>
-                <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#4caf50' }}>{bestQuotaVinta.toFixed(2)}</div>
-                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Top quota vinta</div>
-                </div>
-                <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#4caf50' }}>€{bestVincitaEuro.toFixed(0)}</div>
-                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Top vincita</div>
-                </div>
-                <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '6px 6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#f44336' }}>€{worstPerditaEuro.toFixed(0)}</div>
-                  <div style={{ fontSize: 9, color: textSecondary, marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>Peggior perdita</div>
-                </div>
-              </>)}
             </div>
-            )}
 
-            {/* Analisi mercati — collassabile */}
+            {/* === STREAK & RECORD === */}
+            {chiuse > 0 && (<>
+              <div style={{ fontSize: 10, fontWeight: 700, color: textSecondary, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 10, marginTop: 20 }}>
+                Streak & Record
+              </div>
+              <div style={{
+                background: mySectionBg, border: mySectionBorder,
+                borderRadius: 14, padding: '14px 16px', marginBottom: 16,
+              }}>
+                {/* Serie attuale */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: currentStreakType === 'W' ? (isLight ? '#dcfce7' : 'rgba(22,163,74,0.15)') : (isLight ? '#fee2e2' : 'rgba(220,38,38,0.15)'),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {currentStreakType === 'W'
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+                      }
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: textSecondary }}>Serie attuale</span>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: streakColor }}>{streakText}</span>
+                </div>
+
+                {/* Record row */}
+                <div style={{ display: 'grid', gridTemplateColumns: bestQuotaVinta > 0 ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 8, paddingTop: 12 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#16a34a' }}>{bestWinStreak}</div>
+                    <div style={{ fontSize: 9, color: textSecondary, marginTop: 2, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Record vinte</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#dc2626' }}>{worstLossStreak}</div>
+                    <div style={{ fontSize: 9, color: textSecondary, marginTop: 2, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Record perse</div>
+                  </div>
+                  {bestQuotaVinta > 0 && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: '#3b82f6' }}>{bestQuotaVinta.toFixed(2)}</div>
+                      <div style={{ fontSize: 9, color: textSecondary, marginTop: 2, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Top quota</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Best/Worst vincita */}
+                {bestQuotaVinta > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, paddingTop: 12, borderTop: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.06)', marginTop: 12 }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>{bestVincitaEuro.toFixed(0)}€</div>
+                      <div style={{ fontSize: 9, color: textSecondary, marginTop: 2, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Miglior vincita</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#dc2626' }}>{worstPerditaEuro.toFixed(0)}€</div>
+                      <div style={{ fontSize: 9, color: textSecondary, marginTop: 2, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Peggior perdita</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>)}
+
+            {/* === MERCATI === */}
             {mercatiSorted.length > 0 && (() => {
               const bestWithData = mercatiSorted.find(([, d]) => d.total > 0);
               const renderRow = ([mercato, data]: [string, { win: number; total: number }]) => {
                 const pct = data.total > 0 ? Math.round((data.win / data.total) * 100) : 0;
-                const pctColor = data.total === 0 ? textSecondary : pct >= 60 ? '#4caf50' : pct >= 40 ? '#ff9800' : '#f44336';
+                const pctColor = data.total === 0 ? textSecondary : pct >= 60 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626';
                 return (
-                  <div key={mercato} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: textPrimary, width: 100, flexShrink: 0 }}>{mercato.replace('_', ' ')}</span>
-                    <div style={{ flex: 1, height: 5, background: isLight ? '#e0e0e0' : 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: pctColor, borderRadius: 3 }} />
+                  <div key={mercato} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: textPrimary, width: 100, flexShrink: 0 }}>{mercato.replace('_', ' ')}</span>
+                    <div style={{ flex: 1, height: 6, background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: pctColor, borderRadius: 3, transition: 'width 0.4s' }} />
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: pctColor, width: 30, textAlign: 'right' }}>{data.total > 0 ? `${pct}%` : '—'}</span>
-                    <span style={{ fontSize: 9, color: textSecondary, width: 28 }}>{data.win}/{data.total}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: pctColor, width: 34, textAlign: 'right' }}>{data.total > 0 ? `${pct}%` : '—'}</span>
+                    <span style={{ fontSize: 10, color: textSecondary, width: 32 }}>{data.win}/{data.total}</span>
                   </div>
                 );
               };
-              return (
-              <div style={{ background: cardBg, border: cardBorder, borderRadius: 8, padding: '8px 10px', marginBottom: 16, cursor: 'pointer' }}
-                onClick={() => setMercatiExpanded(prev => !prev)}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: mercatiExpanded ? 6 : (bestWithData ? 6 : 0) }}>
-                  <span style={{ fontSize: 9, color: textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Successo per mercato</span>
-                  <span style={{ fontSize: 10, color: textSecondary }}>{mercatiExpanded ? '▲' : '▼'}</span>
+              return (<>
+                <div style={{ fontSize: 10, fontWeight: 700, color: textSecondary, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 10, marginTop: 20 }}>
+                  Successo per mercato
                 </div>
-                {!mercatiExpanded && bestWithData && renderRow(bestWithData)}
-                {mercatiExpanded && mercatiSorted.map(entry => renderRow(entry))}
-              </div>
-              );
+                <div style={{
+                  background: mySectionBg, border: mySectionBorder,
+                  borderRadius: 14, padding: '14px 16px', marginBottom: 24, cursor: 'pointer',
+                }} onClick={() => setMercatiExpanded(prev => !prev)}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: (mercatiExpanded || bestWithData) ? 10 : 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: textSecondary }}>
+                      {mercatiExpanded ? 'Tutti i mercati' : 'Miglior mercato'}
+                    </span>
+                    <span style={{ fontSize: 11, color: textSecondary, transition: 'transform 0.2s', display: 'inline-block', transform: mercatiExpanded ? 'rotate(180deg)' : 'none' }}>{'\u25BC'}</span>
+                  </div>
+                  {!mercatiExpanded && bestWithData && renderRow(bestWithData)}
+                  {mercatiExpanded && mercatiSorted.map(entry => renderRow(entry))}
+                </div>
+              </>);
             })()}
           </>);
         })()}
 
         {/* Filtri — riga 1: stato + ordine data */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
-          {(['tutti', 'vinte', 'perse', 'in_corso'] as const).map(f => (
-            <button key={f} onClick={() => setFiltroStato(f)} style={{
-              background: filtroStato === f ? (isLight ? '#333' : 'rgba(255,255,255,0.25)') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
-              color: filtroStato === f ? '#fff' : textSecondary,
-              border: filtroStato === f ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
-              borderRadius: 16, padding: '5px 12px',
-              fontSize: 11, fontWeight: 600, cursor: 'pointer',
-            }}>
-              {f === 'tutti' ? 'Tutti' : f === 'vinte' ? '✓ Vinte' : f === 'perse' ? '✗ Perse' : '⏳ In corso'}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {(['tutti', 'vinte', 'perse', 'in_corso'] as const).map(f => {
+            const selected = filtroStato === f;
+            const colorMap: Record<string, string> = { tutti: textPrimary, vinte: '#16a34a', perse: '#dc2626', in_corso: '#d97706' };
+            const c = colorMap[f];
+            return (
+              <button key={f} onClick={() => setFiltroStato(f)} style={{
+                background: selected
+                  ? (isLight ? `${c}15` : `${c}20`)
+                  : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)'),
+                color: selected ? c : textSecondary,
+                border: selected ? `1.5px solid ${c}` : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.08)'),
+                borderRadius: 20, padding: selected ? '5px 12px' : '5.25px 12.25px',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}>
+                {f === 'tutti' ? 'Tutti' : f === 'vinte' ? '✓ Vinte' : f === 'perse' ? '✗ Perse' : '⏳ In corso'}
+              </button>
+            );
+          })}
           <div style={{ flex: 1 }} />
           <button onClick={() => setOrdinaData(prev => prev === 'recenti' ? 'vecchie' : 'recenti')} style={{
-            background: isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)',
-            color: textSecondary, border: 'none', borderRadius: 16, padding: '5px 12px',
+            background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)',
+            color: textSecondary,
+            border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 20, padding: '5px 12px',
             fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.15s',
           }}>
             📅 {ordinaData === 'recenti' ? '↓' : '↑'}
           </button>
         </div>
         {/* Filtri — riga 2: fascia */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-          {(['tutti', 'selettiva', 'bilanciata', 'ambiziosa', 'custom'] as const).map(f => (
-            <button key={f} onClick={() => setFiltroFascia(f)} style={{
-              background: filtroFascia === f ? (isLight ? '#333' : 'rgba(255,255,255,0.25)') : (isLight ? '#e8e8e8' : 'rgba(255,255,255,0.08)'),
-              color: filtroFascia === f ? '#fff' : textSecondary,
-              border: filtroFascia === f ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
-              borderRadius: 16, padding: '5px 12px',
-              fontSize: 11, fontWeight: 600, cursor: 'pointer',
-            }}>
-              {f === 'tutti' ? 'Tutte' : f === 'custom' ? '✨ Custom' : f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+          {(['tutti', 'selettiva', 'bilanciata', 'ambiziosa', 'custom'] as const).map(f => {
+            const selected = filtroFascia === f;
+            return (
+              <button key={f} onClick={() => setFiltroFascia(f)} style={{
+                background: selected
+                  ? (isLight ? 'rgba(51,65,85,0.12)' : 'rgba(255,255,255,0.18)')
+                  : (isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)'),
+                color: selected ? (isLight ? '#1e293b' : '#f1f5f9') : textSecondary,
+                border: selected ? (isLight ? '1.5px solid #94a3b8' : '1.5px solid rgba(255,255,255,0.35)') : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.08)'),
+                borderRadius: 20, padding: selected ? '5px 12px' : '5.25px 12.25px',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}>
+                {f === 'tutti' ? 'Tutte' : f === 'custom' ? '✨ Custom' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            );
+          })}
         </div>
 
         {/* Loading */}
@@ -1061,7 +1176,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundImage: 'url(/bg-stadium.webp)',
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
-        opacity: isLight ? 0.02 : 0.045,
+        opacity: isLight ? 0.06 : 0.045,
         filter: 'saturate(3) contrast(1.6) brightness(1.3)',
         pointerEvents: 'none',
         zIndex: 0,
@@ -1878,7 +1993,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundImage: 'url(/bg-stadium.webp)',
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
-        opacity: isLight ? 0.02 : 0.045,
+        opacity: isLight ? 0.06 : 0.045,
         filter: 'saturate(3) contrast(1.6) brightness(1.3)',
         pointerEvents: 'none',
         zIndex: 0,

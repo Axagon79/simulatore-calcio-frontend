@@ -140,7 +140,7 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
     return <div style={{ textAlign: 'center', padding: 40, color: textSecondary, fontSize: 13 }}>Nessuna bolletta disponibile</div>;
   }
 
-  let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0, totaleProfitto = 0;
+  let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0, totaleProfitto = 0, stakeChiuse = 0;
   const risultati: ('W' | 'L')[] = [];
   let bestQuotaVinta = 0;
   let bestVincitaEuro = 0;
@@ -161,6 +161,7 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
 
     if (isWin) {
       vinte++;
+      stakeChiuse += stake;
       const vincita = stake * ((b.quota_totale || 1) - 1);
       totaleProfitto += vincita;
       risultati.push('W');
@@ -168,6 +169,7 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
       if (vincita > bestVincitaEuro) bestVincitaEuro = vincita;
     } else if (isLoss) {
       perse++;
+      stakeChiuse += stake;
       totaleProfitto -= stake;
       risultati.push('L');
       if (stake > worstPerditaEuro) worstPerditaEuro = stake;
@@ -213,8 +215,8 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
 
   const chiuse = vinte + perse;
   const winRate = chiuse > 0 ? ((vinte / chiuse) * 100).toFixed(1) : '—';
-  const roi = (sorted.reduce((acc, b) => acc + (b.stake_amount || 1), 0)) > 0
-    ? ((totaleProfitto / sorted.reduce((acc, b) => acc + (b.stake_amount || 1), 0)) * 100).toFixed(1)
+  const roi = stakeChiuse > 0
+    ? ((totaleProfitto / stakeChiuse) * 100).toFixed(1)
     : '—';
   const quotaMedia = (bollette.reduce((acc, b) => acc + (b.quota_totale || 0), 0) / bollette.length).toFixed(2);
 

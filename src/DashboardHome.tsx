@@ -7,6 +7,7 @@ import AuthModal from './components/AuthModal'
 import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 import { checkAdmin } from './permissions';
 import StemmaImg from './components/StemmaImg';
+import LogoVirgo from './components/LogoVirgo';
 import TopbarPronostici from './components/TopbarPronostici';
 // OnboardingTour spostato a livello globale in main.tsx
 const theme = getTheme();
@@ -232,17 +233,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             <div data-tour="dashboard-logo" style={{
               display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
             }}>
-              <img
-                src="/logo-virgo.webp"
-                alt="Logo"
-                style={{
-                  width: isMobile ? 28 : 32,
-                  height: isMobile ? 28 : 32,
-                  objectFit: 'contain',
-                  filter: isLight ? 'none' : 'invert(1)',
-                  opacity: isLight ? 1 : 0.85,
-                }}
-              />
+              <LogoVirgo size={isMobile ? 28 : 32} />
               <span style={{
                 fontSize: isMobile ? '14px' : '15px', fontWeight: 600,
                 color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
@@ -1069,10 +1060,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             {!isMobile && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <img src="/logo-virgo.webp" alt="Logo" style={{
-                    width: 24, height: 24, objectFit: 'contain',
-                    filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
-                  }} />
+                  <LogoVirgo size={24} />
                   <span style={{
                     fontSize: '14px', fontWeight: 600,
                     color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',

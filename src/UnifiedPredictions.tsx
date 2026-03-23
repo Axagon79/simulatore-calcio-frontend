@@ -10,6 +10,7 @@ type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng'
 import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 import { sharePrediction } from './utils/shareCard';
 import StemmaImg from './components/StemmaImg';
+import LogoVirgo from './components/LogoVirgo';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
@@ -2881,7 +2882,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             <h1 style={{
               fontSize: '16px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px', flex: 1, textAlign: 'center'
             }}>
-              <img src="/logo-virgo.webp" alt="" style={{ width: 24, height: 24, verticalAlign: 'middle', marginRight: 5, filter: isLight ? 'none' : 'invert(1) brightness(2)' }} />
+              <LogoVirgo size={24} style={{ marginRight: 5 }} />
               <span style={{
                 background: `linear-gradient(135deg, ${theme.cyan}, ${theme.purple})`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
@@ -2935,7 +2936,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   ← Dashboard
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '-900px' }}>
-                  <img src="/logo-virgo.webp" alt="" style={{ width: 36, height: 36, filter: isLight ? 'none' : 'invert(1) brightness(2)' }} />
+                  <LogoVirgo size={36} />
                   <span style={{ color: theme.textDim, fontSize: '13px', fontWeight: 500 }}>
                     Mixture of Experts — i migliori pronostici da 3 sistemi AI
                   </span>

@@ -1,6 +1,7 @@
 // src/pages/PredictionsMixer.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import LogoVirgo from '../components/LogoVirgo';
 
 const AI_ENGINE_BASE = 'https://us-central1-puppals-456c7.cloudfunctions.net';
 
@@ -264,7 +265,7 @@ const PredictionsMixer: React.FC = () => {
       <header style={st.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
-            <img src="/logo-virgo.webp" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain' as const, filter: 'invert(1)', opacity: 0.85 }} />
+            <LogoVirgo size={32} />
             <span style={{ fontSize: '15px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.05em', fontFamily: '"Inter", system-ui, sans-serif' }}>AI Simulator</span>
           </a>
           <button style={{ ...st.backBtn, color: '#a78bfa', borderColor: 'rgba(167,139,250,0.3)' }} onClick={() => navigate('/', { state: { goTo: 'PREDICTIONS' } })}>{'\uD83D\uDCCB'} Pronostici</button>

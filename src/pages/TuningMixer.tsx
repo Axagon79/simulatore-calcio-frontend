@@ -1,5 +1,6 @@
 // src/pages/TuningMixer.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import LogoVirgo from '../components/LogoVirgo';
 
 // --- CONFIGURAZIONE API ---
 const AI_ENGINE_BASE = 'https://us-central1-puppals-456c7.cloudfunctions.net';
@@ -589,7 +590,7 @@ const TuningMixer: React.FC = () => {
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
-            <img src="/logo-virgo.webp" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain' as const, filter: 'invert(1)', opacity: 0.85 }} />
+            <LogoVirgo size={32} />
             <span style={{ fontSize: '15px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.05em', fontFamily: '"Inter", system-ui, sans-serif' }}>AI Simulator</span>
           </a>
           <div style={styles.logo}>

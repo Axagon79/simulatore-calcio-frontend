@@ -4,6 +4,7 @@ import AuthModal from '../components/AuthModal';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import { shareElement } from '../utils/shareCard';
+import LogoVirgo from '../components/LogoVirgo';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -1836,7 +1837,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
               padding: 0, outline: 'none',
             }}>←</button>
           )}
-          <img src="/logo-virgo.webp" alt="" style={{ width: 24, height: 24, objectFit: 'contain', filter: isLight ? 'none' : 'invert(1)' }} />
+          <LogoVirgo size={24} />
           <h1 data-tour="step-5" style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
             Ticket AI
           </h1>

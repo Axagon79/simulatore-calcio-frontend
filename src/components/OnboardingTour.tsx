@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
+import LogoVirgo from './LogoVirgo';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -68,13 +69,7 @@ function WelcomeModal({ onStartChapter, onSkip, onSkipPermanent }: {
           ? '0 24px 64px rgba(0,0,0,0.15)'
           : `0 24px 64px rgba(0,0,0,0.6), 0 0 80px ${theme.cyan}10`,
       }}>
-        <img
-          src="/logo-virgo.webp"
-          alt="AI Simulator"
-          style={{
-            width: 56, height: 56, objectFit: 'contain',
-            filter: isLight ? 'none' : 'invert(1)',
-            opacity: isLight ? 1 : 0.85,
+        <LogoVirgo size={56} style={{
             marginBottom: '20px',
           }}
         />

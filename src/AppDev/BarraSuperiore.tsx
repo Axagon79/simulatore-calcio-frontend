@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { getTheme, getThemeMode } from './costanti';
 import { useAuth } from '../contexts/AuthContext';
+import LogoVirgo from '../components/LogoVirgo';
 const theme = getTheme();
 
 interface League {
@@ -113,17 +114,7 @@ export default function BarraSuperiore({
       {!isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '36px', paddingLeft: '6px', zIndex: 10 }}>
           <a data-tour="app-logo" href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
-            <img
-              src="/logo-virgo.webp"
-              alt="Logo"
-              style={{
-                width: 32,
-                height: 32,
-                objectFit: 'contain' as const,
-                filter: isLight ? 'none' : 'invert(1)',
-                opacity: isLight ? 1 : 0.85,
-              }}
-            />
+            <LogoVirgo size={32} />
             <span style={{
               fontSize: '15px', fontWeight: 600,
               color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getThemeMode, API_BASE } from '../AppDev/costanti';
 import { useAuth } from '../contexts/AuthContext';
+import LogoVirgo from '../components/LogoVirgo';
 
 const isLight = getThemeMode() === 'light';
 
@@ -162,10 +163,7 @@ export default function Prezzi({ onBack }: PrezziProps) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}>
-          <img src="/logo-virgo.webp" alt="Logo" style={{
-            width: 32, height: 32, objectFit: 'contain',
-            filter: isLight ? 'none' : 'invert(1)', opacity: isLight ? 1 : 0.85,
-          }} />
+          <LogoVirgo size={32} />
           <span style={{
             fontSize: '15px', fontWeight: 600,
             color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',

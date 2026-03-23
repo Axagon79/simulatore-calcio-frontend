@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
+import LogoVirgo from '../components/LogoVirgo';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -489,7 +490,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
         </div>
         {isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <img src="/logo-virgo.webp" alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'cover', filter: isLight ? 'none' : 'invert(1)' }} />
+            <LogoVirgo size={22} />
             <span style={{ fontSize: 12, fontWeight: 700, color: textPrimary, letterSpacing: '-0.01em' }}>AI Simulator</span>
             <div style={{ width: 1, height: 14, background: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)' }} />
             <span style={{ fontSize: 10, color: textSecondary, fontStyle: 'italic' }}>Powered by AI Engine</span>

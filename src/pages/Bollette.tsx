@@ -1763,8 +1763,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   }
 
   // Stats header — calcolate su TUTTE le bollette AI (non filtrate), escluse "Le mie bollette"
-  const allAiBollette = bolletteRaw.filter(b => b.tipo !== 'custom');
-  const aiBollette = [...grouped.oggi, ...grouped.elite, ...grouped.selettiva, ...grouped.bilanciata, ...grouped.ambiziosa];
+  const allAiBollette = bolletteRaw.filter(b => (b.tipo as string) !== 'custom');
   const oggiStats = (() => {
     let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0;
     for (const b of allAiBollette) {
@@ -2245,11 +2244,15 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 background: bannerTab === tab
                   ? (tab === 'ai'
                     ? (isLight ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'linear-gradient(135deg, #2d1b69, #11998e)')
-                    : (isLight ? '#e6f5ec' : '#0f2f1f'))
-                  : (isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)'),
+                    : (isLight ? '#b8e0c2' : '#0f2f1f'))
+                  : (tab === 'ai'
+                    ? (isLight ? 'rgba(102,126,234,0.17)' : 'rgba(17,153,142,0.13)')
+                    : (isLight ? 'rgba(5,150,105,0.13)' : 'rgba(74,222,128,0.13)')),
                 color: bannerTab === tab
                   ? (tab === 'ai' ? '#fff' : (isLight ? '#16a34a' : '#4ade80'))
-                  : (isLight ? '#64748b' : 'rgba(255,255,255,0.4)'),
+                  : (tab === 'ai'
+                    ? (isLight ? '#5d60a0' : 'rgba(17,153,142,0.6)')
+                    : (isLight ? '#4d9175' : 'rgba(74,222,128,0.55)')),
                 border: bannerTab === tab
                   ? (isLight ? '1px solid rgba(0,0,0,0.2)' : '1px solid transparent')
                   : (isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)'),
@@ -2316,7 +2319,7 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
                 : (isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.1)'),
               borderRadius: 16, overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
-              height: isMobile ? 590 : 625,
+              height: isMobile ? 565 : 625,
               boxShadow: isLight ? '0 12px 40px rgba(0,0,0,0.15)' : '0 12px 40px rgba(0,0,0,0.5)',
               transition: 'all 0.3s ease',
             }}>

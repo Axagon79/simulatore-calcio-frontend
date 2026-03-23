@@ -123,7 +123,7 @@ type Tab = 'tutti' | 'oggi' | 'elite' | 'selettiva' | 'bilanciata' | 'ambiziosa'
 
 const TABS: { key: Tab; label: string; accent: string }[] = [
   { key: 'tutti', label: 'Tutti', accent: isLight ? '#475569' : '#94a3b8' },
-  { key: 'oggi', label: 'Oggi', accent: '#3b82f6' },
+  { key: 'oggi', label: 'Start', accent: '#3b82f6' },
   { key: 'elite', label: 'Elite', accent: '#f59e0b' },
   { key: 'selettiva', label: 'Selettiva', accent: '#22c55e' },
   { key: 'bilanciata', label: 'Bilanciata', accent: '#8b5cf6' },

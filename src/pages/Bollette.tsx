@@ -215,7 +215,7 @@ function formatMercato(mercato: string, pronostico: string): string {
 }
 
 const CATEGORIE: { key: Categoria; emoji: string; label: string; subtitle: string; gradient: string; gradientLight: string; accent: string; accentLight: string }[] = [
-  { key: 'oggi', emoji: '', label: 'Oggi', subtitle: 'Solo partite di oggi', gradient: 'linear-gradient(135deg, #1e293b, #334155)', gradientLight: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', accent: '#60a5fa', accentLight: '#3b82f6' },
+  { key: 'oggi', emoji: '', label: 'Start', subtitle: 'Solo partite di oggi', gradient: 'linear-gradient(135deg, #1e293b, #334155)', gradientLight: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', accent: '#60a5fa', accentLight: '#3b82f6' },
   { key: 'elite', emoji: '', label: 'Elite', subtitle: 'Pattern vincenti', gradient: 'linear-gradient(135deg, #44403c, #57534e)', gradientLight: 'linear-gradient(135deg, #fefce8, #fef9c3)', accent: '#fbbf24', accentLight: '#d97706' },
   { key: 'selettiva', emoji: '', label: 'Selettiva', subtitle: 'Quota max 5.00', gradient: 'linear-gradient(135deg, #14532d, #166534)', gradientLight: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', accent: '#4ade80', accentLight: '#16a34a' },
   { key: 'bilanciata', emoji: '', label: 'Bilanciata', subtitle: 'Quota 5.00 — 8.0', gradient: 'linear-gradient(135deg, #312e81, #3730a3)', gradientLight: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', accent: '#a78bfa', accentLight: '#7c3aed' },
@@ -376,16 +376,30 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 317, maxPrev
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
-          {preview.map((b) => (
+          {preview.map((b) => {
+            const esitiPrev = b.selezioni.map(s => getEsitoLive(s, liveScores));
+            const prevHasLose = esitiPrev.some(e => e === 'lose');
+            const prevAllDone = esitiPrev.every(e => e === 'win' || e === 'lose');
+            const prevAllWin = esitiPrev.every(e => e === 'win');
+            const prevIsWin = b.esito_globale === 'vinta' || (prevAllDone && prevAllWin);
+            const prevIsLoss = b.esito_globale === 'persa' || prevHasLose;
+            const prevAllPending = esitiPrev.every(e => e === 'pending');
+            const prevStatusColor = prevIsWin ? '#16a34a' : prevIsLoss ? '#dc2626' : prevAllPending ? (isLight ? '#94a3b8' : '#64748b') : '#d97706';
+            const prevStatusBg = prevIsWin ? (isLight ? 'rgba(22,163,74,0.08)' : 'rgba(22,163,74,0.06)') : prevIsLoss ? (isLight ? 'rgba(220,38,38,0.08)' : 'rgba(220,38,38,0.06)') : undefined;
+            return (
             <div key={b._id} style={{
-              background: isLight ? '#eef1f6' : 'rgba(255,255,255,0.04)',
+              background: prevStatusBg || (isLight ? '#eef1f6' : 'rgba(255,255,255,0.04)'),
               borderRadius: 8, padding: '5px 10px',
               fontSize: 12,
               border: isLight ? '1px solid #dde1e9' : '1px solid rgba(255,255,255,0.04)',
+              borderLeft: `3px solid ${prevStatusColor}`,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontWeight: 600, color: textColor, fontSize: 12 }}>{b.label}</span>
-                <span style={{ fontWeight: 700, color: accent, fontSize: 13 }}>{b.quota_totale.toFixed(2)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: prevStatusColor }}>{prevIsWin ? 'VINTA' : prevIsLoss ? 'PERSA' : prevAllPending ? '' : 'LIVE'}</span>
+                  <span style={{ fontWeight: 700, color: accent, fontSize: 13 }}>{b.quota_totale.toFixed(2)}</span>
+                </div>
               </div>
               {b.selezioni.slice(0, b.selezioni.length <= 2 ? 2 : 1).map((s, j) => (
                 <div key={j} style={{ color: dimColor, fontSize: 11, lineHeight: 1.5 }}>
@@ -398,7 +412,8 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 317, maxPrev
                 </div>
               )}
             </div>
-          ))}
+          );
+          })}
           {filteredItems.length > maxPreview && (
             <div style={{ color: dimColor, fontSize: 11, textAlign: 'center', marginTop: 2 }}>
               +{filteredItems.length - maxPreview} altre
@@ -1470,12 +1485,13 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
 
   // Storico
   const [showStorico, setShowStorico] = useState(false);
+  const [showPlInfo, setShowPlInfo] = useState(false);
   const [storicoDate, setStoricoDate] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [dateDisponibili, setDateDisponibili] = useState<Set<string>>(new Set());
   const [storicoBollette, setStoricoBollette] = useState<Bolletta[]>([]);
   const [, setStoricoStats] = useState<any>(null);
-  const [filtroEsito, setFiltroEsito] = useState<'tutti' | 'vinte' | 'perse' | 'pending'>('tutti');
+  const [filtroEsito, setFiltroEsito] = useState<'tutti' | 'vinte' | 'perse' | 'pending' | 'daGiocare'>('tutti');
   const [filtroStatoMie, setFiltroStatoMie] = useState<'tutti' | 'vinte' | 'perse' | 'in_corso'>('tutti');
   const [storicoLoading, setStoricoLoading] = useState(false);
 
@@ -1715,14 +1731,19 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
   const isStorico = !!storicoDate && storicoDate !== new Date().toISOString().split('T')[0];
   const bolletteRaw = isStorico ? storicoBollette : bollette;
   const bolletteAttive = filtroEsito === 'tutti' ? bolletteRaw : bolletteRaw.filter(b => {
-    if (filtroEsito === 'vinte') return b.esito_globale === 'vinta';
-    if (filtroEsito === 'perse') return b.esito_globale === 'persa';
-    if (filtroEsito === 'pending') {
-      if (b.esito_globale) return false;
-      const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
-      if (esitiLive.some(e => e === 'lose')) return false;
-      return !esitiLive.every(e => e === 'win' || e === 'lose');
-    }
+    if (b.esito_globale === 'vinta') return filtroEsito === 'vinte';
+    if (b.esito_globale === 'persa') return filtroEsito === 'perse';
+    // Senza esito_globale: calcola live
+    const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+    const hasDefLose = esitiLive.some(e => e === 'lose');
+    const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+    const allWin = esitiLive.every(e => e === 'win');
+    if (hasDefLose) return filtroEsito === 'perse';
+    if (allDone && allWin) return filtroEsito === 'vinte';
+    // Non chiusa: in corso o da giocare
+    const allPending = esitiLive.every(e => e === 'pending');
+    if (filtroEsito === 'pending') return !allPending;
+    if (filtroEsito === 'daGiocare') return allPending;
     return true;
   });
   const grouped: Record<Categoria, Bolletta[]> = { oggi: [], elite: [], selettiva: [], bilanciata: [], ambiziosa: [], custom: [] };
@@ -1740,11 +1761,12 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
     }
   }
 
-  // Stats header — solo bollette AI (escluse "Le mie bollette")
+  // Stats header — calcolate su TUTTE le bollette AI (non filtrate), escluse "Le mie bollette"
+  const allAiBollette = bolletteRaw.filter(b => b.tipo !== 'custom');
   const aiBollette = [...grouped.oggi, ...grouped.elite, ...grouped.selettiva, ...grouped.bilanciata, ...grouped.ambiziosa];
   const oggiStats = (() => {
-    let vinte = 0, perse = 0, pending = 0;
-    for (const b of aiBollette) {
+    let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0;
+    for (const b of allAiBollette) {
       if (b.esito_globale === 'vinta') { vinte++; continue; }
       if (b.esito_globale === 'persa') { perse++; continue; }
       const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
@@ -1753,9 +1775,53 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
       const allWin = esitiLive.every(e => e === 'win');
       if (hasDefLose) perse++;
       else if (allDone && allWin) vinte++;
-      else pending++;
+      else {
+        // Tutte pending = da giocare, altrimenti in corso
+        const allPending = esitiLive.every(e => e === 'pending');
+        if (allPending) daGiocare++;
+        else inCorso++;
+      }
     }
-    return { vinte, perse, pending };
+    return { vinte, perse, pending: inCorso, daGiocare };
+  })();
+
+  // P/L per sezione (stake fisso 1€ per bolletta)
+  const plPerSezione = (() => {
+    const calcPL = (items: Bolletta[]) => {
+      let profitto = 0, chiuse = 0, vinte = 0, perse = 0, inCorso = 0;
+      for (const b of items) {
+        const esitiLive = b.selezioni.map(s => getEsitoLive(s, liveScores));
+        const hasDefLose = esitiLive.some(e => e === 'lose');
+        const allDone = esitiLive.every(e => e === 'win' || e === 'lose');
+        const allWin = esitiLive.every(e => e === 'win');
+        const isWin = b.esito_globale === 'vinta' || (allDone && allWin);
+        const isLoss = b.esito_globale === 'persa' || hasDefLose;
+        if (isWin) { profitto += (b.quota_totale || 1) - 1; chiuse++; vinte++; }
+        else if (isLoss) { profitto -= 1; chiuse++; perse++; }
+        else { inCorso++; }
+      }
+      return { profitto, chiuse, totale: items.length, vinte, perse, inCorso };
+    };
+    // Raggruppa da bolletteRaw (non filtrate) per P/L reale
+    const allGrouped: Record<string, Bolletta[]> = { oggi: [], elite: [], selettiva: [], bilanciata: [], ambiziosa: [] };
+    for (const b of allAiBollette) {
+      if (b.tipo === 'oggi') allGrouped.oggi.push(b);
+      else if (b.tipo === 'elite') allGrouped.elite.push(b);
+      else { const q = b.quota_totale ?? 0; if (q < 5.0) allGrouped.selettiva.push(b); else if (q < 8.0) allGrouped.bilanciata.push(b); else allGrouped.ambiziosa.push(b); }
+    }
+    const sezioni = {
+      oggi: calcPL(allGrouped.oggi),
+      elite: calcPL(allGrouped.elite),
+      selettiva: calcPL(allGrouped.selettiva),
+      bilanciata: calcPL(allGrouped.bilanciata),
+      ambiziosa: calcPL(allGrouped.ambiziosa),
+    };
+    const totale = Object.values(sezioni).reduce((acc, s) => ({
+      profitto: acc.profitto + s.profitto, chiuse: acc.chiuse + s.chiuse,
+      totale: acc.totale + s.totale, vinte: acc.vinte + s.vinte,
+      perse: acc.perse + s.perse, inCorso: acc.inCorso + s.inCorso,
+    }), { profitto: 0, chiuse: 0, totale: 0, vinte: 0, perse: 0, inCorso: 0 });
+    return { sezioni, totale };
   })();
 
   // Se una categoria è attiva, mostra il dettaglio
@@ -1913,10 +1979,12 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             return (
             <div data-tour="ticket-storico-nav-desktop" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {/* Badge */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 220 }}>
-                <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#15803d' : '#16a34a', background: filtroEsito === 'vinte' ? (isLight ? '#dcfce7' : 'rgba(22,163,74,0.25)') : (isLight ? '#f0fdf4' : 'rgba(22,163,74,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? (isLight ? '1px solid #86efac' : '1px solid rgba(22,163,74,0.4)') : (isLight ? '1px solid #bbf7d0' : '1px solid rgba(22,163,74,0.15)'), transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
-                <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#b91c1c' : '#dc2626', background: filtroEsito === 'perse' ? (isLight ? '#fee2e2' : 'rgba(220,38,38,0.25)') : (isLight ? '#fef2f2' : 'rgba(220,38,38,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? (isLight ? '1px solid #fca5a5' : '1px solid rgba(220,38,38,0.4)') : (isLight ? '1px solid #fecaca' : '1px solid rgba(220,38,38,0.15)'), transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
-                <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 11, fontWeight: 700, color: isLight ? '#b45309' : '#d97706', background: filtroEsito === 'pending' ? (isLight ? '#fef3c7' : 'rgba(217,119,6,0.25)') : (isLight ? '#fffbeb' : 'rgba(217,119,6,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? (isLight ? '1px solid #fcd34d' : '1px solid rgba(217,119,6,0.4)') : (isLight ? '1px solid #fde68a' : '1px solid rgba(217,119,6,0.15)'), transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 100 }}>
+                <span onClick={() => setFiltroEsito('tutti')} style={{ fontSize: 11, fontWeight: 700, color: filtroEsito === 'tutti' ? '#fff' : (isLight ? '#334155' : 'rgba(255,255,255,0.5)'), background: filtroEsito === 'tutti' ? (isLight ? '#475569' : '#475569') : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'tutti' ? (isLight ? '2px solid #334155' : '2px solid #94a3b8') : '2px solid transparent', transition: 'all 0.15s', minWidth: 55, textAlign: 'center' as const }}>{currentStats.vinte + currentStats.perse + currentStats.pending + currentStats.daGiocare} Totale</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 11, fontWeight: 700, color: filtroEsito === 'vinte' ? '#fff' : (isLight ? '#15803d' : '#16a34a'), background: filtroEsito === 'vinte' ? '#16a34a' : (isLight ? 'rgba(22,163,74,0.08)' : 'rgba(22,163,74,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? '2px solid #15803d' : '2px solid transparent', transition: 'all 0.15s', minWidth: 65, textAlign: 'center' as const }}>{currentStats.vinte} Vinte</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 11, fontWeight: 700, color: filtroEsito === 'perse' ? '#fff' : (isLight ? '#b91c1c' : '#dc2626'), background: filtroEsito === 'perse' ? '#dc2626' : (isLight ? 'rgba(220,38,38,0.08)' : 'rgba(220,38,38,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? '2px solid #b91c1c' : '2px solid transparent', transition: 'all 0.15s', minWidth: 60, textAlign: 'center' as const }}>{currentStats.perse} Perse</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 11, fontWeight: 700, color: filtroEsito === 'pending' ? '#fff' : (isLight ? '#b45309' : '#d97706'), background: filtroEsito === 'pending' ? '#d97706' : (isLight ? 'rgba(217,119,6,0.08)' : 'rgba(217,119,6,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? '2px solid #b45309' : '2px solid transparent', transition: 'all 0.15s', minWidth: 75, textAlign: 'center' as const }}>{currentStats.pending} In corso</span>
+                <span onClick={() => setFiltroEsito(filtroEsito === 'daGiocare' ? 'tutti' : 'daGiocare')} style={{ fontSize: 11, fontWeight: 700, color: filtroEsito === 'daGiocare' ? '#fff' : (isLight ? '#4338ca' : '#818cf8'), background: filtroEsito === 'daGiocare' ? '#6366f1' : (isLight ? 'rgba(99,102,241,0.08)' : 'rgba(129,140,248,0.1)'), padding: '5px 10px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'daGiocare' ? '2px solid #4338ca' : '2px solid transparent', transition: 'all 0.15s', minWidth: 95, textAlign: 'center' as const }}>{currentStats.daGiocare} Da cominciare</span>
                 <span style={{ width: 1, height: 23, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 4, marginRight: 4, position: 'relative', top: 2 }} />
                 <button onClick={() => { window.location.href = '/ticket-stats'; }} style={{ background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)', color: isLight ? '#666' : '#64748b', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', padding: 0, outline: 'none' }} title="Statistiche">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
@@ -2012,9 +2080,11 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#15803d' : '#16a34a', background: filtroEsito === 'vinte' ? (isLight ? '#dcfce7' : 'rgba(22,163,74,0.25)') : (isLight ? '#f0fdf4' : 'rgba(22,163,74,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? (isLight ? '1px solid #86efac' : '1px solid rgba(22,163,74,0.4)') : (isLight ? '1px solid #bbf7d0' : '1px solid rgba(22,163,74,0.15)'), transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.vinte} Vinte</span>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#b91c1c' : '#dc2626', background: filtroEsito === 'perse' ? (isLight ? '#fee2e2' : 'rgba(220,38,38,0.25)') : (isLight ? '#fef2f2' : 'rgba(220,38,38,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? (isLight ? '1px solid #fca5a5' : '1px solid rgba(220,38,38,0.4)') : (isLight ? '1px solid #fecaca' : '1px solid rgba(220,38,38,0.15)'), transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.perse} Perse</span>
-              <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 10, fontWeight: 700, color: isLight ? '#b45309' : '#d97706', background: filtroEsito === 'pending' ? (isLight ? '#fef3c7' : 'rgba(217,119,6,0.25)') : (isLight ? '#fffbeb' : 'rgba(217,119,6,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? (isLight ? '1px solid #fcd34d' : '1px solid rgba(217,119,6,0.4)') : (isLight ? '1px solid #fde68a' : '1px solid rgba(217,119,6,0.15)'), transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.pending} In corso</span>
+              <span onClick={() => setFiltroEsito('tutti')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'tutti' ? '#fff' : (isLight ? '#334155' : 'rgba(255,255,255,0.5)'), background: filtroEsito === 'tutti' ? (isLight ? '#475569' : '#475569') : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'tutti' ? (isLight ? '2px solid #334155' : '2px solid #94a3b8') : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.vinte + mobileStats.perse + mobileStats.pending + mobileStats.daGiocare}</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'vinte' ? 'tutti' : 'vinte')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'vinte' ? '#fff' : (isLight ? '#15803d' : '#16a34a'), background: filtroEsito === 'vinte' ? '#16a34a' : (isLight ? 'rgba(22,163,74,0.08)' : 'rgba(22,163,74,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'vinte' ? '2px solid #15803d' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.vinte} Vinte</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'perse' ? 'tutti' : 'perse')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'perse' ? '#fff' : (isLight ? '#b91c1c' : '#dc2626'), background: filtroEsito === 'perse' ? '#dc2626' : (isLight ? 'rgba(220,38,38,0.08)' : 'rgba(220,38,38,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'perse' ? '2px solid #b91c1c' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.perse} Perse</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'pending' ? 'tutti' : 'pending')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'pending' ? '#fff' : (isLight ? '#b45309' : '#d97706'), background: filtroEsito === 'pending' ? '#d97706' : (isLight ? 'rgba(217,119,6,0.08)' : 'rgba(217,119,6,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'pending' ? '2px solid #b45309' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.pending} In corso</span>
+              <span onClick={() => setFiltroEsito(filtroEsito === 'daGiocare' ? 'tutti' : 'daGiocare')} style={{ fontSize: 10, fontWeight: 700, color: filtroEsito === 'daGiocare' ? '#fff' : (isLight ? '#4338ca' : '#818cf8'), background: filtroEsito === 'daGiocare' ? '#6366f1' : (isLight ? 'rgba(99,102,241,0.08)' : 'rgba(129,140,248,0.1)'), padding: '4px 8px', borderRadius: 8, cursor: 'pointer', border: filtroEsito === 'daGiocare' ? '2px solid #4338ca' : '2px solid transparent', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{mobileStats.daGiocare} Da cominciare</span>
               <span style={{ width: 1, height: 21, background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)', marginLeft: 2, marginRight: 2, position: 'relative', top: 2 }} />
               <button onClick={() => { window.location.href = '/ticket-stats'; }} style={{ background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)', color: isLight ? '#666' : '#64748b', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', padding: 0, outline: 'none', flexShrink: 0 }} title="Statistiche">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
@@ -2552,19 +2622,125 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
           )}
           </div>)}
 
+          {/* === P/L GIORNALIERO === */}
+          {plPerSezione.totale.chiuse > 0 && (
+            isMobile ? (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{
+                background: isLight
+                  ? `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)'}, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.03)' : 'rgba(220,38,38,0.03)'})`
+                  : `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)'}, transparent)`,
+                border: isLight
+                  ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}`
+                  : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}`,
+                borderRadius: 12, padding: '10px 12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
+                  <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 16, height: 16, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: textSecondary, cursor: 'pointer', flexShrink: 0 }}>?</span>
+                  <span style={{ fontSize: 11, color: textSecondary }}>{plPerSezione.totale.vinte}V / {plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? ` / ${plPerSezione.totale.inCorso} in corso` : ''}</span>
+                  {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, maxWidth: 280, cursor: 'pointer' }}>
+                    Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
+                  </div>}
+                </div>
+                <span style={{ fontSize: 16, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626' }}>
+                  {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {([
+                  { key: 'oggi', label: 'Start', color: isLight ? '#0369a1' : '#38bdf8' },
+                  { key: 'elite', label: 'Elite', color: isLight ? '#b45309' : '#fbbf24' },
+                  { key: 'selettiva', label: 'Selettiva', color: isLight ? '#16a34a' : '#4ade80' },
+                  { key: 'bilanciata', label: 'Bilanciata', color: isLight ? '#7c3aed' : '#a78bfa' },
+                  { key: 'ambiziosa', label: 'Ambiziosa', color: isLight ? '#dc2626' : '#f87171' },
+                ] as const).map(s => {
+                  const data = plPerSezione.sezioni[s.key];
+                  if (data.totale === 0) return null;
+                  return (
+                    <div key={s.key} style={{ background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)', border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: s.color, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.3 }}>{s.label}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</div>
+                      <div style={{ fontSize: 9, color: textSecondary }}>{data.vinte}V/{data.perse}P{data.inCorso > 0 ? `/${data.inCorso}?` : ''}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            ) : (
+            <div style={{
+              marginBottom: 16,
+              background: isLight
+                ? `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}, transparent)`
+                : `linear-gradient(135deg, ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)'}, transparent)`,
+              border: isLight
+                ? `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`
+                : `1px solid ${plPerSezione.totale.profitto >= 0 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'}`,
+              borderRadius: 16, padding: '20px 24px', minHeight: 53,
+              display: 'flex', alignItems: 'center', gap: 12, position: 'relative',
+            }}>
+              {/* Titolo + ? */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>P/L Giornaliero</span>
+                <span onClick={(e) => { e.stopPropagation(); setShowPlInfo(!showPlInfo); }} style={{ width: 18, height: 18, borderRadius: '50%', background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', border: isLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', flexShrink: 0 }}>?</span>
+              </div>
+              <span style={{ fontSize: 11, color: textSecondary, flexShrink: 0 }}>{plPerSezione.totale.vinte}V/{plPerSezione.totale.perse}P{plPerSezione.totale.inCorso > 0 ? `/${plPerSezione.totale.inCorso}?` : ''}</span>
+              {/* Separatore */}
+              <span style={{ width: 1, height: 18, background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+              {/* Sezioni inline */}
+              <div style={{ display: 'flex', gap: 6, flex: 1 }}>
+                {([
+                  { key: 'oggi', label: 'Start', color: isLight ? '#0369a1' : '#38bdf8' },
+                  { key: 'elite', label: 'Elite', color: isLight ? '#b45309' : '#fbbf24' },
+                  { key: 'selettiva', label: 'Selettiva', color: isLight ? '#16a34a' : '#4ade80' },
+                  { key: 'bilanciata', label: 'Bilanciata', color: isLight ? '#7c3aed' : '#a78bfa' },
+                  { key: 'ambiziosa', label: 'Ambiziosa', color: isLight ? '#dc2626' : '#f87171' },
+                ] as const).map(s => {
+                  const data = plPerSezione.sezioni[s.key];
+                  if (data.totale === 0) return null;
+                  return (
+                    <div key={s.key} style={{
+                      background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                      border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: 8, padding: '4px 12px', textAlign: 'center',
+                      flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+                    }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: 0.3 }}>{s.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: data.profitto >= 0 ? '#16a34a' : '#dc2626' }}>{data.profitto >= 0 ? '+' : ''}{data.profitto.toFixed(2)}€</span>
+                      <span style={{ fontSize: 9, color: textSecondary }}>{data.vinte}V/{data.perse}P</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Separatore */}
+              <span style={{ width: 1, height: 18, background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+              {/* Totale */}
+              <span style={{ fontSize: 18, fontWeight: 700, color: plPerSezione.totale.profitto >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+                {plPerSezione.totale.profitto >= 0 ? '+' : ''}{plPerSezione.totale.profitto.toFixed(2)}€
+              </span>
+              {/* Tooltip info */}
+              {showPlInfo && <div onClick={() => setShowPlInfo(false)} style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, background: isLight ? '#fff' : '#1e2230', border: isLight ? '1px solid #d0d5dd' : '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: textPrimary, lineHeight: 1.5, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 50, maxWidth: 320, cursor: 'pointer' }}>
+                Il calcolo simula una puntata di <b>1€</b> su ogni bolletta proposta. Se la bolletta vince, il profitto = quota - 1€. Se perde, la perdita = 1€. Il totale mostra il bilancio complessivo della giornata.
+              </div>}
+            </div>
+            )
+          )}
+
           {/* === GRIGLIA RESPONSIVE === */}
           {isMobile ? (
             /* Mobile: 1 colonna */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {CATEGORIE.map(cat => (
-                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={262} maxPreview={2} dataTour={`ticket-quadrante-${cat.key}`} />
               ))}
               <Quadrante
                 cat={{ key: 'custom' as Categoria, emoji: '', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)', accent: '#94a3b8', accentLight: '#64748b' } as any}
                 items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                 onClick={() => setActiveCategory('custom' as Categoria)}
                 liveScores={liveScores}
-                height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2}
+                height={262} maxPreview={2}
                 dataTour="ticket-mie-bollette"
                 filtroStato={filtroStatoMie}
                 onFiltroStato={setFiltroStatoMie}
@@ -2575,19 +2751,19 @@ export default function Bollette({ onBack }: { onBack?: () => void }) {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 26 }}>
                 {CATEGORIE.slice(0, 3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={262} maxPreview={2} dataTour={`ticket-quadrante-${cat.key}`} />
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 {CATEGORIE.slice(3).map(cat => (
-                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2} dataTour={`ticket-quadrante-${cat.key}`} />
+                  <Quadrante key={cat.key} cat={cat} items={grouped[cat.key]} onClick={() => setActiveCategory(cat.key)} liveScores={liveScores} height={262} maxPreview={2} dataTour={`ticket-quadrante-${cat.key}`} />
                 ))}
                 <Quadrante
                   cat={{ key: 'custom' as Categoria, emoji: '', label: 'Le mie bollette', subtitle: 'Salvate e personalizzate', gradient: 'linear-gradient(135deg, #1a1a2e, #2d2d44)', gradientLight: 'linear-gradient(135deg, #f0f0f5, #e0e0ea)', accent: '#94a3b8', accentLight: '#64748b' } as any}
                   items={(() => { const ids = new Set(customBollette.map(b => b._id)); return [...customBollette, ...bollette.filter(b => savedIds.has(b._id) && !ids.has(b._id))]; })()}
                   onClick={() => setActiveCategory('custom' as Categoria)}
                   liveScores={liveScores}
-                  height={isStorico ? 317 : 262} maxPreview={isStorico ? 3 : 2}
+                  height={262} maxPreview={2}
                   dataTour="ticket-mie-bollette"
                   filtroStato={filtroStatoMie}
                   onFiltroStato={setFiltroStatoMie}

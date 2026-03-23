@@ -395,7 +395,7 @@ function Quadrante({ cat, items, onClick, liveScores = [], height = 317, maxPrev
               borderLeft: `3px solid ${prevStatusColor}`,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontWeight: 600, color: textColor, fontSize: 12 }}>{b.label}</span>
+                <span style={{ fontWeight: 600, color: textColor, fontSize: 12 }}>{b.label.replace(/^Oggi/, 'Start')}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: prevStatusColor }}>{prevIsWin ? 'VINTA' : prevIsLoss ? 'PERSA' : prevAllPending ? '' : 'LIVE'}</span>
                   <span style={{ fontWeight: 700, color: accent, fontSize: 13 }}>{b.quota_totale.toFixed(2)}</span>
@@ -865,7 +865,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
                   </div>
                   {/* Riga 2: label + data + selezioni */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{b.label}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{b.label.replace(/^Oggi/, 'Start')}</span>
                     <span style={{ fontSize: 11, color: textSecondary }}>· {formatDateIT(b.date)}</span>
                     <span style={{ fontSize: 11, color: textSecondary }}>· {b.selezioni.length} sel.</span>
                   </div>
@@ -1177,7 +1177,7 @@ function VistaDettaglio({ cat, items, onBack, savedIds, onSave, savingId, liveSc
                 {/* Riga 2: label + sel + win/lose + bottone salva */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{b.label}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{b.label.replace(/^Oggi/, 'Start')}</span>
                     <span style={{ fontSize: 11, color: textSecondary }}>· {b.selezioni.length} sel.</span>
                     {(() => {
                       const esitiSel = b.selezioni.map(s => getEsitoLive(s, liveScores));

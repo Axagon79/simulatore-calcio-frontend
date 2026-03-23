@@ -131,16 +131,249 @@ const TABS: { key: Tab; label: string; accent: string }[] = [
 ];
 
 // ============================================
+// HELPER
+// ============================================
+function formatMercatoLabel(mercato: string, pronostico: string): string {
+  const m = mercato?.toUpperCase() || '';
+  if (m.includes('SEGNO') || m === '1X2' || m === '1X2 ESITO FINALE') return `Segno: ${pronostico}`;
+  if (m.includes('DOPPIA') || m === 'DOPPIA_CHANCE') return `DC: ${pronostico}`;
+  if (m.includes('GOL') || m.includes('GOAL') || m === 'U/O') return pronostico;
+  if (m.includes('RISULTATO')) return `RE: ${pronostico}`;
+  return pronostico;
+}
+function formatDateLabel(dateStr: string): string {
+  if (!dateStr || dateStr === 'Senza data') return dateStr;
+  const parts = dateStr.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return dateStr;
+}
+
+// ============================================
+// BOLLETTE FILTRATE LIST
+// ============================================
+function BolletteFiltrateList({ giorniOrdinati, perGiorno, filtroCard, labelMap, colorMap, liveScores, onClose, totale }: {
+  giorniOrdinati: string[];
+  perGiorno: Record<string, Bolletta[]>;
+  filtroCard: string;
+  labelMap: Record<string, string>;
+  colorMap: Record<string, string>;
+  liveScores: LiveScore[];
+  onClose: () => void;
+  totale: number;
+}) {
+  const [giorniCollapsed, setGiorniCollapsed] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const g of giorniOrdinati) init[g] = true;
+    return init;
+  });
+  const [bolletteCollapsed, setBolletteCollapsed] = useState<Record<string, boolean>>({});
+  const cardBg = isLight ? '#ffffff' : '#141720';
+  const cardBorder = isLight ? '1px solid #e0e0e0' : '1px solid rgba(255,255,255,0.06)';
+  const rowBorder = isLight ? '1px solid #eee' : '1px solid rgba(255,255,255,0.04)';
+  const hBg = isLight ? '#f8f9fa' : '#0f1219';
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: colorMap[filtroCard], textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {labelMap[filtroCard]} ({totale})
+        </span>
+        <button onClick={onClose} style={{
+          background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+          border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
+          color: textSecondary, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 0, outline: 'none',
+        }}>{'\u2715'}</button>
+      </div>
+
+      {giorniOrdinati.map(giorno => {
+        const bolletteGiorno = perGiorno[giorno];
+        const isGiornoCollapsed = giorniCollapsed[giorno] ?? false;
+        return (
+          <div key={giorno} style={{ marginBottom: 10 }}>
+            {/* Header giorno */}
+            <div
+              onClick={() => setGiorniCollapsed(prev => ({ ...prev, [giorno]: !prev[giorno] }))}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', cursor: 'pointer',
+                background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 8,
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 700, color: textPrimary }}>{formatDateLabel(giorno)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: textSecondary }}>{bolletteGiorno.length} ticket</span>
+                <span style={{ fontSize: 10, color: textSecondary }}>{isGiornoCollapsed ? '\u25BC' : '\u25B2'}</span>
+              </div>
+            </div>
+
+            {/* Bollette del giorno */}
+            {!isGiornoCollapsed && bolletteGiorno.map(b => {
+              const isBollCollapsed = bolletteCollapsed[b._id] ?? true;
+              const esiti = b.selezioni.map(s => getEsitoSel(s, liveScores));
+
+              // Status
+              const hasDefLose = esiti.some(e => e === 'lose');
+              const allDone = esiti.every(e => e === 'win' || e === 'lose');
+              const allWin = esiti.every(e => e === 'win');
+              const anyLive = esiti.some(e => e === 'live');
+              const allPending = esiti.every(e => e === 'pending');
+              const isWin = b.esito_globale === 'vinta' || (allDone && allWin);
+              const isLoss = b.esito_globale === 'persa' || hasDefLose;
+
+              const dotColor = allPending ? (isLight ? '#ddd' : '#444')
+                : isLoss ? '#f44336'
+                : isWin ? '#4caf50'
+                : anyLive ? '#ff9800'
+                : '#4caf50';
+              const statusLabel = allPending ? null
+                : isLoss ? 'PERSA'
+                : isWin ? 'VINTA!'
+                : anyLive ? 'IN CORSO...'
+                : null;
+              const statusColor = statusLabel === 'PERSA' ? '#f44336'
+                : statusLabel === 'VINTA!' ? '#4caf50'
+                : statusLabel === 'IN CORSO...' ? '#ff9800'
+                : undefined;
+
+              return (
+                <div key={b._id} style={{
+                  background: cardBg, border: cardBorder,
+                  borderRadius: 12, marginTop: 6, overflow: 'hidden',
+                  boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                }}>
+                  {/* Header bolletta */}
+                  <div
+                    onClick={() => setBolletteCollapsed(prev => ({ ...prev, [b._id]: !prev[b._id] }))}
+                    style={{
+                      padding: '10px 16px', cursor: 'pointer',
+                      background: hBg,
+                      borderBottom: isBollCollapsed ? 'none' : rowBorder,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                        {statusLabel && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 800, color: statusColor,
+                            background: `${statusColor}18`, padding: '2px 8px',
+                            borderRadius: 4, letterSpacing: 0.5,
+                          }}>
+                            {statusLabel}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, color: textSecondary }}>Quota</span>
+                        <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>{(b.quota_totale || 0).toFixed(2)}</span>
+                        <span style={{ color: textSecondary, fontSize: 12 }}>{isBollCollapsed ? '\u25BC' : '\u25B2'}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: textPrimary }}>{(b.label || b.tipo).replace(/^Oggi/, 'Start')}</span>
+                      <span style={{ fontSize: 11, color: textSecondary }}>{'\u00B7'} {b.selezioni.length} sel.</span>
+                      {(() => {
+                        const winCount = esiti.filter(e => e === 'win').length;
+                        const loseCount = esiti.filter(e => e === 'lose').length;
+                        if (winCount === 0 && loseCount === 0) return null;
+                        return (
+                          <span style={{ fontSize: 11, display: 'flex', gap: 4 }}>
+                            {winCount > 0 && <span style={{ color: '#4caf50', fontWeight: 700 }}>{winCount}{'\u2713'}</span>}
+                            {loseCount > 0 && <span style={{ color: '#f44336', fontWeight: 700 }}>{loseCount}{'\u2717'}</span>}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Selezioni */}
+                  {!isBollCollapsed && (
+                    <>
+                      {b.selezioni.map((s, i) => {
+                        const esito = getEsitoSel(s, liveScores);
+                        const bgEsito = esito === 'win'
+                          ? (isLight ? '#f0fdf4' : 'rgba(0,255,136,0.08)')
+                          : esito === 'lose'
+                            ? (isLight ? '#fef2f2' : 'rgba(255,68,102,0.08)')
+                            : 'transparent';
+                        const selDotColor = esito === 'win' ? '#4caf50'
+                          : esito === 'lose' ? '#f44336'
+                          : esito === 'live' ? '#ff9800'
+                          : isLight ? '#ddd' : '#444';
+
+                        return (
+                          <div key={i} style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                            padding: '12px 16px',
+                            borderBottom: i < b.selezioni.length - 1 ? rowBorder : 'none',
+                            background: bgEsito,
+                          }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 15, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span>
+                                  {s.league && <span style={{ fontSize: 10, fontWeight: 600, color: textSecondary, background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>{s.league.length > 12 ? s.league.slice(0, 12) : s.league}</span>}
+                                  {s.home} - {s.away}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: 12, color: textSecondary, marginTop: 3, textTransform: 'uppercase' }}>
+                                {formatMercatoLabel(s.mercato, s.pronostico)}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 16 }}>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: 12, color: textSecondary }}>
+                                  {s.match_date ? formatDateLabel(s.match_date).slice(0, 5) : ''} - {s.match_time || ''}
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: 17, color: textPrimary, marginTop: 2 }}>
+                                  {s.quota.toFixed(2)}
+                                </div>
+                              </div>
+                              <div style={{
+                                width: 22, height: 22, borderRadius: '50%',
+                                background: selDotColor, flexShrink: 0,
+                              }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Footer quota */}
+                      <div style={{ padding: '10px 16px', borderTop: rowBorder, background: hBg }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 13, color: textSecondary }}>Quota totale</span>
+                          <span style={{ fontWeight: 700, fontSize: 18, color: textPrimary }}>{(b.quota_totale || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================
 // STATS BLOCK
 // ============================================
+type FiltroCard = 'vinte' | 'perse' | 'inCorso' | 'daGiocare' | null;
+
 function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores: LiveScore[] }) {
   const [mercatiExpanded, setMercatiExpanded] = useState(false);
+  const [filtroCard, setFiltroCard] = useState<FiltroCard>(null);
 
   if (!bollette.length) {
     return <div style={{ textAlign: 'center', padding: 40, color: textSecondary, fontSize: 13 }}>Nessuna bolletta disponibile</div>;
   }
 
   let vinte = 0, perse = 0, inCorso = 0, daGiocare = 0, totaleProfitto = 0, stakeChiuse = 0;
+  const bolletteClassificate: { b: Bolletta; stato: 'vinte' | 'perse' | 'inCorso' | 'daGiocare' }[] = [];
   const risultati: ('W' | 'L')[] = [];
   let bestQuotaVinta = 0;
   let bestVincitaEuro = 0;
@@ -167,15 +400,18 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
       risultati.push('W');
       if ((b.quota_totale || 0) > bestQuotaVinta) bestQuotaVinta = b.quota_totale || 0;
       if (vincita > bestVincitaEuro) bestVincitaEuro = vincita;
+      bolletteClassificate.push({ b, stato: 'vinte' as const });
     } else if (isLoss) {
       perse++;
       stakeChiuse += stake;
       totaleProfitto -= stake;
       risultati.push('L');
       if (stake > worstPerditaEuro) worstPerditaEuro = stake;
+      bolletteClassificate.push({ b, stato: 'perse' as const });
     } else {
       const hasLive = esiti.some(e => e === 'live');
-      if (hasLive) { inCorso++; } else { daGiocare++; }
+      if (hasLive) { inCorso++; bolletteClassificate.push({ b, stato: 'inCorso' as const }); }
+      else { daGiocare++; bolletteClassificate.push({ b, stato: 'daGiocare' as const }); }
     }
 
     for (let si = 0; si < b.selezioni.length; si++) {
@@ -273,18 +509,20 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
       {/* === CONTEGGI 4 CARD === */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
-          { label: 'Vinte', value: vinte, color: '#16a34a', bg: isLight ? '#f0fdf4' : '#0a1a0f', borderC: isLight ? '#bbf7d0' : '#14532d',
+          { label: 'Vinte', value: vinte, color: '#16a34a', bg: isLight ? '#f0fdf4' : '#0a1a0f', borderC: isLight ? '#bbf7d0' : '#14532d', filtro: 'vinte' as FiltroCard,
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> },
-          { label: 'Perse', value: perse, color: '#dc2626', bg: isLight ? '#fef2f2' : '#1a0a0a', borderC: isLight ? '#fecaca' : '#7f1d1d',
+          { label: 'Perse', value: perse, color: '#dc2626', bg: isLight ? '#fef2f2' : '#1a0a0a', borderC: isLight ? '#fecaca' : '#7f1d1d', filtro: 'perse' as FiltroCard,
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> },
-          { label: 'In corso', value: inCorso, color: '#d97706', bg: isLight ? '#fffbeb' : '#1a1408', borderC: isLight ? '#fde68a' : '#78350f',
+          { label: 'In corso', value: inCorso, color: '#d97706', bg: isLight ? '#fffbeb' : '#1a1408', borderC: isLight ? '#fde68a' : '#78350f', filtro: 'inCorso' as FiltroCard,
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
-          { label: 'Da giocare', value: daGiocare, color: '#3b82f6', bg: isLight ? '#eff6ff' : '#0a1020', borderC: isLight ? '#bfdbfe' : '#1e3a5f',
+          { label: 'Da giocare', value: daGiocare, color: '#3b82f6', bg: isLight ? '#eff6ff' : '#0a1020', borderC: isLight ? '#bfdbfe' : '#1e3a5f', filtro: 'daGiocare' as FiltroCard,
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
         ].map(s => (
-          <div key={s.label} style={{
-            background: s.bg, border: `1px solid ${s.borderC}`,
-            borderRadius: 12, padding: '12px 8px', textAlign: 'center',
+          <div key={s.label} onClick={() => s.value > 0 && setFiltroCard(filtroCard === s.filtro ? null : s.filtro)} style={{
+            background: filtroCard === s.filtro ? (isLight ? `${s.color}18` : `${s.color}25`) : s.bg,
+            border: filtroCard === s.filtro ? `2px solid ${s.color}` : `1px solid ${s.borderC}`,
+            borderRadius: 12, padding: filtroCard === s.filtro ? '11px 7px' : '12px 8px', textAlign: 'center',
+            cursor: s.value > 0 ? 'pointer' : 'default', transition: 'all 0.15s',
           }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>{s.icon}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.02em' }}>{s.value}</div>
@@ -292,6 +530,33 @@ function StatsBlock({ bollette, liveScores }: { bollette: Bolletta[]; liveScores
           </div>
         ))}
       </div>
+
+      {/* === LISTA BOLLETTE FILTRATE === */}
+      {filtroCard && (() => {
+        const filtrate = bolletteClassificate.filter(bc => bc.stato === filtroCard).map(bc => bc.b);
+        const labelMap: Record<string, string> = { vinte: 'Vinte', perse: 'Perse', inCorso: 'In corso', daGiocare: 'Da giocare' };
+        const colorMap: Record<string, string> = { vinte: '#16a34a', perse: '#dc2626', inCorso: '#d97706', daGiocare: '#3b82f6' };
+        // Raggruppa per giorno
+        const perGiorno: Record<string, Bolletta[]> = {};
+        for (const b of filtrate) {
+          const d = b.date || 'Senza data';
+          if (!perGiorno[d]) perGiorno[d] = [];
+          perGiorno[d].push(b);
+        }
+        const giorniOrdinati = Object.keys(perGiorno).sort((a, b) => b.localeCompare(a));
+        return (
+          <BolletteFiltrateList
+            giorniOrdinati={giorniOrdinati}
+            perGiorno={perGiorno}
+            filtroCard={filtroCard}
+            labelMap={labelMap}
+            colorMap={colorMap}
+            liveScores={liveScores}
+            onClose={() => setFiltroCard(null)}
+            totale={filtrate.length}
+          />
+        );
+      })()}
 
       {/* === METRICHE === */}
       <div style={{

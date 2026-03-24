@@ -94,7 +94,7 @@ export const STEMMI_CAMPIONATI: Record<string, string> = {
   'PRIMERA_DIVISION_ARG': `${STEMMI_BASE}campionati%2Fprimera_division_arg.png?alt=media`,
   'MLS': `${STEMMI_BASE}campionati%2Fmls.png?alt=media`,
   'J1_LEAGUE': `${STEMMI_BASE}campionati%2Fj1_league.png?alt=media`,
-  // NUOVI CAMPIONATI (24/03/2026) — TODO: upload stemmi su Firebase Storage
+  // Nuovi campionati (24/03/2026)
   'LEAGUE_TWO': `${STEMMI_BASE}campionati%2Fleague_two.png?alt=media`,
   'VEIKKAUSLIIGA': `${STEMMI_BASE}campionati%2Fveikkausliiga.png?alt=media`,
   'LIGA_3': `${STEMMI_BASE}campionati%2F3_liga.png?alt=media`,

@@ -44,6 +44,16 @@ const STEMMI_CAMPIONATI: Record<string, string> = {
   'PRIMERA_DIVISION_ARG': `${STEMMI_BASE}campionati%2Fprimera_division_arg.png?alt=media`,
   'MLS': `${STEMMI_BASE}campionati%2Fmls.png?alt=media`,
   'J1_LEAGUE': `${STEMMI_BASE}campionati%2Fj1_league.png?alt=media`,
+  'LEAGUE_ONE': `${STEMMI_BASE}campionati%2Fleague_one.png?alt=media`,
+  'LEAGUE_TWO': `${STEMMI_BASE}campionati%2Fleague_two.png?alt=media`,
+  'VEIKKAUSLIIGA': `${STEMMI_BASE}campionati%2Fveikkausliiga.png?alt=media`,
+  'LIGA_3': `${STEMMI_BASE}campionati%2F3_liga.png?alt=media`,
+  'LIGA_MX': `${STEMMI_BASE}campionati%2Fliga_mx.png?alt=media`,
+  'EERSTE_DIVISIE': `${STEMMI_BASE}campionati%2Feerste_divisie.png?alt=media`,
+  'LIGA_PORTUGAL_2': `${STEMMI_BASE}campionati%2Fliga_portugal_2.png?alt=media`,
+  'BIR_LIG': `${STEMMI_BASE}campionati%2F1_lig.png?alt=media`,
+  'SAUDI_PRO_LEAGUE': `${STEMMI_BASE}campionati%2Fsaudi_pro_league.png?alt=media`,
+  'SCOTTISH_CHAMPIONSHIP': `${STEMMI_BASE}campionati%2Fscottish_championship.png?alt=media`,
 };
 
 const STEMMI_COPPE: Record<string, string> = {

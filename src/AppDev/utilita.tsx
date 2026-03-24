@@ -18,6 +18,8 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
       // --- INGHILTERRA ---
       case 'PREMIER_LEAGUE': case 'PREMIER LEAGUE':
       case 'CHAMPIONSHIP':
+      case 'LEAGUE_ONE': case 'LEAGUE ONE':
+      case 'LEAGUE_TWO': case 'LEAGUE TWO':
           folder = 'England'; break;
 
       // --- SPAGNA ---
@@ -27,6 +29,7 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
 
       // --- GERMANIA ---
       case 'BUNDESLIGA': case 'BUNDESLIGA_2': case 'BUNDESLIGA 2':
+      case 'LIGA_3': case '3. LIGA':
           folder = 'Germany'; break;
 
       // --- FRANCIA ---
@@ -36,14 +39,17 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
 
       // --- PORTOGALLO ---
       case 'LIGA_PORTUGAL': case 'LIGA PORTUGAL': case 'PRIMEIRA_LIGA':
+      case 'LIGA_PORTUGAL_2': case 'LIGA PORTUGAL 2':
           folder = 'Portugal'; break;
 
       // --- OLANDA ---
       case 'EREDIVISIE':
+      case 'EERSTE_DIVISIE': case 'EERSTE DIVISIE':
           folder = 'Netherlands'; break;
 
       // --- SCOZIA ---
       case 'SCOTTISH_PREMIERSHIP': case 'SCOTTISH PREMIERSHIP':
+      case 'SCOTTISH_CHAMPIONSHIP': case 'SCOTTISH CHAMPIONSHIP':
           folder = 'Scotland'; break;
 
       // --- NORD EUROPA ---
@@ -60,6 +66,7 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
       case 'JUPILER_PRO_LEAGUE': case 'JUPILER PRO LEAGUE':
           folder = 'Belgium'; break;
       case 'SUPER_LIG': case 'SUPER LIG':
+      case 'BIR_LIG': case '1. LIG':
           folder = 'Turkey'; break;
 
       // --- COPPE EUROPEE ---
@@ -67,6 +74,18 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
           folder = 'Champions_League'; break;
       case 'UEL': case 'EUROPA_LEAGUE': case 'EUROPA LEAGUE':
           folder = 'Europa_League'; break;
+
+      // --- FINLANDIA ---
+      case 'VEIKKAUSLIIGA':
+          folder = 'Finland'; break;
+
+      // --- MESSICO ---
+      case 'LIGA_MX': case 'LIGA MX':
+          folder = 'Mexico'; break;
+
+      // --- ARABIA SAUDITA ---
+      case 'SAUDI_PRO_LEAGUE': case 'SAUDI PRO LEAGUE':
+          folder = 'Saudi_Arabia'; break;
 
       // --- RESTO DEL MONDO ---
       case 'BRASILEIRAO':

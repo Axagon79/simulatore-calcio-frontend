@@ -147,6 +147,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
 
     // EUROPA SERIE B
     { id: 'CHAMPIONSHIP', name: 'Championship', country: '🇬🇧 Inghilterra B', color: '#cc0055' },
+    { id: 'LEAGUE_ONE', name: 'League One', country: '🇬🇧 Inghilterra C', color: '#cc3377' },
     { id: 'LA_LIGA_2', name: 'LaLiga 2', country: '🇪🇸 Spagna B', color: '#dd8833' },
     { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: '🇩🇪 Germania B', color: '#dddddd' },
     { id: 'LIGUE_2', name: 'Ligue 2', country: '🇫🇷 Francia B', color: '#0044cc' },
@@ -168,6 +169,17 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
     
     // ASIA
     { id: 'J1_LEAGUE', name: 'J1 League', country: '🇯🇵 Giappone', color: '#cc0000' },
+
+    // NUOVI CAMPIONATI (24/03/2026)
+    { id: 'LEAGUE_TWO', name: 'League Two', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra', color: '#660099' },
+    { id: 'VEIKKAUSLIIGA', name: 'Veikkausliiga', country: '🇫🇮 Finlandia', color: '#003580' },
+    { id: 'LIGA_3', name: '3. Liga', country: '🇩🇪 Germania', color: '#999999' },
+    { id: 'LIGA_MX', name: 'Liga MX', country: '🇲🇽 Messico', color: '#006341' },
+    { id: 'EERSTE_DIVISIE', name: 'Eerste Divisie', country: '🇳🇱 Olanda', color: '#ff6600' },
+    { id: 'LIGA_PORTUGAL_2', name: 'Liga Portugal 2', country: '🇵🇹 Portogallo', color: '#006633' },
+    { id: 'BIR_LIG', name: '1. Lig', country: '🇹🇷 Turchia', color: '#cc0000' },
+    { id: 'SAUDI_PRO_LEAGUE', name: 'Saudi Pro League', country: '🇸🇦 Arabia Saudita', color: '#006633' },
+    { id: 'SCOTTISH_CHAMPIONSHIP', name: 'Scottish Champ.', country: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scozia', color: '#003399' },
   ];
 
   // CONFIGURAZIONE COPPE EUROPEE

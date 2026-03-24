@@ -12,7 +12,7 @@ const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.f
 
 const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Serie A': 'Italy', 'Serie B': 'Italy', 'Serie C - Girone A': 'Italy', 'Serie C - Girone B': 'Italy', 'Serie C - Girone C': 'Italy',
-  'Premier League': 'England', 'Championship': 'England',
+  'Premier League': 'England', 'Championship': 'England', 'League One': 'England',
   'La Liga': 'Spain', 'LaLiga 2': 'Spain',
   'Bundesliga': 'Germany', '2. Bundesliga': 'Germany',
   'Ligue 1': 'France', 'Ligue 2': 'France',
@@ -27,6 +27,10 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Primera División': 'Argentina',
   'MLS': 'USA', 'Major League Soccer': 'USA',
   'J1 League': 'Japan',
+  // NUOVI CAMPIONATI (24/03/2026)
+  'League Two': 'England', 'Veikkausliiga': 'Finland', '3. Liga': 'Germany',
+  'Liga MX': 'Mexico', 'Eerste Divisie': 'Netherlands', 'Liga Portugal 2': 'Portugal',
+  '1. Lig': 'Turkey', 'Saudi Pro League': 'Saudi_Arabia', 'Scottish Championship': 'Scotland',
   'Champions League': 'Champions_League',
   'Europa League': 'Europa_League',
 };

@@ -28,6 +28,7 @@ export const LEAGUES_MAP: League[] = [
 
   // EUROPA SERIE B
   { id: 'CHAMPIONSHIP', name: 'Championship', country: 'England' },
+  { id: 'LEAGUE_ONE', name: 'League One', country: 'England' },
   { id: 'LA_LIGA_2', name: 'LaLiga 2', country: 'Spain' },
   { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: 'Germany' },
   { id: 'LIGUE_2', name: 'Ligue 2', country: 'France' },
@@ -48,6 +49,17 @@ export const LEAGUES_MAP: League[] = [
 
   // ASIA
   { id: 'J1_LEAGUE', name: 'J1 League', country: 'Japan' },
+
+  // NUOVI CAMPIONATI (24/03/2026)
+  { id: 'LEAGUE_TWO', name: 'League Two', country: 'England' },
+  { id: 'VEIKKAUSLIIGA', name: 'Veikkausliiga', country: 'Finland' },
+  { id: 'LIGA_3', name: '3. Liga', country: 'Germany' },
+  { id: 'LIGA_MX', name: 'Liga MX', country: 'Mexico' },
+  { id: 'EERSTE_DIVISIE', name: 'Eerste Divisie', country: 'Netherlands' },
+  { id: 'LIGA_PORTUGAL_2', name: 'Liga Portugal 2', country: 'Portugal' },
+  { id: 'BIR_LIG', name: '1. Lig', country: 'Turkey' },
+  { id: 'SAUDI_PRO_LEAGUE', name: 'Saudi Pro League', country: 'Saudi Arabia' },
+  { id: 'SCOTTISH_CHAMPIONSHIP', name: 'Scottish Champ.', country: 'Scotland' },
 ];
 
 
@@ -66,6 +78,7 @@ export const STEMMI_CAMPIONATI: Record<string, string> = {
   'LIGUE_1': `${STEMMI_BASE}campionati%2Fligue_1.png?alt=media`,
   'LIGA_PORTUGAL': `${STEMMI_BASE}campionati%2Fliga_portugal.png?alt=media`,
   'CHAMPIONSHIP': `${STEMMI_BASE}campionati%2Fchampionship.png?alt=media`,
+  'LEAGUE_ONE': `${STEMMI_BASE}campionati%2Fleague_one.png?alt=media`,
   'LA_LIGA_2': `${STEMMI_BASE}campionati%2Fla_liga_2.png?alt=media`,
   'BUNDESLIGA_2': `${STEMMI_BASE}campionati%2Fbundesliga_2.png?alt=media`,
   'LIGUE_2': `${STEMMI_BASE}campionati%2Fligue_2.png?alt=media`,
@@ -81,6 +94,16 @@ export const STEMMI_CAMPIONATI: Record<string, string> = {
   'PRIMERA_DIVISION_ARG': `${STEMMI_BASE}campionati%2Fprimera_division_arg.png?alt=media`,
   'MLS': `${STEMMI_BASE}campionati%2Fmls.png?alt=media`,
   'J1_LEAGUE': `${STEMMI_BASE}campionati%2Fj1_league.png?alt=media`,
+  // NUOVI CAMPIONATI (24/03/2026) — TODO: upload stemmi su Firebase Storage
+  'LEAGUE_TWO': `${STEMMI_BASE}campionati%2Fleague_two.png?alt=media`,
+  'VEIKKAUSLIIGA': `${STEMMI_BASE}campionati%2Fveikkausliiga.png?alt=media`,
+  'LIGA_3': `${STEMMI_BASE}campionati%2F3_liga.png?alt=media`,
+  'LIGA_MX': `${STEMMI_BASE}campionati%2Fliga_mx.png?alt=media`,
+  'EERSTE_DIVISIE': `${STEMMI_BASE}campionati%2Feerste_divisie.png?alt=media`,
+  'LIGA_PORTUGAL_2': `${STEMMI_BASE}campionati%2Fliga_portugal_2.png?alt=media`,
+  'BIR_LIG': `${STEMMI_BASE}campionati%2F1_lig.png?alt=media`,
+  'SAUDI_PRO_LEAGUE': `${STEMMI_BASE}campionati%2Fsaudi_pro_league.png?alt=media`,
+  'SCOTTISH_CHAMPIONSHIP': `${STEMMI_BASE}campionati%2Fscottish_championship.png?alt=media`,
 };
 
 export const STEMMI_COPPE: Record<string, string> = {

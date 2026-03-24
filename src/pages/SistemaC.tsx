@@ -13,7 +13,7 @@ const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.f
 
 const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Serie A': 'Italy', 'Serie B': 'Italy', 'Serie C - Girone A': 'Italy', 'Serie C - Girone B': 'Italy', 'Serie C - Girone C': 'Italy',
-  'Premier League': 'England', 'Championship': 'England',
+  'Premier League': 'England', 'Championship': 'England', 'League One': 'England',
   'La Liga': 'Spain', 'LaLiga 2': 'Spain',
   'Bundesliga': 'Germany', '2. Bundesliga': 'Germany',
   'Ligue 1': 'France', 'Ligue 2': 'France',
@@ -25,12 +25,16 @@ const LEAGUE_TO_FOLDER: Record<string, string> = {
   'Süper Lig': 'Turkey', 'Super Lig': 'Turkey',
   'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil', 'Brasileirão Serie A': 'Brazil', 'Brasileirao Serie A': 'Brazil',
   'Primera División': 'Argentina', 'MLS': 'USA', 'J1 League': 'Japan',
+  // NUOVI CAMPIONATI (24/03/2026)
+  'League Two': 'England', 'Veikkausliiga': 'Finland', '3. Liga': 'Germany',
+  'Liga MX': 'Mexico', 'Eerste Divisie': 'Netherlands', 'Liga Portugal 2': 'Portugal',
+  '1. Lig': 'Turkey', 'Saudi Pro League': 'Saudi_Arabia', 'Scottish Championship': 'Scotland',
 };
 
 const LEAGUE_TO_LOGO: Record<string, string> = {
   'Serie A': 'serie_a', 'Serie B': 'serie_b',
   'Serie C - Girone A': 'serie_c', 'Serie C - Girone B': 'serie_c', 'Serie C - Girone C': 'serie_c',
-  'Premier League': 'premier_league', 'Championship': 'championship',
+  'Premier League': 'premier_league', 'Championship': 'championship', 'League One': 'league_one',
   'La Liga': 'la_liga', 'LaLiga 2': 'la_liga_2',
   'Bundesliga': 'bundesliga', '2. Bundesliga': 'bundesliga_2',
   'Ligue 1': 'ligue_1', 'Ligue 2': 'ligue_2',
@@ -42,11 +46,15 @@ const LEAGUE_TO_LOGO: Record<string, string> = {
   'Süper Lig': 'super_lig', 'Super Lig': 'super_lig',
   'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao', 'Brasileirão Serie A': 'brasileirao', 'Brasileirao Serie A': 'brasileirao',
   'Primera División': 'primera_division_arg', 'MLS': 'mls', 'J1 League': 'j1_league',
+  // NUOVI CAMPIONATI (24/03/2026)
+  'League Two': 'league_two', 'Veikkausliiga': 'veikkausliiga', '3. Liga': '3_liga',
+  'Liga MX': 'liga_mx', 'Eerste Divisie': 'eerste_divisie', 'Liga Portugal 2': 'liga_portugal_2',
+  '1. Lig': '1_lig', 'Saudi Pro League': 'saudi_pro_league', 'Scottish Championship': 'scottish_championship',
 };
 
 const LEAGUE_TO_COUNTRY_CODE: Record<string, string> = {
   'Serie A': 'it', 'Serie B': 'it', 'Serie C - Girone A': 'it', 'Serie C - Girone B': 'it', 'Serie C - Girone C': 'it',
-  'Premier League': 'gb-eng', 'Championship': 'gb-eng',
+  'Premier League': 'gb-eng', 'Championship': 'gb-eng', 'League One': 'gb-eng',
   'La Liga': 'es', 'LaLiga 2': 'es',
   'Bundesliga': 'de', '2. Bundesliga': 'de',
   'Ligue 1': 'fr', 'Ligue 2': 'fr',
@@ -58,6 +66,10 @@ const LEAGUE_TO_COUNTRY_CODE: Record<string, string> = {
   'Süper Lig': 'tr', 'Super Lig': 'tr',
   'Brasileirão': 'br', 'Brasileirao': 'br', 'Brasileirão Serie A': 'br', 'Brasileirao Serie A': 'br',
   'Primera División': 'ar', 'MLS': 'us', 'J1 League': 'jp',
+  // NUOVI CAMPIONATI (24/03/2026)
+  'League Two': 'gb-eng', 'Veikkausliiga': 'fi', '3. Liga': 'de',
+  'Liga MX': 'mx', 'Eerste Divisie': 'nl', 'Liga Portugal 2': 'pt',
+  '1. Lig': 'tr', 'Saudi Pro League': 'sa', 'Scottish Championship': 'gb-sct',
 };
 
 const getLeagueLogoUrl = (league: string): string => {

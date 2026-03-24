@@ -42,6 +42,7 @@ const LEAGUE_PREFIX: Record<string, string> = {
   'Serie C - Girone C': 'ITA3C',
   'Premier League': 'ENG1',
   'Championship': 'ENG2',
+  'League One': 'ENG3',
   'La Liga': 'ESP1',
   'LaLiga 2': 'ESP2',
   'Ligue 1': 'FRA1',
@@ -58,6 +59,16 @@ const LEAGUE_PREFIX: Record<string, string> = {
   'Major League Soccer': 'MLS',
   'Primera División': 'ARG1',
   'League of Ireland Premier Division': 'IRL1',
+  // NUOVI CAMPIONATI (24/03/2026)
+  'League Two': 'ENG4',
+  'Veikkausliiga': 'FIN1',
+  '3. Liga': 'GER3',
+  'Liga MX': 'MEX1',
+  'Eerste Divisie': 'NED2',
+  'Liga Portugal 2': 'POR2',
+  '1. Lig': 'TUR2',
+  'Saudi Pro League': 'SAU1',
+  'Scottish Championship': 'SCO2',
 };
 
 function getLeaguePrefix(league?: string): string {

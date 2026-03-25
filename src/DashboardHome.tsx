@@ -148,49 +148,66 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
     { id: 'LIGUE_1', name: 'Ligue 1', country: '🇫🇷 Francia', matches: 7, color: '#0055ff' }, 
   ];
 
-  // LISTA COMPLETA ALTRI CAMPIONATI
-  const otherLeagues = [
-    // ITALIA
-    { id: 'SERIE_C_A', name: 'Serie C - Girone A', country: '🇮🇹 Italia', color: '#00f0ff' },
-    { id: 'SERIE_C_B', name: 'Serie C - Girone B', country: '🇮🇹 Italia', color: '#00f0ff' },
-    { id: 'SERIE_C_C', name: 'Serie C - Girone C', country: '🇮🇹 Italia', color: '#00f0ff' },
-
-    // EUROPA SERIE B
-    { id: 'CHAMPIONSHIP', name: 'Championship', country: '🇬🇧 Inghilterra B', color: '#cc0055' },
-    { id: 'LEAGUE_ONE', name: 'League One', country: '🇬🇧 Inghilterra C', color: '#cc3377' },
-    { id: 'LA_LIGA_2', name: 'LaLiga 2', country: '🇪🇸 Spagna B', color: '#dd8833' },
-    { id: 'BUNDESLIGA_2', name: '2. Bundesliga', country: '🇩🇪 Germania B', color: '#dddddd' },
-    { id: 'LIGUE_2', name: 'Ligue 2', country: '🇫🇷 Francia B', color: '#0044cc' },
-    { id: 'EREDIVISIE', name: 'Eredivisie', country: '🇳🇱 Olanda', color: '#FFA500' },
-    
-    // EUROPA NORDICI + EXTRA
-    { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Prem.', country: '🇬🇧 Scozia', color: '#0055aa' },
-    { id: 'ALLSVENSKAN', name: 'Allsvenskan', country: '🇸🇪 Svezia', color: '#ffcc00' },
-    { id: 'ELITESERIEN', name: 'Eliteserien', country: '🇳🇴 Norvegia', color: '#cc0000' },
-    { id: 'SUPERLIGAEN', name: 'Superligaen', country: '🇩🇰 Danimarca', color: '#dd0000' },
-    { id: 'JUPILER_PRO_LEAGUE', name: 'Jupiler Pro', country: '🇧🇪 Belgio', color: '#ffdd00' },
-    { id: 'SUPER_LIG', name: 'Süper Lig', country: '🇹🇷 Turchia', color: '#ee0000' },
-    { id: 'LEAGUE_OF_IRELAND', name: 'League of Ireland', country: '🇮🇪 Irlanda', color: '#009900' },
-    
-    // AMERICHE
-    { id: 'BRASILEIRAO', name: 'Brasileirão', country: '🇧🇷 Brasile', color: '#00ff00' },
-    { id: 'PRIMERA_DIVISION_ARG', name: 'Primera División', country: '🇦🇷 Argentina', color: '#66ccff' },
-    { id: 'MLS', name: 'MLS', country: '🇺🇸 USA', color: '#0066cc' },
-    
-    // ASIA
-    { id: 'J1_LEAGUE', name: 'J1 League', country: '🇯🇵 Giappone', color: '#cc0000' },
-
-    // NUOVI CAMPIONATI (24/03/2026)
-    { id: 'LEAGUE_TWO', name: 'League Two', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra', color: '#660099' },
-    { id: 'VEIKKAUSLIIGA', name: 'Veikkausliiga', country: '🇫🇮 Finlandia', color: '#003580' },
-    { id: 'LIGA_3', name: '3. Liga', country: '🇩🇪 Germania', color: '#999999' },
-    { id: 'LIGA_MX', name: 'Liga MX', country: '🇲🇽 Messico', color: '#006341' },
-    { id: 'EERSTE_DIVISIE', name: 'Eerste Divisie', country: '🇳🇱 Olanda', color: '#ff6600' },
-    { id: 'LIGA_PORTUGAL_2', name: 'Liga Portugal 2', country: '🇵🇹 Portogallo', color: '#006633' },
-    { id: 'BIR_LIG', name: '1. Lig', country: '🇹🇷 Turchia', color: '#cc0000' },
-    { id: 'SAUDI_PRO_LEAGUE', name: 'Saudi Pro League', country: '🇸🇦 Arabia Saudita', color: '#006633' },
-    { id: 'SCOTTISH_CHAMPIONSHIP', name: 'Scottish Champ.', country: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scozia', color: '#003399' },
+  // LISTA COMPLETA ALTRI CAMPIONATI — raggruppati per nazione
+  const otherLeagueGroups: { nation: string; flag: string; colors: string[]; leagues: { id: string; name: string; color: string }[] }[] = [
+    { nation: 'Italia', flag: '🇮🇹', colors: ['#009246', '#ffffff', '#CE2B37'], leagues: [
+      { id: 'SERIE_C_A', name: 'Serie C - Girone A', color: '#00f0ff' },
+      { id: 'SERIE_C_B', name: 'Serie C - Girone B', color: '#00f0ff' },
+      { id: 'SERIE_C_C', name: 'Serie C - Girone C', color: '#00f0ff' },
+    ]},
+    { nation: 'Inghilterra', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', colors: ['#ffffff', '#CE1124', '#ffffff'], leagues: [
+      { id: 'CHAMPIONSHIP', name: 'Championship', color: '#cc0055' },
+      { id: 'LEAGUE_ONE', name: 'League One', color: '#cc3377' },
+      { id: 'LEAGUE_TWO', name: 'League Two', color: '#660099' },
+    ]},
+    { nation: 'Spagna', flag: '🇪🇸', colors: ['#AA151B', '#F1BF00', '#AA151B'], leagues: [
+      { id: 'LA_LIGA_2', name: 'LaLiga 2', color: '#dd8833' },
+    ]},
+    { nation: 'Germania', flag: '🇩🇪', colors: ['#000000', '#DD0000', '#FFCE00'], leagues: [
+      { id: 'BUNDESLIGA_2', name: '2. Bundesliga', color: '#dddddd' },
+      { id: 'LIGA_3', name: '3. Liga', color: '#999999' },
+    ]},
+    { nation: 'Francia', flag: '🇫🇷', colors: ['#002395', '#ffffff', '#ED2939'], leagues: [
+      { id: 'LIGUE_2', name: 'Ligue 2', color: '#0044cc' },
+    ]},
+    { nation: 'Olanda', flag: '🇳🇱', colors: ['#AE1C28', '#ffffff', '#21468B'], leagues: [
+      { id: 'EREDIVISIE', name: 'Eredivisie', color: '#FFA500' },
+      { id: 'EERSTE_DIVISIE', name: 'Eerste Divisie', color: '#ff6600' },
+    ]},
+    { nation: 'Portogallo', flag: '🇵🇹', colors: ['#006600', '#FF0000', '#006600'], leagues: [
+      { id: 'LIGA_PORTUGAL_2', name: 'Liga Portugal 2', color: '#006633' },
+    ]},
+    { nation: 'Scozia', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', colors: ['#005EB8', '#ffffff', '#005EB8'], leagues: [
+      { id: 'SCOTTISH_PREMIERSHIP', name: 'Scottish Premiership', color: '#0055aa' },
+      { id: 'SCOTTISH_CHAMPIONSHIP', name: 'Scottish Championship', color: '#003399' },
+    ]},
+    { nation: 'Turchia', flag: '🇹🇷', colors: ['#E30A17', '#ffffff', '#E30A17'], leagues: [
+      { id: 'SUPER_LIG', name: 'Süper Lig', color: '#ee0000' },
+      { id: 'BIR_LIG', name: '1. Lig', color: '#cc0000' },
+    ]},
+    { nation: 'Scandinavia', flag: '🇸🇪', colors: ['#006AA7', '#FECC00', '#006AA7'], leagues: [
+      { id: 'ALLSVENSKAN', name: 'Allsvenskan', color: '#ffcc00' },
+      { id: 'ELITESERIEN', name: 'Eliteserien', color: '#cc0000' },
+      { id: 'SUPERLIGAEN', name: 'Superligaen', color: '#dd0000' },
+      { id: 'VEIKKAUSLIIGA', name: 'Veikkausliiga', color: '#003580' },
+    ]},
+    { nation: 'Belgio & Irlanda', flag: '🇧🇪', colors: ['#000000', '#FAE042', '#ED2939'], leagues: [
+      { id: 'JUPILER_PRO_LEAGUE', name: 'Jupiler Pro League', color: '#ffdd00' },
+      { id: 'LEAGUE_OF_IRELAND', name: 'League of Ireland', color: '#009900' },
+    ]},
+    { nation: 'Americhe', flag: '🌎', colors: ['#009B3A', '#FEDF00', '#002776'], leagues: [
+      { id: 'BRASILEIRAO', name: 'Brasileirão', color: '#00ff00' },
+      { id: 'PRIMERA_DIVISION_ARG', name: 'Primera División', color: '#66ccff' },
+      { id: 'MLS', name: 'MLS', color: '#0066cc' },
+      { id: 'LIGA_MX', name: 'Liga MX', color: '#006341' },
+    ]},
+    { nation: 'Asia & Medio Oriente', flag: '🌏', colors: ['#BC002D', '#ffffff', '#BC002D'], leagues: [
+      { id: 'J1_LEAGUE', name: 'J1 League', color: '#cc0000' },
+      { id: 'SAUDI_PRO_LEAGUE', name: 'Saudi Pro League', color: '#006633' },
+    ]},
   ];
+  // Flat list per compatibilità (menu mobile, etc.)
+  const otherLeagues = otherLeagueGroups.flatMap(g => g.leagues.map(l => ({ ...l, country: `${g.flag} ${g.nation}` })));
 
   // CONFIGURAZIONE COPPE EUROPEE
 
@@ -1270,62 +1287,78 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             </div>
 
             <div data-tour="step-1b" style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: '1px',
-              background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
               borderRadius: '8px',
               overflow: 'hidden auto',
               flex: 1,
             }}>
-              {otherLeagues.map(league => (
-                <div
-                  key={league.id}
-                  {...(league.id === 'EREDIVISIE' ? { 'data-tour': 'tour-league-sample' } : {})}
-                  onClick={() => {
-                    setShowOtherLeagues(false);
-                    onSelectLeague(league.id);
-                  }}
-                  style={{
-                    background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
-                    padding: isMobile ? '12px 14px' : '14px 16px',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
-                  }}
-                >
-                  <StemmaImg
-                    src={STEMMI_CAMPIONATI[league.id]}
-                    size={isMobile ? 28 : 32}
-                    alt={league.name}
-                    cardColor={league.color}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+              {otherLeagueGroups.map(group => (
+                <div key={group.nation}>
+                  {/* Separatore bandiera */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: isMobile ? '8px 14px' : '10px 16px',
+                    background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                  }}>
                     <div style={{
-                      fontSize: isMobile ? '13px' : '14px',
-                      fontWeight: '500',
-                      color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
-                      whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+                      display: 'flex', height: '5px', borderRadius: '3px', overflow: 'hidden',
+                      width: '30px', flexShrink: 0,
                     }}>
-                      {league.name}
+                      {group.colors.map((c, i) => (
+                        <div key={i} style={{ flex: 1, background: c }} />
+                      ))}
                     </div>
-                    <div style={{
-                      fontSize: '11px',
-                      color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.35)',
-                      marginTop: '1px',
+                    <span style={{
+                      fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px',
+                      color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
                     }}>
-                      {league.country}
-                    </div>
+                      {group.flag} {group.nation}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
+                  {/* Campionati del gruppo */}
+                  {group.leagues.map(league => (
+                    <div
+                      key={league.id}
+                      {...(league.id === 'EREDIVISIE' ? { 'data-tour': 'tour-league-sample' } : {})}
+                      onClick={() => {
+                        setShowOtherLeagues(false);
+                        onSelectLeague(league.id);
+                      }}
+                      style={{
+                        background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
+                        padding: isMobile ? '10px 14px 10px 54px' : '12px 16px 12px 56px',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
+                      }}
+                    >
+                      <StemmaImg
+                        src={STEMMI_CAMPIONATI[league.id]}
+                        size={isMobile ? 26 : 30}
+                        alt={league.name}
+                        cardColor={league.color}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: '500',
+                          color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                          whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>
+                          {league.name}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>

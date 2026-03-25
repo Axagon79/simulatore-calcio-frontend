@@ -633,11 +633,15 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     return () => clearInterval(interval);
   }, [viewMode, todayData !== null]);
 
-  // Se l'utente seleziona un campionato dalla sidebar, torna a Calendario
+  // Se l'utente seleziona un campionato dalla sidebar, torna a Calendario/lista
   useEffect(() => {
     if (isRestoringState.current) return;
     if (league && viewMode === 'today') {
       setViewMode('calendar');
+    }
+    if (league && viewState === 'pre-match') {
+      setViewState('list');
+      setSelectedMatch(null);
     }
   }, [league]);
 

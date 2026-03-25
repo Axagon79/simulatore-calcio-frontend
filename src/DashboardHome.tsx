@@ -201,7 +201,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
       { id: 'MLS', name: 'MLS', color: '#0066cc' },
       { id: 'LIGA_MX', name: 'Liga MX', color: '#006341' },
     ]},
-    { nation: 'Asia & Medio Oriente', flag: '🌏', colors: ['#BC002D', '#ffffff', '#BC002D'], leagues: [
+    { nation: 'Asia', flag: '🌏', colors: ['#BC002D', '#ffffff', '#BC002D'], leagues: [
       { id: 'J1_LEAGUE', name: 'J1 League', color: '#cc0000' },
       { id: 'SAUDI_PRO_LEAGUE', name: 'Saudi Pro League', color: '#006633' },
     ]},
@@ -1293,72 +1293,67 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
             }}>
               {otherLeagueGroups.map(group => (
                 <div key={group.nation}>
-                  {/* Separatore bandiera */}
+                  {/* Separatore nazione */}
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: isMobile ? '8px 14px' : '10px 16px',
-                    background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                    padding: '6px 16px 6px 36px',
+                    background: `linear-gradient(to right, ${group.colors[0]}cc 0px, ${group.colors[0]}cc 4px, ${group.colors[1]}cc 8px, ${group.colors[2]}99 16px, ${group.colors[2]}33 22px, transparent 30px)`,
                   }}>
-                    <div style={{
-                      display: 'flex', height: '5px', borderRadius: '3px', overflow: 'hidden',
-                      width: '30px', flexShrink: 0,
-                    }}>
-                      {group.colors.map((c, i) => (
-                        <div key={i} style={{ flex: 1, background: c }} />
-                      ))}
-                    </div>
                     <span style={{
-                      fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px',
-                      color: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
-                    }}>
-                      {group.flag} {group.nation}
-                    </span>
+                      fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px',
+                      color: isLight ? '#374151' : 'rgba(255,255,255,0.60)',
+                    }}>{group.nation}</span>
                   </div>
-                  {/* Campionati del gruppo */}
-                  {group.leagues.map(league => (
-                    <div
-                      key={league.id}
-                      {...(league.id === 'EREDIVISIE' ? { 'data-tour': 'tour-league-sample' } : {})}
-                      onClick={() => {
-                        setShowOtherLeagues(false);
-                        onSelectLeague(league.id);
-                      }}
-                      style={{
-                        background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
-                        padding: isMobile ? '10px 14px 10px 54px' : '12px 16px 12px 56px',
-                        cursor: 'pointer',
-                        transition: 'background 0.15s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'}`,
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
-                      }}
-                    >
-                      <StemmaImg
-                        src={STEMMI_CAMPIONATI[league.id]}
-                        size={isMobile ? 26 : 30}
-                        alt={league.name}
-                        cardColor={league.color}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: isMobile ? '13px' : '14px',
-                          fontWeight: '500',
-                          color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
-                          whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>
-                          {league.name}
+                  {/* Campionati del gruppo — griglia orizzontale, card identiche all'originale */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
+                    gap: '1px',
+                    background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+                  }}>
+                    {group.leagues.map(league => (
+                      <div
+                        key={league.id}
+                        {...(league.id === 'EREDIVISIE' ? { 'data-tour': 'tour-league-sample' } : {})}
+                        onClick={() => {
+                          setShowOtherLeagues(false);
+                          onSelectLeague(league.id);
+                        }}
+                        style={{
+                          background: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
+                          padding: isMobile ? '12px 14px' : '14px 16px',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';
+                        }}
+                      >
+                        <StemmaImg
+                          src={STEMMI_CAMPIONATI[league.id]}
+                          size={isMobile ? 28 : 32}
+                          alt={league.name}
+                          cardColor={league.color}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: isMobile ? '13px' : '14px',
+                            fontWeight: '500',
+                            color: isLight ? '#111827' : 'rgba(255,255,255,0.85)',
+                            whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+                          }}>
+                            {league.name}
+                          </div>
                         </div>
+                        <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
                       </div>
-                      <span style={{ fontSize: '11px', color: isLight ? '#d1d5db' : 'rgba(255,255,255,0.15)' }}>&#8250;</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

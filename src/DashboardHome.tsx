@@ -1296,7 +1296,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   {/* Separatore nazione */}
                   <div style={{
                     padding: '6px 16px 6px 36px',
-                    background: `linear-gradient(to right, ${group.colors[0]}cc 0px, ${group.colors[0]}cc 4px, ${group.colors[1]}cc 8px, ${group.colors[2]}99 16px, ${group.colors[2]}33 22px, transparent 30px)`,
+                    background: `linear-gradient(to right, ${group.colors[0]}cc 0px, ${group.colors[0]}cc 3px, ${group.colors[1]}cc 6px, ${group.colors[2]}99 10px, ${group.colors[2]}33 15px, transparent 20px)`,
                   }}>
                     <span style={{
                       fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px',

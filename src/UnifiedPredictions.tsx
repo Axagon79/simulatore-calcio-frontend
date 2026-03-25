@@ -3039,7 +3039,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               for (let i = -7; i <= 7; i++) days.push(shiftDate(today, i));
               const weekDaysShort = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
               return (
-                <div style={{
+                <div
+                  ref={(el) => {
+                    if (el) {
+                      const todayBtn = el.querySelector('[data-today="true"]') as HTMLElement;
+                      if (todayBtn) {
+                        requestAnimationFrame(() => {
+                          el.scrollTop = todayBtn.offsetTop - el.clientHeight / 2 + todayBtn.clientHeight / 2;
+                        });
+                      }
+                    }
+                  }}
+                  style={{
                   position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
                   marginTop: '6px', zIndex: 200,
                   background: isLight ? '#f0f2f5' : '#1a1d2e', border: `1px solid ${theme.cyan}33`,
@@ -3059,6 +3070,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     return (
                       <button
                         key={d}
+                        data-today={isToday || undefined}
                         onClick={() => { setDate(d); setDatePickerOpen(false); }}
                         style={{
                           display: 'block', width: '100%', textAlign: 'center',

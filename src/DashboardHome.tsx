@@ -206,8 +206,6 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
       { id: 'SAUDI_PRO_LEAGUE', name: 'Saudi Pro League', color: '#006633' },
     ]},
   ];
-  // Flat list per compatibilità (menu mobile, etc.)
-  const otherLeagues = otherLeagueGroups.flatMap(g => g.leagues.map(l => ({ ...l, country: `${g.flag} ${g.nation}` })));
 
   // CONFIGURAZIONE COPPE EUROPEE
 
@@ -1296,19 +1294,21 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                   {/* Separatore nazione */}
                   <div style={{
                     padding: '6px 16px 6px 36px',
-                    background: `linear-gradient(to right, ${group.colors[0]}cc 0px, ${group.colors[0]}cc 3px, ${group.colors[1]}cc 6px, ${group.colors[2]}99 10px, ${group.colors[2]}33 15px, transparent 20px)`,
+                    background: `linear-gradient(to right, ${group.colors[0]}cc 0px, ${group.colors[0]}cc 3px, ${group.colors[1]}cc 6px, ${group.colors[2]}99 10px, ${group.colors[2]}33 15px, ${isLight ? '#f3f4f6' : 'transparent'} 20px)`,
+                    borderTop: isLight ? '1px solid rgba(0,0,0,0.05)' : 'none',
+                    borderBottom: isLight ? '1px solid rgba(0,0,0,0.05)' : 'none',
                   }}>
                     <span style={{
                       fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px',
                       color: isLight ? '#374151' : 'rgba(255,255,255,0.60)',
                     }}>{group.nation}</span>
                   </div>
-                  {/* Campionati del gruppo — griglia orizzontale, card identiche all'originale */}
+                  {/* Campionati del gruppo — griglia orizzontale */}
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
                     gap: '1px',
-                    background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+                    background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
                   }}>
                     {group.leagues.map(league => (
                       <div
@@ -1326,9 +1326,10 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                           display: 'flex',
                           alignItems: 'center',
                           gap: '12px',
+                          borderBottom: isLight ? '1px solid rgba(0,0,0,0.06)' : 'none',
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
+                          e.currentTarget.style.background = isLight ? '#eef0f3' : 'rgba(255,255,255,0.06)';
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.background = isLight ? '#ffffff' : 'rgba(255,255,255,0.02)';

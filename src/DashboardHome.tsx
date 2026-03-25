@@ -20,9 +20,9 @@ const STEMMI_CAMPIONATI: Record<string, string> = {
   'SERIE_A': `${STEMMI_BASE}campionati%2Fserie_a.png?alt=media`,
   'SERIE_B': `${STEMMI_BASE}campionati%2Fserie_b.png?alt=media`,
   'SERIE_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
-  'SERIE_C_A': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
-  'SERIE_C_B': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
-  'SERIE_C_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_GIRONE_A': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_GIRONE_B': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
+  'SERIE_C_GIRONE_C': `${STEMMI_BASE}campionati%2Fserie_c.png?alt=media`,
   'PREMIER_LEAGUE': `${STEMMI_BASE}campionati%2Fpremier_league.png?alt=media`,
   'LA_LIGA': `${STEMMI_BASE}campionati%2Fla_liga.png?alt=media`,
   'BUNDESLIGA': `${STEMMI_BASE}campionati%2Fbundesliga.png?alt=media`,
@@ -151,9 +151,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
   // LISTA COMPLETA ALTRI CAMPIONATI — raggruppati per nazione
   const otherLeagueGroups: { nation: string; flag: string; colors: string[]; leagues: { id: string; name: string; color: string }[] }[] = [
     { nation: 'Italia', flag: '🇮🇹', colors: ['#009246', '#ffffff', '#CE2B37'], leagues: [
-      { id: 'SERIE_C_A', name: 'Serie C - Girone A', color: '#00f0ff' },
-      { id: 'SERIE_C_B', name: 'Serie C - Girone B', color: '#00f0ff' },
-      { id: 'SERIE_C_C', name: 'Serie C - Girone C', color: '#00f0ff' },
+      { id: 'SERIE_C_GIRONE_A', name: 'Serie C - Girone A', color: '#00f0ff' },
+      { id: 'SERIE_C_GIRONE_B', name: 'Serie C - Girone B', color: '#00f0ff' },
+      { id: 'SERIE_C_GIRONE_C', name: 'Serie C - Girone C', color: '#00f0ff' },
     ]},
     { nation: 'Inghilterra', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', colors: ['#ffffff', '#CE1124', '#ffffff'], leagues: [
       { id: 'CHAMPIONSHIP', name: 'Championship', color: '#cc0055' },

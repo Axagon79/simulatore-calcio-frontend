@@ -12,7 +12,7 @@ export const getStemmaLeagueUrl = (mongoId: string | undefined, currentLeague: s
       // --- ITALIA ---
       case 'SERIE_A': case 'SERIE A':
       case 'SERIE_B': case 'SERIE B':
-      case 'SERIE_C_A': case 'SERIE_C_B': case 'SERIE_C_C': case 'SERIE C':
+      case 'SERIE_C_GIRONE_A': case 'SERIE_C_GIRONE_B': case 'SERIE_C_GIRONE_C': case 'SERIE C':
           folder = 'Italy'; break;
 
       // --- INGHILTERRA ---

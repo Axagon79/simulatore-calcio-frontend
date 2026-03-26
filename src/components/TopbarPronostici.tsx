@@ -76,6 +76,7 @@ function estimatePickWidth(pick: Pick, mobile: boolean): number {
 
 export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
   const [picks, setPicks] = useState<Pick[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(isMobile ? 2 : 4);
@@ -107,8 +108,9 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
         }
         allPicks.sort((a, b) => b.stars - a.stars);
         setPicks(allPicks.slice(0, 20));
+        setLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setLoaded(true); });
   }, []);
 
   // Calcolo intelligente: quanti pick entrano nella larghezza disponibile
@@ -325,6 +327,7 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
   const currentPicks = getPagePicks(pageIndex);
 
   if (picks.length === 0) {
+    if (loaded) return null;
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',

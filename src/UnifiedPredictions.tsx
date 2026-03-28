@@ -2996,11 +2996,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   );
                   return (
-                    <div style={{ position: 'absolute', right: '330px', top: '50%', transform: 'translateY(-40%)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <div style={{ position: 'absolute', right: '330px', top: '50%', transform: 'translateY(-40%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '8px', color: theme.textMuted, fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Rendimento Globale</span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {badge('P/L Giorno', day && day.bets > 0 ? `${day.pl > 0 ? '+' : ''}${day.pl}u` : '—', day ? day.pl >= 0 : true)}
                       {tutti && badge('P/L Mese', `${tutti.pl > 0 ? '+' : ''}${tutti.pl}u`, tutti.pl >= 0)}
                       {tutti && tutti.staked > 0 && badge('Yield Mese', `${Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((tutti.pl / tutti.staked) * 1000) / 10}%`, tutti.pl >= 0)}
                       {totTutti && totTutti.staked > 0 && badge('Yield Totale', `${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%`, totTutti.pl >= 0)}
+                    </div>
                     </div>
                   );
                 })()}
@@ -3172,11 +3175,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </div>
           );
           return (
-            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
-              {mbadge('P/L Giorno', day && day.bets > 0 ? `${day.pl > 0 ? '+' : ''}${day.pl}u` : '—', day ? day.pl >= 0 : true)}
-              {tutti && mbadge('P/L Mese', `${tutti.pl > 0 ? '+' : ''}${tutti.pl}u`, tutti.pl >= 0)}
-              {tutti && tutti.staked > 0 && mbadge('Yield Mese', `${Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((tutti.pl / tutti.staked) * 1000) / 10}%`, tutti.pl >= 0)}
-              {totTutti && totTutti.staked > 0 && mbadge('Yield Tot.', `${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%`, totTutti.pl >= 0)}
+            <div style={{
+              display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap',
+              marginTop: '6px', padding: '4px 10px',
+              background: isLight ? '#e8eaed' : '#151825',
+              border: isLight ? '1px solid #d0d3d8' : '1px solid #ffffff15',
+              borderRadius: '8px',
+            }}>
+              <span style={{ fontSize: '8px', color: theme.textMuted, fontWeight: '800' }}>Globale:</span>
+              <span style={{ fontSize: '8px', color: theme.textMuted }}>P/L Giorno <b style={{ color: day && day.bets > 0 ? (day.pl >= 0 ? theme.financePositive : theme.missText) : theme.textDim }}>{day && day.bets > 0 ? `${day.pl > 0 ? '+' : ''}${day.pl}u` : '—'}</b></span>
+              <span style={{ fontSize: '8px', color: theme.textDim }}>|</span>
+              {tutti && <span style={{ fontSize: '8px', color: theme.textMuted }}>P/L Mese <b style={{ color: tutti.pl >= 0 ? theme.financePositive : theme.missText }}>{tutti.pl > 0 ? '+' : ''}{tutti.pl}u</b></span>}
+              <span style={{ fontSize: '8px', color: theme.textDim }}>|</span>
+              {tutti && tutti.staked > 0 && <span style={{ fontSize: '8px', color: theme.textMuted }}>Yield Mese <b style={{ color: tutti.pl >= 0 ? theme.financePositive : theme.missText }}>{Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}{Math.round((tutti.pl / tutti.staked) * 1000) / 10}%</b></span>}
+              <span style={{ fontSize: '8px', color: theme.textDim }}>|</span>
+              {totTutti && totTutti.staked > 0 && <span style={{ fontSize: '8px', color: theme.textMuted }}>Yield Tot. <b style={{ color: totTutti.pl >= 0 ? theme.financePositive : theme.missText }}>{Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}{Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%</b></span>}
             </div>
           );
         })()}

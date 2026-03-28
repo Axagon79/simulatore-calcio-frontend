@@ -2996,7 +2996,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   );
                   return (
-                    <div style={{ position: 'absolute', right: '330px', top: '50%', transform: 'translateY(-40%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <div style={{ position: 'absolute', right: '290px', top: '50%', transform: 'translateY(-58%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                       <span style={{ fontSize: '8px', color: theme.textMuted, fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Rendimento Globale</span>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {badge('P/L Giorno', day && day.bets > 0 ? `${day.pl > 0 ? '+' : ''}${day.pl}u` : '—', day ? day.pl >= 0 : true)}

@@ -296,6 +296,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
+  const [monthlyPL, setMonthlyPL] = useState<{ pl: number; bets: number; wins: number; hr: number; roi: number } | null>(null);
   const isAdmin = checkAdmin();
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
@@ -596,11 +597,23 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       setLoading(true);
       setError(null);
       try {
-        // Fetch parallelo: pronostici unified + versioni (per partite ritirate)
-        const [predRes, versionsRes] = await Promise.all([
+        // Fetch parallelo: pronostici unified + versioni + P/L mensile
+        const currentMonth = date.slice(0, 7); // "2026-03"
+        const [predRes, versionsRes, monthlyRes] = await Promise.all([
           fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`),
           fetch(`${API_BASE}/prediction-versions?date=${date}`).catch(() => null),
+          fetch(`${API_BASE}/predictions/monthly-pl?month=${currentMonth}`).catch(() => null),
         ]);
+
+        // P/L mensile
+        if (monthlyRes && monthlyRes.ok) {
+          try {
+            const mData = await monthlyRes.json();
+            if (mData.success && mData.sezioni) {
+              setMonthlyPL(mData.sezioni.tutti || null);
+            }
+          } catch { /* ignore */ }
+        }
 
         const predData = await predRes.json();
         const unified: Prediction[] = predData.success ? (predData.predictions || []) : [];
@@ -3221,13 +3234,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const mf = MARKET_DEFS.find(m => m.id === marketFilter);
             return mf ? allTips.filter(mf.filter) : allTips;
           })();
-          // Calcolo metriche finanziarie (flat stake = 1 unità)
+          // Calcolo metriche finanziarie (stake REALI dal pronostico)
           const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
           const totalBets = verifiedWithQuota.length;
-          const totalProfit = verifiedWithQuota.reduce((sum, t) => sum + (t._effHit ? (t._quota - 1) : -1), 0);
-          const yieldPct = totalBets > 0 ? Math.round((totalProfit / totalBets) * 1000) / 10 : null;
+          const totalStaked = verifiedWithQuota.reduce((sum, t) => sum + (t.stake || 1), 0);
+          const totalProfit = verifiedWithQuota.reduce((sum, t) => {
+            const stake = t.stake || 1;
+            return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
+          }, 0);
           const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
-          const roiPct = yieldPct;
+          const roiPct = totalStaked > 0 ? Math.round((totalProfit / totalStaked) * 1000) / 10 : null;
           const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
           const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
           const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
@@ -3239,7 +3255,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
             {/* Contenitore Rendimento — sempre visibile sopra Filtri & Statistiche */}
             {(() => {
-              const yieldColor = yieldPct !== null && yieldPct >= 0 ? theme.financePositive : theme.missText;
+              // yieldColor rimosso — sostituito da P/L mensile
               return (
                 <div
                   style={{
@@ -3300,16 +3316,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           </>
                         );
                       })()}
+                      {monthlyPL && (
                       <div style={{
-                        background: `${yieldColor}${isLight ? '55' : '15'}`, border: `1px solid ${yieldColor}${isLight ? '70' : '30'}`,
+                        background: `${monthlyPL.pl >= 0 ? theme.financePositive : theme.missText}${isLight ? '55' : '15'}`,
+                        border: `1px solid ${monthlyPL.pl >= 0 ? theme.financePositive : theme.missText}${isLight ? '70' : '30'}`,
                         borderRadius: '10px', padding: '2px 6px',
                         display: 'flex', alignItems: 'center', gap: '3px'
                       }}>
-                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>Yield</span>
-                        <span style={{ fontSize: '9px', fontWeight: '900', color: yieldColor, lineHeight: '14px' }}>
-                          {yieldPct !== null ? `${yieldPct > 0 ? '+' : ''}${yieldPct}%` : '—'}
+                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>
+                          {new Date(date).toLocaleString('it', { month: 'short' }).replace('.', '')}
+                        </span>
+                        <span style={{ fontSize: '9px', fontWeight: '900', color: monthlyPL.pl >= 0 ? theme.financePositive : theme.missText, lineHeight: '14px' }}>
+                          {monthlyPL.pl > 0 ? '+' : ''}{monthlyPL.pl}u
                         </span>
                       </div>
+                      )}
                     </div>
                     <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: financeOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '30px' }}>▼</span>
                   </div>
@@ -3320,9 +3341,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   )}
                   {finLegendOpen && (
                     <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ marginTop: '8px', padding: '8px 10px', background: isLight ? '#fafafa' : theme.surfaceSubtle, border: isLight ? '1px solid #e5e7eb' : 'none', borderRadius: '8px', fontSize: '10px', color: isLight ? '#4b5563' : theme.textFaint, lineHeight: '1.6' }}>
-                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield</span> — Se punti 1&euro; su ogni pronostico, quanto guadagni in media? +10% = guadagni 0.10&euro; per ogni euro puntato</div>
-                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L</span> — Il totale che hai in tasca alla fine. +3.2 = hai 3.20&euro; in pi&ugrave; rispetto a quando hai iniziato</div>
-                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>ROI</span> — Stesso concetto del Yield: quanto ti rende ogni euro investito, in percentuale</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L Giorno</span> — Quanto hai guadagnato o perso oggi, calcolato con gli stake reali di ogni pronostico</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L Mese</span> — Il guadagno accumulato dall'inizio del mese. Il numero che deve crescere</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>ROI</span> — Quanto ti rende ogni unit&agrave; investita, in percentuale</div>
                       <div><span style={{ color: theme.quotaText, fontWeight: '700' }}>Q.Media</span> — A che livello di difficolt&agrave; giochiamo. Pi&ugrave; &egrave; alta, pi&ugrave; &egrave; rischioso ma pi&ugrave; si pu&ograve; vincere</div>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Edge</span> — Il nostro vantaggio: se &egrave; positivo, il sistema trova opportunit&agrave; che i bookmaker sottovalutano</div>
                     </div>
@@ -3330,7 +3351,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   {financeOpen && (
                     <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
                       {[
-                        { label: 'P/L', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
+                        { label: 'P/L Giorno', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
                         { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? theme.financePositive : theme.missText },
                         { label: 'Q.Media', value: avgQuota !== null ? `@${avgQuota}` : '—', color: theme.quotaText },
                         { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? theme.financePositive : theme.missText },

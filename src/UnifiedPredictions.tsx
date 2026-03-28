@@ -3356,9 +3356,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ marginTop: '8px', padding: '8px 10px', background: isLight ? '#fafafa' : theme.surfaceSubtle, border: isLight ? '1px solid #e5e7eb' : 'none', borderRadius: '8px', fontSize: '10px', color: isLight ? '#4b5563' : theme.textFaint, lineHeight: '1.6' }}>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L Giorno</span> — Quanto hai guadagnato o perso oggi, calcolato con gli stake reali di ogni pronostico</div>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>P/L Mese</span> — Il guadagno accumulato dall'inizio del mese fino ad oggi. Il numero che deve crescere</div>
-                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield Mese</span> — Quanto guadagni in media per ogni scommessa questo mese</div>
-                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield Totale</span> — La prova della bravura: il rendimento medio per scommessa dall'inizio. Se &egrave; positivo, il vantaggio &egrave; reale e non fortuna</div>
-                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>ROI</span> — Quanto ti rende ogni unit&agrave; investita oggi, in percentuale</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield Mese</span> — Quanto guadagni ogni 100 unit&agrave; scommesse questo mese. +5% = guadagni 5 per ogni 100 giocate</div>
+                      <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Yield Totale</span> — La prova della bravura: il rendimento su tutto lo storico. Uno yield positivo costante dimostra che il vantaggio &egrave; reale</div>
                       <div><span style={{ color: theme.quotaText, fontWeight: '700' }}>Q.Media</span> — A che livello di difficolt&agrave; giochiamo. Pi&ugrave; &egrave; alta, pi&ugrave; &egrave; rischioso ma pi&ugrave; si pu&ograve; vincere</div>
                       <div><span style={{ color: theme.financePositive, fontWeight: '700' }}>Edge</span> — Il nostro vantaggio: se &egrave; positivo, il sistema trova opportunit&agrave; che i bookmaker sottovalutano</div>
                     </div>
@@ -3378,21 +3377,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           if (mplTutti) {
                             items.push({ label: tabKey !== 'tutti' ? 'P/L Mese (Tot)' : 'P/L Mese', value: `${mplTutti.pl > 0 ? '+' : ''}${mplTutti.pl}u`, color: mplTutti.pl >= 0 ? theme.financePositive : theme.missText });
                           }
-                          // Yield Mese = P/L / numero scommesse
+                          // Yield Mese = (P/L / Somma Stake) × 100
                           const yieldSrc = tabKey !== 'tutti' && mpl ? mpl : mplTutti;
-                          if (yieldSrc && yieldSrc.bets > 0) {
-                            const yieldVal = Math.round((yieldSrc.pl / yieldSrc.bets) * 100) / 100;
+                          if (yieldSrc && yieldSrc.staked > 0) {
+                            const yieldVal = Math.round((yieldSrc.pl / yieldSrc.staked) * 1000) / 10;
                             items.push({ label: 'Yield Mese', value: `${yieldVal > 0 ? '+' : ''}${yieldVal}%`, color: yieldVal >= 0 ? theme.financePositive : theme.missText });
                           }
-                          // Yield Totale = P/L totale / numero scommesse totali
+                          // Yield Totale = (P/L totale / Somma Stake totali) × 100
                           const totSrc = tabKey !== 'tutti' ? totalPLData[tabKey] : totalPLData.tutti;
-                          if (totSrc && totSrc.bets > 0) {
-                            const yieldTot = Math.round((totSrc.pl / totSrc.bets) * 100) / 100;
+                          if (totSrc && totSrc.staked > 0) {
+                            const yieldTot = Math.round((totSrc.pl / totSrc.staked) * 1000) / 10;
                             items.push({ label: 'Yield Totale', value: `${yieldTot > 0 ? '+' : ''}${yieldTot}%`, color: yieldTot >= 0 ? theme.financePositive : theme.missText });
                           }
                           return items;
                         })(),
-                        { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? theme.financePositive : theme.missText },
                         { label: 'Q.Media', value: avgQuota !== null ? `@${avgQuota}` : '—', color: theme.quotaText },
                         { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? theme.financePositive : theme.missText },
                       ].map(item => (

@@ -3293,7 +3293,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           // Calcolo metriche finanziarie (stake REALI dal pronostico)
           const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
           const totalBets = verifiedWithQuota.length;
-          const totalStaked = verifiedWithQuota.reduce((sum, t) => sum + (t.stake || 1), 0);
           const totalProfit = verifiedWithQuota.reduce((sum, t) => {
             const stake = t.stake || 1;
             return sum + (t._effHit ? (t._quota - 1) * stake : -stake);

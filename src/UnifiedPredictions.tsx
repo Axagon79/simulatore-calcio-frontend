@@ -598,11 +598,10 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       setError(null);
       try {
         // Fetch parallelo: pronostici unified + versioni + P/L mensile
-        const currentMonth = date.slice(0, 7); // "2026-03"
         const [predRes, versionsRes, monthlyRes] = await Promise.all([
           fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`),
           fetch(`${API_BASE}/prediction-versions?date=${date}`).catch(() => null),
-          fetch(`${API_BASE}/simulation/monthly-pl?month=${currentMonth}`).catch(() => null),
+          fetch(`${API_BASE}/simulation/monthly-pl?date=${date}`).catch(() => null),
         ]);
 
         // P/L mensile

@@ -3383,32 +3383,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           </>
                         );
                       })()}
-                      {(() => {
-                        const monthName = new Date(date).toLocaleString('it', { month: 'long' });
-                        const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-                        const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
-                        const mpl = monthlyPLData[tabKey];
-                        if (!mpl) return null;
-                        const plColor = (v: number) => v >= 0 ? theme.financePositive : theme.missText;
-                        return (
-                          <>
-                            {/* P/L mensile della sezione attiva */}
-                            <div style={{
-                              background: `${plColor(mpl.pl)}${isLight ? '55' : '15'}`,
-                              border: `1px solid ${plColor(mpl.pl)}${isLight ? '70' : '30'}`,
-                              borderRadius: '10px', padding: '2px 6px',
-                              display: 'flex', alignItems: 'center', gap: '3px'
-                            }}>
-                              <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>
-                                {monthLabel}
-                              </span>
-                              <span style={{ fontSize: '9px', fontWeight: '900', color: plColor(mpl.pl), lineHeight: '14px' }}>
-                                {mpl.pl > 0 ? '+' : ''}{mpl.pl}u
-                              </span>
-                            </div>
-                          </>
-                        );
-                      })()}
+                      {/* Badge Marzo rimosso — spostato nel pannello espanso */}
                     </div>
                     <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: financeOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: isMobile ? '8px' : '30px', flexShrink: 0 }}>▼</span>
                   </div>
@@ -3428,28 +3403,32 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   )}
                   {financeOpen && (
-                    <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
+                    <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ display: 'flex', justifyContent: 'center', gap: isMobile ? '6px' : '10px', marginTop: '10px', flexWrap: 'wrap' as const, maxWidth: isMobile ? '100%' : undefined }}>
                       {[
+                        ...(() => {
+                          const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
+                          const mplForLabel = monthlyPLData[tabKey];
+                          const monthName = new Date(date).toLocaleString('it', { month: 'long' });
+                          const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                          if (mplForLabel) {
+                            return [{ label: 'P/L Mese', value: `${mplForLabel.pl > 0 ? '+' : ''}${mplForLabel.pl}u`, color: mplForLabel.pl >= 0 ? theme.financePositive : theme.missText }];
+                          }
+                          return [];
+                        })(),
                         { label: 'P/L Giorno', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
                         ...(() => {
-                          const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'tutti';
+                          const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
                           const mpl = monthlyPLData[tabKey];
-                          const mplTutti = monthlyPLData.tutti;
                           const items: { label: string; value: string; color: string }[] = [];
-                          if (mpl && tabKey !== 'tutti') {
-                            items.push({ label: 'P/L Mese', value: `${mpl.pl > 0 ? '+' : ''}${mpl.pl}u`, color: mpl.pl >= 0 ? theme.financePositive : theme.missText });
-                          }
-                          if (mplTutti) {
-                            items.push({ label: tabKey !== 'tutti' ? 'P/L Mese (Tot)' : 'P/L Mese', value: `${mplTutti.pl > 0 ? '+' : ''}${mplTutti.pl}u`, color: mplTutti.pl >= 0 ? theme.financePositive : theme.missText });
-                          }
+                          // P/L Mese rimosso — è già nel badge "Marzo" sopra
                           // Yield Mese = (P/L / Somma Stake) × 100
-                          const yieldSrc = tabKey !== 'tutti' && mpl ? mpl : mplTutti;
+                          const yieldSrc = mpl;
                           if (yieldSrc && yieldSrc.staked > 0) {
                             const yieldVal = Math.round((yieldSrc.pl / yieldSrc.staked) * 1000) / 10;
                             items.push({ label: 'Yield Mese', value: `${yieldVal > 0 ? '+' : ''}${yieldVal}%`, color: yieldVal >= 0 ? theme.financePositive : theme.missText });
                           }
                           // Yield Totale = (P/L totale / Somma Stake totali) × 100
-                          const totSrc = tabKey !== 'tutti' ? totalPLData[tabKey] : totalPLData.tutti;
+                          const totSrc = totalPLData[tabKey];
                           if (totSrc && totSrc.staked > 0) {
                             const yieldTot = Math.round((totSrc.pl / totSrc.staked) * 1000) / 10;
                             items.push({ label: 'Yield Totale', value: `${yieldTot > 0 ? '+' : ''}${yieldTot}%`, color: yieldTot >= 0 ? theme.financePositive : theme.missText });
@@ -3460,12 +3439,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? theme.financePositive : theme.missText },
                       ].map(item => (
                         <div key={item.label} style={{
-                          display: 'flex', alignItems: 'center', gap: '5px',
+                          display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '5px',
                           background: `${item.color}${isLight ? '55' : '15'}`, border: `1px solid ${item.color}${isLight ? '70' : '30'}`,
-                          borderRadius: '12px', padding: '4px 12px'
+                          borderRadius: isMobile ? '10px' : '12px', padding: isMobile ? '3px 10px' : '4px 12px'
                         }}>
-                          <span style={{ fontSize: '10px', color: isLight ? '#1a1a1a' : theme.textFaint, fontWeight: '700' }}>{item.label}</span>
-                          <span style={{ fontSize: '10px', fontWeight: '700', color: item.color }}>{item.value}</span>
+                          <span style={{ fontSize: isMobile ? '9px' : '10px', color: isLight ? '#1a1a1a' : theme.textFaint, fontWeight: '700' }}>{item.label}</span>
+                          <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: '700', color: item.color }}>{item.value}</span>
                         </div>
                       ))}
                     </div>

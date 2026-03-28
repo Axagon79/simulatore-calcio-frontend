@@ -3324,7 +3324,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         display: 'flex', alignItems: 'center', gap: '3px'
                       }}>
                         <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>
-                          {new Date(date).toLocaleString('it', { month: 'short' }).replace('.', '')}
+                          {new Date(date).toLocaleString('it', { month: 'long' }).charAt(0).toUpperCase() + new Date(date).toLocaleString('it', { month: 'long' }).slice(1)}
                         </span>
                         <span style={{ fontSize: '9px', fontWeight: '900', color: monthlyPL.pl >= 0 ? theme.financePositive : theme.missText, lineHeight: '14px' }}>
                           {monthlyPL.pl > 0 ? '+' : ''}{monthlyPL.pl}u

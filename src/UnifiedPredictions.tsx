@@ -3163,17 +3163,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           const tutti = monthlyPLData.tutti;
           const totTutti = totalPLData.tutti;
           if (!day && !tutti && !totTutti) return null;
-          const mbadge = (label: string, value: string, positive: boolean) => (
-            <div key={label} style={{
-              background: `${positive ? theme.financePositive : theme.missText}15`,
-              border: `1px solid ${positive ? theme.financePositive : theme.missText}30`,
-              borderRadius: '6px', padding: '2px 6px',
-              display: 'flex', alignItems: 'center', gap: '3px',
-            }}>
-              <span style={{ fontSize: '8px', color: theme.textMuted, fontWeight: '700' }}>{label}</span>
-              <span style={{ fontSize: '8px', fontWeight: '900', color: positive ? theme.financePositive : theme.missText }}>{value}</span>
-            </div>
-          );
           return (
             <div style={{
               display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap',
@@ -3408,8 +3397,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         ...(() => {
                           const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
                           const mplForLabel = monthlyPLData[tabKey];
-                          const monthName = new Date(date).toLocaleString('it', { month: 'long' });
-                          const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
                           if (mplForLabel) {
                             return [{ label: 'P/L Mese', value: `${mplForLabel.pl > 0 ? '+' : ''}${mplForLabel.pl}u`, color: mplForLabel.pl >= 0 ? theme.financePositive : theme.missText }];
                           }

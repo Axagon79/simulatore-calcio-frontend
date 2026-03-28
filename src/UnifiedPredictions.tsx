@@ -296,7 +296,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
-  const [monthlyPL, setMonthlyPL] = useState<{ pl: number; bets: number; wins: number; hr: number; roi: number } | null>(null);
+  const [monthlyPLData, setMonthlyPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number }>>({});
   const isAdmin = checkAdmin();
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
@@ -604,12 +604,12 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           fetch(`${API_BASE}/simulation/monthly-pl?date=${date}`).catch(() => null),
         ]);
 
-        // P/L mensile
+        // P/L mensile (tutti + elite + alto_rendimento)
         if (monthlyRes && monthlyRes.ok) {
           try {
             const mData = await monthlyRes.json();
             if (mData.success && mData.sezioni) {
-              setMonthlyPL(mData.sezioni.tutti || null);
+              setMonthlyPLData(mData.sezioni);
             }
           } catch { /* ignore */ }
         }
@@ -3315,21 +3315,33 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           </>
                         );
                       })()}
-                      {monthlyPL && (
-                      <div style={{
-                        background: `${monthlyPL.pl >= 0 ? theme.financePositive : theme.missText}${isLight ? '55' : '15'}`,
-                        border: `1px solid ${monthlyPL.pl >= 0 ? theme.financePositive : theme.missText}${isLight ? '70' : '30'}`,
-                        borderRadius: '10px', padding: '2px 6px',
-                        display: 'flex', alignItems: 'center', gap: '3px'
-                      }}>
-                        <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>
-                          {new Date(date).toLocaleString('it', { month: 'long' }).charAt(0).toUpperCase() + new Date(date).toLocaleString('it', { month: 'long' }).slice(1)}
-                        </span>
-                        <span style={{ fontSize: '9px', fontWeight: '900', color: monthlyPL.pl >= 0 ? theme.financePositive : theme.missText, lineHeight: '14px' }}>
-                          {monthlyPL.pl > 0 ? '+' : ''}{monthlyPL.pl}u
-                        </span>
-                      </div>
-                      )}
+                      {(() => {
+                        const monthName = new Date(date).toLocaleString('it', { month: 'long' });
+                        const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                        const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'tutti';
+                        const mpl = monthlyPLData[tabKey];
+                        const mplTutti = monthlyPLData.tutti;
+                        if (!mpl) return null;
+                        const plColor = (v: number) => v >= 0 ? theme.financePositive : theme.missText;
+                        return (
+                          <>
+                            {/* P/L mensile della sezione attiva */}
+                            <div style={{
+                              background: `${plColor(mpl.pl)}${isLight ? '55' : '15'}`,
+                              border: `1px solid ${plColor(mpl.pl)}${isLight ? '70' : '30'}`,
+                              borderRadius: '10px', padding: '2px 6px',
+                              display: 'flex', alignItems: 'center', gap: '3px'
+                            }}>
+                              <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : theme.textMuted, fontWeight: '700', lineHeight: '14px' }}>
+                                {monthLabel}
+                              </span>
+                              <span style={{ fontSize: '9px', fontWeight: '900', color: plColor(mpl.pl), lineHeight: '14px' }}>
+                                {mpl.pl > 0 ? '+' : ''}{mpl.pl}u
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                     <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: financeOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '30px' }}>▼</span>
                   </div>
@@ -3351,6 +3363,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' as const }}>
                       {[
                         { label: 'P/L Giorno', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
+                        ...(() => {
+                          const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'tutti';
+                          const mpl = monthlyPLData[tabKey];
+                          const mplTutti = monthlyPLData.tutti;
+                          const items: { label: string; value: string; color: string }[] = [];
+                          if (mpl && tabKey !== 'tutti') {
+                            items.push({ label: 'P/L Mese', value: `${mpl.pl > 0 ? '+' : ''}${mpl.pl}u`, color: mpl.pl >= 0 ? theme.financePositive : theme.missText });
+                          }
+                          if (mplTutti) {
+                            items.push({ label: tabKey !== 'tutti' ? 'P/L Mese (Tot)' : 'P/L Mese', value: `${mplTutti.pl > 0 ? '+' : ''}${mplTutti.pl}u`, color: mplTutti.pl >= 0 ? theme.financePositive : theme.missText });
+                          }
+                          return items;
+                        })(),
                         { label: 'ROI', value: roiPct !== null ? `${roiPct > 0 ? '+' : ''}${roiPct}%` : '—', color: roiPct !== null && roiPct >= 0 ? theme.financePositive : theme.missText },
                         { label: 'Q.Media', value: avgQuota !== null ? `@${avgQuota}` : '—', color: theme.quotaText },
                         { label: 'Edge', value: avgEdge !== null ? `${avgEdge > 0 ? '+' : ''}${avgEdge}%` : '—', color: avgEdge !== null && avgEdge >= 0 ? theme.financePositive : theme.missText },

@@ -3400,7 +3400,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         );
                       })()}
                     </div>
-                    <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: financeOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: '30px' }}>▼</span>
+                    <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: financeOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: isMobile ? '8px' : '30px', flexShrink: 0 }}>▼</span>
                   </div>
                   {(finLegendOpen || financeOpen) && (
                     <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 2px' }}>

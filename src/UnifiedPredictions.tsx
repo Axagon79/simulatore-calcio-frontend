@@ -296,8 +296,9 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
-  const [monthlyPLData, setMonthlyPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number }>>({});
-  const [totalPLData, setTotalPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number }>>({});
+  const [dailyPLData, setDailyPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number; staked: number }>>({});
+  const [monthlyPLData, setMonthlyPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number; staked: number }>>({});
+  const [totalPLData, setTotalPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number; staked: number }>>({});
   const isAdmin = checkAdmin();
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
@@ -609,8 +610,9 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         if (monthlyRes && monthlyRes.ok) {
           try {
             const mData = await monthlyRes.json();
-            if (mData.success && mData.sezioni) {
-              setMonthlyPLData(mData.sezioni);
+            if (mData.success) {
+              if (mData.giorno) setDailyPLData(mData.giorno);
+              if (mData.sezioni) setMonthlyPLData(mData.sezioni);
               if (mData.totale) setTotalPLData(mData.totale);
             }
           } catch { /* ignore */ }
@@ -2976,6 +2978,32 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
                   }}>Best Picks</span>
                 </h1>
+                {/* Badge P/L e Yield fissi (Tutti) — posizionati assoluti tra Best Picks e crediti */}
+                {(() => {
+                  const day = dailyPLData.tutti;
+                  const tutti = monthlyPLData.tutti;
+                  const totTutti = totalPLData.tutti;
+                  if (!day && !tutti && !totTutti) return null;
+                  const badge = (label: string, value: string, positive: boolean) => (
+                    <div key={label} style={{
+                      background: `${positive ? theme.financePositive : theme.missText}15`,
+                      border: `1px solid ${positive ? theme.financePositive : theme.missText}30`,
+                      borderRadius: '8px', padding: '3px 8px',
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                    }}>
+                      <span style={{ fontSize: '9px', color: theme.textMuted, fontWeight: '700' }}>{label}</span>
+                      <span style={{ fontSize: '9px', fontWeight: '900', color: positive ? theme.financePositive : theme.missText }}>{value}</span>
+                    </div>
+                  );
+                  return (
+                    <div style={{ position: 'absolute', right: '380px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {day && day.bets > 0 && badge('P/L Giorno', `${day.pl > 0 ? '+' : ''}${day.pl}u`, day.pl >= 0)}
+                      {tutti && badge('P/L Mese', `${tutti.pl > 0 ? '+' : ''}${tutti.pl}u`, tutti.pl >= 0)}
+                      {tutti && tutti.staked > 0 && badge('Yield Mese', `${Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((tutti.pl / tutti.staked) * 1000) / 10}%`, tutti.pl >= 0)}
+                      {totTutti && totTutti.staked > 0 && badge('Yield Totale', `${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%`, totTutti.pl >= 0)}
+                    </div>
+                  );
+                })()}
                 <button
                   onClick={() => window.location.href = '/bankroll'}
                   style={{
@@ -3125,6 +3153,33 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             ▶
           </button>
         </div>
+
+        {/* MOBILE: badge P/L e Yield sotto il calendario */}
+        {isMobile && (() => {
+          const day = dailyPLData.tutti;
+          const tutti = monthlyPLData.tutti;
+          const totTutti = totalPLData.tutti;
+          if (!day && !tutti && !totTutti) return null;
+          const mbadge = (label: string, value: string, positive: boolean) => (
+            <div key={label} style={{
+              background: `${positive ? theme.financePositive : theme.missText}15`,
+              border: `1px solid ${positive ? theme.financePositive : theme.missText}30`,
+              borderRadius: '6px', padding: '2px 6px',
+              display: 'flex', alignItems: 'center', gap: '3px',
+            }}>
+              <span style={{ fontSize: '8px', color: theme.textMuted, fontWeight: '700' }}>{label}</span>
+              <span style={{ fontSize: '8px', fontWeight: '900', color: positive ? theme.financePositive : theme.missText }}>{value}</span>
+            </div>
+          );
+          return (
+            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
+              {day && day.bets > 0 && mbadge('P/L Giorno', `${day.pl > 0 ? '+' : ''}${day.pl}u`, day.pl >= 0)}
+              {tutti && mbadge('P/L Mese', `${tutti.pl > 0 ? '+' : ''}${tutti.pl}u`, tutti.pl >= 0)}
+              {tutti && tutti.staked > 0 && mbadge('Yield Mese', `${Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((tutti.pl / tutti.staked) * 1000) / 10}%`, tutti.pl >= 0)}
+              {totTutti && totTutti.staked > 0 && mbadge('Yield Tot.', `${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%`, totTutti.pl >= 0)}
+            </div>
+          );
+        })()}
 
         </div>{/* FINE HEADER STICKY */}
         {isMobile && <div style={{ height: '15px' }} />}

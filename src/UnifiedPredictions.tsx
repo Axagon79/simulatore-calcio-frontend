@@ -991,8 +991,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       const p = pronostico.toLowerCase();
       if (p.startsWith('over')) { const thr = parseFloat(pronostico.split(' ')[1]); return total > thr; }
       if (p.startsWith('under')) { const thr = parseFloat(pronostico.split(' ')[1]); return total < thr; }
-      if (p === 'gg') return home > 0 && away > 0;
-      if (p === 'ng') return home === 0 || away === 0;
+      if (p === 'gg' || p === 'goal' || p === 'gol') return home > 0 && away > 0;
+      if (p === 'ng' || p === 'no goal' || p === 'no gol' || p === 'nogoal') return home === 0 || away === 0;
       const mg = pronostico.match(/^MG\s+(\d+)-(\d+)/i);
       if (mg) return total >= parseInt(mg[1]) && total <= parseInt(mg[2]);
       return null;

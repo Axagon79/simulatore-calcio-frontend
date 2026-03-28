@@ -3299,7 +3299,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
           }, 0);
           const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
-          const roiPct = totalStaked > 0 ? Math.round((totalProfit / totalStaked) * 1000) / 10 : null;
           const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
           const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
           const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
@@ -3375,9 +3374,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       {(() => {
                         const monthName = new Date(date).toLocaleString('it', { month: 'long' });
                         const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-                        const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'tutti';
+                        const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
                         const mpl = monthlyPLData[tabKey];
-                        const mplTutti = monthlyPLData.tutti;
                         if (!mpl) return null;
                         const plColor = (v: number) => v >= 0 ? theme.financePositive : theme.missText;
                         return (

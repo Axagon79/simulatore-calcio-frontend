@@ -2986,8 +2986,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   if (!day && !tutti && !totTutti) return null;
                   const badge = (label: string, value: string, positive: boolean) => (
                     <div key={label} style={{
-                      background: `${positive ? theme.financePositive : theme.missText}15`,
-                      border: `1px solid ${positive ? theme.financePositive : theme.missText}30`,
+                      background: `${positive ? theme.financePositive : theme.missText}40`,
+                      border: `1px solid ${positive ? theme.financePositive : theme.missText}80`,
                       borderRadius: '8px', padding: '3px 8px',
                       display: 'flex', alignItems: 'center', gap: '4px',
                     }}>
@@ -2996,8 +2996,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   );
                   return (
-                    <div style={{ position: 'absolute', right: '380px', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      {day && day.bets > 0 && badge('P/L Giorno', `${day.pl > 0 ? '+' : ''}${day.pl}u`, day.pl >= 0)}
+                    <div style={{ position: 'absolute', right: '330px', top: '50%', transform: 'translateY(-40%)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {badge('P/L Giorno', day && day.bets > 0 ? `${day.pl > 0 ? '+' : ''}${day.pl}u` : '—', day ? day.pl >= 0 : true)}
                       {tutti && badge('P/L Mese', `${tutti.pl > 0 ? '+' : ''}${tutti.pl}u`, tutti.pl >= 0)}
                       {tutti && tutti.staked > 0 && badge('Yield Mese', `${Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((tutti.pl / tutti.staked) * 1000) / 10}%`, tutti.pl >= 0)}
                       {totTutti && totTutti.staked > 0 && badge('Yield Totale', `${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%`, totTutti.pl >= 0)}
@@ -3173,7 +3173,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           );
           return (
             <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
-              {day && day.bets > 0 && mbadge('P/L Giorno', `${day.pl > 0 ? '+' : ''}${day.pl}u`, day.pl >= 0)}
+              {mbadge('P/L Giorno', day && day.bets > 0 ? `${day.pl > 0 ? '+' : ''}${day.pl}u` : '—', day ? day.pl >= 0 : true)}
               {tutti && mbadge('P/L Mese', `${tutti.pl > 0 ? '+' : ''}${tutti.pl}u`, tutti.pl >= 0)}
               {tutti && tutti.staked > 0 && mbadge('Yield Mese', `${Math.round((tutti.pl / tutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((tutti.pl / tutti.staked) * 1000) / 10}%`, tutti.pl >= 0)}
               {totTutti && totTutti.staked > 0 && mbadge('Yield Tot.', `${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10 > 0 ? '+' : ''}${Math.round((totTutti.pl / totTutti.staked) * 1000) / 10}%`, totTutti.pl >= 0)}

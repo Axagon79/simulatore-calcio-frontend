@@ -70,6 +70,7 @@ export interface Match {
   live_score?: string;
   live_status?: string;
   live_minute?: number;
+  match_status_detail?: string | null;
 }
 
 // --- EVENTI CRONACA ---

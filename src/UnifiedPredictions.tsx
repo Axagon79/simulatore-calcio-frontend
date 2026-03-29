@@ -178,6 +178,8 @@ interface Prediction {
   live_score?: string | null;
   live_status?: string | null;
   live_minute?: number | null;
+  // Stato speciale partita (Postp., Susp., Canc., ecc.)
+  match_status_detail?: string | null;
   // Risultato Esatto
   is_exact_score?: boolean;
   exact_score_top3?: Array<{ score: string; prob: number }>;
@@ -690,6 +692,23 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           }
         }
 
+        // Merge immediato con live scores PRIMA del render (evita flash Live → Finished)
+        try {
+          const liveRes = await fetch(`${API_BASE}/live-scores?date=${date}`);
+          const liveData = await liveRes.json();
+          if (liveData.success && liveData.scores?.length > 0) {
+            const scores = liveData.scores;
+            for (const pred of unified) {
+              const live = scores.find((s: any) => s.home === pred.home && s.away === pred.away);
+              if (live) {
+                pred.live_score = live.live_score;
+                pred.live_status = live.live_status;
+                pred.live_minute = live.live_minute;
+              }
+            }
+          }
+        } catch { /* live scores non disponibili, prosegui */ }
+
         setPredictions(unified);
 
       } catch (err: any) {
@@ -1033,6 +1052,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
   const getEffectiveHit = (pred: { date: string; match_time: string; real_score?: string | null; live_score?: string | null; live_status?: string | null }, p: { hit?: boolean | null; pronostico: string; tipo: string }): boolean | null => {
+    if (p.pronostico === 'NO BET') return null;
     if (p.hit === true || p.hit === false) return p.hit;
     if (pred.real_score) return p.hit ?? null;
     if (pred.live_score && isMatchOver(pred)) return calculateHitFromScore(pred.live_score, p.pronostico, p.tipo);
@@ -1321,12 +1341,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         <div
           className="card-expand-row"
           style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: isMobile ? '4px' : '8px', cursor: 'pointer' }}
-          onClick={() => setExpandedCards(prev => {
-            const next = new Set(prev);
-            if (next.has(cardKey)) next.delete(cardKey);
-            else next.add(cardKey);
-            return next;
-          })}
+          onClick={(e) => {
+            const row = e.currentTarget;
+            const rect = row.getBoundingClientRect();
+            const scrollY = window.scrollY;
+            setExpandedCards(prev => {
+              const next = new Set(prev);
+              if (next.has(cardKey)) next.delete(cardKey);
+              else next.add(cardKey);
+              return next;
+            });
+            // Mantieni la posizione visiva della riga dopo l'espansione
+            requestAnimationFrame(() => {
+              const newRect = row.getBoundingClientRect();
+              const drift = newRect.top - rect.top;
+              if (Math.abs(drift) > 2) {
+                window.scrollTo({ top: scrollY + drift, behavior: 'instant' as ScrollBehavior });
+              }
+            });
+          }}
         >
           {getMatchStatus(pred) === 'live' ? (
             <span style={{ fontSize: '13px', fontWeight: 900, flexShrink: 0, width: isMobile ? '32px' : '50px', textAlign: 'center', color: pred.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: pred.live_status !== 'HT' ? `${isMobile ? 'pulse' : 'pulseLiveScore'} 1.5s ease-in-out infinite` : undefined }}>
@@ -1371,15 +1404,30 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 {pred.live_score ? pred.live_score.replace(':', ' - ') : '– : –'}
               </span>
             ) : (
-              <span style={{ fontSize: '13px', fontWeight: '900', color: theme.textDim }}>– : –</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: pred.match_status_detail ? '#e67e22' : theme.textDim }}>{pred.match_status_detail ? '– : –' : '– : –'}</span>
             )}
             <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isCardExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </div>
         </div>
 
+        {/* Badge stato speciale (Postp., Susp., ecc.) — ha priorità su tutto */}
+        {pred.match_status_detail && (
+        <div
+          style={{
+            position: 'absolute', top: isMobile ? '1px' : '4px', right: isMobile ? '90px' : '100px',
+            zIndex: 5
+          }}
+        >
+          {isMobile ? (
+            <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e67e22', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 800, color: '#fff' }}>PP</span>
+          ) : (
+            <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e67e22', borderRadius: '4px', width: '50px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textTransform: 'uppercase' as const }}>{pred.match_status_detail}</span>
+          )}
+        </div>
+        )}
         {/* Badge "NB" (mobile: bollino tondo, desktop: rettangolino) al posto del tasto Tip */}
         {/* Guarda pronostici[] reali, non decision (che può essere stale dopo pre-match update) */}
-        {!(pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET')) && (
+        {!pred.match_status_detail && !(pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET')) && (
         <div
           style={{
             position: 'absolute', top: isMobile ? '1px' : '4px', right: isMobile ? '90px' : '100px',
@@ -1389,12 +1437,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {isMobile ? (
             <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e53e3e', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 800, color: '#fff' }}>NB</span>
           ) : (
-            <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', padding: '4px 10px' }}>NO BET</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', background: '#e53e3e', borderRadius: '4px', width: '50px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>NO BET</span>
           )}
         </div>
         )}
         {/* Badge "Tip" — solo per partite con pronostico */}
-        {pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET') && (
+        {!pred.match_status_detail && pred.pronostici?.some((p: any) => p.pronostico && p.pronostico !== 'NO BET') && (
         <div
           style={{
             position: 'absolute', top: isMobile ? '3px' : '4px', right: isMobile ? '84px' : '100px',
@@ -3752,7 +3800,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             }}>
               {/* Gruppo PARTITE */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '9px', fontWeight: '600', color: theme.textDim, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Partite</span>
+                <span style={{ fontSize: '9px', fontWeight: '600', color: theme.textDim, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Partite con pronostico</span>
                 <div style={{ display: 'flex', gap: isMobile ? '3px' : '5px', flexWrap: 'nowrap' as const, justifyContent: 'center' }}>
                   {([
                     { id: 'tutte' as StatusFilter, label: 'Tutte', icon: '📋', color: theme.purple },

@@ -286,15 +286,19 @@ export default function ElementoPartita({
             flexShrink: 0
           }}>
             <span style={{
-              fontSize: '11px',
-              color: match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : appTheme.text,
+              fontSize: match.match_status_detail ? '9px' : '11px',
+              color: match.match_status_detail ? '#e67e22' : match.live_status === 'Live' && match.status !== 'Finished' ? '#ef4444' : match.live_status === 'HT' && match.status !== 'Finished' ? '#f59e0b' : appTheme.text,
               fontWeight: 'bold',
               fontFamily: 'monospace',
               animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
             }}>
-              {(match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
-                ? (match.live_score || '-:-')
-                : (match.status === 'Finished' && match.real_score ? match.real_score : '-:-')}
+              {match.match_status_detail
+                ? match.match_status_detail
+                : (match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
+                  ? (match.live_score || '-:-')
+                  : (match.status === 'Finished' && match.real_score) ? match.real_score
+                  : (match.live_status === 'Finished' && match.live_score) ? match.live_score
+                  : '-:-'}
             </span>
             {match.live_status === 'Live' && match.status !== 'Finished' && match.live_minute && (
               <span style={{ fontSize: '8px', color: '#ef4444', fontWeight: 900, marginLeft: '3px' }}>
@@ -379,9 +383,13 @@ export default function ElementoPartita({
               display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2px 8px',
               animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
             }}>
-              <span>{(match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
-                ? (match.live_score || 'VS')
-                : (match.status === 'Finished' && match.real_score ? match.real_score : 'VS')}</span>
+              <span style={match.match_status_detail ? { fontSize: '11px', color: '#e67e22', textTransform: 'uppercase' as const } : undefined}>{match.match_status_detail
+                ? match.match_status_detail
+                : (match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
+                  ? (match.live_score || 'VS')
+                  : (match.status === 'Finished' && match.real_score) ? match.real_score
+                  : (match.live_status === 'Finished' && match.live_score) ? match.live_score
+                  : 'VS'}</span>
               {match.live_status === 'Live' && match.status !== 'Finished' && match.live_minute && (
                 <span style={{ fontSize: '9px', color: '#ef4444', fontWeight: 900, lineHeight: 1 }}>
                   {match.live_minute}'
@@ -476,7 +484,8 @@ export default function ElementoPartita({
                   const val = (odds as any)[label];
                   const numVal = parseFloat(val);
 
-                  const score = match.real_score?.split(':');
+                  const effectiveScore = match.real_score || (match.live_status === 'Finished' && match.live_score ? match.live_score : null);
+                  const score = effectiveScore?.split(':');
                   let resultOutcome = null;
                   if (score && score.length === 2) {
                     const homeGoals = parseInt(score[0]);
@@ -672,9 +681,13 @@ export default function ElementoPartita({
             fontFamily: 'monospace',
             animation: match.live_status === 'Live' && match.status !== 'Finished' ? 'pulse 1.5s infinite' : undefined
           }}>
-            {(match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
-              ? (match.live_score || 'VS')
-              : (match.status === 'Finished' && match.real_score ? match.real_score : 'VS')}
+            {match.match_status_detail
+              ? <span style={{ fontSize: '13px', color: '#e67e22', textTransform: 'uppercase' as const }}>{match.match_status_detail}</span>
+              : (match.live_status === 'Live' || match.live_status === 'HT') && match.status !== 'Finished'
+                ? (match.live_score || 'VS')
+                : (match.status === 'Finished' && match.real_score) ? match.real_score
+                : (match.live_status === 'Finished' && match.live_score) ? match.live_score
+                : 'VS'}
             {match.live_status === 'Live' && match.status !== 'Finished' && match.live_minute && (
               <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 900, marginLeft: '8px' }}>
                 {match.live_minute}'

@@ -427,6 +427,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Coach AI', onClick: () => setCoachOpen(true) },
               ...(checkAdmin() ? [{ label: 'Analisi Storica', onClick: () => { window.location.href = '/analisi-storica'; } }] : []),
             ]},
+            { label: 'Quote', items: [
+              { label: 'Quote Anomale', onClick: () => { window.location.href = '/quote-anomale'; } },
+            ]},
             { label: 'Prezzi', onClick: () => { window.location.href = '/prezzi'; } },
             { label: 'Contatti', onClick: () => { window.location.href = '/contatti'; } },
           ];

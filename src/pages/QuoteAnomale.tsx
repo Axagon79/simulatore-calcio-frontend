@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import QuoteAnomaleDetail from './QuoteAnomaleDetail';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
-// Tipi
+// --- TIPI ---
 interface QuoteSet { '1': number; 'X': number; '2': number }
 interface Semaforo { delta_pp: number; livello: string }
 interface AlertBE { aggio_specifico: number; alert: boolean }
@@ -14,31 +14,32 @@ interface Rendimento {
   ritorno_pct: number; hwr: number; dr: number; awr: number;
   aggio_1: number; aggio_x: number; aggio_2: number;
 }
-
 interface MatchDoc {
-  match_key: string;
-  date: string;
-  league?: string;
-  league_raw?: string;
-  match_time: string;
-  home_raw: string;
-  away_raw: string;
-  quote_apertura: QuoteSet;
-  quote_chiusura?: QuoteSet;
+  match_key: string; date: string; league?: string; league_raw?: string;
+  match_time: string; home_raw: string; away_raw: string;
+  quote_apertura: QuoteSet; quote_chiusura?: QuoteSet;
   semaforo?: { '1': Semaforo; 'X': Semaforo; '2': Semaforo };
   alert_breakeven?: { aggio_tot: number; '1': AlertBE; 'X': AlertBE; '2': AlertBE };
   direzione?: { '1': string; 'X': string; '2': string };
   v_index_rel?: { '1': VIndex; 'X': VIndex; '2': VIndex };
   v_index_abs?: { '1': VIndex; 'X': VIndex; '2': VIndex };
-  rendimento_apertura?: Rendimento;
-  rendimento_chiusura?: Rendimento;
-  n_aggiornamenti?: number;
-  ts_chiusura?: string;
+  rendimento_apertura?: Rendimento; rendimento_chiusura?: Rendimento;
+  n_aggiornamenti?: number; ts_chiusura?: string;
 }
 
-const SEMAFORO_COLORS: Record<string, string> = {
-  verde: '#10b981', giallo: '#f59e0b', arancione: '#f97316', rosso: '#ef4444',
-};
+const SIGNS = ['1', 'X', '2'] as const;
+const SEMAFORO_COLORS: Record<string, string> = { verde: '#10b981', giallo: '#f59e0b', arancione: '#f97316', rosso: '#ef4444' };
+
+const CHART_TABS = [
+  { key: 'quote', label: 'Quote', tip: 'Evoluzione quote 1/X/2 nel tempo' },
+  { key: 'delta', label: 'Δ pp', tip: 'Delta punti percentuali (prob. implicita apertura vs live)' },
+  { key: 'aggio', label: 'Aggio', tip: 'Margine del bookmaker per quota' },
+  { key: 'rend', label: 'Rendim.', tip: 'Home Win / Draw / Away Win Return %' },
+  { key: 'vRel', label: 'V-Rel', tip: 'V-Index Relativo: live vs apertura (<100 scesa, >100 salita)' },
+  { key: 'vAbs', label: 'V-Abs', tip: 'V-Index Assoluto: live vs fair odds (>100 = possibile valore)' },
+];
+
+function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }
 
 function formatTimeAgo(ts: string | undefined): string {
   if (!ts) return '—';
@@ -49,189 +50,126 @@ function formatTimeAgo(ts: string | undefined): string {
   return `${Math.floor(min / 60)}h fa`;
 }
 
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-// --- COMPONENTE CARD PARTITA ---
-function MatchCard({ m, isExpanded, onToggle, date }: {
+// --- CARD MOBILE ---
+function MobileCard({ m, isExpanded, onToggle, date }: {
   m: MatchDoc; isExpanded: boolean; onToggle: () => void; date: string;
 }) {
-  const signs = ['1', 'X', '2'] as const;
   const rend = m.rendimento_chiusura || m.rendimento_apertura;
 
   return (
     <div style={{
       background: theme.panel,
       border: isExpanded ? `1px solid ${theme.cyan}66` : theme.panelBorder,
-      borderRadius: 8,
-      marginBottom: 10,
-      overflow: 'hidden',
-      transition: 'border-color 0.2s',
+      borderRadius: 6, marginBottom: 6, overflow: 'hidden',
     }}>
-      {/* Header card — cliccabile */}
-      <div
-        onClick={onToggle}
-        style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '8px 12px',
-          background: isLight ? 'rgba(0,119,204,0.04)' : 'rgba(0,240,255,0.04)',
-          borderBottom: theme.cellBorder,
-          fontSize: 11, color: theme.textDim,
-          cursor: 'pointer',
-          userSelect: 'none',
-        }}
-      >
-        <span>{m.league || m.league_raw || '—'}</span>
-        <span style={{ fontFamily: 'monospace' }}>{m.match_time}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {m.ts_chiusura ? `Agg: ${formatTimeAgo(m.ts_chiusura)}` : 'Solo apertura'}
-          <span style={{
-            fontSize: 10, color: theme.cyan,
-            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)',
-            transition: 'transform 0.2s',
-          }}>▼</span>
-        </span>
-      </div>
-
-      {/* Squadre + Ritorno — cliccabile */}
-      <div
-        onClick={onToggle}
-        style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '6px 12px',
-          borderBottom: theme.cellBorder,
-          cursor: 'pointer',
-        }}
-      >
-        <span style={{ fontWeight: 600, fontSize: 13, color: theme.text }}>
+      {/* Header */}
+      <div onClick={onToggle} style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '5px 8px', gap: 6,
+        background: isLight ? 'rgba(0,119,204,0.04)' : 'rgba(0,240,255,0.04)',
+        borderBottom: theme.cellBorder, cursor: 'pointer', userSelect: 'none',
+      }}>
+        <span style={{ fontWeight: 600, fontSize: 11, color: theme.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {m.home_raw} vs {m.away_raw}
         </span>
+        <span style={{ fontFamily: 'monospace', fontSize: 10, color: theme.textDim }}>{m.match_time}</span>
         {rend && (
-          <span style={{
-            fontSize: 11, fontFamily: 'monospace',
-            color: rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger,
-          }}>
-            Ritorno: {rend.ritorno_pct}%
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger }}>
+            {rend.ritorno_pct}%
           </span>
         )}
+        <span style={{ fontSize: 8, color: theme.cyan, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
       </div>
 
-      {/* Tabella indicatori compatta */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: 'monospace' }}>
-          <thead>
-            <tr style={{ background: theme.headerBg }}>
-              <th style={thStyle}></th>
-              {signs.map(s => <th key={s} style={thStyle}>{s}</th>)}
+      {/* Tabella indicatori */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: 'monospace' }}>
+        <thead>
+          <tr style={{ background: theme.headerBg }}>
+            <th style={mThStyle}></th>
+            {SIGNS.map(s => <th key={s} style={mThStyle}>{s}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          <tr style={{ background: theme.rowOdd }}>
+            <td style={mLabelStyle}>Aper.</td>
+            {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}</td>)}
+          </tr>
+          {m.quote_chiusura && (
+            <tr style={{ background: theme.rowEven }}>
+              <td style={mLabelStyle}>Live</td>
+              {SIGNS.map(s => <td key={s} style={{ ...mCellStyle, fontWeight: 600 }}>{m.quote_chiusura![s]?.toFixed(2) ?? '—'}</td>)}
             </tr>
-          </thead>
-          <tbody>
+          )}
+          {m.semaforo && (
             <tr style={{ background: theme.rowOdd }}>
-              <td style={labelStyle}>Apertura</td>
-              {signs.map(s => <td key={s} style={cellStyle}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}</td>)}
+              <td style={mLabelStyle}>Δ pp</td>
+              {SIGNS.map(s => (
+                <td key={s} style={mCellStyle}>
+                  <span style={{ marginRight: 2 }}>{m.semaforo![s].delta_pp.toFixed(1)}</span>
+                  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: SEMAFORO_COLORS[m.semaforo![s].livello] || '#666', verticalAlign: 'middle' }} />
+                </td>
+              ))}
             </tr>
-            {m.quote_chiusura && (
-              <tr style={{ background: theme.rowEven }}>
-                <td style={labelStyle}>Live</td>
-                {signs.map(s => (
-                  <td key={s} style={{ ...cellStyle, fontWeight: 600 }}>{m.quote_chiusura![s]?.toFixed(2) ?? '—'}</td>
-                ))}
-              </tr>
-            )}
-            {m.semaforo && (
-              <tr style={{ background: theme.rowOdd }}>
-                <td style={labelStyle}>Δ pp</td>
-                {signs.map(s => (
-                  <td key={s} style={cellStyle}>
-                    <span style={{ marginRight: 4 }}>{m.semaforo![s].delta_pp.toFixed(1)}</span>
-                    <span style={{
-                      display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-                      background: SEMAFORO_COLORS[m.semaforo![s].livello] || '#666',
-                      verticalAlign: 'middle',
-                    }} />
-                  </td>
-                ))}
-              </tr>
-            )}
-            {m.direzione && (
-              <tr style={{ background: theme.rowEven }}>
-                <td style={labelStyle}>Direz.</td>
-                {signs.map(s => {
-                  const dir = m.direzione![s];
-                  const arrow = dir === 'conferma' ? '↓' : dir === 'dubbio' ? '↑' : '—';
-                  const color = dir === 'conferma' ? '#10b981' : dir === 'dubbio' ? '#ef4444' : theme.textDim;
-                  return <td key={s} style={{ ...cellStyle, color }}>{arrow} {dir === 'conferma' ? 'conf' : dir === 'dubbio' ? 'dubb' : 'stab'}</td>;
-                })}
-              </tr>
-            )}
-            {m.alert_breakeven && (
-              <tr style={{ background: theme.rowOdd }}>
-                <td style={labelStyle}>B-Even</td>
-                {signs.map(s => (
-                  <td key={s} style={cellStyle}>
-                    {m.alert_breakeven![s].alert
-                      ? <span style={{ color: '#ef4444' }}>!! alert</span>
-                      : <span style={{ color: theme.textDim }}>ok</span>}
-                  </td>
-                ))}
-              </tr>
-            )}
-            {m.alert_breakeven && (
-              <tr style={{ background: theme.rowEven }}>
-                <td style={labelStyle}>Aggio%</td>
-                {signs.map(s => <td key={s} style={cellStyle}>{m.alert_breakeven![s].aggio_specifico.toFixed(2)}</td>)}
-              </tr>
-            )}
-            {rend && (
-              <tr style={{ background: theme.rowOdd }}>
-                <td style={labelStyle}>HWR/DR/A</td>
-                <td style={cellStyle}>{rend.hwr.toFixed(1)}%</td>
-                <td style={cellStyle}>{rend.dr.toFixed(1)}%</td>
-                <td style={cellStyle}>{rend.awr.toFixed(1)}%</td>
-              </tr>
-            )}
-            {m.v_index_rel && (
-              <tr style={{ background: theme.rowEven }}>
-                <td style={labelStyle}>V-Rel</td>
-                {signs.map(s => <td key={s} style={cellStyle}>{m.v_index_rel![s].valore.toFixed(1)}</td>)}
-              </tr>
-            )}
-            {m.v_index_abs && (
-              <tr style={{ background: theme.rowOdd }}>
-                <td style={labelStyle}>V-Abs</td>
-                {signs.map(s => <td key={s} style={cellStyle}>{m.v_index_abs![s].valore.toFixed(1)}</td>)}
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          )}
+          {m.direzione && (
+            <tr style={{ background: theme.rowEven }}>
+              <td style={mLabelStyle}>Dir.</td>
+              {SIGNS.map(s => {
+                const dir = m.direzione![s];
+                const arrow = dir === 'conferma' ? '↓' : dir === 'dubbio' ? '↑' : '—';
+                const color = dir === 'conferma' ? '#10b981' : dir === 'dubbio' ? '#ef4444' : theme.textDim;
+                return <td key={s} style={{ ...mCellStyle, color }}>{arrow} {dir === 'conferma' ? 'cf' : dir === 'dubbio' ? 'du' : 'st'}</td>;
+              })}
+            </tr>
+          )}
+          {m.alert_breakeven && (
+            <tr style={{ background: theme.rowOdd }}>
+              <td style={mLabelStyle}>BEv</td>
+              {SIGNS.map(s => (
+                <td key={s} style={mCellStyle}>
+                  {m.alert_breakeven![s].alert ? <span style={{ color: '#ef4444', fontWeight: 600 }}>!!</span> : <span style={{ color: theme.textDim }}>ok</span>}
+                </td>
+              ))}
+            </tr>
+          )}
+          {m.alert_breakeven && (
+            <tr style={{ background: theme.rowEven }}>
+              <td style={mLabelStyle}>Agg%</td>
+              {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.alert_breakeven![s].aggio_specifico.toFixed(2)}</td>)}
+            </tr>
+          )}
+          {rend && (
+            <tr style={{ background: theme.rowOdd }}>
+              <td style={mLabelStyle}>HWR/D/A</td>
+              <td style={mCellStyle}>{rend.hwr.toFixed(1)}%</td>
+              <td style={mCellStyle}>{rend.dr.toFixed(1)}%</td>
+              <td style={mCellStyle}>{rend.awr.toFixed(1)}%</td>
+            </tr>
+          )}
+          {m.v_index_rel && (
+            <tr style={{ background: theme.rowEven }}>
+              <td style={mLabelStyle}>V-Rel</td>
+              {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.v_index_rel![s].valore.toFixed(1)}</td>)}
+            </tr>
+          )}
+          {m.v_index_abs && (
+            <tr style={{ background: theme.rowOdd }}>
+              <td style={mLabelStyle}>V-Abs</td>
+              {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.v_index_abs![s].valore.toFixed(1)}</td>)}
+            </tr>
+          )}
+        </tbody>
+      </table>
 
-      {/* DETTAGLIO ESPANDIBILE CON GRAFICI */}
+      {/* Expand: tutti i grafici */}
       {isExpanded && (
-        <div style={{
-          borderTop: `1px solid ${theme.cyan}33`,
-          background: isLight ? 'rgba(0,119,204,0.02)' : 'rgba(0,240,255,0.02)',
-        }}>
+        <div style={{ borderTop: `1px solid ${theme.cyan}33`, background: isLight ? 'rgba(0,119,204,0.02)' : 'rgba(0,240,255,0.02)' }}>
           <QuoteAnomaleDetail date={date} matchKey={m.match_key} />
         </div>
       )}
     </div>
   );
 }
-
-// --- STILI TABELLA ---
-const thStyle: React.CSSProperties = {
-  padding: '6px 8px', textAlign: 'center', color: theme.cyan,
-  fontWeight: 600, fontSize: 12, borderBottom: theme.cellBorder,
-};
-const labelStyle: React.CSSProperties = {
-  padding: '4px 8px', color: theme.textDim, fontWeight: 500, fontSize: 10,
-  textTransform: 'uppercase', letterSpacing: 0.5, borderRight: theme.cellBorder, whiteSpace: 'nowrap',
-};
-const cellStyle: React.CSSProperties = {
-  padding: '4px 8px', textAlign: 'center', color: theme.text, borderRight: theme.cellBorder,
-};
 
 // --- PAGINA PRINCIPALE ---
 export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
@@ -241,7 +179,20 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const [selectedLeague, setSelectedLeague] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Desktop: tabellone + detail
+  const [selectedMatchKey, setSelectedMatchKey] = useState<string | null>(null);
+  const [chartTab, setChartTab] = useState('quote');
+  const detailRef = useRef<HTMLDivElement>(null);
+  // Mobile: card espandibili
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Responsive
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     fetch(`${API_BASE}/quote-anomale/leagues?date=${date}`)
@@ -251,16 +202,11 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   }, [date]);
 
   useEffect(() => {
-    setLoading(true);
-    setError('');
-    setExpandedKey(null);
+    setLoading(true); setError(''); setSelectedMatchKey(null); setExpandedKey(null);
     const url = `${API_BASE}/quote-anomale/matches?date=${date}${selectedLeague ? `&league=${encodeURIComponent(selectedLeague)}` : ''}`;
     fetch(url)
       .then(r => r.json())
-      .then(d => {
-        if (d.success) setMatches(d.data);
-        else setError(d.message || 'Errore');
-      })
+      .then(d => { if (d.success) setMatches(d.data); else setError(d.message || 'Errore'); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [date, selectedLeague]);
@@ -268,22 +214,13 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const kpi = useMemo(() => {
     let alertRossi = 0, beAlert = 0, aggioSum = 0, aggioCount = 0;
     for (const m of matches) {
-      if (m.semaforo) {
-        for (const s of ['1', 'X', '2'] as const) {
-          if (m.semaforo[s]?.livello === 'rosso') alertRossi++;
-        }
-      }
+      if (m.semaforo) for (const s of SIGNS) { if (m.semaforo[s]?.livello === 'rosso') alertRossi++; }
       if (m.alert_breakeven) {
-        for (const s of ['1', 'X', '2'] as const) {
-          if (m.alert_breakeven[s]?.alert) beAlert++;
-        }
+        for (const s of SIGNS) { if (m.alert_breakeven[s]?.alert) beAlert++; }
         if (m.alert_breakeven.aggio_tot > 0) { aggioSum += m.alert_breakeven.aggio_tot; aggioCount++; }
       }
     }
-    return {
-      total: matches.length, alertRossi, beAlert,
-      aggioMedio: aggioCount > 0 ? (aggioSum / aggioCount).toFixed(1) : '—',
-    };
+    return { total: matches.length, alertRossi, beAlert, aggioMedio: aggioCount > 0 ? (aggioSum / aggioCount).toFixed(1) : '—' };
   }, [matches]);
 
   const grouped = useMemo(() => {
@@ -296,65 +233,249 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [matches]);
 
+  const selectedMatch = matches.find(m => m.match_key === selectedMatchKey);
+
+  const handleRowClick = (matchKey: string) => {
+    if (selectedMatchKey === matchKey) { setSelectedMatchKey(null); return; }
+    setSelectedMatchKey(matchKey);
+    setChartTab('quote');
+    setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font, padding: '0 0 40px' }}>
+    <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font }}>
       {/* HEADER */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 10,
-        background: theme.panelSolid, borderBottom: theme.panelBorder, padding: '10px 16px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: theme.cyan, cursor: 'pointer', fontSize: 18, padding: 0 }}>←</button>
-          <span style={{ fontWeight: 700, fontSize: 16 }}>Quote Anomale</span>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.panelSolid, borderBottom: theme.panelBorder, padding: '8px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', color: theme.cyan, cursor: 'pointer', fontSize: 16, padding: 0 }}>←</button>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>Odds Monitor</span>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '4px 8px', color: theme.text, fontSize: 12, marginLeft: 'auto' }} />
+            style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '3px 6px', color: theme.text, fontSize: 11, marginLeft: 'auto' }} />
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)}
-            style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '4px 8px', color: theme.text, fontSize: 12 }}>
-            <option value="">Tutti i campionati</option>
+            style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '3px 6px', color: theme.text, fontSize: 11 }}>
+            <option value="">Tutti</option>
             {leagues.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
       </div>
 
       {/* KPI BAR */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, padding: '12px 16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: 6, padding: '8px 12px' }}>
         {[
           { label: 'Partite', value: kpi.total, color: theme.cyan },
           { label: 'Alert rossi', value: kpi.alertRossi, color: '#ef4444' },
-          { label: 'B-Even superati', value: kpi.beAlert, color: '#f97316' },
+          { label: 'B-Even alert', value: kpi.beAlert, color: '#f97316' },
           { label: 'Aggio medio', value: `${kpi.aggioMedio}%`, color: theme.textDim },
         ].map((k, i) => (
-          <div key={i} style={{ background: theme.cardBg, border: theme.cellBorder, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: k.color, fontFamily: 'monospace' }}>{k.value}</div>
-            <div style={{ fontSize: 10, color: theme.textDim, marginTop: 2 }}>{k.label}</div>
+          <div key={i} style={{ background: theme.cardBg, border: theme.cellBorder, borderRadius: 4, padding: '5px 6px', textAlign: 'center' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: k.color, fontFamily: 'monospace' }}>{k.value}</div>
+            <div style={{ fontSize: 9, color: theme.textDim }}>{k.label}</div>
           </div>
         ))}
       </div>
 
       {/* CONTENUTO */}
-      <div style={{ padding: '0 16px' }}>
-        {loading && <div style={{ textAlign: 'center', padding: 40, color: theme.textDim }}>Caricamento...</div>}
-        {error && <div style={{ textAlign: 'center', padding: 20, color: theme.danger }}>{error}</div>}
+      <div style={{ padding: '0 12px 40px' }}>
+        {loading && <div style={{ textAlign: 'center', padding: 30, color: theme.textDim, fontSize: 11 }}>Caricamento...</div>}
+        {error && <div style={{ textAlign: 'center', padding: 16, color: theme.danger, fontSize: 11 }}>{error}</div>}
         {!loading && !error && matches.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 40, color: theme.textDim }}>Nessuna partita per questa data</div>
+          <div style={{ textAlign: 'center', padding: 30, color: theme.textDim, fontSize: 11 }}>Nessuna partita per questa data</div>
         )}
-        {grouped.map(([league, leagueMatches]) => (
-          <div key={league} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: theme.cyan, padding: '6px 0', borderBottom: `1px solid ${theme.cyan}33`, marginBottom: 8 }}>
-              {league} ({leagueMatches.length})
+
+        {/* ===== DESKTOP: TABELLONE ===== */}
+        {isDesktop && !loading && matches.length > 0 && (
+          <>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: 'monospace' }}>
+                <thead>
+                  <tr style={{ background: theme.headerBg }}>
+                    <th style={{ ...hStyle, textAlign: 'left', minWidth: 150 }}>Partita</th>
+                    <th style={hStyle}>Ora</th>
+                    <th style={hStyle}>1</th>
+                    <th style={hStyle}>X</th>
+                    <th style={hStyle}>2</th>
+                    <th style={hStyle}>Δ1</th>
+                    <th style={hStyle}>ΔX</th>
+                    <th style={hStyle}>Δ2</th>
+                    <th style={hStyle}>Rit%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grouped.map(([league, leagueMatches]) => (
+                    <>{/* eslint-disable-next-line react/jsx-key */}
+                      <tr key={`h-${league}`}>
+                        <td colSpan={9} style={{
+                          padding: '8px 8px 3px', fontSize: 11, fontWeight: 600,
+                          color: theme.cyan, borderBottom: `1px solid ${theme.cyan}33`, fontFamily: theme.font,
+                        }}>
+                          {league} ({leagueMatches.length})
+                        </td>
+                      </tr>
+                      {leagueMatches.map((m, idx) => {
+                        const sel = selectedMatchKey === m.match_key;
+                        const q = m.quote_chiusura || m.quote_apertura;
+                        const hasLive = !!m.quote_chiusura;
+                        const rend = m.rendimento_chiusura || m.rendimento_apertura;
+                        const bg = sel
+                          ? (isLight ? 'rgba(0,119,204,0.12)' : 'rgba(0,240,255,0.12)')
+                          : idx % 2 === 0 ? theme.rowOdd : theme.rowEven;
+
+                        return (
+                          <tr key={m.match_key} onClick={() => handleRowClick(m.match_key)}
+                            style={{ background: bg, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent' }}>
+                            <td style={{ ...cStyle, textAlign: 'left', fontFamily: theme.font, fontWeight: 500, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {m.home_raw} vs {m.away_raw}
+                            </td>
+                            <td style={{ ...cStyle, color: theme.textDim }}>{m.match_time}</td>
+                            {SIGNS.map(s => (
+                              <td key={s} style={{ ...cStyle, fontWeight: hasLive ? 600 : 400 }}>{q[s]?.toFixed(2) ?? '—'}</td>
+                            ))}
+                            {SIGNS.map(s => (
+                              <td key={`d${s}`} style={cStyle}>
+                                {m.semaforo ? (
+                                  <>
+                                    <span style={{ marginRight: 2 }}>{m.semaforo[s].delta_pp.toFixed(1)}</span>
+                                    <span style={{
+                                      display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+                                      background: SEMAFORO_COLORS[m.semaforo[s].livello] || '#666', verticalAlign: 'middle',
+                                    }} />
+                                  </>
+                                ) : '—'}
+                              </td>
+                            ))}
+                            <td style={{
+                              ...cStyle, fontWeight: 600,
+                              color: rend ? (rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger) : theme.textDim,
+                            }}>
+                              {rend ? `${rend.ritorno_pct}%` : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {leagueMatches.map(m => (
-              <MatchCard
-                key={m.match_key}
-                m={m}
-                date={date}
-                isExpanded={expandedKey === m.match_key}
-                onToggle={() => setExpandedKey(expandedKey === m.match_key ? null : m.match_key)}
-              />
+
+            {/* Dettaglio sotto la tabella */}
+            {selectedMatch && (
+              <div ref={detailRef} style={{
+                marginTop: 12, background: theme.panel,
+                border: `1px solid ${theme.cyan}44`, borderRadius: 8, overflow: 'hidden',
+              }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 12px',
+                  background: isLight ? 'rgba(0,119,204,0.05)' : 'rgba(0,240,255,0.05)',
+                  borderBottom: theme.cellBorder,
+                }}>
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{selectedMatch.home_raw} vs {selectedMatch.away_raw}</span>
+                    <span style={{ fontSize: 10, color: theme.textDim, marginLeft: 10 }}>
+                      {selectedMatch.league || selectedMatch.league_raw} — {selectedMatch.match_time}
+                    </span>
+                  </div>
+                  <button onClick={() => setSelectedMatchKey(null)}
+                    style={{ background: 'none', border: 'none', color: theme.textDim, cursor: 'pointer', fontSize: 14, padding: '0 4px' }}>✕</button>
+                </div>
+
+                <DetailSummary m={selectedMatch} />
+
+                <div style={{ display: 'flex', gap: 3, padding: '6px 12px', borderBottom: theme.cellBorder, flexWrap: 'wrap' }}>
+                  {CHART_TABS.map(t => (
+                    <button key={t.key} onClick={() => setChartTab(t.key)} title={t.tip}
+                      style={{
+                        padding: '4px 10px', borderRadius: 4, border: 'none', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                        background: chartTab === t.key ? theme.cyan : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'),
+                        color: chartTab === t.key ? '#fff' : theme.textDim,
+                      }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                <QuoteAnomaleDetail date={date} matchKey={selectedMatch.match_key} chartFilter={chartTab} />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ===== MOBILE: CARD ESPANDIBILI ===== */}
+        {!isDesktop && !loading && matches.length > 0 && (
+          <>
+            {grouped.map(([league, leagueMatches]) => (
+              <div key={league} style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: theme.cyan, padding: '4px 0', borderBottom: `1px solid ${theme.cyan}33`, marginBottom: 4 }}>
+                  {league} ({leagueMatches.length})
+                </div>
+                {leagueMatches.map(m => (
+                  <MobileCard
+                    key={m.match_key}
+                    m={m}
+                    date={date}
+                    isExpanded={expandedKey === m.match_key}
+                    onToggle={() => setExpandedKey(expandedKey === m.match_key ? null : m.match_key)}
+                  />
+                ))}
+              </div>
             ))}
-          </div>
-        ))}
+          </>
+        )}
       </div>
     </div>
   );
 }
+
+// --- RIEPILOGO COMPATTO (desktop detail) ---
+function DetailSummary({ m }: { m: MatchDoc }) {
+  const rend = m.rendimento_chiusura || m.rendimento_apertura;
+  return (
+    <div style={{
+      padding: '5px 12px',
+      display: 'flex', flexWrap: 'wrap', gap: '3px 14px',
+      fontSize: 10, fontFamily: 'monospace', color: theme.textDim,
+      borderBottom: theme.cellBorder,
+    }}>
+      <span>Ap: {SIGNS.map(s => m.quote_apertura[s]?.toFixed(2)).join(' / ')}</span>
+      {m.quote_chiusura && <span>Live: {SIGNS.map(s => m.quote_chiusura![s]?.toFixed(2)).join(' / ')}</span>}
+      {m.direzione && (
+        <span>Dir: {SIGNS.map(s => {
+          const d = m.direzione![s];
+          return d === 'conferma' ? '↓cf' : d === 'dubbio' ? '↑du' : '—st';
+        }).join(' ')}</span>
+      )}
+      {m.alert_breakeven && (
+        <span>BEv: {SIGNS.map((s, i) =>
+          <span key={i}>{m.alert_breakeven![s].alert ? <span style={{ color: '#ef4444' }}>!! </span> : 'ok '}</span>
+        )}</span>
+      )}
+      {m.alert_breakeven && <span>Agg: {SIGNS.map(s => m.alert_breakeven![s].aggio_specifico.toFixed(2)).join(' / ')}</span>}
+      {rend && <span>HWR:{rend.hwr.toFixed(1)}% DR:{rend.dr.toFixed(1)}% AWR:{rend.awr.toFixed(1)}%</span>}
+      {m.v_index_rel && <span>V-Rel: {SIGNS.map(s => m.v_index_rel![s].valore.toFixed(1)).join(' / ')}</span>}
+      {m.v_index_abs && <span>V-Abs: {SIGNS.map(s => m.v_index_abs![s].valore.toFixed(1)).join(' / ')}</span>}
+    </div>
+  );
+}
+
+// --- STILI DESKTOP ---
+const hStyle: React.CSSProperties = {
+  padding: '5px 8px', textAlign: 'center', color: theme.cyan,
+  fontWeight: 600, fontSize: 10, borderBottom: theme.cellBorder, whiteSpace: 'nowrap',
+};
+const cStyle: React.CSSProperties = {
+  padding: '5px 8px', textAlign: 'center', color: theme.text,
+};
+
+// --- STILI MOBILE ---
+const mThStyle: React.CSSProperties = {
+  padding: '3px 6px', textAlign: 'center', color: theme.cyan,
+  fontWeight: 600, fontSize: 10, borderBottom: theme.cellBorder,
+};
+const mLabelStyle: React.CSSProperties = {
+  padding: '3px 6px', color: theme.textDim, fontWeight: 500, fontSize: 9,
+  textTransform: 'uppercase', letterSpacing: 0.3, borderRight: theme.cellBorder, whiteSpace: 'nowrap',
+};
+const mCellStyle: React.CSSProperties = {
+  padding: '3px 6px', textAlign: 'center', color: theme.text, borderRight: theme.cellBorder,
+};

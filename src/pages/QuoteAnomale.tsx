@@ -213,7 +213,7 @@ function MatchCard({ m, isExpanded, onToggle, date }: {
           borderTop: `1px solid ${theme.cyan}33`,
           background: isLight ? 'rgba(0,119,204,0.02)' : 'rgba(0,240,255,0.02)',
         }}>
-          <QuoteAnomaleDetail date={date} matchKey={m.match_key} onBack={onToggle} />
+          <QuoteAnomaleDetail date={date} matchKey={m.match_key} />
         </div>
       )}
     </div>

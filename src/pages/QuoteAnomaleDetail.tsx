@@ -83,8 +83,8 @@ function MiniChart({ title, data, dataKeys, colors, domain }: {
 }
 
 // --- COMPONENTE DETTAGLIO (INLINE) ---
-export default function QuoteAnomaleDetail({ date, matchKey, onBack }: {
-  date: string; matchKey: string; onBack: () => void;
+export default function QuoteAnomaleDetail({ date, matchKey }: {
+  date: string; matchKey: string;
 }) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);

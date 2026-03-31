@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import QuoteAnomaleDetail from './QuoteAnomaleDetail';
 
@@ -25,6 +25,7 @@ interface MatchDoc {
   v_index_abs?: { '1': VIndex; 'X': VIndex; '2': VIndex };
   rendimento_apertura?: Rendimento; rendimento_chiusura?: Rendimento;
   n_aggiornamenti?: number; ts_chiusura?: string;
+  real_score?: string;
 }
 
 const SIGNS = ['1', 'X', '2'] as const;
@@ -40,15 +41,6 @@ const CHART_TABS = [
 ];
 
 function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }
-
-function formatTimeAgo(ts: string | undefined): string {
-  if (!ts) return '—';
-  const diff = Date.now() - new Date(ts).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return 'ora';
-  if (min < 60) return `${min}min fa`;
-  return `${Math.floor(min / 60)}h fa`;
-}
 
 // --- CARD MOBILE ---
 function MobileCard({ m, isExpanded, onToggle, date }: {
@@ -72,6 +64,11 @@ function MobileCard({ m, isExpanded, onToggle, date }: {
         <span style={{ fontWeight: 600, fontSize: 11, color: theme.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {m.home_raw} vs {m.away_raw}
         </span>
+        {m.real_score && (
+          <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: theme.text, letterSpacing: 1 }}>
+            {m.real_score.replace(':', ' - ')}
+          </span>
+        )}
         <span style={{ fontFamily: 'monospace', fontSize: 10, color: theme.textDim }}>{m.match_time}</span>
         {rend && (
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger }}>
@@ -92,12 +89,23 @@ function MobileCard({ m, isExpanded, onToggle, date }: {
         <tbody>
           <tr style={{ background: theme.rowOdd }}>
             <td style={mLabelStyle}>Aper.</td>
-            {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}</td>)}
+            {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}<span style={{ fontSize: 9, marginLeft: 5, width: 0, display: 'inline-block', overflow: 'visible', visibility: 'hidden' }}>▼</span></td>)}
           </tr>
           {m.quote_chiusura && (
             <tr style={{ background: theme.rowEven }}>
               <td style={mLabelStyle}>Live</td>
-              {SIGNS.map(s => <td key={s} style={{ ...mCellStyle, fontWeight: 600 }}>{m.quote_chiusura![s]?.toFixed(2) ?? '—'}</td>)}
+              {SIGNS.map(s => {
+                const qLive = m.quote_chiusura![s];
+                const qAp = m.quote_apertura[s];
+                const diff = qLive && qAp ? qLive - qAp : 0;
+                const arrow = diff < -0.02 ? '▼' : diff > 0.02 ? '▲' : '=';
+                const color = diff < -0.02 ? '#10b981' : diff > 0.02 ? '#ef4444' : theme.textDim;
+                return (
+                  <td key={s} style={{ ...mCellStyle, fontWeight: 600, color, position: 'relative' }}>
+                    {qLive?.toFixed(2) ?? '—'}<span style={{ fontSize: 9, marginLeft: 5, verticalAlign: 'middle', width: 0, display: 'inline-block', overflow: 'visible' }}>{arrow}</span>
+                  </td>
+                );
+              })}
             </tr>
           )}
           {m.semaforo && (
@@ -109,17 +117,6 @@ function MobileCard({ m, isExpanded, onToggle, date }: {
                   <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: SEMAFORO_COLORS[m.semaforo![s].livello] || '#666', verticalAlign: 'middle' }} />
                 </td>
               ))}
-            </tr>
-          )}
-          {m.direzione && (
-            <tr style={{ background: theme.rowEven }}>
-              <td style={mLabelStyle}>Dir.</td>
-              {SIGNS.map(s => {
-                const dir = m.direzione![s];
-                const arrow = dir === 'conferma' ? '↓' : dir === 'dubbio' ? '↑' : '—';
-                const color = dir === 'conferma' ? '#10b981' : dir === 'dubbio' ? '#ef4444' : theme.textDim;
-                return <td key={s} style={{ ...mCellStyle, color }}>{arrow} {dir === 'conferma' ? 'cf' : dir === 'dubbio' ? 'du' : 'st'}</td>;
-              })}
             </tr>
           )}
           {m.alert_breakeven && (
@@ -286,25 +283,48 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
         {isDesktop && !loading && matches.length > 0 && (
           <>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: 'monospace' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: 'monospace', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: 45 }} />   {/* Ora */}
+                  <col style={{ width: 220 }} />  {/* Partita */}
+                  <col style={{ width: 50 }} />   {/* 1 */}
+                  <col style={{ width: 50 }} />   {/* X */}
+                  <col style={{ width: 50 }} />   {/* 2 */}
+                  <col style={{ width: 55 }} />   {/* Δ1 */}
+                  <col style={{ width: 55 }} />   {/* ΔX */}
+                  <col style={{ width: 55 }} />   {/* Δ2 */}
+                  <col style={{ width: 60 }} />   {/* BEv */}
+                  <col style={{ width: 70 }} />   {/* Agg% */}
+                  <col style={{ width: 70 }} />   {/* V-Rel */}
+                  <col style={{ width: 70 }} />   {/* V-Abs */}
+                  <col style={{ width: 80 }} />   {/* HWR/D/A */}
+                  <col style={{ width: 45 }} />   {/* Rit% */}
+                  <col style={{ width: 45 }} />   {/* Ris. */}
+                </colgroup>
                 <thead>
                   <tr style={{ background: theme.headerBg }}>
-                    <th style={{ ...hStyle, textAlign: 'left', minWidth: 150 }}>Partita</th>
                     <th style={hStyle}>Ora</th>
+                    <th style={{ ...hStyle, textAlign: 'left' }}>Partita</th>
                     <th style={hStyle}>1</th>
                     <th style={hStyle}>X</th>
                     <th style={hStyle}>2</th>
                     <th style={hStyle}>Δ1</th>
                     <th style={hStyle}>ΔX</th>
                     <th style={hStyle}>Δ2</th>
+                    <th style={hStyle}>BEv</th>
+                    <th style={hStyle}>Agg%</th>
+                    <th style={hStyle}>V-Rel</th>
+                    <th style={hStyle}>V-Abs</th>
+                    <th style={hStyle}>HWR/D/A</th>
                     <th style={hStyle}>Rit%</th>
+                    <th style={hStyle}>Ris.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {grouped.map(([league, leagueMatches]) => (
                     <>{/* eslint-disable-next-line react/jsx-key */}
                       <tr key={`h-${league}`}>
-                        <td colSpan={9} style={{
+                        <td colSpan={15} style={{
                           padding: '8px 8px 3px', fontSize: 11, fontWeight: 600,
                           color: theme.cyan, borderBottom: `1px solid ${theme.cyan}33`, fontFamily: theme.font,
                         }}>
@@ -313,43 +333,115 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                       </tr>
                       {leagueMatches.map((m, idx) => {
                         const sel = selectedMatchKey === m.match_key;
-                        const q = m.quote_chiusura || m.quote_apertura;
                         const hasLive = !!m.quote_chiusura;
                         const rend = m.rendimento_chiusura || m.rendimento_apertura;
                         const bg = sel
                           ? (isLight ? 'rgba(0,119,204,0.12)' : 'rgba(0,240,255,0.12)')
                           : idx % 2 === 0 ? theme.rowOdd : theme.rowEven;
+                        const bgAlt = sel
+                          ? (isLight ? 'rgba(0,119,204,0.08)' : 'rgba(0,240,255,0.08)')
+                          : idx % 2 === 0 ? theme.rowEven : theme.rowOdd;
 
                         return (
-                          <tr key={m.match_key} onClick={() => handleRowClick(m.match_key)}
-                            style={{ background: bg, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent' }}>
-                            <td style={{ ...cStyle, textAlign: 'left', fontFamily: theme.font, fontWeight: 500, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {m.home_raw} vs {m.away_raw}
-                            </td>
-                            <td style={{ ...cStyle, color: theme.textDim }}>{m.match_time}</td>
-                            {SIGNS.map(s => (
-                              <td key={s} style={{ ...cStyle, fontWeight: hasLive ? 600 : 400 }}>{q[s]?.toFixed(2) ?? '—'}</td>
-                            ))}
-                            {SIGNS.map(s => (
-                              <td key={`d${s}`} style={cStyle}>
-                                {m.semaforo ? (
+                          <React.Fragment key={m.match_key}>
+                            {/* RIGA 1: Apertura */}
+                            <tr onClick={() => handleRowClick(m.match_key)}
+                              style={{ background: bg, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent' }}>
+                              <td rowSpan={2} style={{ ...cStyle, color: theme.textDim, verticalAlign: 'middle' }}>{m.match_time}</td>
+                              <td rowSpan={2} style={{ ...cStyle, textAlign: 'left', fontFamily: theme.font, fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {m.home_raw} vs {m.away_raw}
+                              </td>
+                              {/* Quote apertura */}
+                              {SIGNS.map(s => (
+                                <td key={s} style={{ ...cStyle, color: theme.textDim }}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}<span style={{ fontSize: 9, marginLeft: 5, width: 0, display: 'inline-block', overflow: 'visible', visibility: 'hidden' }}>▼</span></td>
+                              ))}
+                              {/* Δ pp vuoto in riga apertura */}
+                              <td colSpan={3} style={{ ...cStyle, fontSize: 9, color: theme.textDim, textAlign: 'center' }}>apertura</td>
+                              {/* BEv, Agg%, V-Rel, V-Abs, HWR, Rit% vuoti in riga apertura */}
+                              <td colSpan={6} style={{ ...cStyle, fontSize: 9, color: theme.textDim }}></td>
+                              {/* Risultato — ultima colonna */}
+                              <td rowSpan={2} style={{ ...cStyle, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 1, verticalAlign: 'middle', color: m.real_score ? theme.cyan : theme.textDim }}>
+                                {m.real_score ? m.real_score.replace(':', '-') : '—'}
+                              </td>
+                            </tr>
+                            {/* RIGA 2: Live + tutti gli indicatori */}
+                            <tr onClick={() => handleRowClick(m.match_key)}
+                              style={{ background: bgAlt, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent', borderBottom: `1px solid ${theme.textDim}22` }}>
+                              {/* Quote live + freccia colorata */}
+                              {SIGNS.map(s => {
+                                if (!hasLive) return <td key={s} style={cStyle}>—</td>;
+                                const qLive = m.quote_chiusura![s];
+                                const qAp = m.quote_apertura[s];
+                                const diff = qLive && qAp ? qLive - qAp : 0;
+                                const arrow = diff < -0.02 ? '▼' : diff > 0.02 ? '▲' : '=';
+                                const color = diff < -0.02 ? '#10b981' : diff > 0.02 ? '#ef4444' : theme.textDim;
+                                return (
+                                  <td key={s} style={{ ...cStyle, fontWeight: 600, color }}>
+                                    {qLive?.toFixed(2) ?? '—'}<span style={{ fontSize: 9, marginLeft: 5, verticalAlign: 'middle', width: 0, display: 'inline-block', overflow: 'visible' }}>{arrow}</span>
+                                  </td>
+                                );
+                              })}
+                              {/* Δ pp + semaforo */}
+                              {SIGNS.map(s => (
+                                <td key={`d${s}`} style={cStyle}>
+                                  {m.semaforo ? (
+                                    <>
+                                      <span style={{ marginRight: 2 }}>{m.semaforo[s].delta_pp.toFixed(1)}</span>
+                                      <span style={{
+                                        display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+                                        background: SEMAFORO_COLORS[m.semaforo[s].livello] || '#666', verticalAlign: 'middle',
+                                      }} />
+                                    </>
+                                  ) : '—'}
+                                </td>
+                              ))}
+                              {/* Break-even */}
+                              <td style={cStyle}>
+                                {m.alert_breakeven ? SIGNS.map(s => (
+                                  <span key={s} style={{ marginRight: 3, color: m.alert_breakeven![s].alert ? '#ef4444' : theme.textDim, fontWeight: m.alert_breakeven![s].alert ? 600 : 400 }}>
+                                    {m.alert_breakeven![s].alert ? '!!' : 'ok'}
+                                  </span>
+                                )) : '—'}
+                              </td>
+                              {/* Aggio % */}
+                              <td style={{ ...cStyle, fontSize: 10 }}>
+                                {m.alert_breakeven ? SIGNS.map(s => (
+                                  <span key={s} style={{ marginRight: 3 }}>{m.alert_breakeven![s].aggio_specifico.toFixed(1)}</span>
+                                )) : '—'}
+                              </td>
+                              {/* V-Rel */}
+                              <td style={{ ...cStyle, fontSize: 10 }}>
+                                {m.v_index_rel ? SIGNS.map(s => (
+                                  <span key={s} style={{ marginRight: 3 }}>{m.v_index_rel![s].valore.toFixed(0)}</span>
+                                )) : '—'}
+                              </td>
+                              {/* V-Abs */}
+                              <td style={{ ...cStyle, fontSize: 10 }}>
+                                {m.v_index_abs ? SIGNS.map(s => {
+                                  const v = m.v_index_abs![s].valore;
+                                  const color = v > 100 ? '#10b981' : v < 100 ? '#ef4444' : theme.textDim;
+                                  return <span key={s} style={{ marginRight: 3, color, fontWeight: v > 100 ? 600 : 400 }}>{v.toFixed(0)}</span>;
+                                }) : '—'}
+                              </td>
+                              {/* HWR / DR / AWR */}
+                              <td style={{ ...cStyle, fontSize: 10 }}>
+                                {rend ? (
                                   <>
-                                    <span style={{ marginRight: 2 }}>{m.semaforo[s].delta_pp.toFixed(1)}</span>
-                                    <span style={{
-                                      display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-                                      background: SEMAFORO_COLORS[m.semaforo[s].livello] || '#666', verticalAlign: 'middle',
-                                    }} />
+                                    <span style={{ marginRight: 3 }}>{rend.hwr.toFixed(0)}</span>
+                                    <span style={{ marginRight: 3 }}>{rend.dr.toFixed(0)}</span>
+                                    <span>{rend.awr.toFixed(0)}</span>
                                   </>
                                 ) : '—'}
                               </td>
-                            ))}
-                            <td style={{
-                              ...cStyle, fontWeight: 600,
-                              color: rend ? (rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger) : theme.textDim,
-                            }}>
-                              {rend ? `${rend.ritorno_pct}%` : '—'}
-                            </td>
-                          </tr>
+                              {/* Rit% */}
+                              <td style={{
+                                ...cStyle, fontWeight: 600,
+                                color: rend ? (rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger) : theme.textDim,
+                              }}>
+                                {rend ? `${rend.ritorno_pct}%` : '—'}
+                              </td>
+                            </tr>
+                          </React.Fragment>
                         );
                       })}
                     </>
@@ -462,9 +554,11 @@ function DetailSummary({ m }: { m: MatchDoc }) {
 const hStyle: React.CSSProperties = {
   padding: '5px 8px', textAlign: 'center', color: theme.cyan,
   fontWeight: 600, fontSize: 10, borderBottom: theme.cellBorder, whiteSpace: 'nowrap',
+  border: '1px solid rgba(128,128,128,0.3)',
 };
 const cStyle: React.CSSProperties = {
   padding: '5px 8px', textAlign: 'center', color: theme.text,
+  border: '1px solid rgba(128,128,128,0.3)',
 };
 
 // --- STILI MOBILE ---

@@ -502,7 +502,7 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
 
   // Se chartFilter, mostra solo quel grafico (più grande)
   if (chartFilter) {
-    const charts: Record<string, JSX.Element | null> = {
+    const charts: Record<string, React.ReactNode> = {
       quote: <MiniChart title="Quote 1 / X / 2" subtitle={subs.quote} data={cd.quote} dataKeys={['1', 'X', '2']} colors={c3} height={bigH} />,
       delta: deltaGaugeData.length > 0 ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
@@ -518,7 +518,7 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
           </div>
         </div>
       ) : null,
-      aggio: <AggioComparison storico={match.storico!} deltaSigni={deltaSigni} subtitle={subs.aggio} />,
+      aggio: <AggioComparison storico={match?.storico ?? []} deltaSigni={deltaSigni} subtitle={subs.aggio} />,
       vRel: <MiniChart title="V-Index Relativo" subtitle={subs.vRel} data={cd.vRel} dataKeys={['1', 'X', '2']} colors={c3} height={bigH} />,
       vAbs: <MiniChart title="V-Index Assoluto" subtitle={subs.vAbs} data={cd.vAbs} dataKeys={['1', 'X', '2']} colors={c3} height={bigH} />,
       rend: <MiniChart title="Rendimento" subtitle={subs.rend} data={cd.rend} dataKeys={['Rit%', 'HWR', 'DR', 'AWR']} colors={[theme.cyan, ...c3]} height={bigH} />,
@@ -526,7 +526,7 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
     return (
       <div style={{ padding: '6px 4px' }}>
         <div style={{ fontSize: 10, color: theme.textDim, marginBottom: 6 }}>
-          {match.storico.length} rilevazioni
+          {match?.storico?.length ?? 0} rilevazioni
         </div>
         {charts[chartFilter] || <div style={{ color: theme.textDim, fontSize: 11 }}>Grafico non disponibile</div>}
       </div>
@@ -537,11 +537,11 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
   return (
     <div style={{ padding: '10px 8px' }}>
       <div style={{ fontSize: 10, color: theme.textDim, marginBottom: 8 }}>
-        {match.storico.length} rilevazioni
+        {match?.storico?.length ?? 0} rilevazioni
       </div>
       <MiniChart title="Quote 1 / X / 2" subtitle={subs.quote} data={cd.quote} dataKeys={['1', 'X', '2']} colors={c3} />
       {deltaGaugeData.length > 0 && <DeltaGauge data={deltaGaugeData} subtitle={subs.delta} />}
-      <AggioComparison storico={match.storico!} deltaSigni={deltaSigni} subtitle={subs.aggio} />
+      <AggioComparison storico={match?.storico ?? []} deltaSigni={deltaSigni} subtitle={subs.aggio} />
       <MiniChart title="V-Index Relativo" subtitle={subs.vRel} data={cd.vRel} dataKeys={['1', 'X', '2']} colors={c3} />
       <MiniChart title="V-Index Assoluto" subtitle={subs.vAbs} data={cd.vAbs} dataKeys={['1', 'X', '2']} colors={c3} />
       <MiniChart title="Rendimento" subtitle={subs.rend} data={cd.rend} dataKeys={['Rit%', 'HWR', 'DR', 'AWR']} colors={[theme.cyan, ...c3]} />

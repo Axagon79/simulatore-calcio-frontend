@@ -66,7 +66,7 @@ function bevLevel(deltaPp: number, aggio: number): { color: string; label: strin
   return { color: '#ef4444', label: '!!!' };
 }
 
-type PredEntry = { source: string; bestPick?: boolean; pronostico: string; tipo?: string; confidence: number | null; sezione: string | null };
+type PredEntry = { source: string; bestPick?: boolean; pronostico: string; tipo?: string; confidence: number | null; sezione: string | null; home?: string; away?: string };
 
 // Mappa DC a segni coinvolti: "1X" → ["1","X"], "X2" → ["X","2"], "12" → ["1","2"]
 function dcToSigns(dc: string): ('1' | 'X' | '2')[] {
@@ -451,7 +451,7 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
               {/* Link Best Picks — solo se è Best Pick */}
               {isBP && (
                 <a
-                  href={`/best-picks?focus=${encodeURIComponent(m.home_raw + ' vs ' + m.away_raw)}`}
+                  href={`/best-picks?focus=${encodeURIComponent((entry.home || m.home_raw) + ' vs ' + (entry.away || m.away_raw))}`}
                   onClick={e => { e.stopPropagation(); }}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,

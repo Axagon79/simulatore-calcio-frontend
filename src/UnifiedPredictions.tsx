@@ -732,14 +732,22 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     url.searchParams.delete('focus');
     window.history.replaceState({}, '', url.toString());
     // Fuzzy match (nomi LuckSport vs nomi MongoDB possono differire)
-    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-    const focusParts = focus.split(' vs ').map(norm);
+    // Es: "Cultural Leonesa" (LuckSport) vs "CyD Leonesa" (MongoDB)
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+    const normStrip = (s: string) => norm(s).replace(/\s+/g, '');
+    const words = (s: string) => norm(s).split(/\s+/).filter(w => w.length > 2); // parole >2 char
+    const fuzzyTeam = (a: string, b: string) => {
+      const sa = normStrip(a), sb = normStrip(b);
+      // Match esatto o contenimento
+      if (sa === sb || sa.includes(sb) || sb.includes(sa)) return true;
+      // Match per parole comuni: se almeno 1 parola significativa combacia
+      const wa = words(a), wb = words(b);
+      const common = wa.filter(w => wb.some(w2 => w2.includes(w) || w.includes(w2)));
+      return common.length >= 1 && common.length >= Math.min(wa.length, wb.length) * 0.5;
+    };
+    const focusParts = focus.split(' vs ');
     const match = focusParts.length === 2
-      ? predictions.find(p => {
-          const h = norm(p.home), a = norm(p.away);
-          return (h.includes(focusParts[0]) || focusParts[0].includes(h))
-            && (a.includes(focusParts[1]) || focusParts[1].includes(a));
-        })
+      ? predictions.find(p => fuzzyTeam(p.home, focusParts[0]) && fuzzyTeam(p.away, focusParts[1]))
       : null;
     if (!match) return;
     const cardKey = `pred-${match.home}-${match.away}`;

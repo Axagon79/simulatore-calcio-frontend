@@ -165,15 +165,15 @@ function GaugeSingle({ sign, value, color, large }: { sign: string; value: numbe
   const clamp = Math.max(-maxPp, Math.min(maxPp, value));
   const nColor = getNeedleColor(absPp);
   const label = getLabel(absPp);
-  const dirLabel = value > 0 ? `Quota ${sign} in salita` : value < 0 ? `Quota ${sign} in calo` : 'Stabile';
+  const dirLabel = value > 0 ? `Quota ${sign} in calo` : value < 0 ? `Quota ${sign} in salita` : 'Stabile';
 
   const scale = large ? 1.5 : 1;
   const w = 110 * scale, h = 62 * scale;
   const cx = 55 * scale, cy = 56 * scale, r = 42 * scale, thickness = 7 * scale;
   const rInner = r - thickness;
 
-  // Mappa valore pp → angolo: -14 = 180° (sx), 0 = 90° (centro), +14 = 0° (dx)
-  const ppToAngle = (pp: number) => Math.PI * (1 - (pp + maxPp) / (2 * maxPp));
+  // Mappa valore pp → angolo: +14 = 180° (sx, quota in calo), 0 = 90° (centro), -14 = 0° (dx, quota in salita)
+  const ppToAngle = (pp: number) => Math.PI * ((pp + maxPp) / (2 * maxPp));
 
   const arcD = (startPp: number, endPp: number, rad: number) => {
     const a1 = ppToAngle(startPp);
@@ -417,12 +417,6 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
       });
     }
 
-    // --- V-REL: 100 all'apertura (live = apertura → rapporto = 100) ---
-    const vRelPoints = s.filter(x => x.v_index_rel).map(x => ({ time: formatTs(x.ts), '1': x.v_index_rel!['1'].valore, 'X': x.v_index_rel!['X'].valore, '2': x.v_index_rel!['2'].valore }));
-    if (apDiffers && vRelPoints.length > 0) {
-      vRelPoints.unshift({ time: apLabel, '1': 100, 'X': 100, '2': 100 });
-    }
-
     // --- V-ABS: ritorno% all'apertura (quota / fair_odds_apertura = 1/sum_prob) ---
     const vAbsPoints = s.filter(x => x.v_index_abs).map(x => ({ time: formatTs(x.ts), '1': x.v_index_abs!['1'].valore, 'X': x.v_index_abs!['X'].valore, '2': x.v_index_abs!['2'].valore }));
     if (hasAp && vAbsPoints.length > 0) {
@@ -438,7 +432,7 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
       rendPoints.unshift({ time: apLabel, 'Rit%': ra.ritorno_pct, 'HWR': ra.hwr, 'DR': ra.dr, 'AWR': ra.awr });
     }
 
-    return { quote: quotePoints, delta: deltaPoints, aggio: aggioPoints, vRel: vRelPoints, vAbs: vAbsPoints, rend: rendPoints };
+    return { quote: quotePoints, delta: deltaPoints, aggio: aggioPoints, vAbs: vAbsPoints, rend: rendPoints };
   }, [match]);
 
   if (loading) {
@@ -492,10 +486,9 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
   } : undefined;
 
   const subs = {
-    quote: 'Come cambiano le quote nel tempo. Se una quota scende, il mercato si sta muovendo verso quell\'esito: può dipendere dal volume di puntate, da notizie sulle formazioni o da valutazioni interne dei bookmaker.',
-    delta: 'Ago a sinistra = quota in calo. Ago a destra = quota in salita. Al centro = stabile. Più l\'ago è lontano dal centro, più il movimento è forte (🟢→🟡→🔴).',
+    quote: 'Valore assoluto delle quote nel tempo (es. 2.10 → 1.85). Mostra COSA è successo, ma non quanto è importante: una variazione di -0.05 su una quota bassa (1.20→1.15) pesa molto più della stessa su una quota alta (8.00→7.95). Per capire il peso reale del movimento, guarda il Δpp.',
+    delta: 'Quanto è SIGNIFICATIVO il movimento, in punti percentuali di probabilità implicita. Converte le quote in probabilità (1/quota) e misura la differenza rispetto all\'apertura. Es: 2.10→1.85 = +6.5pp (forte), 8.00→7.50 = +0.8pp (trascurabile). Ago a sinistra = quota in calo (favore). Ago a destra = quota in salita (contro). 🟢→🟡→🔴 = intensità.',
     aggio: 'Per ogni segno, confronta il suo Δpp col suo aggio specifico (la fetta di margine del book su quell\'esito). Se il Δpp supera l\'aggio → il movimento è reale e non solo rumore.',
-    vRel: 'Quanto è cambiata ogni quota rispetto all\'apertura (base 100). Es: 80 = la quota si è accorciata del 20%, 120 = si è allungata del 20%.',
     vAbs: 'Confronta la quota attuale con un riferimento calcolato dalla media tra il nostro modello statistico e la valutazione del bookmaker all\'apertura. Sopra 100 = quota di valore (il book paga più del dovuto). Sotto 100 = quota compressa (nessun valore).',
     rend: 'Quanto il book restituisce ai giocatori (Rit%). HWR = peso casa, DR = peso pareggio, AWR = peso trasferta nella distribuzione del margine.',
   };
@@ -519,9 +512,8 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
         </div>
       ) : null,
       aggio: <AggioComparison storico={match?.storico ?? []} deltaSigni={deltaSigni} subtitle={subs.aggio} />,
-      vRel: <MiniChart title="V-Index Relativo" subtitle={subs.vRel} data={cd.vRel} dataKeys={['1', 'X', '2']} colors={c3} height={bigH} />,
-      vAbs: <MiniChart title="V-Index Assoluto" subtitle={subs.vAbs} data={cd.vAbs} dataKeys={['1', 'X', '2']} colors={c3} height={bigH} />,
       rend: <MiniChart title="Rendimento" subtitle={subs.rend} data={cd.rend} dataKeys={['Rit%', 'HWR', 'DR', 'AWR']} colors={[theme.cyan, ...c3]} height={bigH} />,
+      vAbs: <MiniChart title="V-Abs" subtitle={subs.vAbs} data={cd.vAbs} dataKeys={['1', 'X', '2']} colors={c3} height={bigH} />,
     };
     return (
       <div style={{ padding: '6px 4px' }}>
@@ -542,9 +534,8 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
       <MiniChart title="Quote 1 / X / 2" subtitle={subs.quote} data={cd.quote} dataKeys={['1', 'X', '2']} colors={c3} />
       {deltaGaugeData.length > 0 && <DeltaGauge data={deltaGaugeData} subtitle={subs.delta} />}
       <AggioComparison storico={match?.storico ?? []} deltaSigni={deltaSigni} subtitle={subs.aggio} />
-      <MiniChart title="V-Index Relativo" subtitle={subs.vRel} data={cd.vRel} dataKeys={['1', 'X', '2']} colors={c3} />
-      <MiniChart title="V-Index Assoluto" subtitle={subs.vAbs} data={cd.vAbs} dataKeys={['1', 'X', '2']} colors={c3} />
       <MiniChart title="Rendimento" subtitle={subs.rend} data={cd.rend} dataKeys={['Rit%', 'HWR', 'DR', 'AWR']} colors={[theme.cyan, ...c3]} />
+      <MiniChart title="V-Abs" subtitle={subs.vAbs} data={cd.vAbs} dataKeys={['1', 'X', '2']} colors={c3} />
     </div>
   );
 }

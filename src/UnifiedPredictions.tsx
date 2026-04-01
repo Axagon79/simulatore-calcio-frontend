@@ -721,6 +721,43 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     fetchData();
   }, [date]);
 
+  // --- FOCUS da URL (deep link da Odds Monitor) ---
+  useEffect(() => {
+    if (loading || predictions.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const focus = params.get('focus');
+    if (!focus) return;
+    // Pulisci subito il parametro dall'URL per non ri-triggerare
+    const url = new URL(window.location.href);
+    url.searchParams.delete('focus');
+    window.history.replaceState({}, '', url.toString());
+    // Fuzzy match (nomi LuckSport vs nomi MongoDB possono differire)
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const focusParts = focus.split(' vs ').map(norm);
+    const match = focusParts.length === 2
+      ? predictions.find(p => {
+          const h = norm(p.home), a = norm(p.away);
+          return (h.includes(focusParts[0]) || focusParts[0].includes(h))
+            && (a.includes(focusParts[1]) || focusParts[1].includes(a));
+        })
+      : null;
+    if (!match) return;
+    const cardKey = `pred-${match.home}-${match.away}`;
+    // 1) Assicurati tab "pronostici" attivo
+    setActiveTab('pronostici');
+    // 2) Espandi il campionato (logica invertita: nel set = espanso)
+    if (match.league) {
+      setCollapsedLeagues(prev => new Set(prev).add(match.league));
+    }
+    // 3) Espandi la card
+    setExpandedCards(prev => new Set(prev).add(cardKey));
+    // 4) Scroll alla card dopo il render
+    setTimeout(() => {
+      const el = predCardRefs.current[cardKey];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 500);
+  }, [loading, predictions]);
+
   // --- POLLING LIVE SCORES (per la data visualizzata) ---
   useEffect(() => {
     const mergeLive = <T extends { home: string; away: string }>(items: T[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number }>): T[] =>

@@ -419,6 +419,9 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Altri Campionati', onClick: () => setShowOtherLeagues(true) },
               { label: 'Coppe Europee', onClick: () => setShowCups(true) },
             ]},
+            { label: 'Odds', items: [
+              { label: 'Odds Monitor', onClick: () => { window.location.href = '/quote-anomale'; } },
+            ]},
             { label: 'Strumenti', items: [
               { label: 'Simulazione Rapida', onClick: () => { window.location.href = '/simulate'; } },
               { label: 'Step System', onClick: () => { window.location.href = '/step-system'; } },
@@ -426,9 +429,6 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Track Record', onClick: () => { window.location.href = '/track-record'; } },
               { label: 'Coach AI', onClick: () => setCoachOpen(true) },
               ...(checkAdmin() ? [{ label: 'Analisi Storica', onClick: () => { window.location.href = '/analisi-storica'; } }] : []),
-            ]},
-            { label: 'Odds', items: [
-              { label: 'Odds Monitor', onClick: () => { window.location.href = '/quote-anomale'; } },
             ]},
             { label: 'Prezzi', onClick: () => { window.location.href = '/prezzi'; } },
             { label: 'Contatti', onClick: () => { window.location.href = '/contatti'; } },

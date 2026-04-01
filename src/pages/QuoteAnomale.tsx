@@ -43,123 +43,141 @@ const CHART_TABS = [
 function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }
 
 // --- CARD MOBILE ---
-function MobileCard({ m, isExpanded, onToggle, date }: {
-  m: MatchDoc; isExpanded: boolean; onToggle: () => void; date: string;
+function MobileCard({ m, date }: {
+  m: MatchDoc; date: string;
 }) {
   const rend = m.rendimento_chiusura || m.rendimento_apertura;
+  const [showIndicators, setShowIndicators] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   return (
     <div style={{
       background: theme.panel,
-      border: isExpanded ? `1px solid ${theme.cyan}66` : theme.panelBorder,
+      border: showChart ? `1px solid ${theme.cyan}66` : theme.panelBorder,
       borderRadius: 6, marginBottom: 6, overflow: 'hidden',
     }}>
       {/* Header */}
-      <div onClick={onToggle} style={{
+      <div onClick={() => setShowIndicators(!showIndicators)} style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '5px 8px', gap: 6,
         background: isLight ? 'rgba(0,119,204,0.04)' : 'rgba(0,240,255,0.04)',
         borderBottom: theme.cellBorder, cursor: 'pointer', userSelect: 'none',
       }}>
+        <span style={{ fontFamily: 'monospace', fontSize: 10, color: theme.textDim }}>{m.match_time}</span>
         <span style={{ fontWeight: 600, fontSize: 11, color: theme.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {m.home_raw} vs {m.away_raw}
         </span>
-        {m.real_score && (
-          <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: theme.text, letterSpacing: 1 }}>
-            {m.real_score.replace(':', ' - ')}
-          </span>
-        )}
-        <span style={{ fontFamily: 'monospace', fontSize: 10, color: theme.textDim }}>{m.match_time}</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: m.real_score ? theme.text : theme.textDim, letterSpacing: 1, background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.06)', borderRadius: 3, padding: '1px 5px', minWidth: 38, textAlign: 'center', display: 'inline-block' }}>
+          {m.real_score ? m.real_score.replace(':', ' - ') : '-'}
+        </span>
         {rend && (
-          <span style={{ fontSize: 10, fontFamily: 'monospace', color: rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger }}>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 600, color: isLight ? '#fff' : rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger, background: isLight ? (rend.ritorno_pct >= 95 ? '#22c55e' : rend.ritorno_pct >= 90 ? '#e0a030' : '#ef4444') : 'rgba(255,255,255,0.06)', borderRadius: 3, padding: '1px 5px', minWidth: 38, textAlign: 'center', display: 'inline-block' }}>
             {rend.ritorno_pct}%
           </span>
         )}
-        <span style={{ fontSize: 8, color: theme.cyan, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
+        <span style={{ fontSize: 8, color: theme.cyan, transform: showIndicators ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
       </div>
 
-      {/* Tabella indicatori */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: 'monospace' }}>
-        <thead>
-          <tr style={{ background: theme.headerBg }}>
-            <th style={mThStyle}></th>
-            {SIGNS.map(s => <th key={s} style={mThStyle}>{s}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          <tr style={{ background: theme.rowOdd }}>
-            <td style={mLabelStyle}>Aper.</td>
-            {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}<span style={{ fontSize: 9, marginLeft: 5, width: 0, display: 'inline-block', overflow: 'visible', visibility: 'hidden' }}>▼</span></td>)}
-          </tr>
-          {m.quote_chiusura && (
-            <tr style={{ background: theme.rowEven }}>
-              <td style={mLabelStyle}>Live</td>
-              {SIGNS.map(s => {
-                const qLive = m.quote_chiusura![s];
-                const qAp = m.quote_apertura[s];
-                const diff = qLive && qAp ? qLive - qAp : 0;
-                const arrow = diff < -0.02 ? '▼' : diff > 0.02 ? '▲' : '=';
-                const color = diff < -0.02 ? '#10b981' : diff > 0.02 ? '#ef4444' : theme.textDim;
-                return (
-                  <td key={s} style={{ ...mCellStyle, fontWeight: 600, color, position: 'relative' }}>
-                    {qLive?.toFixed(2) ?? '—'}<span style={{ fontSize: 9, marginLeft: 5, verticalAlign: 'middle', width: 0, display: 'inline-block', overflow: 'visible' }}>{arrow}</span>
-                  </td>
-                );
-              })}
-            </tr>
-          )}
-          {m.semaforo && (
-            <tr style={{ background: theme.rowOdd }}>
-              <td style={mLabelStyle}>Δ pp</td>
-              {SIGNS.map(s => (
-                <td key={s} style={mCellStyle}>
-                  <span style={{ marginRight: 2 }}>{m.semaforo![s].delta_pp.toFixed(1)}</span>
-                  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: SEMAFORO_COLORS[m.semaforo![s].livello] || '#666', verticalAlign: 'middle' }} />
-                </td>
-              ))}
-            </tr>
-          )}
-          {m.alert_breakeven && (
-            <tr style={{ background: theme.rowOdd }}>
-              <td style={mLabelStyle}>BEv</td>
-              {SIGNS.map(s => (
-                <td key={s} style={mCellStyle}>
-                  {m.alert_breakeven![s].alert ? <span style={{ color: '#ef4444', fontWeight: 600 }}>!!</span> : <span style={{ color: theme.textDim }}>ok</span>}
-                </td>
-              ))}
-            </tr>
-          )}
-          {m.alert_breakeven && (
-            <tr style={{ background: theme.rowEven }}>
-              <td style={mLabelStyle}>Agg%</td>
-              {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.alert_breakeven![s].aggio_specifico.toFixed(2)}</td>)}
-            </tr>
-          )}
-          {rend && (
-            <tr style={{ background: theme.rowOdd }}>
-              <td style={mLabelStyle}>HWR/D/A</td>
-              <td style={mCellStyle}>{rend.hwr.toFixed(1)}%</td>
-              <td style={mCellStyle}>{rend.dr.toFixed(1)}%</td>
-              <td style={mCellStyle}>{rend.awr.toFixed(1)}%</td>
-            </tr>
-          )}
-          {m.v_index_rel && (
-            <tr style={{ background: theme.rowEven }}>
-              <td style={mLabelStyle}>V-Rel</td>
-              {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.v_index_rel![s].valore.toFixed(1)}</td>)}
-            </tr>
-          )}
-          {m.v_index_abs && (
-            <tr style={{ background: theme.rowOdd }}>
-              <td style={mLabelStyle}>V-Abs</td>
-              {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.v_index_abs![s].valore.toFixed(1)}</td>)}
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {/* Tabella indicatori — collassabile */}
+      {showIndicators && (
+        <>
+          {/* Tabella unica: quote + indicatori */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: 'monospace' }}>
+            <thead>
+              <tr style={{ background: theme.headerBg }}>
+                <th style={mThStyle}></th>
+                {SIGNS.map(s => <th key={s} style={mThStyle}>{s}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Blocco quote — sfondo trading */}
+              <tr style={{ background: isLight ? '#f5f7fa' : '#0d1117' }}>
+                <td style={{ ...mLabelStyle, borderLeft: `1px solid ${theme.cyan}` }}>Aper.</td>
+                {SIGNS.map(s => <td key={s} style={{ ...mCellStyle, color: isLight ? '#57606a' : '#8b949e' }}>{m.quote_apertura[s]?.toFixed(2) ?? '—'}<span style={{ fontSize: 8, marginLeft: 4, width: 0, display: 'inline-block', overflow: 'visible', visibility: 'hidden' }}>▼</span></td>)}
+              </tr>
+              {m.quote_chiusura && (
+                <tr style={{ background: isLight ? '#eaecf0' : '#161b22', borderBottom: `2px solid ${theme.cyan}33` }}>
+                  <td style={{ ...mLabelStyle, borderLeft: `1px solid ${theme.cyan}` }}>Live</td>
+                  {SIGNS.map(s => {
+                    const qLive = m.quote_chiusura![s];
+                    const qAp = m.quote_apertura[s];
+                    const diff = qLive && qAp ? qLive - qAp : 0;
+                    const arrow = diff < -0.02 ? '▼' : diff > 0.02 ? '▲' : '=';
+                    const color = diff < -0.02 ? '#10b981' : diff > 0.02 ? '#ef4444' : isLight ? '#24292f' : '#c9d1d9';
+                    return (
+                      <td key={s} style={{ ...mCellStyle, color, fontWeight: 700 }}>
+                        {qLive?.toFixed(2) ?? '—'}<span style={{ fontSize: 8, marginLeft: 4, verticalAlign: 'middle', width: 0, display: 'inline-block', overflow: 'visible' }}>{arrow}</span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
+              {/* Indicatori */}
+              {m.semaforo && (
+                <tr style={{ background: theme.rowOdd }}>
+                  <td style={mLabelStyle}>Δ pp</td>
+                  {SIGNS.map(s => (
+                    <td key={s} style={mCellStyle}>
+                      <span style={{ marginRight: 2 }}>{m.semaforo![s].delta_pp.toFixed(1)}</span>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: SEMAFORO_COLORS[m.semaforo![s].livello] || '#666', verticalAlign: 'middle' }} />
+                    </td>
+                  ))}
+                </tr>
+              )}
+              {m.alert_breakeven && (
+                <tr style={{ background: theme.rowOdd }}>
+                  <td style={mLabelStyle}>BEv</td>
+                  {SIGNS.map(s => (
+                    <td key={s} style={mCellStyle}>
+                      {m.alert_breakeven![s].alert ? <span style={{ color: '#ef4444', fontWeight: 600 }}>!!</span> : <span style={{ color: theme.textDim }}>ok</span>}
+                    </td>
+                  ))}
+                </tr>
+              )}
+              {m.alert_breakeven && (
+                <tr style={{ background: theme.rowEven }}>
+                  <td style={mLabelStyle}>Agg%</td>
+                  {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.alert_breakeven![s].aggio_specifico.toFixed(2)}</td>)}
+                </tr>
+              )}
+              {rend && (
+                <tr style={{ background: theme.rowOdd }}>
+                  <td style={mLabelStyle}>HWR/D/A</td>
+                  <td style={mCellStyle}>{rend.hwr.toFixed(1)}%</td>
+                  <td style={mCellStyle}>{rend.dr.toFixed(1)}%</td>
+                  <td style={mCellStyle}>{rend.awr.toFixed(1)}%</td>
+                </tr>
+              )}
+              {m.v_index_rel && (
+                <tr style={{ background: theme.rowEven }}>
+                  <td style={mLabelStyle}>V-Rel</td>
+                  {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.v_index_rel![s].valore.toFixed(1)}</td>)}
+                </tr>
+              )}
+              {m.v_index_abs && (
+                <tr style={{ background: theme.rowOdd }}>
+                  <td style={mLabelStyle}>V-Abs</td>
+                  {SIGNS.map(s => <td key={s} style={mCellStyle}>{m.v_index_abs![s].valore.toFixed(1)}</td>)}
+                </tr>
+              )}
+            </tbody>
+          </table>
 
-      {/* Expand: tutti i grafici */}
-      {isExpanded && (
+          {/* Bottone grafici */}
+          <div onClick={() => setShowChart(!showChart)} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '6px 0', cursor: 'pointer', userSelect: 'none',
+            background: theme.headerBg,
+            color: showChart ? theme.cyan : theme.textDim, fontSize: 10,
+          }}>
+            <span style={{ fontSize: 14 }}>📊</span>
+            <span>{showChart ? 'Chiudi grafici' : 'Apri grafici'}</span>
+          </div>
+        </>
+      )}
+
+      {/* Grafici — collassabili separatamente */}
+      {showChart && (
         <div style={{ borderTop: `1px solid ${theme.cyan}33`, background: isLight ? 'rgba(0,119,204,0.02)' : 'rgba(0,240,255,0.02)' }}>
           <QuoteAnomaleDetail date={date} matchKey={m.match_key} />
         </div>
@@ -180,8 +198,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const [selectedMatchKey, setSelectedMatchKey] = useState<string | null>(null);
   const [chartTab, setChartTab] = useState('quote');
   const detailRef = useRef<HTMLDivElement>(null);
-  // Mobile: card espandibili
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Mobile
   // Responsive
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
 
@@ -199,7 +216,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   }, [date]);
 
   useEffect(() => {
-    setLoading(true); setError(''); setSelectedMatchKey(null); setExpandedKey(null);
+    setLoading(true); setError(''); setSelectedMatchKey(null);
     const url = `${API_BASE}/quote-anomale/matches?date=${date}${selectedLeague ? `&league=${encodeURIComponent(selectedLeague)}` : ''}`;
     fetch(url)
       .then(r => r.json())
@@ -229,6 +246,17 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [matches]);
+
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
+
+  const toggleLeague = (league: string) => {
+    setCollapsedLeagues(prev => {
+      const next = new Set(prev);
+      if (next.has(league)) next.delete(league); else next.add(league);
+      return next;
+    });
+  };
 
   const selectedMatch = matches.find(m => m.match_key === selectedMatchKey);
 
@@ -304,7 +332,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                 <thead>
                   <tr style={{ background: theme.headerBg }}>
                     <th style={hStyle}>Ora</th>
-                    <th style={{ ...hStyle, textAlign: 'left' }}>Partita</th>
+                    <th style={hStyle}>Partita</th>
                     <th style={hStyle}>1</th>
                     <th style={hStyle}>X</th>
                     <th style={hStyle}>2</th>
@@ -321,32 +349,44 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {grouped.map(([league, leagueMatches]) => (
-                    <>{/* eslint-disable-next-line react/jsx-key */}
-                      <tr key={`h-${league}`}>
+                  {grouped.map(([league, leagueMatches]) => {
+                    const collapsed = collapsedLeagues.has(league);
+                    return (
+                    <React.Fragment key={`lg-${league}`}>
+                      <tr onClick={() => toggleLeague(league)} style={{ cursor: 'pointer' }}>
                         <td colSpan={15} style={{
-                          padding: '8px 8px 3px', fontSize: 11, fontWeight: 600,
-                          color: theme.cyan, borderBottom: `1px solid ${theme.cyan}33`, fontFamily: theme.font,
+                          padding: '6px 8px', fontSize: 11, fontWeight: 600,
+                          color: theme.cyan, fontFamily: theme.font,
+                          background: isLight ? '#f0f4f8' : 'rgba(0,150,255,0.10)',
+                          border: isLight ? '1px solid #d0d7de' : `1px solid ${theme.cyan}33`,
+                          borderRadius: 4,
+                          userSelect: 'none',
                         }}>
+                          <span style={{ display: 'inline-block', width: 10, fontSize: 8, transition: 'transform 0.2s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', verticalAlign: 'middle', marginRight: 5 }}>▼</span>
                           {league} ({leagueMatches.length})
                         </td>
                       </tr>
-                      {leagueMatches.map((m, idx) => {
+                      {!collapsed && leagueMatches.map((m, idx) => {
                         const sel = selectedMatchKey === m.match_key;
+                        const hov = hoveredKey === m.match_key;
                         const hasLive = !!m.quote_chiusura;
                         const rend = m.rendimento_chiusura || m.rendimento_apertura;
+                        const hoverBg = isLight ? 'rgba(0,119,204,0.07)' : 'rgba(0,240,255,0.07)';
                         const bg = sel
                           ? (isLight ? 'rgba(0,119,204,0.12)' : 'rgba(0,240,255,0.12)')
+                          : hov ? hoverBg
                           : idx % 2 === 0 ? theme.rowOdd : theme.rowEven;
                         const bgAlt = sel
                           ? (isLight ? 'rgba(0,119,204,0.08)' : 'rgba(0,240,255,0.08)')
+                          : hov ? hoverBg
                           : idx % 2 === 0 ? theme.rowEven : theme.rowOdd;
 
                         return (
                           <React.Fragment key={m.match_key}>
                             {/* RIGA 1: Apertura */}
                             <tr onClick={() => handleRowClick(m.match_key)}
-                              style={{ background: bg, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent' }}>
+                              onMouseEnter={() => setHoveredKey(m.match_key)} onMouseLeave={() => setHoveredKey(null)}
+                              style={{ background: bg, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent', transition: 'background 0.15s' }}>
                               <td rowSpan={2} style={{ ...cStyle, color: theme.textDim, verticalAlign: 'middle' }}>{m.match_time}</td>
                               <td rowSpan={2} style={{ ...cStyle, textAlign: 'left', fontFamily: theme.font, fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {m.home_raw} vs {m.away_raw}
@@ -366,7 +406,8 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                             </tr>
                             {/* RIGA 2: Live + tutti gli indicatori */}
                             <tr onClick={() => handleRowClick(m.match_key)}
-                              style={{ background: bgAlt, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent', borderBottom: `1px solid ${theme.textDim}22` }}>
+                              onMouseEnter={() => setHoveredKey(m.match_key)} onMouseLeave={() => setHoveredKey(null)}
+                              style={{ background: bgAlt, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent', borderBottom: `1px solid ${theme.textDim}22`, transition: 'background 0.15s' }}>
                               {/* Quote live + freccia colorata */}
                               {SIGNS.map(s => {
                                 if (!hasLive) return <td key={s} style={cStyle}>—</td>;
@@ -444,8 +485,9 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                           </React.Fragment>
                         );
                       })}
-                    </>
-                  ))}
+                    </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -496,22 +538,24 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
         {/* ===== MOBILE: CARD ESPANDIBILI ===== */}
         {!isDesktop && !loading && matches.length > 0 && (
           <>
-            {grouped.map(([league, leagueMatches]) => (
+            {grouped.map(([league, leagueMatches]) => {
+              const collapsed = collapsedLeagues.has(league);
+              return (
               <div key={league} style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: theme.cyan, padding: '4px 0', borderBottom: `1px solid ${theme.cyan}33`, marginBottom: 4 }}>
+                <div onClick={() => toggleLeague(league)} style={{ fontSize: 11, fontWeight: 600, color: theme.cyan, padding: '6px 8px', marginBottom: 4, cursor: 'pointer', userSelect: 'none', background: isLight ? '#f0f4f8' : 'rgba(0,240,255,0.05)', border: isLight ? '1px solid #d0d7de' : `1px solid ${theme.cyan}22`, borderRadius: 4 }}>
+                  <span style={{ display: 'inline-block', width: 10, fontSize: 8, transition: 'transform 0.2s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', verticalAlign: 'middle', marginRight: 5 }}>▼</span>
                   {league} ({leagueMatches.length})
                 </div>
-                {leagueMatches.map(m => (
+                {!collapsed && leagueMatches.map(m => (
                   <MobileCard
                     key={m.match_key}
                     m={m}
                     date={date}
-                    isExpanded={expandedKey === m.match_key}
-                    onToggle={() => setExpandedKey(expandedKey === m.match_key ? null : m.match_key)}
                   />
                 ))}
               </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>

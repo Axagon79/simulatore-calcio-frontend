@@ -53,6 +53,7 @@ async function fetchOne(date: string): Promise<{ date: string; versions: Predict
 }
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionVersionsProvider({ children }: { children: ReactNode }) {
   const cacheRef = useRef<Record<string, PredictionVersion[]>>({});
@@ -60,7 +61,8 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
 
   useEffect(() => {
     let cancelled = false;
-    const prefetch = async () => {
+
+    const prefetchAll = async () => {
       const dates = getDateRange();
       for (const date of dates) {
         if (cancelled) return;
@@ -70,8 +72,14 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
       }
       if (!cancelled) setLoading(false);
     };
-    prefetch();
-    return () => { cancelled = true; };
+
+    prefetchAll();
+
+    const interval = setInterval(() => {
+      if (!cancelled) prefetchAll();
+    }, POLL_INTERVAL);
+
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   const getVersions = useCallback((date: string): PredictionVersion[] | null => {

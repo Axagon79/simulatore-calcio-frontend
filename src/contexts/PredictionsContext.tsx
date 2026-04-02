@@ -54,6 +54,7 @@ async function fetchOne(date: string): Promise<{ date: string; data: PredictionD
 }
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionsProvider({ children }: { children: ReactNode }) {
   const cacheRef = useRef<Record<string, PredictionData>>({});
@@ -61,20 +62,25 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    const prefetch = async () => {
+
+    const prefetchAll = async () => {
       const dates = getDateRange();
-      // Uno alla volta con piccola pausa per non saturare il rate limiter
       for (const date of dates) {
         if (cancelled) return;
         const result = await fetchOne(date);
         cacheRef.current[date] = result.data;
-        // Piccola pausa tra le richieste
         if (!cancelled) await delay(200);
       }
       if (!cancelled) setLoading(false);
     };
-    prefetch();
-    return () => { cancelled = true; };
+
+    prefetchAll();
+
+    const interval = setInterval(() => {
+      if (!cancelled) prefetchAll();
+    }, POLL_INTERVAL);
+
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   const getPredictions = useCallback((date: string): PredictionData | null => {

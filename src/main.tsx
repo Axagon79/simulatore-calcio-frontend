@@ -12,6 +12,8 @@ import './index.css';
 import { getThemeMode } from './AppDev/costanti';
 import { AuthProvider } from './contexts/AuthContext';
 import { PLStoricoProvider } from './contexts/PLStoricoContext';
+import { PredictionVersionsProvider } from './contexts/PredictionVersionsContext';
+import { PredictionsProvider } from './contexts/PredictionsContext';
 
 // Setta data-theme sul body per regole CSS globali (es. stemmi drop-shadow)
 document.body.dataset.theme = getThemeMode();
@@ -83,6 +85,8 @@ function AppRoot() {
     <ErrorBoundary>
     <AuthProvider>
     <PLStoricoProvider>
+    <PredictionsProvider>
+    <PredictionVersionsProvider>
       <BrowserRouter>
       <ConsentGate>
       <BackToHome>{(goBack, navigate) => (<>
@@ -123,6 +127,8 @@ function AppRoot() {
       </>)}</BackToHome>
       </ConsentGate>
       </BrowserRouter>
+    </PredictionVersionsProvider>
+    </PredictionsProvider>
     </PLStoricoProvider>
     </AuthProvider>
     </ErrorBoundary>

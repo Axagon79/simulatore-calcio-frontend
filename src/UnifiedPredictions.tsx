@@ -3,6 +3,8 @@ import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
 import { usePLStorico } from './contexts/PLStoricoContext';
+import { usePredictionVersions } from './contexts/PredictionVersionsContext';
+import { usePredictionsCache } from './contexts/PredictionsContext';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're' | 'nobet';
@@ -300,6 +302,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const { calcola: calcolaPL } = usePLStorico();
+  const { getVersions, fetchVersions } = usePredictionVersions();
+  const { getPredictions: getCachedPredictions, fetchPredictions: fetchCachedPredictions } = usePredictionsCache();
   const plCalcolato = useMemo(() => calcolaPL(date), [calcolaPL, date]);
   const dailyPLData = plCalcolato.giorno;
   const monthlyPLData = plCalcolato.mese;
@@ -604,20 +608,19 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       setLoading(true);
       setError(null);
       try {
-        // Fetch parallelo: pronostici unified + versioni (P/L ora dal context PLStorico)
-        const [predRes, versionsRes] = await Promise.all([
-          fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`),
-          fetch(`${API_BASE}/prediction-versions?date=${date}`).catch(() => null),
+        // Predictions dal context (precaricate all'avvio), live scores in parallelo
+        const cached = getCachedPredictions(date);
+        const [predData, liveRes] = await Promise.all([
+          cached ? Promise.resolve(cached) : fetchCachedPredictions(date),
+          fetch(`${API_BASE}/live-scores?date=${date}`).catch(() => null),
         ]);
 
-        const predData = await predRes.json();
-        const unified: Prediction[] = predData.success ? (predData.predictions || []) : [];
+        const unified: Prediction[] = (predData.predictions || []) as Prediction[];
 
-        // Merge: aggiungi partite ritirate da prediction_versions che non sono in unified
-        if (versionsRes && versionsRes.ok) {
+        // Merge: aggiungi partite ritirate da prediction_versions (dal context o fetch on-demand)
+        {
           try {
-            const versData = await versionsRes.json();
-            const versions = versData.versions || [];
+            const versions = getVersions(date) ?? await fetchVersions(date);
             // Normalizza come fa il backend: lowercase + spazi → underscore
             const normalizeKey = (d: string, h: string, a: string) =>
               `${d}_${h.trim().toLowerCase().replace(/\s+/g, '_')}_${a.trim().toLowerCase().replace(/\s+/g, '_')}`;
@@ -682,18 +685,19 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           }
         }
 
-        // Merge immediato con live scores PRIMA del render (evita flash Live → Finished)
+        // Merge live scores (già caricati in parallelo)
         try {
-          const liveRes = await fetch(`${API_BASE}/live-scores?date=${date}`);
-          const liveData = await liveRes.json();
-          if (liveData.success && liveData.scores?.length > 0) {
-            const scores = liveData.scores;
-            for (const pred of unified) {
-              const live = scores.find((s: any) => s.home === pred.home && s.away === pred.away);
-              if (live) {
-                pred.live_score = live.live_score;
-                pred.live_status = live.live_status;
-                pred.live_minute = live.live_minute;
+          if (liveRes && liveRes.ok) {
+            const liveData = await liveRes.json();
+            if (liveData.success && liveData.scores?.length > 0) {
+              const scores = liveData.scores;
+              for (const pred of unified) {
+                const live = scores.find((s: any) => s.home === pred.home && s.away === pred.away);
+                if (live) {
+                  pred.live_score = live.live_score;
+                  pred.live_status = live.live_status;
+                  pred.live_minute = live.live_minute;
+                }
               }
             }
           }
@@ -709,6 +713,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       }
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
   // --- FOCUS da URL (deep link da Odds Monitor) ---
@@ -3129,13 +3134,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           marginBottom: isMobile ? '10px' : '25px'
         }}>
           <button
-            onClick={() => setDate(shiftDate(date, -1))}
+            onClick={() => { const prev = shiftDate(date, -1); if (isAdmin || prev >= shiftDate(getToday(), -7)) setDate(prev); }}
+            disabled={!isAdmin && date <= shiftDate(getToday(), -7)}
             style={{
               background: theme.surface05, border: `1px solid ${theme.borderSubtle}`,
-              color: theme.text, padding: '8px 14px', borderRadius: '8px',
-              cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s'
+              color: !isAdmin && date <= shiftDate(getToday(), -7) ? theme.textDim : theme.text, padding: '8px 14px', borderRadius: '8px',
+              cursor: !isAdmin && date <= shiftDate(getToday(), -7) ? 'not-allowed' : 'pointer', fontSize: '16px', transition: 'all 0.2s',
+              opacity: !isAdmin && date <= shiftDate(getToday(), -7) ? 0.4 : 1
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = theme.cyan; }}
+            onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.borderColor = theme.cyan; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = theme.borderSubtle; }}
           >
             ◀
@@ -3227,13 +3234,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
 
           <button
-            onClick={() => setDate(shiftDate(date, 1))}
+            onClick={() => { const next = shiftDate(date, 1); if (isAdmin || next <= shiftDate(getToday(), 7)) setDate(next); }}
+            disabled={!isAdmin && date >= shiftDate(getToday(), 7)}
             style={{
               background: theme.surface05, border: `1px solid ${theme.borderSubtle}`,
-              color: theme.text, padding: '8px 14px', borderRadius: '8px',
-              cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s'
+              color: !isAdmin && date >= shiftDate(getToday(), 7) ? theme.textDim : theme.text, padding: '8px 14px', borderRadius: '8px',
+              cursor: !isAdmin && date >= shiftDate(getToday(), 7) ? 'not-allowed' : 'pointer', fontSize: '16px', transition: 'all 0.2s',
+              opacity: !isAdmin && date >= shiftDate(getToday(), 7) ? 0.4 : 1
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = theme.cyan; }}
+            onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.borderColor = theme.cyan; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = theme.borderSubtle; }}
           >
             ▶

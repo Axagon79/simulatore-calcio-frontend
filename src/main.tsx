@@ -11,6 +11,7 @@ import './index.css';
 
 import { getThemeMode } from './AppDev/costanti';
 import { AuthProvider } from './contexts/AuthContext';
+import { PLStoricoProvider } from './contexts/PLStoricoContext';
 
 // Setta data-theme sul body per regole CSS globali (es. stemmi drop-shadow)
 document.body.dataset.theme = getThemeMode();
@@ -81,6 +82,7 @@ function AppRoot() {
   return (
     <ErrorBoundary>
     <AuthProvider>
+    <PLStoricoProvider>
       <BrowserRouter>
       <ConsentGate>
       <BackToHome>{(goBack, navigate) => (<>
@@ -121,6 +123,7 @@ function AppRoot() {
       </>)}</BackToHome>
       </ConsentGate>
       </BrowserRouter>
+    </PLStoricoProvider>
     </AuthProvider>
     </ErrorBoundary>
   );

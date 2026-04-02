@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
+import { usePLStorico } from './contexts/PLStoricoContext';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're' | 'nobet';
@@ -298,9 +299,11 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
-  const [dailyPLData, setDailyPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number; staked: number }>>({});
-  const [monthlyPLData, setMonthlyPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number; staked: number }>>({});
-  const [totalPLData, setTotalPLData] = useState<Record<string, { pl: number; bets: number; wins: number; hr: number; roi: number; staked: number }>>({});
+  const { calcola: calcolaPL } = usePLStorico();
+  const plCalcolato = useMemo(() => calcolaPL(date), [calcolaPL, date]);
+  const dailyPLData = plCalcolato.giorno;
+  const monthlyPLData = plCalcolato.mese;
+  const totalPLData = plCalcolato.totale;
   const isAdmin = checkAdmin();
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
@@ -601,24 +604,11 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       setLoading(true);
       setError(null);
       try {
-        // Fetch parallelo: pronostici unified + versioni + P/L mensile
-        const [predRes, versionsRes, monthlyRes] = await Promise.all([
+        // Fetch parallelo: pronostici unified + versioni (P/L ora dal context PLStorico)
+        const [predRes, versionsRes] = await Promise.all([
           fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`),
           fetch(`${API_BASE}/prediction-versions?date=${date}`).catch(() => null),
-          fetch(`${API_BASE}/simulation/monthly-pl?date=${date}`).catch(() => null),
         ]);
-
-        // P/L mensile (tutti + elite + alto_rendimento)
-        if (monthlyRes && monthlyRes.ok) {
-          try {
-            const mData = await monthlyRes.json();
-            if (mData.success) {
-              if (mData.giorno) setDailyPLData(mData.giorno);
-              if (mData.sezioni) setMonthlyPLData(mData.sezioni);
-              if (mData.totale) setTotalPLData(mData.totale);
-            }
-          } catch { /* ignore */ }
-        }
 
         const predData = await predRes.json();
         const unified: Prediction[] = predData.success ? (predData.predictions || []) : [];

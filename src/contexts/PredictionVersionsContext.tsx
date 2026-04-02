@@ -38,9 +38,12 @@ function getDateRange(): string[] {
   return dates;
 }
 
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const adminHeaders: HeadersInit = isLocalhost ? { 'x-admin-key': '000128' } : {};
+
 async function fetchOne(date: string): Promise<{ date: string; versions: PredictionVersion[] }> {
   try {
-    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}`);
+    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}`, { headers: adminHeaders });
     if (!res.ok) return { date, versions: [] };
     const data = await res.json();
     return { date, versions: data.versions || [] };

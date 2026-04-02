@@ -32,10 +32,12 @@ function getDateRange(): string[] {
 }
 
 const EMPTY: PredictionData = { predictions: [], stats: {}, count: 0 };
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const adminHeaders: HeadersInit = isLocalhost ? { 'x-admin-key': '000128' } : {};
 
 async function fetchOne(date: string): Promise<{ date: string; data: PredictionData }> {
   try {
-    const res = await fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`);
+    const res = await fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${date}`, { headers: adminHeaders });
     if (!res.ok) return { date, data: EMPTY };
     const json = await res.json();
     return {

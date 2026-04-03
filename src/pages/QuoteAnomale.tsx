@@ -441,91 +441,139 @@ function buildPredAnalysis(sign: string, isDC: boolean, m: MatchDoc, isBestPick:
 
 function buildMarketOverview(m: MatchDoc): string {
   const signNameMap: Record<string, string> = { '1': 'vittoria casa', 'X': 'pareggio', '2': 'vittoria trasferta' };
+  const signShort: Record<string, string> = { '1': 'casa', 'X': 'pareggio', '2': 'trasferta' };
   let h = 0;
   for (let i = 0; i < m.match_key.length; i++) h = ((h << 5) - h + m.match_key.charCodeAt(i)) | 0;
   const pick = (arr: string[]) => arr[Math.abs(h++) % arr.length];
   const lines: string[] = [];
   const qRef = m.quote_chiusura || m.quote_apertura;
   if (!qRef) return 'Dati quote non disponibili per questa partita.';
-
-  const q1 = qRef['1'] ?? 99; const qX = qRef['X'] ?? 99; const q2 = qRef['2'] ?? 99;
-  const minQ = Math.min(q1, qX, q2);
-  const favorito = q1 === minQ ? '1' : q2 === minQ ? '2' : 'X';
-  const favLabel = signNameMap[favorito];
   const ql = m.quote_chiusura ? ' live' : '';
+  const hasLive = !!m.quote_chiusura;
 
-  // Intro: chi è il favorito
-  lines.push(pick([
-    `Il mercato${ql} indica la ${favLabel} come esito più probabile (${minQ.toFixed(2)}). Nessuno dei nostri sistemi ha emesso un pronostico SEGNO per questa partita, ma ecco cosa dicono le quote.`,
-    `Le quote${ql} danno favorita la ${favLabel} (${minQ.toFixed(2)}). Non abbiamo un pronostico nel mercato dei segni, ma l'analisi degli indicatori di mercato è comunque disponibile.`,
-    `Secondo le quote${ql}, il favorito è la ${favLabel} a ${minQ.toFixed(2)}. I nostri algoritmi non hanno selezionato un pronostico SEGNO, ma il mercato fornisce comunque informazioni utili.`,
-    `Favorita la ${favLabel} (${minQ.toFixed(2)}) secondo le quote${ql}. Nessun pronostico SEGNO emesso, ma l'analisi del mercato resta valida.`,
-    `Quote${ql}: ${favLabel} favorita a ${minQ.toFixed(2)}. Non c'è un pronostico dei nostri sistemi per i segni, ma gli indicatori offrono spunti interessanti.`,
-    `Il book${ql} punta sulla ${favLabel} (${minQ.toFixed(2)}). Nessun pronostico SEGNO disponibile, ma le quote raccontano una storia.`,
-  ]));
-
-  // Analisi per ciascun segno
-  for (const s of ['1', 'X', '2'] as const) {
-    const qAp = m.quote_apertura?.[s];
-    const qLive = m.quote_chiusura?.[s];
+  // Calcola dati per tutti i segni
+  const signData = (['1', 'X', '2'] as const).map(s => {
+    const qAp = m.quote_apertura?.[s]; const qLive = m.quote_chiusura?.[s];
+    const q = qLive ?? qAp ?? 99;
     const vAbs = m.v_index_abs?.[s]?.valore;
     const delta = m.semaforo?.[s]?.delta_pp;
     const livello = m.semaforo?.[s]?.livello;
     const bev = m.alert_breakeven?.[s];
-    const sName = signNameMap[s];
+    const diff = (qAp && qLive) ? qLive - qAp : 0;
+    return { s, q, qAp, qLive, vAbs, delta, livello, bev, diff };
+  });
 
-    const parts: string[] = [];
+  const favorito = signData.reduce((a, b) => a.q < b.q ? a : b);
+  const bestValue = signData.filter(d => d.vAbs !== undefined).reduce((a, b) => (a.vAbs ?? 0) > (b.vAbs ?? 0) ? a : b);
+  const worstValue = signData.filter(d => d.vAbs !== undefined).reduce((a, b) => (a.vAbs ?? 100) < (b.vAbs ?? 100) ? a : b);
+  const rend = m.rendimento_chiusura || m.rendimento_apertura;
+  const hwrMap: Record<string, number> = { '1': rend?.hwr ?? 0, 'X': rend?.dr ?? 0, '2': rend?.awr ?? 0 };
+  const bevAlerts = signData.filter(d => d.bev?.alert);
+  const bigMoves = signData.filter(d => (d.delta ?? 0) >= 3);
 
-    // Movimento quota
-    if (qAp && qLive) {
-      const diff = qLive - qAp;
-      if (diff < -0.05) parts.push(`quota in calo (${qAp.toFixed(2)}→${qLive.toFixed(2)})`);
-      else if (diff > 0.05) parts.push(`quota in salita (${qAp.toFixed(2)}→${qLive.toFixed(2)})`);
-      else parts.push(`quota stabile (${(qLive).toFixed(2)})`);
-    }
+  // 1. INTRO: quadro generale
+  const favQ = favorito.q.toFixed(2);
+  const favName = signNameMap[favorito.s];
+  lines.push(pick([
+    `Il mercato${ql} dà favorita la ${favName} (${favQ}). Nessuno dei nostri sistemi ha emesso un pronostico SEGNO, ma le quote raccontano molto su questa partita.`,
+    `Quote${ql}: favorita la ${favName} a ${favQ}. Non c'è un pronostico SEGNO dai nostri algoritmi, ma l'analisi del mercato rivela informazioni importanti.`,
+    `La ${favName} è il favorito secondo le quote${ql} (${favQ}). Nessun pronostico emesso nel mercato dei segni, ma gli indicatori meritano attenzione.`,
+    `Secondo il bookmaker${ql}, la ${favName} è l'esito più probabile (${favQ}). Vediamo cosa emerge dall'analisi degli indicatori.`,
+    `Favorita la ${favName} a ${favQ}. I nostri sistemi non hanno selezionato un segno per questa partita, ma il mercato offre letture interessanti.`,
+    `Le quote${ql} puntano sulla ${favName} (${favQ}). Nessun pronostico SEGNO, ma l'analisi del mercato è comunque significativa.`,
+  ]));
 
-    // Semaforo
-    if (delta !== undefined && livello) {
-      if (livello === 'rosso') parts.push(`Δpp ${delta.toFixed(1)} (rosso, possibile anomalia)`);
-      else if (livello === 'arancione') parts.push(`Δpp ${delta.toFixed(1)} (arancione)`);
-      else if (livello === 'giallo') parts.push(`Δpp ${delta.toFixed(1)} (giallo)`);
-      else parts.push(`Δpp ${delta.toFixed(1)} (verde)`);
-    }
+  // 2. DOVE C'È VALORE (la cosa più importante)
+  if (bestValue.vAbs !== undefined && worstValue.vAbs !== undefined) {
+    const bv = bestValue.vAbs;
+    const wv = worstValue.vAbs;
+    const bName = signShort[bestValue.s];
+    const wName = signShort[worstValue.s];
 
-    // BEv
-    if (bev) {
-      if (bev.alert) parts.push('break-even superato');
-      else parts.push(`entro margine (aggio ${bev.aggio_specifico.toFixed(1)}%)`);
-    }
-
-    // V-Abs
-    if (vAbs !== undefined) {
-      if (vAbs >= 105) parts.push(`V-Abs ${vAbs.toFixed(1)} — molto valore`);
-      else if (vAbs >= 102) parts.push(`V-Abs ${vAbs.toFixed(1)} — buon valore`);
-      else if (vAbs >= 98) parts.push(`V-Abs ${vAbs.toFixed(1)} — neutro`);
-      else if (vAbs >= 95) parts.push(`V-Abs ${vAbs.toFixed(1)} — poco valore`);
-      else parts.push(`V-Abs ${vAbs.toFixed(1)} — compresso`);
-    }
-
-    if (parts.length > 0) {
-      lines.push(`[${s}] ${sName.charAt(0).toUpperCase() + sName.slice(1)}: ${parts.join(', ')}.`);
+    if (bv >= 105 && wv < 95) {
+      // Caso chiaro: un segno ha molto valore, un altro è compresso
+      const isFavNoValue = worstValue.s === favorito.s;
+      if (isFavNoValue) {
+        lines.push(pick([
+          `Dato chiave: il favorito (${signShort[favorito.s]}) non ha valore. Il V-Abs della ${wName} è solo ${wv.toFixed(1)} — il book paga meno del dovuto su questo esito nonostante sia il più atteso. Al contrario, la ${bName} ha un V-Abs di ${bv.toFixed(1)}: il bookmaker offre più di quanto il modello ritenga corretto. Questo è il segnale più rilevante della partita.`,
+          `L'indicatore più importante: la ${wName}, pur essendo favorita, ha un V-Abs di ${wv.toFixed(1)} — quota compressa, nessun valore. La ${bName} invece è a ${bv.toFixed(1)}: il book paga più del giusto. Il mercato non premia chi segue il favorito.`,
+          `V-Abs cruciale: ${bName} a ${bv.toFixed(1)} (molto valore), ${wName} a ${wv.toFixed(1)} (compresso). Il favorito non è dove c'è valore. Chi punta sulla ${wName} paga un prezzo svantaggioso rispetto alla probabilità reale.`,
+          `Lettura chiave: il valore non è sul favorito. La ${wName} ha V-Abs ${wv.toFixed(1)} — compressa. La ${bName} è a ${bv.toFixed(1)} — il book offre molto più del dovuto. Giocare il favorito qui significa pagare un premio senza giustificazione.`,
+        ]));
+      } else {
+        lines.push(pick([
+          `Il valore è concentrato sulla ${bName}: V-Abs ${bv.toFixed(1)}, nettamente sopra 100. Il bookmaker offre un prezzo superiore a quanto il modello stima corretto. La ${wName} invece è compressa (V-Abs ${wv.toFixed(1)}): quota penalizzata, nessun valore.`,
+          `V-Abs: ${bName} a ${bv.toFixed(1)} — il segno con più valore. La ${wName} è a ${wv.toFixed(1)}, quota schiacciata. Chi cerca valore deve guardare dalla parte della ${bName}.`,
+          `Il mercato dice chiaramente dove sta il valore: ${bName} con V-Abs ${bv.toFixed(1)}, quota generosa. Dall'altra parte, la ${wName} a ${wv.toFixed(1)} non offre nulla. Un gap netto tra i due esiti.`,
+          `L'analisi del valore è netta: la ${bName} ha un V-Abs di ${bv.toFixed(1)} — il book paga più di quanto dovrebbe. La ${wName} è penalizzata a ${wv.toFixed(1)}. Il valore è da una parte sola.`,
+        ]));
+      }
+    } else if (bv >= 102) {
+      lines.push(pick([
+        `Sul fronte del valore, la ${bName} emerge con un V-Abs di ${bv.toFixed(1)} — il bookmaker paga leggermente più del dovuto. Gli altri esiti sono nella norma o sotto.`,
+        `Valore moderato sulla ${bName} (V-Abs ${bv.toFixed(1)}). Non un segnale forte, ma la quota è leggermente più generosa di quanto il modello suggerirebbe.`,
+        `Il V-Abs più alto è sulla ${bName}: ${bv.toFixed(1)}. Un leggero vantaggio in termini di valore rispetto agli altri segni.`,
+        `C'è del valore sulla ${bName} (V-Abs ${bv.toFixed(1)}), anche se non eclatante. Gli altri esiti non offrono altrettanto.`,
+      ]));
+    } else if (bv < 98) {
+      lines.push(pick([
+        `Nessun segno offre valore. I V-Abs sono tutti sotto 100: il bookmaker trattiene un margine elevato su ogni esito. Non c'è un'opportunità chiara dal punto di vista del valore.`,
+        `Il mercato non regala nulla: tutti i V-Abs sono sotto soglia. Il book è ben calibrato su questa partita — nessun esito è prezzato in modo generoso.`,
+        `V-Abs sotto 100 su tutti i segni: il bookmaker tiene il margine alto. Non c'è un segno che offra un prezzo vantaggioso rispetto alla probabilità stimata.`,
+        `Quote compresse su tutta la linea. Nessun segno ha un V-Abs sopra 100 — il book è conservativo e non offre valore su nessun esito.`,
+      ]));
+    } else {
+      lines.push(pick([
+        `V-Abs nella norma per tutti i segni: ${signData.map(d => `${signShort[d.s]} ${(d.vAbs ?? 100).toFixed(1)}`).join(', ')}. Nessun valore evidente né penalizzazioni particolari.`,
+        `I V-Abs sono equilibrati: ${signData.map(d => `${signShort[d.s]} ${(d.vAbs ?? 100).toFixed(1)}`).join(', ')}. Il book prezza in modo corretto tutti gli esiti.`,
+        `Situazione neutra sul fronte valore: ${signData.map(d => `${signShort[d.s]} ${(d.vAbs ?? 100).toFixed(1)}`).join(', ')}. Quote allineate al modello, senza distorsioni evidenti.`,
+      ]));
     }
   }
 
-  // HWR/DR/AWR e Ritorno
-  const rend = m.rendimento_chiusura || m.rendimento_apertura;
+  // 3. MOVIMENTI SIGNIFICATIVI
+  if (hasLive && bigMoves.length > 0) {
+    for (const d of bigMoves) {
+      const sn = signNameMap[d.s];
+      const isRed = d.livello === 'rosso';
+      lines.push(pick([
+        `Movimento importante sulla ${sn}: Δpp ${d.delta!.toFixed(1)}${isRed ? ', semaforo rosso' : ''}. La quota è passata da ${d.qAp?.toFixed(2)} a ${d.qLive?.toFixed(2)} — un cambio che va oltre il normale aggiustamento.${d.bev?.alert ? ' Il break-even è stato superato: il book muove oltre il proprio margine.' : ''}`,
+        `Attenzione alla ${sn}: scostamento di ${d.delta!.toFixed(1)} pp${isRed ? ' (rosso)' : ''}. Da ${d.qAp?.toFixed(2)} a ${d.qLive?.toFixed(2)} — il mercato sta segnalando qualcosa su questo esito.${d.bev?.alert ? ' Superato il break-even.' : ''}`,
+        `Segnale sulla ${sn}: Δpp ${d.delta!.toFixed(1)}${isRed ? ' con semaforo rosso' : ''}, quota da ${d.qAp?.toFixed(2)} a ${d.qLive?.toFixed(2)}.${d.bev?.alert ? ' Il book ha superato il proprio margine di sicurezza: un movimento non ordinario.' : ' Un aggiustamento rilevante.'}`,
+      ]));
+    }
+  } else if (hasLive && bevAlerts.length > 0) {
+    const names = bevAlerts.map(d => signShort[d.s]).join(' e ');
+    lines.push(pick([
+      `Break-even superato su ${names}: il bookmaker ha mosso le quote oltre il proprio margine. Un segnale da non ignorare.`,
+      `Il book ha oltrepassato il break-even su ${names} — sta accettando di guadagnare meno su ${bevAlerts.length === 1 ? 'questo esito' : 'questi esiti'}, segno che qualcosa ha spinto il mercato.`,
+      `Superamento break-even su ${names}: il movimento di quote va oltre il margine del book. Non è un aggiustamento di routine.`,
+    ]));
+  } else if (hasLive) {
+    const allGreen = signData.every(d => d.livello === 'verde' || !d.livello);
+    if (allGreen) {
+      lines.push(pick([
+        `I movimenti di quota sono contenuti su tutti i segni — semafori verdi. Il mercato è stabile, senza segnali di anomalie o correzioni importanti.`,
+        `Nessun movimento anomalo: tutti i semafori sono verdi. Le quote si sono mosse poco tra apertura e chiusura — partita tranquilla dal punto di vista del mercato.`,
+        `Stabilità del mercato: Δpp contenuti, nessun break-even superato. Il book non ha avuto motivo di correggere in modo significativo.`,
+      ]));
+    }
+  }
+
+  // 4. DISTRIBUZIONE PAYOUT
   if (rend) {
     const vals = [
-      { s: '1', label: 'HWR', v: rend.hwr },
-      { s: 'X', label: 'DR', v: rend.dr },
-      { s: '2', label: 'AWR', v: rend.awr },
+      { s: '1', v: rend.hwr },
+      { s: 'X', v: rend.dr },
+      { s: '2', v: rend.awr },
     ];
     const best = vals.reduce((a, b) => a.v > b.v ? a : b);
+    const worst = vals.reduce((a, b) => a.v < b.v ? a : b);
     lines.push(pick([
-      `Ritorno: ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(', ')}. Il book è più generoso sulla ${signNameMap[best.s]} (${best.label} ${best.v.toFixed(1)}%). Ritorno complessivo: ${rend.ritorno_pct}%.`,
-      `Distribuzione payout: ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(' / ')}. Margine più sottile sulla ${signNameMap[best.s]}. Ritorno totale: ${rend.ritorno_pct}%.`,
-      `Il bookmaker restituisce di più sulla ${signNameMap[best.s]} (${best.label} ${best.v.toFixed(1)}%). Ritorno: ${rend.ritorno_pct}% — ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(', ')}.`,
-      `Payout: ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(', ')}. La ${signNameMap[best.s]} ha il ritorno migliore. Totale: ${rend.ritorno_pct}%.`,
+      `Payout: il book restituisce di più sulla ${signShort[best.s]} (${best.v.toFixed(1)}%) e meno sulla ${signShort[worst.s]} (${worst.v.toFixed(1)}%). Ritorno complessivo: ${rend.ritorno_pct}%.`,
+      `Il margine del book è più sottile sulla ${signShort[best.s]} (${best.v.toFixed(1)}%) e più spesso sulla ${signShort[worst.s]} (${worst.v.toFixed(1)}%). Ritorno totale: ${rend.ritorno_pct}%.`,
+      `Distribuzione del ritorno: ${signShort[best.s]} ${best.v.toFixed(1)}%, ${signShort[worst.s]} ${worst.v.toFixed(1)}%. Il bookmaker penalizza di più la ${signShort[worst.s]}. Ritorno: ${rend.ritorno_pct}%.`,
+      `Il book è più generoso sulla ${signShort[best.s]} (${best.v.toFixed(1)}%) e trattiene di più sulla ${signShort[worst.s]} (${worst.v.toFixed(1)}%). Resa complessiva: ${rend.ritorno_pct}%.`,
     ]));
   }
 

@@ -439,6 +439,99 @@ function buildPredAnalysis(sign: string, isDC: boolean, m: MatchDoc, isBestPick:
   return lines.join(' ');
 }
 
+function buildMarketOverview(m: MatchDoc): string {
+  const signNameMap: Record<string, string> = { '1': 'vittoria casa', 'X': 'pareggio', '2': 'vittoria trasferta' };
+  let h = 0;
+  for (let i = 0; i < m.match_key.length; i++) h = ((h << 5) - h + m.match_key.charCodeAt(i)) | 0;
+  const pick = (arr: string[]) => arr[Math.abs(h++) % arr.length];
+  const lines: string[] = [];
+  const qRef = m.quote_chiusura || m.quote_apertura;
+  if (!qRef) return 'Dati quote non disponibili per questa partita.';
+
+  const q1 = qRef['1'] ?? 99; const qX = qRef['X'] ?? 99; const q2 = qRef['2'] ?? 99;
+  const minQ = Math.min(q1, qX, q2);
+  const favorito = q1 === minQ ? '1' : q2 === minQ ? '2' : 'X';
+  const favLabel = signNameMap[favorito];
+  const ql = m.quote_chiusura ? ' live' : '';
+
+  // Intro: chi è il favorito
+  lines.push(pick([
+    `Il mercato${ql} indica la ${favLabel} come esito più probabile (${minQ.toFixed(2)}). Nessuno dei nostri sistemi ha emesso un pronostico SEGNO per questa partita, ma ecco cosa dicono le quote.`,
+    `Le quote${ql} danno favorita la ${favLabel} (${minQ.toFixed(2)}). Non abbiamo un pronostico nel mercato dei segni, ma l'analisi degli indicatori di mercato è comunque disponibile.`,
+    `Secondo le quote${ql}, il favorito è la ${favLabel} a ${minQ.toFixed(2)}. I nostri algoritmi non hanno selezionato un pronostico SEGNO, ma il mercato fornisce comunque informazioni utili.`,
+    `Favorita la ${favLabel} (${minQ.toFixed(2)}) secondo le quote${ql}. Nessun pronostico SEGNO emesso, ma l'analisi del mercato resta valida.`,
+    `Quote${ql}: ${favLabel} favorita a ${minQ.toFixed(2)}. Non c'è un pronostico dei nostri sistemi per i segni, ma gli indicatori offrono spunti interessanti.`,
+    `Il book${ql} punta sulla ${favLabel} (${minQ.toFixed(2)}). Nessun pronostico SEGNO disponibile, ma le quote raccontano una storia.`,
+  ]));
+
+  // Analisi per ciascun segno
+  for (const s of ['1', 'X', '2'] as const) {
+    const qAp = m.quote_apertura?.[s];
+    const qLive = m.quote_chiusura?.[s];
+    const vAbs = m.v_index_abs?.[s]?.valore;
+    const delta = m.semaforo?.[s]?.delta_pp;
+    const livello = m.semaforo?.[s]?.livello;
+    const bev = m.alert_breakeven?.[s];
+    const sName = signNameMap[s];
+
+    const parts: string[] = [];
+
+    // Movimento quota
+    if (qAp && qLive) {
+      const diff = qLive - qAp;
+      if (diff < -0.05) parts.push(`quota in calo (${qAp.toFixed(2)}→${qLive.toFixed(2)})`);
+      else if (diff > 0.05) parts.push(`quota in salita (${qAp.toFixed(2)}→${qLive.toFixed(2)})`);
+      else parts.push(`quota stabile (${(qLive).toFixed(2)})`);
+    }
+
+    // Semaforo
+    if (delta !== undefined && livello) {
+      if (livello === 'rosso') parts.push(`Δpp ${delta.toFixed(1)} (rosso, possibile anomalia)`);
+      else if (livello === 'arancione') parts.push(`Δpp ${delta.toFixed(1)} (arancione)`);
+      else if (livello === 'giallo') parts.push(`Δpp ${delta.toFixed(1)} (giallo)`);
+      else parts.push(`Δpp ${delta.toFixed(1)} (verde)`);
+    }
+
+    // BEv
+    if (bev) {
+      if (bev.alert) parts.push('break-even superato');
+      else parts.push(`entro margine (aggio ${bev.aggio_specifico.toFixed(1)}%)`);
+    }
+
+    // V-Abs
+    if (vAbs !== undefined) {
+      if (vAbs >= 105) parts.push(`V-Abs ${vAbs.toFixed(1)} — molto valore`);
+      else if (vAbs >= 102) parts.push(`V-Abs ${vAbs.toFixed(1)} — buon valore`);
+      else if (vAbs >= 98) parts.push(`V-Abs ${vAbs.toFixed(1)} — neutro`);
+      else if (vAbs >= 95) parts.push(`V-Abs ${vAbs.toFixed(1)} — poco valore`);
+      else parts.push(`V-Abs ${vAbs.toFixed(1)} — compresso`);
+    }
+
+    if (parts.length > 0) {
+      lines.push(`[${s}] ${sName.charAt(0).toUpperCase() + sName.slice(1)}: ${parts.join(', ')}.`);
+    }
+  }
+
+  // HWR/DR/AWR e Ritorno
+  const rend = m.rendimento_chiusura || m.rendimento_apertura;
+  if (rend) {
+    const vals = [
+      { s: '1', label: 'HWR', v: rend.hwr },
+      { s: 'X', label: 'DR', v: rend.dr },
+      { s: '2', label: 'AWR', v: rend.awr },
+    ];
+    const best = vals.reduce((a, b) => a.v > b.v ? a : b);
+    lines.push(pick([
+      `Ritorno: ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(', ')}. Il book è più generoso sulla ${signNameMap[best.s]} (${best.label} ${best.v.toFixed(1)}%). Ritorno complessivo: ${rend.ritorno_pct}%.`,
+      `Distribuzione payout: ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(' / ')}. Margine più sottile sulla ${signNameMap[best.s]}. Ritorno totale: ${rend.ritorno_pct}%.`,
+      `Il bookmaker restituisce di più sulla ${signNameMap[best.s]} (${best.label} ${best.v.toFixed(1)}%). Ritorno: ${rend.ritorno_pct}% — ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(', ')}.`,
+      `Payout: ${vals.map(v => `${v.label} ${v.v.toFixed(1)}%`).join(', ')}. La ${signNameMap[best.s]} ha il ritorno migliore. Totale: ${rend.ritorno_pct}%.`,
+    ]));
+  }
+
+  return lines.join(' ');
+}
+
 function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc; compact?: boolean }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const hasPreds = preds && preds.length > 0;
@@ -457,13 +550,40 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
         Pronostici Segno
       </div>
       {!hasPreds ? (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: compact ? 9 : 10, color: theme.textDim, fontStyle: 'italic',
-          padding: '2px 0',
-        }}>
-          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: isLight ? '#cbd5e1' : '#475569' }} />
-          Nessun pronostico nel mercato dei segni emesso dai nostri sistemi per questa partita
+        <div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: compact ? 9 : 10, color: theme.textDim, fontStyle: 'italic',
+            padding: '2px 0',
+          }}>
+            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: isLight ? '#cbd5e1' : '#475569' }} />
+            Nessun pronostico SEGNO emesso dai nostri sistemi per questa partita
+          </div>
+          {/* Analisi di mercato standalone */}
+          <div style={{ marginTop: 4 }}>
+            <div onClick={() => setExpanded(expanded === '_market' ? null : '_market')} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: isLight ? '#fff' : '#111827',
+              border: `1.5px solid ${expanded === '_market' ? theme.cyan : theme.cyan + '44'}`,
+              borderRadius: 6, padding: compact ? '1px 6px' : '2px 8px',
+              cursor: 'pointer', userSelect: 'none' as const,
+              fontSize: compact ? 9 : 10, whiteSpace: 'nowrap' as const,
+            }}>
+              <span style={{ fontWeight: 600, color: theme.text }}>Analisi mercato</span>
+              <span style={{ fontSize: 7, color: theme.textDim, transform: expanded === '_market' ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
+            </div>
+            {expanded === '_market' && (
+              <div style={{
+                marginTop: 6, padding: '8px 10px',
+                background: isLight ? '#f8fafc' : '#0f172a',
+                border: `1px solid ${theme.cyan}33`,
+                borderRadius: 4, fontSize: compact ? 10 : 11,
+                lineHeight: 1.7, color: theme.text,
+              }}>
+                {buildMarketOverview(m)}
+              </div>
+            )}
+          </div>
         </div>
       ) : [...new Map<string, PredEntry>(preds!.map(p => [p.pronostico, p] as [string, PredEntry])).entries()].map(([sign, entry]) => {
         const isDC = entry.tipo === 'DOPPIA_CHANCE';

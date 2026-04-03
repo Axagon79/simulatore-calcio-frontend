@@ -27,6 +27,7 @@ interface MatchDoc {
   rendimento_apertura?: Rendimento; rendimento_chiusura?: Rendimento;
   n_aggiornamenti?: number; ts_chiusura?: string;
   real_score?: string;
+  live_score?: string; live_status?: string; live_minute?: number;
 }
 
 const SIGNS = ['1', 'X', '2'] as const;
@@ -559,13 +560,25 @@ function MobileCard({ m, date, preds }: {
         borderBottom: theme.cellBorder, cursor: 'pointer', userSelect: 'none',
       }}>
         <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: predDotColor(preds), flexShrink: 0 }} />
-        <span style={{ fontFamily: 'monospace', fontSize: 10, color: theme.textDim }}>{m.match_time}</span>
+        {m.live_status && m.live_status !== 'Finished' && m.live_score ? (
+          <span style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: 900, color: m.live_status === 'HT' ? '#f59e0b' : '#ef4444', animation: m.live_status !== 'HT' ? 'qaPulseLive 1.5s ease-in-out infinite' : undefined }}>
+            {m.live_status === 'HT' ? 'HT' : `${m.live_minute || ''}'`}
+          </span>
+        ) : (
+          <span style={{ fontFamily: 'monospace', fontSize: 10, color: theme.textDim }}>{m.match_time}</span>
+        )}
         <span style={{ fontWeight: 600, fontSize: 11, color: theme.text, flex: 1 }}>
           {m.home_raw} vs {m.away_raw}
         </span>
-        <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: m.real_score ? theme.text : theme.textDim, letterSpacing: 1, background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.06)', borderRadius: 3, padding: '1px 5px', minWidth: 38, textAlign: 'center', display: 'inline-block' }}>
-          {m.real_score ? m.real_score.replace(':', ' - ') : '-'}
-        </span>
+        {m.live_score && !m.real_score && m.live_status !== 'Finished' ? (
+          <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 900, color: m.live_status === 'HT' ? '#f59e0b' : '#ef4444', letterSpacing: 1, animation: m.live_status !== 'HT' ? 'qaPulseLive 1.5s ease-in-out infinite' : undefined, background: isLight ? '#fef3c7' : 'rgba(255,50,50,0.1)', borderRadius: 3, padding: '1px 5px', minWidth: 38, textAlign: 'center', display: 'inline-block' }}>
+            {m.live_score.replace(':', ' - ')}
+          </span>
+        ) : (
+          <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: m.real_score ? theme.text : theme.textDim, letterSpacing: 1, background: isLight ? '#f0f0f0' : 'rgba(255,255,255,0.06)', borderRadius: 3, padding: '1px 5px', minWidth: 38, textAlign: 'center', display: 'inline-block' }}>
+            {m.real_score ? m.real_score.replace(':', ' - ') : '-'}
+          </span>
+        )}
         {rend && (
           <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 600, color: isLight ? '#fff' : rend.ritorno_pct >= 95 ? theme.success : rend.ritorno_pct >= 90 ? theme.warning : theme.danger, background: isLight ? (rend.ritorno_pct >= 95 ? '#22c55e' : rend.ritorno_pct >= 90 ? '#e0a030' : '#ef4444') : 'rgba(255,255,255,0.06)', borderRadius: 3, padding: '1px 5px', minWidth: 38, textAlign: 'center', display: 'inline-block' }}>
             {rend.ritorno_pct}%
@@ -800,6 +813,9 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
 
   return (
     <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font }}>
+      <style>{`
+        @keyframes qaPulseLive { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+      `}</style>
       {/* HEADER */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.panelSolid, borderBottom: theme.panelBorder, padding: '8px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -958,7 +974,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                             <tr onClick={() => handleRowClick(m.match_key)}
                               onMouseEnter={() => setHoveredKey(m.match_key)} onMouseLeave={() => setHoveredKey(null)}
                               style={{ background: bg, cursor: 'pointer', borderLeft: sel ? `3px solid ${theme.cyan}` : '3px solid transparent', transition: 'background 0.15s' }}>
-                              <td rowSpan={2} style={{ ...cStyle, color: theme.textDim, verticalAlign: 'middle' }}><span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: predDotColor(predictions[m.match_key]), marginRight: 3, verticalAlign: 'middle' }} />{m.match_time}</td>
+                              <td rowSpan={2} style={{ ...cStyle, color: m.live_status && m.live_status !== 'Finished' && m.live_score ? (m.live_status === 'HT' ? '#f59e0b' : '#ef4444') : theme.textDim, fontWeight: m.live_status && m.live_status !== 'Finished' && m.live_score ? 900 : 400, verticalAlign: 'middle', animation: m.live_status && m.live_status !== 'Finished' && m.live_status !== 'HT' && m.live_score ? 'qaPulseLive 1.5s ease-in-out infinite' : undefined }}><span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: predDotColor(predictions[m.match_key]), marginRight: 3, verticalAlign: 'middle' }} />{m.live_status && m.live_status !== 'Finished' && m.live_score ? (m.live_status === 'HT' ? 'HT' : `${m.live_minute || ''}'`) : m.match_time}</td>
                               <td rowSpan={2} style={{ ...cStyle, textAlign: 'left', fontFamily: theme.font, fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {m.home_raw} vs {m.away_raw}
                               </td>
@@ -971,8 +987,8 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                               {/* BEv, Agg%, V-Abs, HWR, Rit% vuoti in riga apertura */}
                               <td colSpan={5} style={{ ...cStyle, fontSize: 9, color: theme.textDim }}></td>
                               {/* Risultato — ultima colonna */}
-                              <td rowSpan={2} style={{ ...cStyle, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 1, verticalAlign: 'middle', color: m.real_score ? theme.cyan : theme.textDim }}>
-                                {m.real_score ? m.real_score.replace(':', '-') : '—'}
+                              <td rowSpan={2} style={{ ...cStyle, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 1, verticalAlign: 'middle', color: m.live_score && !m.real_score && m.live_status !== 'Finished' ? (m.live_status === 'HT' ? '#f59e0b' : '#ef4444') : m.real_score ? theme.cyan : theme.textDim, animation: m.live_score && !m.real_score && m.live_status !== 'Finished' && m.live_status !== 'HT' ? 'qaPulseLive 1.5s ease-in-out infinite' : undefined }}>
+                                {m.live_score && !m.real_score && m.live_status !== 'Finished' ? m.live_score.replace(':', '-') : m.real_score ? m.real_score.replace(':', '-') : '—'}
                               </td>
                             </tr>
                             {/* RIGA 2: Live + tutti gli indicatori */}

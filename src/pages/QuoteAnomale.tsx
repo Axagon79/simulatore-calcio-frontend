@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import QuoteAnomaleDetail from './QuoteAnomaleDetail';
@@ -119,6 +119,51 @@ function buildPredAnalysis(sign: string, isDC: boolean, m: MatchDoc, isBestPick:
       `Pronostico ${signLabel}, individuato dall'analisi ma rimasto fuori dalle Best Picks. La soglia di inclusione non è stata raggiunta.`,
       `${SL} — i nostri algoritmi lo hanno considerato, senza però promuoverlo tra le Best Picks. Non tutti i parametri hanno superato la selezione.`,
     ]));
+  }
+
+  // Contesto di mercato: il pronostico va col favorito o contro?
+  const qRef = m.quote_chiusura || m.quote_apertura;
+  if (qRef) {
+    const q1 = qRef['1'] ?? 99; const qX = qRef['X'] ?? 99; const q2 = qRef['2'] ?? 99;
+    const minQ = Math.min(q1, qX, q2);
+    const favorito = q1 === minQ ? '1' : q2 === minQ ? '2' : 'X';
+    const favLabel = favorito === '1' ? 'casa' : favorito === '2' ? 'trasferta' : 'pareggio';
+    const favQuota = minQ;
+    const pronoCopreFavorito = signs.includes(favorito as '1' | 'X' | '2');
+
+    if (!pronoCopreFavorito) {
+      // Il pronostico va CONTRO il favorito
+      const coveredLabels = signs.map(s => signNameMap[s] || s).join(' o ');
+      const ql = m.quote_chiusura ? ' live' : '';
+      lines.push(pick([
+        `Nota importante: questo pronostico va contro il favorito del mercato. Le quote${ql} indicano la ${favLabel} come esito più probabile (quota ${favQuota.toFixed(2)}), mentre il ${signLabel} copre ${coveredLabels}. Il mercato non è dalla parte di questa scommessa.`,
+        `Attenzione al contesto: il mercato${ql} dà favorita la ${favLabel} (${favQuota.toFixed(2)}), e il ${signLabel} non la include. Questo pronostico si gioca contro l'esito ritenuto più probabile dal book.`,
+        `Da considerare: le quote${ql} puntano sulla ${favLabel} come favorita (${favQuota.toFixed(2)}). Il ${signLabel} va nella direzione opposta — si scommette contro il favorito del mercato.`,
+        `Elemento chiave: il favorito secondo le quote${ql} è la ${favLabel} (${favQuota.toFixed(2)}), ma il ${signLabel} non copre questo esito. È una scommessa controcorrente rispetto all'indicazione del mercato.`,
+        `Il mercato${ql} è chiaro: la ${favLabel} è l'esito più atteso (${favQuota.toFixed(2)}). Il ${signLabel} non lo include — questa scommessa va in direzione opposta rispetto a dove puntano le quote.`,
+        `Le quote${ql} parlano: favorita la ${favLabel} a ${favQuota.toFixed(2)}, mentre il ${signLabel} copre ${coveredLabels}. Siamo dalla parte opposta rispetto al favorito del book.`,
+      ]));
+    } else if (signs.length === 1 && signs[0] === favorito) {
+      const ql = m.quote_chiusura ? ' live' : '';
+      lines.push(pick([
+        `Il pronostico è in linea con il favorito del mercato: le quote${ql} danno la ${favLabel} come esito più probabile (${favQuota.toFixed(2)}).`,
+        `Contesto favorevole: il ${signLabel} coincide con il favorito del mercato${ql} (${favLabel}, quota ${favQuota.toFixed(2)}).`,
+        `Le quote${ql} confermano: la ${favLabel} è il favorito (${favQuota.toFixed(2)}), esattamente nella direzione di questo pronostico.`,
+        `Il mercato${ql} va nella stessa direzione: ${favLabel} favorita a ${favQuota.toFixed(2)}, e questo pronostico la segue.`,
+        `Scommessa allineata al mercato: la ${favLabel} (${favQuota.toFixed(2)}) è l'esito più probabile secondo le quote${ql}, e il ${signLabel} punta proprio lì.`,
+        `Quote${ql} e pronostico concordano: la ${favLabel} è il favorito (${favQuota.toFixed(2)}). Il mercato supporta questa direzione.`,
+      ]));
+    } else if (isDC && pronoCopreFavorito) {
+      const ql = m.quote_chiusura ? ' live' : '';
+      lines.push(pick([
+        `Il ${signLabel} copre il favorito del mercato (${favLabel}, quota${ql} ${favQuota.toFixed(2)}), più un secondo esito. La scommessa include l'esito più probabile secondo le quote.`,
+        `Contesto: la ${favLabel} è il favorito (${favQuota.toFixed(2)}) e rientra nel ${signLabel}. La doppia chance include l'esito che il mercato ritiene più probabile.`,
+        `Le quote${ql} danno favorita la ${favLabel} (${favQuota.toFixed(2)}), che è coperta da questo ${signLabel}. La scommessa è dalla parte del mercato.`,
+        `La doppia chance ${sign} include la ${favLabel}, favorita a ${favQuota.toFixed(2)}. Il mercato${ql} è dalla parte di almeno uno dei due esiti coperti.`,
+        `Il favorito${ql} è la ${favLabel} (${favQuota.toFixed(2)}), e il ${signLabel} lo comprende. Si gioca con il mercato, non contro.`,
+        `Buon segnale strutturale: il ${signLabel} copre la ${favLabel}, che le quote${ql} indicano come favorita (${favQuota.toFixed(2)}). La scommessa ha il mercato dalla sua parte.`,
+      ]));
+    }
   }
 
   for (const s of signs) {
@@ -299,6 +344,21 @@ function buildPredAnalysis(sign: string, isDC: boolean, m: MatchDoc, isBestPick:
     return map[s] ?? 0;
   })) : null;
   const allVals = rend ? [rend.hwr, rend.dr, rend.awr] : [];
+
+  // Contesto favorito/sfavorito: peso 2
+  const qRefScore = m.quote_chiusura || m.quote_apertura;
+  if (qRefScore) {
+    const sq1 = qRefScore['1'] ?? 99; const sqX = qRefScore['X'] ?? 99; const sq2 = qRefScore['2'] ?? 99;
+    const minQs = Math.min(sq1, sqX, sq2);
+    const favS = sq1 === minQs ? '1' : sq2 === minQs ? '2' : 'X';
+    const pronoCopreFavS = signs.includes(favS as '1' | 'X' | '2');
+    if (!pronoCopreFavS) {
+      score -= 2; negativi.push('contro il favorito del mercato');
+    } else if (signs.length === 1 && signs[0] === favS) {
+      score += 1; positivi.push('in linea col favorito del mercato');
+    }
+    // DC che copre favorito: neutro (vantaggio già implicito nella DC)
+  }
 
   // Quota: peso 2
   if (bestQuotaDiff < -0.05) { score += 2; positivi.push('quota in calo' + (isDC ? ' su almeno un segno coperto' : '')); }
@@ -707,7 +767,6 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   // Desktop: tabellone + detail
   const [selectedMatchKey, setSelectedMatchKey] = useState<string | null>(null);
   const [chartTab, setChartTab] = useState('quote');
-  const detailRef = useRef<HTMLDivElement>(null);
   const [predictions, setPredictions] = useState<Record<string, PredEntry[]>>({});
   const [predDebug, setPredDebug] = useState<{
     matched_count: number; qa_partite: number;
@@ -802,13 +861,10 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
     });
   };
 
-  const selectedMatch = matches.find(m => m.match_key === selectedMatchKey);
-
   const handleRowClick = (matchKey: string) => {
     if (selectedMatchKey === matchKey) { setSelectedMatchKey(null); return; }
     setSelectedMatchKey(matchKey);
-    setChartTab('quote');
-    setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
+    setChartTab('');
   };
 
   return (
@@ -1071,6 +1127,35 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                                 </td>
                               </tr>
                             )}
+                            {/* RIGA 4: Capsule tab grafici */}
+                            {sel && (
+                              <tr style={{ background: isLight ? '#f0f7ff' : '#0c1929' }}>
+                                <td colSpan={14} style={{ padding: '6px 10px', borderBottom: `1px solid ${theme.textDim}22` }}>
+                                  <DetailSummary m={m} />
+                                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                                    {CHART_TABS.map(t => (
+                                      <button key={t.key} onClick={(e) => { e.stopPropagation(); setChartTab(chartTab === t.key ? '' : t.key); }} title={t.tip}
+                                        style={{
+                                          padding: '4px 12px', borderRadius: 12, border: 'none', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                          background: chartTab === t.key ? theme.cyan : (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)'),
+                                          color: chartTab === t.key ? '#fff' : theme.textDim,
+                                          transition: 'all 0.15s',
+                                        }}>
+                                        {t.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                            {/* RIGA 5: Grafico selezionato */}
+                            {sel && chartTab && (
+                              <tr style={{ background: isLight ? '#f0f7ff' : '#0c1929' }}>
+                                <td colSpan={14} style={{ padding: '0 8px 8px', borderBottom: `2px solid ${theme.cyan}33` }}>
+                                  <QuoteAnomaleDetail date={date} matchKey={m.match_key} chartFilter={chartTab} />
+                                </td>
+                              </tr>
+                            )}
                           </React.Fragment>
                         );
                       })}
@@ -1081,46 +1166,6 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
               </table>
             </div>
 
-            {/* Dettaglio sotto la tabella */}
-            {selectedMatch && (
-              <div ref={detailRef} style={{
-                marginTop: 12, background: theme.panel,
-                border: `1px solid ${theme.cyan}44`, borderRadius: 8, overflow: 'hidden',
-              }}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '8px 12px',
-                  background: isLight ? 'rgba(0,119,204,0.05)' : 'rgba(0,240,255,0.05)',
-                  borderBottom: theme.cellBorder,
-                }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>{selectedMatch.home_raw} vs {selectedMatch.away_raw}</span>
-                    <span style={{ fontSize: 10, color: theme.textDim, marginLeft: 10 }}>
-                      {selectedMatch.league || selectedMatch.league_raw} — {selectedMatch.match_time}
-                    </span>
-                  </div>
-                  <button onClick={() => setSelectedMatchKey(null)}
-                    style={{ background: 'none', border: 'none', color: theme.textDim, cursor: 'pointer', fontSize: 14, padding: '0 4px' }}>✕</button>
-                </div>
-
-                <DetailSummary m={selectedMatch} />
-
-                <div style={{ display: 'flex', gap: 3, padding: '6px 12px', borderBottom: theme.cellBorder, flexWrap: 'wrap' }}>
-                  {CHART_TABS.map(t => (
-                    <button key={t.key} onClick={() => setChartTab(t.key)} title={t.tip}
-                      style={{
-                        padding: '4px 10px', borderRadius: 4, border: 'none', fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                        background: chartTab === t.key ? theme.cyan : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'),
-                        color: chartTab === t.key ? '#fff' : theme.textDim,
-                      }}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                <QuoteAnomaleDetail date={date} matchKey={selectedMatch.match_key} chartFilter={chartTab} />
-              </div>
-            )}
           </>
         )}
 

@@ -30,7 +30,7 @@ export default function TermsPage() {
       title: 'Termini e Condizioni d\'uso',
       content: (
         <>
-          <p style={{ ...p, fontSize: '12px', color: dimText }}>Versione 1.0 — 11 marzo 2026 | Sezioni 1–12</p>
+          <p style={{ ...p, fontSize: '12px', color: dimText }}>Versione 1.1 — 3 aprile 2026 | Sezioni 1–12</p>
 
           <h2 style={h2}>1. Presentazione del Servizio</h2>
           <p style={p}><strong>AI Simulator</strong> e una piattaforma digitale che fornisce analisi statistiche, pronostici sportivi e indicatori di probabilita relativi a eventi calcistici, elaborati attraverso algoritmi proprietari di intelligenza artificiale e machine learning.</p>
@@ -75,6 +75,21 @@ export default function TermsPage() {
             <li>Non basare decisioni esclusivamente sui pronostici della piattaforma</li>
             <li>Considerare i pronostici come uno dei tanti strumenti di analisi</li>
           </ul>
+
+          <h2 style={h2}>5.6 Copertura dei campionati e fasi playoff</h2>
+          <p style={p}>I pronostici vengono emessi principalmente per le partite della <strong>stagione regolare</strong> dei campionati nazionali coperti dalla piattaforma.</p>
+          <p style={p}>Di norma, AI Simulator <strong>non emette pronostici</strong> per le seguenti fasi dei campionati nazionali:</p>
+          <ul style={ul}>
+            <li>Playoff promozione e spareggi</li>
+            <li>Playout retrocessione</li>
+            <li>Gironi di championship/relegation post-season (es. Superligaen danese, Jupiler Pro League belga)</li>
+          </ul>
+          <p style={p}>Il motore AI e ottimizzato per la stagione regolare, dove il volume di dati storici e la continuita del formato garantiscono l'affidabilita statistica del modello. Le fasi post-season, con campioni ridotti e dinamiche competitive diverse, non raggiungono di norma gli standard di affidabilita richiesti dalla piattaforma.</p>
+          <h3 style={h3}>5.6.1 Competizioni europee per club</h3>
+          <p style={p}>Per le <strong>coppe europee</strong> (Champions League, Europa League, Conference League) la piattaforma utilizza <strong>algoritmi proprietari dedicati</strong> ottimizzati per il formato di queste competizioni. I pronostici per le coppe europee vengono pertanto emessi regolarmente.</p>
+          <h3 style={h3}>5.6.2 Eccezioni occasionali</h3>
+          <p style={p}>AI Simulator si riserva la facolta di emettere occasionalmente pronostici anche per fasi di playoff o playout di campionati nazionali, qualora ritenga che i dati disponibili siano sufficienti a garantire un livello di affidabilita adeguato. Tali pronostici saranno chiaramente identificati.</p>
+          <p style={p}>L'elenco aggiornato dei campionati coperti e delle relative date di inizio/fine copertura e consultabile nella sezione dedicata dell'app.</p>
 
           <h2 style={h2}>6. Quote — Natura e Limitazioni</h2>
           <p style={p}>Le quote mostrate hanno natura <strong>indicativa e algoritmica</strong>. Possono differire dalle quote reali dei bookmakers. Non costituiscono un'offerta commerciale.</p>

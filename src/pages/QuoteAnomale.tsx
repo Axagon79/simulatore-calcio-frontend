@@ -1073,9 +1073,9 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '3px 6px', color: theme.text, fontSize: 11, marginLeft: 'auto' }} />
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)}
-            style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '3px 6px', color: theme.text, fontSize: 11 }}>
-            <option value="">Tutti</option>
-            {leagues.map(l => <option key={l} value={l}>{l}</option>)}
+            style={{ background: isLight ? '#f5f5f5' : '#1e293b', border: theme.cellBorder, borderRadius: 4, padding: '3px 6px', color: isLight ? '#1e293b' : '#e2e8f0', fontSize: 11 }}>
+            <option value="" style={{ background: isLight ? '#f5f5f5' : '#1e293b', color: isLight ? '#1e293b' : '#e2e8f0' }}>Tutti</option>
+            {leagues.map(l => <option key={l} value={l} style={{ background: isLight ? '#f5f5f5' : '#1e293b', color: isLight ? '#1e293b' : '#e2e8f0' }}>{l}</option>)}
           </select>
         </div>
       </div>

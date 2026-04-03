@@ -741,6 +741,55 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
   );
 }
 
+function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact }: {
+  matchKey: string; analysis?: string; loading?: boolean; canSee: boolean; onFetch: (mk: string) => void; compact?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasAnalysis = !!analysis;
+
+  return (
+    <div style={{ padding: compact ? '4px 8px' : '6px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!canSee) return;
+            if (hasAnalysis) { setOpen(!open); return; }
+            onFetch(matchKey);
+            setOpen(true);
+          }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: compact ? '3px 10px' : '4px 12px',
+            borderRadius: 6, border: `1.5px solid ${canSee ? (hasAnalysis ? theme.cyan : theme.cyan + '66') : (isLight ? '#cbd5e1' : '#475569')}`,
+            background: hasAnalysis ? (isLight ? '#f0f9ff' : '#0c1929') : (isLight ? '#fff' : '#111827'),
+            cursor: canSee ? 'pointer' : 'not-allowed',
+            fontSize: compact ? 9 : 10, fontWeight: 600,
+            color: canSee ? theme.text : theme.textDim,
+            opacity: canSee ? 1 : 0.6,
+          }}
+        >
+          <span>{canSee ? '🤖' : '🔒'}</span>
+          <span>{loading ? 'Analisi in corso...' : hasAnalysis ? (open ? 'Chiudi analisi AI' : 'Analisi AI') : (canSee ? 'Analisi AI Premium' : 'Analisi AI (Premium)')}</span>
+          {loading && <span style={{ display: 'inline-block', width: 10, height: 10, border: '2px solid transparent', borderTop: `2px solid ${theme.cyan}`, borderRadius: '50%', animation: 'qaSpinAi 0.8s linear infinite' }} />}
+        </button>
+      </div>
+      {open && hasAnalysis && (
+        <div style={{
+          marginTop: 6, padding: compact ? '8px 10px' : '10px 14px',
+          background: isLight ? '#f8fafc' : '#0f172a',
+          border: `1px solid ${theme.cyan}33`,
+          borderRadius: 6, fontSize: compact ? 11 : 12,
+          lineHeight: 1.8, color: theme.text,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {analysis}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InfoBubble({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const text = INFO_TEXTS[id];
@@ -792,8 +841,9 @@ const CHART_TABS = [
 function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }
 
 // --- CARD MOBILE ---
-function MobileCard({ m, date, preds }: {
+function MobileCard({ m, date, preds, aiAnalysis, aiLoading, canSeeAi, onFetchAi }: {
   m: MatchDoc; date: string; preds?: PredEntry[];
+  aiAnalysis?: string; aiLoading?: boolean; canSeeAi: boolean; onFetchAi: (mk: string) => void;
 }) {
   const rend = m.rendimento_chiusura || m.rendimento_apertura;
   const [showIndicators, setShowIndicators] = useState(false);
@@ -845,6 +895,7 @@ function MobileCard({ m, date, preds }: {
         <>
           {/* Pronostici SEGNO */}
           {<PredictionRow preds={preds} m={m} compact />}
+          <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis} loading={aiLoading} canSee={canSeeAi} onFetch={onFetchAi} compact />
           {/* Tabella unica: quote + indicatori */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: 'monospace' }}>
             <thead>
@@ -967,6 +1018,27 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
     unmatched: { source: string; home: string; away: string; league?: string }[];
   } | null>(null);
   const isAdmin = checkAdmin();
+  const [isPremiumUser] = useState(() => localStorage.getItem('pp_pu') === '1');
+  const canSeeAi = isAdmin || isPremiumUser;
+  const [aiAnalysis, setAiAnalysis] = useState<Record<string, string>>({});
+  const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
+  const fetchAiAnalysis = async (matchKey: string) => {
+    if (aiAnalysis[matchKey] || aiLoading[matchKey]) return;
+    setAiLoading(prev => ({ ...prev, [matchKey]: true }));
+    try {
+      const resp = await fetch(`${API_BASE}/quote-anomale/analysis-premium`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ match_key: matchKey, date, isAdmin }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setAiAnalysis(prev => ({ ...prev, [matchKey]: data.analysis }));
+      }
+    } catch { /* silenzioso */ }
+    setAiLoading(prev => ({ ...prev, [matchKey]: false }));
+  };
+
   // Mobile
   // Responsive
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
@@ -1064,6 +1136,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
     <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontFamily: theme.font }}>
       <style>{`
         @keyframes qaPulseLive { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        @keyframes qaSpinAi { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
       {/* HEADER */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.panelSolid, borderBottom: theme.panelBorder, padding: '8px 12px' }}>
@@ -1317,6 +1390,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                               <tr style={{ background: isLight ? '#f0f7ff' : '#0c1929' }}>
                                 <td colSpan={14} style={{ padding: 0, borderBottom: `1px solid ${theme.textDim}22` }}>
                                   <PredictionRow preds={predictions[m.match_key]} m={m} />
+                                  <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis[m.match_key]} loading={aiLoading[m.match_key]} canSee={canSeeAi} onFetch={fetchAiAnalysis} />
                                 </td>
                               </tr>
                             )}
@@ -1379,6 +1453,10 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                     m={m}
                     date={date}
                     preds={predictions[m.match_key]}
+                    aiAnalysis={aiAnalysis[m.match_key]}
+                    aiLoading={aiLoading[m.match_key]}
+                    canSeeAi={canSeeAi}
+                    onFetchAi={fetchAiAnalysis}
                   />
                 ))}
               </div>

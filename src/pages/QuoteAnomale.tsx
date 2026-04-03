@@ -995,7 +995,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
       {/* HEADER */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.panelSolid, borderBottom: theme.panelBorder, padding: '8px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: theme.cyan, cursor: 'pointer', fontSize: 16, padding: 0 }}>←</button>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', outline: 'none', color: theme.cyan, cursor: 'pointer', fontSize: 16, padding: '2px 6px', borderRadius: 4, lineHeight: 1 }}>←</button>
           <span style={{ fontWeight: 700, fontSize: 15 }}>Odds Monitor</span>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             style={{ background: isLight ? '#f5f5f5' : 'rgba(255,255,255,0.08)', border: theme.cellBorder, borderRadius: 4, padding: '3px 6px', color: theme.text, fontSize: 11, marginLeft: 'auto' }} />

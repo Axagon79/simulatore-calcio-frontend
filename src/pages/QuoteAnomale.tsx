@@ -441,7 +441,6 @@ function buildPredAnalysis(sign: string, isDC: boolean, m: MatchDoc, isBestPick:
 
 function buildMarketOverview(m: MatchDoc): string {
   const signNameMap: Record<string, string> = { '1': 'vittoria casa', 'X': 'pareggio', '2': 'vittoria trasferta' };
-  const signShort: Record<string, string> = { '1': 'casa', 'X': 'pareggio', '2': 'trasferta' };
   let h = 0;
   for (let i = 0; i < m.match_key.length; i++) h = ((h << 5) - h + m.match_key.charCodeAt(i)) | 0;
   const pick = (arr: string[]) => arr[Math.abs(h++) % arr.length];
@@ -449,7 +448,6 @@ function buildMarketOverview(m: MatchDoc): string {
   const qRef = m.quote_chiusura || m.quote_apertura;
   if (!qRef) return 'Dati quote non disponibili per questa partita.';
   const ql = m.quote_chiusura ? ' live' : '';
-  const hasLive = !!m.quote_chiusura;
 
   // Calcola dati per tutti i segni
   const signData = (['1', 'X', '2'] as const).map(s => {

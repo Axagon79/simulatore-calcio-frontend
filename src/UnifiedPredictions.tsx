@@ -637,6 +637,12 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
             // Solo se almeno una versione aveva pronostici (= è stata selezionata almeno una volta)
             for (const [matchKey, matchVersions] of Object.entries(versionsByMatch)) {
               if (unifiedKeys.has(matchKey)) continue;
+              // Double-check con normalizzazione dal latest per evitare duplicati
+              const latest0 = matchVersions[matchVersions.length - 1];
+              if (latest0?.home && latest0?.away) {
+                const altKey = normalizeKey(latest0.date || date, latest0.home, latest0.away);
+                if (unifiedKeys.has(altKey)) continue;
+              }
               // Skip se nessuna versione ha mai avuto pronostici (mai entrata nella selezione)
               const everHadPicks = matchVersions.some((v: any) => v.pronostici && v.pronostici.length > 0);
               if (!everHadPicks) continue;

@@ -3489,8 +3489,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         ...(() => {
                           const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
                           const mplForLabel = monthlyPLData[tabKey];
-                          if (mplForLabel) {
-                            return [{ label: 'P/L Mese', value: `${mplForLabel.pl > 0 ? '+' : ''}${mplForLabel.pl}u`, color: mplForLabel.pl >= 0 ? theme.financePositive : theme.missText }];
+                          // Se oggi, somma P/L giorno (frontend) al mese (backend)
+                          const dayPl = plUnits ?? 0;
+                          const isDateToday = date === getToday();
+                          const mesePl = mplForLabel ? Math.round((mplForLabel.pl + (isDateToday ? dayPl : 0)) * 100) / 100 : null;
+                          if (mesePl !== null) {
+                            return [{ label: 'P/L Mese', value: `${mesePl > 0 ? '+' : ''}${mesePl}u`, color: mesePl >= 0 ? theme.financePositive : theme.missText }];
                           }
                           return [];
                         })(),
@@ -3498,18 +3502,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         ...(() => {
                           const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
                           const mpl = monthlyPLData[tabKey];
+                          const isDateToday = date === getToday();
+                          const dayPl = plUnits ?? 0;
+                          const dayStaked = verifiedWithQuota.reduce((sum, t) => sum + (t.stake || 1), 0);
                           const items: { label: string; value: string; color: string }[] = [];
-                          // P/L Mese rimosso — è già nel badge "Marzo" sopra
-                          // Yield Mese = (P/L / Somma Stake) × 100
-                          const yieldSrc = mpl;
-                          if (yieldSrc && yieldSrc.staked > 0) {
-                            const yieldVal = Math.round((yieldSrc.pl / yieldSrc.staked) * 1000) / 10;
+                          // Yield Mese = (P/L mese + oggi) / (Staked mese + oggi) × 100
+                          const meseStaked = mpl ? mpl.staked + (isDateToday ? dayStaked : 0) : 0;
+                          const mesePl = mpl ? mpl.pl + (isDateToday ? dayPl : 0) : 0;
+                          if (meseStaked > 0) {
+                            const yieldVal = Math.round((mesePl / meseStaked) * 1000) / 10;
                             items.push({ label: 'Yield Mese', value: `${yieldVal > 0 ? '+' : ''}${yieldVal}%`, color: yieldVal >= 0 ? theme.financePositive : theme.missText });
                           }
-                          // Yield Totale = (P/L totale / Somma Stake totali) × 100
+                          // Yield Totale = (P/L totale + oggi) / (Staked totale + oggi) × 100
                           const totSrc = totalPLData[tabKey];
-                          if (totSrc && totSrc.staked > 0) {
-                            const yieldTot = Math.round((totSrc.pl / totSrc.staked) * 1000) / 10;
+                          const totStaked = totSrc ? totSrc.staked + (isDateToday ? dayStaked : 0) : 0;
+                          const totPl = totSrc ? totSrc.pl + (isDateToday ? dayPl : 0) : 0;
+                          if (totStaked > 0) {
+                            const yieldTot = Math.round((totPl / totStaked) * 1000) / 10;
                             items.push({ label: 'Yield Totale', value: `${yieldTot > 0 ? '+' : ''}${yieldTot}%`, color: yieldTot >= 0 ? theme.financePositive : theme.missText });
                           }
                           return items;

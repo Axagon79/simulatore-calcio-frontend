@@ -1094,7 +1094,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const getEffectiveHit = (pred: { date: string; match_time: string; real_score?: string | null; live_score?: string | null; live_status?: string | null }, p: { hit?: boolean | null; pronostico: string; tipo: string }): boolean | null => {
     if (p.pronostico === 'NO BET') return null;
     if (p.hit === true || p.hit === false) return p.hit;
-    if (pred.real_score) return p.hit ?? null;
+    if (pred.real_score) return calculateHitFromScore(pred.real_score, p.pronostico, p.tipo);
     if (pred.live_score && isMatchOver(pred)) return calculateHitFromScore(pred.live_score, p.pronostico, p.tipo);
     return null;
   };
@@ -1285,8 +1285,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       (rePredictions.find(rp => rp.home === pred.home && rp.away === pred.away)?._rePreds || []).map((pr: any) => normalizeScore(pr.pronostico))
     );
     const effPredHit = effScore ? pred.pronostici?.some(p => {
-      if (pred.real_score) return p.hit === true;
-      return calculateHitFromScore(pred.live_score!, p.pronostico, p.tipo) === true;
+      const score = pred.real_score || pred.live_score;
+      return score ? calculateHitFromScore(score, p.pronostico, p.tipo) === true : false;
     }) ?? null : null;
     const isNoBet = !hasRealTip(pred);
     const barColor = effScore ? (isNoBet ? theme.textDim : effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
@@ -3432,8 +3432,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
                         const matchesFinished = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
                         const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
-                          if (p.real_score) return pr.hit === true;
-                          return calculateHitFromScore(p.live_score!, pr.pronostico, pr.tipo) === true;
+                          const score = p.real_score || p.live_score;
+                          return score ? calculateHitFromScore(score, pr.pronostico, pr.tipo) === true : false;
                         })).length;
                         const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;

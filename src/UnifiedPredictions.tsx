@@ -12,6 +12,7 @@ type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng'
 // --- TEMA (centralizzato) ---
 import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
 import { sharePrediction } from './utils/shareCard';
+import { getRoutingRule, isOptimized } from './utils/routingRules';
 import StemmaImg from './components/StemmaImg';
 import LogoVirgo from './components/LogoVirgo';
 const theme = getTheme();
@@ -531,6 +532,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [reHitFilter, setReHitFilter] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [finLegendOpen, setFinLegendOpen] = useState(false);
+  const [routingPopup, setRoutingPopup] = useState<{rule: string, original?: string, originalQuota?: number, current: string, currentQuota?: number, description: string, category: string} | null>(null);
   const [filtersStatsOpen, setFiltersStatsOpen] = useState(false);
   // Definizioni mercati (per capsule + filtraggio)
   const MARKET_DEFS: { id: MarketFilter; label: string; filter: (t: any) => boolean; color: string }[] = [
@@ -1624,6 +1626,34 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           {source.includes('_screm') ? 'S8F' : source}
                         </span>
                       )}
+                      {(() => {
+                        const rr = getRoutingRule((p as any).routing_rule, isLight);
+                        if (!rr || !isOptimized((p as any).routing_rule)) return null;
+                        return (
+                          <span
+                            title={rr.description}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRoutingPopup({
+                                rule: (p as any).routing_rule,
+                                original: (p as any).original_pronostico,
+                                originalQuota: (p as any).original_quota,
+                                current: p.pronostico,
+                                currentQuota: p.quota,
+                                description: rr.description,
+                                category: rr.label,
+                              });
+                            }}
+                            style={{
+                              fontSize: '8px', fontWeight: '700',
+                              color: rr.color, background: rr.bg,
+                              borderRadius: '3px', padding: '1px 4px',
+                              cursor: 'pointer',
+                            }}>
+                            {rr.label}
+                          </span>
+                        );
+                      })()}
                       {isAdmin && p.edge != null && p.edge > 0 && (
                         <span style={{ fontSize: '8px', color: theme.textFaint }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
                           E:+{p.edge?.toFixed(1)}%
@@ -4444,6 +4474,84 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         probabilitaStimata={addBetPopup.probabilitaStimata}
         systemStake={addBetPopup.systemStake}
       />
+
+      {/* Popup Routing Rule */}
+      {routingPopup && (
+        <div
+          onClick={() => setRoutingPopup(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', zIndex: 99999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px',
+          }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: isLight ? '#fff' : theme.panel,
+              border: `1px solid ${isLight ? '#d1d5db' : theme.panelBorder}`,
+              borderRadius: '10px', padding: '20px',
+              maxWidth: '400px', width: '100%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '14px', fontWeight: '800', color: theme.text }}>Regola Orchestratore</span>
+              <span
+                onClick={() => setRoutingPopup(null)}
+                style={{ fontSize: '18px', cursor: 'pointer', color: theme.textDim, lineHeight: 1 }}>✕</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {(() => {
+                const rr = getRoutingRule(routingPopup.rule, isLight);
+                return rr ? (
+                  <div style={{
+                    display: 'inline-flex', alignSelf: 'flex-start',
+                    fontSize: '11px', fontWeight: '700',
+                    color: rr.color, background: rr.bg,
+                    borderRadius: '4px', padding: '3px 8px',
+                  }}>
+                    {rr.label}
+                  </div>
+                ) : null;
+              })()}
+              <div style={{ fontSize: '13px', color: theme.text, lineHeight: 1.5 }}>
+                {routingPopup.description}
+              </div>
+              {routingPopup.original && (
+                <div style={{
+                  background: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.05)',
+                  borderRadius: '6px', padding: '10px',
+                }}>
+                  <div style={{ fontSize: '11px', color: theme.textDim, marginBottom: '6px', fontWeight: '600' }}>Trasformazione</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '13px', fontWeight: '700',
+                      color: isLight ? '#dc2626' : '#f87171',
+                      background: isLight ? 'rgba(220,38,38,0.08)' : 'rgba(248,113,113,0.12)',
+                      borderRadius: '4px', padding: '3px 8px',
+                      textDecoration: 'line-through',
+                    }}>
+                      {routingPopup.original}{routingPopup.originalQuota ? ` @${routingPopup.originalQuota.toFixed(2)}` : ''}
+                    </span>
+                    <span style={{ fontSize: '14px', color: theme.textDim }}>→</span>
+                    <span style={{
+                      fontSize: '13px', fontWeight: '700',
+                      color: isLight ? '#059669' : '#34d399',
+                      background: isLight ? 'rgba(5,150,105,0.08)' : 'rgba(52,211,153,0.12)',
+                      borderRadius: '4px', padding: '3px 8px',
+                    }}>
+                      {routingPopup.current}{routingPopup.currentQuota ? ` @${routingPopup.currentQuota.toFixed(2)}` : ''}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div style={{ fontSize: '11px', color: theme.textFaint, fontFamily: 'monospace' }}>
+                rule: {routingPopup.rule}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

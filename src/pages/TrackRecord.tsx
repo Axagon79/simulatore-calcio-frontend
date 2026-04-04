@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getThemeMode, API_BASE } from '../AppDev/costanti';
+import { getRoutingRule, isOptimized, CATEGORY_LABELS, type RoutingCategory } from '../utils/routingRules';
 
 
 
@@ -47,6 +48,7 @@ interface TrackRecordResponse {
   breakdown_campionato: Record<string, HitRateData>;
   breakdown_confidence: Record<string, HitRateData>;
   breakdown_stelle: Record<string, HitRateData>;
+  breakdown_routing_rule: Record<string, QuotaBandData>;
   breakdown_quota: Record<string, QuotaBandData>;
   quota_stats: QuotaStats;
   cross_quota_mercato: Record<string, Record<string, HitRateData>>;
@@ -1096,6 +1098,54 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
                       )}
                     </div>
                   ))}
+              </div>
+            </div>
+            );
+          })()}
+
+          {/* ─── Per Regola Orchestratore ──────────────────────────────── */}
+          {data.breakdown_routing_rule && Object.keys(data.breakdown_routing_rule).length > 0 && (() => {
+            const isLightMode = getThemeMode() === 'light';
+            // Filtra solo regole ottimizzate (non base), ordina per P/L
+            const entries = Object.entries(data.breakdown_routing_rule)
+              .filter(([rule]) => isOptimized(rule))
+              .sort(([, a], [, b]) => b.profit - a.profit);
+            if (entries.length === 0) return null;
+            return (
+            <div style={card}>
+              <div style={sectionTitle}>Per Regola Orchestratore</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {entries.map(([rule, stats]) => {
+                  const rr = getRoutingRule(rule, isLightMode);
+                  return (
+                    <div key={rule} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        minWidth: isMobile ? '65px' : '80px',
+                        fontSize: '0.78em', fontWeight: 700,
+                        color: rr?.color || C.textSec,
+                        background: rr?.bg || 'transparent',
+                        borderRadius: '3px', padding: '1px 5px',
+                        textAlign: 'center',
+                      }} title={rr?.description || rule}>
+                        {rr?.label || rule}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <ProgressBar rate={stats.hit_rate ?? 0} showLabel arMode={!isPronostici} />
+                      </div>
+                      <div style={{ minWidth: '50px', textAlign: 'right', fontSize: '0.78em', color: C.textMuted }}>
+                        {stats.hits}/{stats.total}
+                      </div>
+                      <div style={{ minWidth: '55px', textAlign: 'right', fontSize: '0.78em', fontWeight: 600, color: profitColor(stats.profit) }}>
+                        {stats.profit > 0 ? '+' : ''}{stats.profit}u
+                      </div>
+                      {stats.roi != null && (
+                        <div style={{ minWidth: '48px', textAlign: 'right', fontSize: '0.75em', color: profitColor(stats.roi) }}>
+                          {stats.roi > 0 ? '+' : ''}{stats.roi}%
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             );

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getThemeMode, API_BASE } from '../AppDev/costanti';
-import { getRoutingRule, isOptimized, CATEGORY_LABELS, type RoutingCategory } from '../utils/routingRules';
+import { getRoutingRule, isOptimized } from '../utils/routingRules';
 
 
 

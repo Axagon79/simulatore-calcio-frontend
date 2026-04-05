@@ -1605,7 +1605,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       background: pillBg, border: `1px solid ${pillBorder}`,
                       borderRadius: isExpanded ? '5px 5px 0 0' : '5px', padding: '3px 8px',
                       display: 'flex', alignItems: 'center', gap: '6px',
-                      cursor: 'pointer',
+                      cursor: 'pointer', overflow: 'hidden',
                       ...(isMobile ? { flexWrap: 'wrap' as const } : {})
                     }}
                       onClick={(e) => { e.stopPropagation(); toggleVersionHistory(pillKey, matchKey); }}
@@ -1617,11 +1617,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                       {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {source && (
-                        <span style={{
+                        <span title={source} style={{
                           fontSize: '8px', fontWeight: '700',
                           color: source.includes('_screm') ? (isLight ? '#9333ea' : '#c084fc') : '#a78bfa',
                           background: source.includes('_screm') ? 'rgba(192,132,252,0.12)' : 'rgba(167,139,250,0.12)',
                           borderRadius: '3px', padding: '1px 4px',
+                          ...(!isMobile ? { maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle', minWidth: 0, flexShrink: 1 } : {}),
                         }}>
                           {source.includes('_screm') ? 'S8F' : source}
                         </span>
@@ -1649,13 +1650,14 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               color: rr.color, background: rr.bg,
                               borderRadius: '3px', padding: '1px 4px',
                               cursor: 'pointer',
+                              ...(!isMobile ? { maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle', minWidth: 0, flexShrink: 1 } : {}),
                             }}>
                             {rr.label}
                           </span>
                         );
                       })()}
                       {isAdmin && p.edge != null && p.edge > 0 && (
-                        <span style={{ fontSize: '8px', color: theme.textFaint }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
+                        <span style={{ fontSize: '8px', color: theme.textFaint, whiteSpace: 'nowrap', flexShrink: 0 }} title={`Prob: ${p.probabilita_stimata}% | Mkt: ${p.prob_mercato}% | Mod: ${p.prob_modello}%`}>
                           E:+{p.edge?.toFixed(1)}%
                         </span>
                       )}
@@ -1663,6 +1665,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{
                           fontSize: '9px', fontWeight: '800', color: getStakeColor(p.stake),
                           background: theme.surface05, borderRadius: '3px', padding: '1px 4px',
+                          whiteSpace: 'nowrap', flexShrink: 0,
                         }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
                           Stake:{p.stake}
                         </span>
@@ -1680,11 +1683,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
                         title="Storico versioni"
                       >▼</span>
-                      {isHit !== null && <span style={{ fontSize: '11px', marginLeft: 'auto' }}>{isHit ? '✅' : '❌'}</span>}
+                      {isHit !== null && <span style={{ fontSize: '11px', marginLeft: 'auto', flexShrink: 0 }}>{isHit ? '✅' : '❌'}</span>}
                       {!effScore && quota && (
                         <span
                           onClick={(e) => { e.stopPropagation(); setAddBetPopup({isOpen: true, home: pred.home, away: pred.away, market: p.tipo, prediction: p.pronostico, odds: Number(quota), confidence: p.confidence, probabilitaStimata: (p as any).probabilita_stimata, systemStake: p.stake}); }}
-                          style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: isHit !== null ? '4px' : 'auto', opacity: 0.7, transition: 'opacity 0.2s' }}
+                          style={{ fontSize: '11px', cursor: 'pointer', color: theme.gold, marginLeft: isHit !== null ? '4px' : 'auto', opacity: 0.7, transition: 'opacity 0.2s', flexShrink: 0 }}
                           onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                           onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
                           title="Salva nel Tracker"

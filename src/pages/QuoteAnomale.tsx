@@ -620,7 +620,7 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
       borderLeft: `3px solid ${hasPreds ? accent : (isLight ? '#cbd5e1' : '#334155')}`,
     }}>
       <div style={{ fontSize: compact ? 8 : 9, color: theme.textDim, marginBottom: hasPreds ? 5 : 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        Pronostici Segno
+        Pronostici
       </div>
       {!hasPreds ? (
         <div>
@@ -630,7 +630,7 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
             padding: '2px 0',
           }}>
             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: isLight ? '#cbd5e1' : '#475569' }} />
-            Nessun pronostico SEGNO emesso dai nostri sistemi per questa partita
+            Nessun pronostico emesso dai nostri sistemi per questa partita
           </div>
           {/* Analisi di mercato standalone */}
           <div style={{ marginTop: 4 }}>
@@ -662,7 +662,10 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
         const isDC = entry.tipo === 'DOPPIA_CHANCE';
         const isBP = preds.some(p => p.pronostico === sign && p.bestPick);
         const isOpen = expanded === sign;
-        const tipoLabel = isDC ? 'DC' : 'Segno';
+        const tipoLabel = entry.tipo === 'DOPPIA_CHANCE' ? 'DC'
+          : entry.tipo === 'GOL' ? 'Gol'
+          : entry.tipo === 'RISULTATO_ESATTO' ? 'RE'
+          : 'Segno';
         const bpColor = isBP ? '#10b981' : '#f59e0b';
 
         return (
@@ -682,8 +685,8 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   minWidth: compact ? 16 : 18, height: compact ? 16 : 18,
-                  borderRadius: isDC ? 3 : '50%',
-                  padding: isDC ? '0 3px' : 0,
+                  borderRadius: entry.tipo === 'SEGNO' ? '50%' : 3,
+                  padding: entry.tipo === 'SEGNO' ? 0 : '0 3px',
                   background: accent, color: '#fff',
                   fontWeight: 800, fontSize: compact ? 9 : 10, fontFamily: 'monospace',
                 }}>{sign}</span>

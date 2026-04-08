@@ -20,8 +20,8 @@ export default function WalletBadge() {
   // o su rotta AppDev catchall (qualsiasi path non in lista rotte esplicite)
   const EXPLICIT_ROUTES = [
     '/best-picks', '/wallet', '/step-system', '/money-tracker',
-    '/money-management', '/bankroll', '/track-record', '/sistema-c',
-    '/analisi-storica', '/simulate', '/prezzi', '/mixer', '/predictions-mixer',
+    '/money-management', '/bankroll', '/sistema-c',
+    '/simulate', '/prezzi',
   ];
 
   const isExplicitRoute = EXPLICIT_ROUTES.some(r => path === r || path.startsWith(r + '/'));

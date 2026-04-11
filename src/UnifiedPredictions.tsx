@@ -3689,7 +3689,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           >
                             <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textDim, fontWeight: '700', lineHeight: '14px' }}>{g.label}</span>
                             <span style={{ fontSize: '10px', color: isActive ? g.color : theme.textFaint, fontWeight: '600', lineHeight: '14px' }}>{g.total}</span>
-                            {g.hr !== null && <span style={{ fontSize: '10px', fontWeight: '700', color: g.hr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{g.hr}%</span>}
+                            {g.hr !== null ? <span style={{ fontSize: '10px', fontWeight: '700', color: g.hr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{g.hr}%</span> : <span style={{ fontSize: '10px', fontWeight: '600', color: theme.textDisabled, lineHeight: '14px' }}>-</span>}
                           </button>
                         );
                       })}

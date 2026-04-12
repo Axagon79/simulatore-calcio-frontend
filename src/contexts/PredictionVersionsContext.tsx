@@ -2,7 +2,19 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, ty
 import { API_BASE } from '../AppDev/costanti';
 
 // --- Tipi ---
-interface PredictionVersion {
+interface PredictionVersionLight {
+  match_key: string;
+  home: string;
+  away: string;
+  league?: string;
+  match_time?: string;
+  home_mongo_id?: string;
+  away_mongo_id?: string;
+  odds?: Record<string, number>;
+  pronostici_tipi?: string[][];
+}
+
+interface PredictionVersionFull {
   match_key: string;
   date: string;
   home: string;
@@ -18,8 +30,9 @@ interface PredictionVersion {
 }
 
 interface PredictionVersionsContextType {
-  getVersions: (date: string) => PredictionVersion[] | null;
-  fetchVersions: (date: string) => Promise<PredictionVersion[]>;
+  getVersionsLight: (date: string) => PredictionVersionLight[] | null;
+  fetchVersionsLight: (date: string) => Promise<PredictionVersionLight[]>;
+  fetchVersionsFull: (date: string, match_key: string) => Promise<PredictionVersionFull[]>;
   loading: boolean;
 }
 
@@ -44,14 +57,27 @@ function getOtherDates(): string[] {
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const adminHeaders: HeadersInit = isLocalhost ? { 'x-admin-key': '000128' } : {};
 
-async function fetchOne(date: string): Promise<{ date: string; versions: PredictionVersion[] }> {
+// Fetch leggera: solo campi minimi per partite ritirate
+async function fetchLight(date: string): Promise<PredictionVersionLight[]> {
   try {
-    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}`, { headers: adminHeaders });
-    if (!res.ok) return { date, versions: [] };
+    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&keys_only=true`, { headers: adminHeaders });
+    if (!res.ok) return [];
     const data = await res.json();
-    return { date, versions: data.versions || [] };
+    return data.versions || [];
   } catch {
-    return { date, versions: [] };
+    return [];
+  }
+}
+
+// Fetch completa: storico versioni per singola partita
+async function fetchFull(date: string, match_key: string): Promise<PredictionVersionFull[]> {
+  try {
+    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&match_key=${encodeURIComponent(match_key)}`, { headers: adminHeaders });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.versions || [];
+  } catch {
+    return [];
   }
 }
 
@@ -59,18 +85,17 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionVersionsProvider({ children }: { children: ReactNode }) {
-  const cacheRef = useRef<Record<string, PredictionVersion[]>>({});
-  const inflightRef = useRef<Record<string, Promise<PredictionVersion[]>>>({});
+  const cacheRef = useRef<Record<string, PredictionVersionLight[]>>({});
+  const inflightRef = useRef<Record<string, Promise<PredictionVersionLight[]>>>({});
   const [loading, setLoading] = useState(true);
 
-  // Fetch singola con dedup: se già in corso, ritorna la stessa Promise
-  const fetchWithDedup = useCallback(async (date: string): Promise<PredictionVersion[]> => {
+  const fetchWithDedup = useCallback(async (date: string): Promise<PredictionVersionLight[]> => {
     if (cacheRef.current[date]) return cacheRef.current[date];
     if (inflightRef.current[date]) return inflightRef.current[date];
-    const promise = fetchOne(date).then(r => {
-      cacheRef.current[date] = r.versions;
+    const promise = fetchLight(date).then(versions => {
+      cacheRef.current[date] = versions;
       delete inflightRef.current[date];
-      return r.versions;
+      return versions;
     });
     inflightRef.current[date] = promise;
     return promise;
@@ -80,14 +105,12 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
     let cancelled = false;
 
     const prefetchAll = async () => {
-      // Carica solo oggi subito
       const today = getToday();
       const versions = await fetchWithDedup(today);
       if (cancelled) return;
       cacheRef.current[today] = versions;
       setLoading(false);
 
-      // Poi carica le altre date in background con calma
       const others = getOtherDates();
       for (const date of others) {
         if (cancelled) return;
@@ -106,16 +129,20 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
     return () => { cancelled = true; clearInterval(interval); };
   }, [fetchWithDedup]);
 
-  const getVersions = useCallback((date: string): PredictionVersion[] | null => {
+  const getVersionsLight = useCallback((date: string): PredictionVersionLight[] | null => {
     return cacheRef.current[date] ?? null;
   }, []);
 
-  const fetchVersions = useCallback(async (date: string): Promise<PredictionVersion[]> => {
+  const fetchVersionsLight = useCallback(async (date: string): Promise<PredictionVersionLight[]> => {
     return fetchWithDedup(date);
   }, [fetchWithDedup]);
 
+  const fetchVersionsFull = useCallback(async (date: string, match_key: string): Promise<PredictionVersionFull[]> => {
+    return fetchFull(date, match_key);
+  }, []);
+
   return (
-    <PredictionVersionsContext.Provider value={{ getVersions, fetchVersions, loading }}>
+    <PredictionVersionsContext.Provider value={{ getVersionsLight, fetchVersionsLight, fetchVersionsFull, loading }}>
       {children}
     </PredictionVersionsContext.Provider>
   );

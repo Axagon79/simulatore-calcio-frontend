@@ -297,13 +297,15 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [predDetail, setPredDetail] = useState<Record<string, any>>({});
+  const [predDetailLoading, setPredDetailLoading] = useState<Set<string>>(new Set());
   const predCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento' | 'elite'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const { calcola: calcolaPL } = usePLStorico();
-  const { getVersions, fetchVersions } = usePredictionVersions();
+  const { getVersionsLight, fetchVersionsLight, fetchVersionsFull } = usePredictionVersions();
   const { getPredictions: getCachedPredictions, fetchPredictions: fetchCachedPredictions } = usePredictionsCache();
   const plCalcolato = useMemo(() => calcolaPL(date), [calcolaPL, date]);
   const dailyPLData = plCalcolato.giorno;
@@ -374,11 +376,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 
     setVersionLoading(prev => new Set([...prev, fetchKey]));
     try {
-      const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&match_key=${encodeURIComponent(fetchKey)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setVersionCache(prev => ({ ...prev, [fetchKey]: data.versions || [] }));
-      }
+      const versions = await fetchVersionsFull(date, fetchKey);
+      setVersionCache(prev => ({ ...prev, [fetchKey]: versions }));
     } catch { /* silent */ }
     setVersionLoading(prev => { const s = new Set(prev); s.delete(fetchKey); return s; });
   };
@@ -597,6 +596,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     setSourceFilter('tutti');
     setPatternFilter('tutti');
     setReHitFilter(false);
+    setPredDetail({});
+    setPredDetailLoading(new Set());
   }, [date]);
 
   useEffect(() => {
@@ -635,45 +636,29 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         // Merge: aggiungi partite ritirate da prediction_versions (dal context o fetch on-demand)
         {
           try {
-            const versions = getVersions(date) ?? await fetchVersions(date);
+            const versionsLight = getVersionsLight(date) ?? await fetchVersionsLight(date);
             // Normalizza come fa il backend: lowercase + spazi → underscore
             const normalizeKey = (d: string, h: string, a: string) =>
               `${d}_${h.trim().toLowerCase().replace(/\s+/g, '_')}_${a.trim().toLowerCase().replace(/\s+/g, '_')}`;
             const unifiedKeys = new Set(unified.map(p => normalizeKey(p.date, p.home, p.away)));
 
-            // Raggruppa versioni per match_key
-            const versionsByMatch: Record<string, any[]> = {};
-            for (const v of versions) {
-              if (!versionsByMatch[v.match_key]) versionsByMatch[v.match_key] = [];
-              versionsByMatch[v.match_key].push(v);
-            }
-
-            // Aggiungi partite che sono solo in prediction_versions (ritirate)
-            // Solo se almeno una versione aveva pronostici (= è stata selezionata almeno una volta)
-            for (const [matchKey, matchVersions] of Object.entries(versionsByMatch)) {
-              if (unifiedKeys.has(matchKey)) continue;
-              // Double-check con normalizzazione dal latest per evitare duplicati
-              const latest0 = matchVersions[matchVersions.length - 1];
-              if (latest0?.home && latest0?.away) {
-                const altKey = normalizeKey(latest0.date || date, latest0.home, latest0.away);
+            // Ogni elemento è già l'ultima versione di una partita (aggregato server-side)
+            for (const v of versionsLight) {
+              if (unifiedKeys.has(v.match_key)) continue;
+              // Double-check con normalizzazione per evitare duplicati
+              if (v.home && v.away) {
+                const altKey = normalizeKey(date, v.home, v.away);
                 if (unifiedKeys.has(altKey)) continue;
               }
-              // Skip se nessuna versione ha mai avuto pronostici (mai entrata nella selezione)
-              const everHadPicks = matchVersions.some((v: any) => v.pronostici && v.pronostici.length > 0);
-              if (!everHadPicks) continue;
-              // Prendi la versione più recente per i dati base
-              const latest = matchVersions[matchVersions.length - 1];
-              if (!latest) continue;
-              // Crea entry fantasma con badge NO BET
-              // Recupera i tipi di mercato che avevano pronostici nelle versioni precedenti
+
+              // Recupera i tipi di mercato dalle versioni precedenti
               const allPrevTypes = new Set<string>();
-              for (const v of matchVersions) {
-                for (const pr of (v.pronostici || [])) {
-                  if (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') allPrevTypes.add('SEGNO');
-                  else if (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO') allPrevTypes.add('GOL');
+              for (const tipiArr of (v.pronostici_tipi || [])) {
+                for (const tipo of (tipiArr || [])) {
+                  if (tipo === 'SEGNO' || tipo === 'DOPPIA_CHANCE') allPrevTypes.add('SEGNO');
+                  else if (tipo === 'GOL' || tipo === 'RISULTATO_ESATTO') allPrevTypes.add('GOL');
                 }
               }
-              // Almeno SEGNO come fallback
               if (allPrevTypes.size === 0) allPrevTypes.add('SEGNO');
 
               const ghostPronostici: any[] = [];
@@ -681,13 +666,13 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
               if (allPrevTypes.has('GOL')) ghostPronostici.push({ tipo: 'GOL', pronostico: 'NO BET', confidence: 0, stars: 0 });
 
               const ghostPred: Prediction = {
-                date: latest.date || date,
-                home: latest.home || matchKey.split('_')[1] || '?',
-                away: latest.away || matchKey.split('_')[2] || '?',
-                league: latest.league || '',
-                match_time: latest.match_time || '',
-                home_mongo_id: latest.home_mongo_id,
-                away_mongo_id: latest.away_mongo_id,
+                date: date,
+                home: v.home || v.match_key.split('_')[1] || '?',
+                away: v.away || v.match_key.split('_')[2] || '?',
+                league: v.league || '',
+                match_time: v.match_time || '',
+                home_mongo_id: v.home_mongo_id,
+                away_mongo_id: v.away_mongo_id,
                 decision: 'NO_BET',
                 pronostici: ghostPronostici,
                 confidence_segno: 0,
@@ -695,7 +680,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
                 stars_segno: 0,
                 stars_gol: 0,
                 comment: 'Pronostico ritirato',
-                odds: latest.odds || [...matchVersions].reverse().find((v: any) => v.odds)?.odds || { '1': 0, '2': 0, 'X': 0 },
+                odds: (v.odds as any) || { '1': 0, '2': 0, 'X': 0 },
                 segno_dettaglio: {},
                 gol_dettaglio: {},
               };
@@ -1300,7 +1285,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const hasComment = typeof pred.comment === 'string'
       ? pred.comment.length > 0
       : (pred.comment?.segno || pred.comment?.gol || pred.comment?.doppia_chance || pred.comment?.gol_extra);
-    const hasDetail = !!(pred.segno_dettaglio || pred.gol_dettaglio || (pred.streak_home && pred.streak_away));
+    const hasDetail = !!(pred.segno_dettaglio || pred.gol_dettaglio || (pred.streak_home && pred.streak_away) || (pred.decision !== 'NO_BET' && pred.pronostici?.some((p: any) => p.pronostico !== 'NO BET')));
     const bestConf = Math.max(pred.confidence_segno || 0, pred.confidence_gol || 0);
     const effScore = getEffectiveScore(pred);
     const reScoresForCard = new Set(
@@ -1313,6 +1298,20 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const isNoBet = !hasRealTip(pred);
     const barColor = effScore ? (isNoBet ? theme.textDim : effPredHit ? theme.hitText : theme.missText) : getConfidenceColor(bestConf);
     const isCardExpanded = expandedCards.has(cardKey);
+    // Merge dettagli on-demand (caricati al click)
+    const predDetailKey = `${pred.date}|${pred.home}|${pred.away}`;
+    const detail = predDetail[predDetailKey];
+    if (detail) {
+      if (detail.segno_dettaglio && !pred.segno_dettaglio) pred.segno_dettaglio = detail.segno_dettaglio;
+      if (detail.segno_dettaglio_raw && !pred.segno_dettaglio_raw) pred.segno_dettaglio_raw = detail.segno_dettaglio_raw;
+      if (detail.gol_dettaglio && !pred.gol_dettaglio) pred.gol_dettaglio = detail.gol_dettaglio;
+      if (detail.simulation_data && !(pred as any).simulation_data) (pred as any).simulation_data = detail.simulation_data;
+      if (detail.analysis_free && !pred.analysis_free) pred.analysis_free = detail.analysis_free;
+      if (detail.streak_home && !pred.streak_home) pred.streak_home = detail.streak_home;
+      if (detail.streak_away && !pred.streak_away) pred.streak_away = detail.streak_away;
+      if (detail.streak_home_context && !pred.streak_home_context) pred.streak_home_context = detail.streak_home_context;
+      if (detail.streak_away_context && !pred.streak_away_context) pred.streak_away_context = detail.streak_away_context;
+    }
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
     const matchKey = `${pred.date}_${pred.home}_${pred.away}`;
@@ -1324,7 +1323,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const isPremiumBusy = !!premiumLoading[matchId];
     const isDeepDiveLoaded = !!deepdiveAnalysis[matchId] || !!pred.analysis_deepdive;
     const isDeepDiveBusy = !!deepdiveLoading[matchId];
-    const hasAnalysis = !!pred.analysis_free && pred.analysis_score !== undefined;
+    const hasAnalysis = pred.analysis_score !== undefined;
     const analysisScore = pred.analysis_score ?? 0;
     const analysisScoreColor = analysisScore >= 70 ? theme.success : analysisScore >= 40 ? '#facc15' : theme.danger;
 
@@ -1410,7 +1409,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             setExpandedCards(prev => {
               const next = new Set(prev);
               if (next.has(cardKey)) next.delete(cardKey);
-              else next.add(cardKey);
+              else {
+                next.add(cardKey);
+                // Carica dettagli on-demand se non già caricati
+                const dk = `${pred.date}|${pred.home}|${pred.away}`;
+                if (!predDetail[dk] && !predDetailLoading.has(dk)) {
+                  setPredDetailLoading(prev => new Set([...prev, dk]));
+                  fetch(`${API_BASE}/simulation/prediction-detail?date=${encodeURIComponent(pred.date)}&home=${encodeURIComponent(pred.home)}&away=${encodeURIComponent(pred.away)}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                      if (data?.success && data.detail) {
+                        setPredDetail(prev => ({ ...prev, [dk]: data.detail }));
+                      }
+                    })
+                    .catch(() => {})
+                    .finally(() => setPredDetailLoading(prev => { const s = new Set(prev); s.delete(dk); return s; }));
+                }
+              }
               return next;
             });
             // Mantieni la posizione visiva della riga dopo l'espansione
@@ -2483,9 +2498,26 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <div
                   className="detail-section-header"
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '10px', color: theme.textDim, userSelect: 'none' as const }}
-                  onClick={(e) => toggleSection(detailKey, e)}
+                  onClick={(e) => {
+                    toggleSection(detailKey, e);
+                    // Carica dettagli on-demand se non già caricati
+                    const dk = `${pred.date}|${pred.home}|${pred.away}`;
+                    if (!predDetail[dk] && !predDetailLoading.has(dk)) {
+                      setPredDetailLoading(prev => new Set([...prev, dk]));
+                      fetch(`${API_BASE}/simulation/prediction-detail?date=${encodeURIComponent(pred.date)}&home=${encodeURIComponent(pred.home)}&away=${encodeURIComponent(pred.away)}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} })
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                          if (data?.success && data.detail) {
+                            setPredDetail(prev => ({ ...prev, [dk]: data.detail }));
+                          }
+                        })
+                        .catch(() => {})
+                        .finally(() => setPredDetailLoading(prev => { const s = new Set(prev); s.delete(dk); return s; }));
+                    }
+                  }}
                 >
                   <span>📊 Dettaglio</span>
+                  {predDetailLoading.has(predDetailKey) && <span style={{ fontSize: '9px' }}>⏳</span>}
                   <span style={{ transition: 'transform 0.2s', transform: isDetailOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                 </div>
               )}

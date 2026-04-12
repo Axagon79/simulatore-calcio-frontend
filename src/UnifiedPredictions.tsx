@@ -1539,7 +1539,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             onClick={(e) => { e.stopPropagation(); toggleSection(tipsKey, e); }}
           >
             <span style={{ fontSize: '9px', fontWeight: '600', color: theme.cyan, letterSpacing: '0.3px' }}>
-              {pred.pronostici?.length || 0} tip
+              {pred.pronostici?.filter(p => p.pronostico !== 'NO BET').length || 0} tip
             </span>
             <span style={{ fontSize: '9px', color: theme.cyan, transition: 'transform 0.2s', transform: isTipsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </div>
@@ -1568,7 +1568,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   </div>
                 )}
                 <div style={{ filter: canSee ? 'none' : 'blur(6px)', pointerEvents: canSee ? 'auto' as const : 'none' as const, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {pred.pronostici?.map((p, i) => {
+                {pred.pronostici?.filter(p => p.pronostico !== 'NO BET').map((p, i) => {
                   const isHit = getEffectiveHit(pred, p);
                   const pillBg = isHit === true ? theme.hitBg : isHit === false ? theme.missBg : theme.surface05;
                   const pillBorder = isHit === true ? theme.hitBorder : isHit === false ? theme.missBorder : theme.surface15;

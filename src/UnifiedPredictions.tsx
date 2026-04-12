@@ -531,6 +531,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [marketsOpen, setMarketsOpen] = useState(false);
   const [reHitFilter, setReHitFilter] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [patternFilter, setPatternFilter] = useState<string>('tutti');
+  const [patternsOpen, setPatternsOpen] = useState(false);
   const [finLegendOpen, setFinLegendOpen] = useState(false);
   const [routingPopup, setRoutingPopup] = useState<{rule: string, original?: string, originalQuota?: number, current: string, currentQuota?: number, description: string, category: string} | null>(null);
   const [filtersStatsOpen, setFiltersStatsOpen] = useState(false);
@@ -578,11 +580,22 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     return p.pronostici?.some((t: any) => sg.match(t.source || '')) ?? false;
   };
 
+  // Funzione filtraggio pattern su prediction (solo tab elite)
+  const predMatchesPattern = (p: Prediction): boolean => {
+    if (patternFilter === 'tutti') return true;
+    return p.pronostici?.some((t: any) => {
+      const prod = t.elite_patterns || [];
+      const trial = t.elite_patterns_trial || [];
+      return prod.includes(patternFilter) || trial.includes(patternFilter);
+    }) ?? false;
+  };
+
   // Reset filtri al cambio data
   useEffect(() => {
     setStatusFilter('tutte');
     setMarketFilter('tutti');
     setSourceFilter('tutti');
+    setPatternFilter('tutti');
     setReHitFilter(false);
   }, [date]);
 
@@ -1234,7 +1247,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   const filteredElite = elitePredictions
     .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
     .filter(predMatchesMarket)
-    .filter(predMatchesSource);
+    .filter(predMatchesSource)
+    .filter(predMatchesPattern);
   const filteredEliteByLeague = filteredElite.reduce<Record<string, Prediction[]>>((acc, p) => {
     if (!acc[p.league]) acc[p.league] = [];
     acc[p.league].push(p);
@@ -3695,6 +3709,130 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       })}
                     </div>
                     )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+            {/* Contenitore Pattern — solo tab Elite + admin */}
+            {activeTab === 'elite' && isAdmin && (() => {
+              // Tooltip descrizioni pattern
+              const PATTERN_LABELS: Record<string, string> = {
+                P1: 'SEGNO q1.50-1.79 stelle 3.0-3.5',
+                P2: 'SEGNO q1.50-1.79 conf 50-59',
+                P3: 'DC C_screm q2.00-2.49',
+                P4: 'GOL q1.30-1.49 conf 70-79',
+                P5: 'DC q2.00-2.49',
+                P6: 'SEGNO conf ≥80',
+                P7: 'DC q1.30-1.49 conf 60-69',
+                P8: 'GOL A+S q1.30-1.49',
+                P9: 'DC q1.40-1.49 conf ≥60',
+                P10: 'Multigol 2-4',
+                P11: 'GOL q1.30-1.39 conf ≥70',
+                P12: 'DC q1.40-1.49 stelle ≥3',
+                P13: 'GOL q1.30-1.39 A+S',
+                P14: 'GOL q1.50-1.59 C_screm',
+                P15: 'SEGNO q1.80-1.99 conf ≥80',
+                P16: 'DC q1.30-1.49 conf 70-79',
+                P17: 'SEGNO pron=1 q1.60-1.79 single stelle ≥3',
+                P18: 'SEGNO q1.60-1.79 src=C stelle ≥3',
+              };
+              const TRIAL_SET = new Set(['P17', 'P18']);
+              // Conta pronostici e HR per pattern
+              const patternCounts: Record<string, number> = {};
+              const patternHits: Record<string, number> = {};
+              const patternFinished: Record<string, number> = {};
+              let totalEliteTips = 0;
+              const sourcePreds = elitePredictions.filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter));
+              sourcePreds.forEach(p => {
+                p.pronostici?.forEach((t: any) => {
+                  if (!t.elite) return;
+                  const all = [...(t.elite_patterns || []), ...(t.elite_patterns_trial || [])];
+                  const hit = getEffectiveHit(p, t);
+                  all.forEach((pid: string) => {
+                    patternCounts[pid] = (patternCounts[pid] || 0) + 1;
+                    if (hit !== null) {
+                      patternFinished[pid] = (patternFinished[pid] || 0) + 1;
+                      if (hit === true) patternHits[pid] = (patternHits[pid] || 0) + 1;
+                    }
+                  });
+                  if (all.length > 0) totalEliteTips++;
+                });
+              });
+              const sortedPatterns = Object.entries(patternCounts).sort((a, b) => {
+                const na = parseInt(a[0].slice(1)), nb = parseInt(b[0].slice(1));
+                return na - nb;
+              });
+              if (sortedPatterns.length === 0) return null;
+              return (
+                <div
+                  style={{
+                    background: isLight ? '#eeeeee' : '#1a1d2e',
+                    border: isLight ? '1px solid #e0e2e6' : '1px solid #ffffff15',
+                    borderRadius: '12px', padding: '8px 14px', marginBottom: '8px',
+                    cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={isLight && !isMobile ? e => { e.currentTarget.style.background = '#c8cdcd'; } : undefined}
+                  onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
+                >
+                  <div
+                    onClick={() => setPatternsOpen(!patternsOpen)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Pattern</span>
+                    <span style={{ fontSize: '12px', color: theme.textDisabled, transition: 'transform 0.2s', transform: patternsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block', marginLeft: 'auto' }}>▼</span>
+                  </div>
+                  {patternsOpen && (
+                    <>
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 2px' }}>
+                      <div style={{ width: '90%', height: '1px', background: isLight ? '#d0d3d8' : '#ffffff12' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' as const }}>
+                      <button
+                        onClick={() => setPatternFilter('tutti')}
+                        onMouseEnter={e => { if (patternFilter !== 'tutti') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                        onMouseLeave={e => { if (patternFilter !== 'tutti') e.currentTarget.style.background = theme.surfaceSubtle; }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          background: patternFilter === 'tutti' ? (isLight ? '#dbeafe' : `${theme.cyan}25`) : theme.surfaceSubtle,
+                          border: `1px solid ${patternFilter === 'tutti' ? theme.cyan : theme.surface05}`,
+                          color: patternFilter === 'tutti' ? theme.cyan : theme.textDim,
+                          borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                          fontSize: '10px', fontWeight: patternFilter === 'tutti' ? '800' : '600',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalEliteTips}</span>
+                      </button>
+                      {sortedPatterns.map(([pid, count]) => {
+                        const isActive = patternFilter === pid;
+                        const isTrial = TRIAL_SET.has(pid);
+                        const color = isTrial ? (isLight ? '#d97706' : '#fbbf24') : (isLight ? '#059669' : '#34d399');
+                        const fin = patternFinished[pid] || 0;
+                        const hits = patternHits[pid] || 0;
+                        const hr = fin > 0 ? Math.round((hits / fin) * 1000) / 10 : null;
+                        return (
+                          <button
+                            key={pid}
+                            onClick={() => setPatternFilter(isActive ? 'tutti' : pid)}
+                            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+                            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = theme.surfaceSubtle; }}
+                            title={PATTERN_LABELS[pid] || pid}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '5px',
+                              background: isActive ? `${color}${isLight ? '20' : '25'}` : theme.surfaceSubtle,
+                              border: `1px solid ${isActive ? color : theme.surface05}`,
+                              borderRadius: '12px', padding: '4px 12px', cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <span style={{ fontSize: '10px', color: isActive ? color : theme.textDim, fontWeight: '700', lineHeight: '14px' }}>{pid}</span>
+                            <span style={{ fontSize: '10px', color: isActive ? color : theme.textFaint, fontWeight: '600', lineHeight: '14px' }}>({count})</span>
+                            {hr !== null ? <span style={{ fontSize: '10px', fontWeight: '700', color: hr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{hr}%</span> : <span style={{ fontSize: '10px', fontWeight: '600', color: theme.textDisabled, lineHeight: '14px' }}>-</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                     </>
                   )}
                 </div>

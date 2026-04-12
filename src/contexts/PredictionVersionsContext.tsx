@@ -25,10 +25,13 @@ interface PredictionVersionsContextType {
 
 const PredictionVersionsContext = createContext<PredictionVersionsContextType | null>(null);
 
-function getDateRange(): string[] {
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getOtherDates(): string[] {
   const dates: string[] = [];
   const now = new Date();
-  dates.push(now.toISOString().split('T')[0]);
   for (let i = 1; i <= 7; i++) {
     const future = new Date(now); future.setDate(future.getDate() + i);
     const past = new Date(now); past.setDate(past.getDate() - i);
@@ -57,20 +60,41 @@ const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionVersionsProvider({ children }: { children: ReactNode }) {
   const cacheRef = useRef<Record<string, PredictionVersion[]>>({});
+  const inflightRef = useRef<Record<string, Promise<PredictionVersion[]>>>({});
   const [loading, setLoading] = useState(true);
+
+  // Fetch singola con dedup: se già in corso, ritorna la stessa Promise
+  const fetchWithDedup = useCallback(async (date: string): Promise<PredictionVersion[]> => {
+    if (cacheRef.current[date]) return cacheRef.current[date];
+    if (inflightRef.current[date]) return inflightRef.current[date];
+    const promise = fetchOne(date).then(r => {
+      cacheRef.current[date] = r.versions;
+      delete inflightRef.current[date];
+      return r.versions;
+    });
+    inflightRef.current[date] = promise;
+    return promise;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     const prefetchAll = async () => {
-      const dates = getDateRange();
-      for (const date of dates) {
+      // Carica solo oggi subito
+      const today = getToday();
+      const versions = await fetchWithDedup(today);
+      if (cancelled) return;
+      cacheRef.current[today] = versions;
+      setLoading(false);
+
+      // Poi carica le altre date in background con calma
+      const others = getOtherDates();
+      for (const date of others) {
         if (cancelled) return;
-        const result = await fetchOne(date);
-        cacheRef.current[date] = result.versions;
-        if (!cancelled) await delay(200);
+        if (cacheRef.current[date]) continue;
+        await delay(500);
+        await fetchWithDedup(date);
       }
-      if (!cancelled) setLoading(false);
     };
 
     prefetchAll();
@@ -80,18 +104,15 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
     }, POLL_INTERVAL);
 
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [fetchWithDedup]);
 
   const getVersions = useCallback((date: string): PredictionVersion[] | null => {
     return cacheRef.current[date] ?? null;
   }, []);
 
   const fetchVersions = useCallback(async (date: string): Promise<PredictionVersion[]> => {
-    if (cacheRef.current[date]) return cacheRef.current[date];
-    const result = await fetchOne(date);
-    cacheRef.current[date] = result.versions;
-    return result.versions;
-  }, []);
+    return fetchWithDedup(date);
+  }, [fetchWithDedup]);
 
   return (
     <PredictionVersionsContext.Provider value={{ getVersions, fetchVersions, loading }}>

@@ -91,7 +91,7 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
 
   const fetchWithDedup = useCallback(async (date: string): Promise<PredictionVersionLight[]> => {
     if (cacheRef.current[date]) return cacheRef.current[date];
-    if (inflightRef.current[date]) return inflightRef.current[date];
+    if (date in inflightRef.current) return inflightRef.current[date];
     const promise = fetchLight(date).then(versions => {
       cacheRef.current[date] = versions;
       delete inflightRef.current[date];

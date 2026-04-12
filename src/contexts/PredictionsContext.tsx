@@ -66,7 +66,7 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
   // Fetch singola con dedup: se già in corso, ritorna la stessa Promise
   const fetchWithDedup = useCallback(async (date: string): Promise<PredictionData> => {
     if (cacheRef.current[date]) return cacheRef.current[date];
-    if (inflightRef.current[date]) return inflightRef.current[date];
+    if (date in inflightRef.current) return inflightRef.current[date];
     const promise = fetchOne(date).then(r => {
       cacheRef.current[date] = r.data;
       delete inflightRef.current[date];

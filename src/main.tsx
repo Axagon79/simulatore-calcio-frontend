@@ -34,6 +34,7 @@ const Bankroll = lazy(() => import('./pages/Bankroll'));
 const MoneyManagement = lazy(() => import('./pages/MoneyManagement'));
 const SistemaC = lazy(() => import('./pages/SistemaC'));
 const UnifiedPredictions = lazy(() => import('./UnifiedPredictions'));
+const MixerPredictions = lazy(() => import('./MixerPredictions'));
 const MoneyTracker = lazy(() => import('./pages/MoneyTracker'));
 const StepSystem = lazy(() => import('./pages/StepSystem'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -105,6 +106,7 @@ function AppRoot() {
           <Route path="/step-system" element={<ProtectedRoute><StepSystem onBack={goBack} /></ProtectedRoute>} />
           <Route path="/sistema-c" element={<SistemaC />} />
           <Route path="/best-picks" element={<ProtectedRoute><UnifiedPredictions onBack={goBack} /></ProtectedRoute>} />
+          <Route path="/best-picks-v2" element={<ProtectedRoute><MixerPredictions onBack={goBack} /></ProtectedRoute>} />
           <Route path="/analisi-storica" element={<AnalisiStorica onBack={goBack} />} />
           <Route path="/simulate" element={<SimulazioneRapida onBack={goBack} />} />
           <Route path="/prezzi" element={<Prezzi onBack={goBack} />} />

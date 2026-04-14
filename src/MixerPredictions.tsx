@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
@@ -286,7 +286,8 @@ interface UnifiedPredictionsProps {
 /** Controlla se una prediction ha almeno un pronostico reale (non NO BET) */
 const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET') ?? false;
 
-export default function UnifiedPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
+export default function MixerPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [date, setDate] = useState(() => searchParams.get('date') || getToday());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -302,11 +303,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [predDetail, setPredDetail] = useState<Record<string, any>>({});
   const [predDetailLoading, setPredDetailLoading] = useState<Set<string>>(new Set());
   const predCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento' | 'elite'>(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'elite' || tab === 'alto_rendimento' || tab === 'pronostici') return tab;
-    return 'pronostici';
-  });
+  const [activeTab, setActiveTab] = useState<'pronostici' | 'alto_rendimento' | 'elite'>('pronostici');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
@@ -1150,47 +1147,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
   };
 
-  // --- PARTIZIONAMENTO: Pronostici (<=2.50) vs Alto Rendimento (>2.50) ---
+  // --- PRE-FILTRO: solo pronostici con mixer === true, lista unica ---
   const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score).map(p => {
-    return p.pronostici && p.pronostici.length > 0 ? p : null;
+    const mixerOnly = p.pronostici?.filter((pr: any) => pr.mixer === true) || [];
+    return mixerOnly.length > 0 ? { ...p, pronostici: mixerOnly } : null;
   }).filter(Boolean) as typeof predictions, [predictions]);
 
-  const normalPredictions = useMemo(() => {
-    return allNormalPreds
-      .map(p => {
-        const lowQuota = p.pronostici?.filter(pr => {
-          if (pr.tipo === 'RISULTATO_ESATTO') return false;
-          const q = getPronosticoQuota(pr, p);
-          const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
-          return !q || q < soglia;
-        }) || [];
-        return lowQuota.length > 0 ? { ...p, pronostici: lowQuota } : null;
-      })
-      .filter(Boolean) as Prediction[];
-  }, [allNormalPreds]);
-
-  const altoRendimentoPreds = useMemo(() => {
-    return allNormalPreds
-      .map(p => {
-        const highQuota = p.pronostici?.filter(pr => {
-          if (pr.tipo === 'RISULTATO_ESATTO') return true;
-          const q = getPronosticoQuota(pr, p);
-          const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
-          return q != null && q >= soglia;
-        }) || [];
-        return highQuota.length > 0 ? { ...p, pronostici: highQuota } : null;
-      })
-      .filter(Boolean) as Prediction[];
-  }, [allNormalPreds]);
-
-  const elitePredictions = useMemo(() => {
-    return allNormalPreds
-      .map(p => {
-        const elitePronostici = p.pronostici?.filter((pr: any) => pr.elite === true) || [];
-        return elitePronostici.length > 0 ? { ...p, pronostici: elitePronostici } : null;
-      })
-      .filter(Boolean) as Prediction[];
-  }, [allNormalPreds]);
+  const normalPredictions = allNormalPreds;
+  const altoRendimentoPreds = allNormalPreds;
+  const elitePredictions = allNormalPreds;
 
   const exactScorePredictions = useMemo(() => predictions.filter(p => p.is_exact_score), [predictions]);
 
@@ -3343,7 +3308,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               <>
                 <button
                   onClick={() => {
-                    const inp = document.getElementById('admin-date-picker') as HTMLInputElement;
+                    const inp = document.getElementById('admin-date-picker-mixer') as HTMLInputElement;
                     if (inp) { inp.showPicker(); }
                   }}
                   style={{
@@ -3355,7 +3320,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = theme.borderSubtle}
                 >📅</button>
                 <input
-                  id="admin-date-picker"
+                  id="admin-date-picker-mixer"
                   type="date"
                   value={date}
                   onChange={(e) => { if (e.target.value) setDate(e.target.value); }}
@@ -3397,44 +3362,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* ==================== VISTA PRINCIPALE ==================== */}
         {(<>
-        {/* TAB SWITCHER: Pronostici | Alto Rendimento */}
+        {/* TAB SWITCHER: link verso pagina originale + Mixer attivo */}
         <div data-tour="step-4" style={{
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
         }}>
+          {/* Link verso pagina originale */}
           {[
-            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🏆', color: theme.cyan },
-            { id: 'elite' as const, label: `Elite (${elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '👑', color: '#f59e0b' },
-            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: theme.gold }
+            { id: 'pronostici', label: 'Pronostici', icon: '🏆', color: theme.cyan },
+            { id: 'elite', label: 'Elite', icon: '👑', color: '#f59e0b' },
+            { id: 'alto_rendimento', label: 'Alto Rendimento', icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setMarketFilter('tutti'); }}
-              onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
-              onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.background = theme.surfaceSubtle; }}
-              style={{
-                background: activeTab === tab.id ? `${tab.color}20` : theme.surfaceSubtle,
-                border: `1px solid ${activeTab === tab.id ? tab.color : theme.surface08}`,
-                color: activeTab === tab.id ? tab.color : theme.textDim,
-                padding: '8px 18px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: activeTab === tab.id ? '700' : '500',
-                transition: 'all 0.15s'
-              }}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-          {isAdmin && (
-            <button
-              onClick={() => window.location.href = `/best-picks-v2?date=${date}`}
+              onClick={() => window.location.href = `/best-picks?tab=${tab.id}&date=${date}`}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
               onMouseLeave={e => e.currentTarget.style.background = theme.surfaceSubtle}
               style={{
                 background: theme.surfaceSubtle,
                 border: `1px solid ${theme.surface08}`,
-                color: '#10b981',
+                color: theme.textDim,
                 padding: '8px 18px',
                 borderRadius: '8px',
                 cursor: 'pointer',
@@ -3443,9 +3389,24 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 transition: 'all 0.15s'
               }}
             >
-              🧪 Mixer
+              {tab.icon} {tab.label}
             </button>
-          )}
+          ))}
+          {/* Tab Mixer attivo */}
+          <button
+            style={{
+              background: `#10b98120`,
+              border: `1px solid #10b981`,
+              color: '#10b981',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              cursor: 'default',
+              fontSize: '12px',
+              fontWeight: '700',
+            }}
+          >
+            🧪 Mixer ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})
+          </button>
         </div>
 
         {/* Capsule filtro mercato + Rendimento */}
@@ -4230,6 +4191,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
+        {/* NESSUN PRONOSTICO MIXER */}
+        {!loading && !error && predictions.length > 0 && allNormalPreds.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧪</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico Mixer per oggi</div>
+            <div style={{ fontSize: '11px', color: theme.textFaint }}>I pronostici Mixer sono quelli che matchano i 74 pattern storicamente vincenti</div>
+          </div>
+        )}
+
         {/* NESSUN RISULTATO PER FILTRO */}
         {!loading && !error && statusFilter !== 'tutte' && (
           activeTab === 'elite'
@@ -4439,22 +4409,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>👑</div>
                 <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico Elite per oggi</div>
                 <div style={{ fontSize: '11px', color: theme.textFaint }}>I pronostici Elite sono rari: solo quelli che matchano i pattern storicamente vincenti (HR &gt; 80%)</div>
-              </div>
-            )}
-
-            {activeTab === 'alto_rendimento' && filteredAltoRendimento.length === 0 && !loading && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
-                <div style={{ fontSize: '40px', marginBottom: '12px' }}>💎</div>
-                <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico Alto Rendimento per oggi</div>
-                <div style={{ fontSize: '11px', color: theme.textFaint }}>I pronostici Alto Rendimento hanno quote elevate e rendimenti potenzialmente superiori</div>
-              </div>
-            )}
-
-            {activeTab === 'pronostici' && filteredPredictions.length === 0 && !loading && predictions.length > 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
-                <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏆</div>
-                <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico per oggi</div>
-                <div style={{ fontSize: '11px', color: theme.textFaint }}>Non ci sono pronostici disponibili per questa data</div>
               </div>
             )}
 

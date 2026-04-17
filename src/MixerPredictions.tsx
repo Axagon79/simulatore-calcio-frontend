@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
@@ -287,7 +287,6 @@ interface UnifiedPredictionsProps {
 const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET') ?? false;
 
 export default function MixerPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [date, setDate] = useState(() => searchParams.get('date') || getToday());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -1139,13 +1138,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return true;
   };
 
-
-  // --- HELPER: quota di un singolo pronostico ---
-  const getPronosticoQuota = (p: any, pred: Prediction): number | null => {
-    return p.quota || (p.tipo === 'SEGNO' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
-      || (p.tipo === 'DOPPIA_CHANCE' && pred.odds ? (pred.odds as any)[p.pronostico] : null)
-      || (p.tipo === 'GOL' && pred.odds ? getGolQuota(p.pronostico, pred.odds) : null);
-  };
 
   // --- PRE-FILTRO: solo pronostici con mixer === true, lista unica ---
   const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score).map(p => {

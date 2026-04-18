@@ -1164,8 +1164,37 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return mixerOnly.length > 0 ? { ...p, pronostici: mixerOnly } : null;
   }).filter(Boolean) as typeof predictions, [predictions]);
 
-  const normalPredictions = allNormalPreds;
-  const altoRendimentoPreds = allNormalPreds;
+  // --- PARTIZIONAMENTO QUOTA (19/04/2026): replica logica UnifiedPredictions ---
+  // SEGNO/GOL: q >= 2.51 -> Alto Rendimento. DOPPIA_CHANCE: q >= 2.00 -> Alto Rendimento. Altrimenti Pronostici.
+  const getQ = (pr: any, p: any): number | null =>
+    pr.quota || (pr.tipo === 'SEGNO' && p.odds ? (p.odds as any)[pr.pronostico] : null)
+    || (pr.tipo === 'DOPPIA_CHANCE' && p.odds ? (p.odds as any)[pr.pronostico] : null)
+    || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
+
+  const normalPredictions = useMemo(() => {
+    return allNormalPreds.map(p => {
+      const lowQuota = p.pronostici?.filter((pr: any) => {
+        if (pr.tipo === 'RISULTATO_ESATTO') return false;
+        const q = getQ(pr, p);
+        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
+        return !q || q < soglia;
+      }) || [];
+      return lowQuota.length > 0 ? { ...p, pronostici: lowQuota } : null;
+    }).filter(Boolean) as typeof predictions;
+  }, [allNormalPreds]);
+
+  const altoRendimentoPreds = useMemo(() => {
+    return allNormalPreds.map(p => {
+      const highQuota = p.pronostici?.filter((pr: any) => {
+        if (pr.tipo === 'RISULTATO_ESATTO') return true;
+        const q = getQ(pr, p);
+        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
+        return q != null && q >= soglia;
+      }) || [];
+      return highQuota.length > 0 ? { ...p, pronostici: highQuota } : null;
+    }).filter(Boolean) as typeof predictions;
+  }, [allNormalPreds]);
+
   const elitePredictions = allNormalPreds;
 
   const exactScorePredictions = useMemo(() => predictions.filter(p => p.is_exact_score), [predictions]);

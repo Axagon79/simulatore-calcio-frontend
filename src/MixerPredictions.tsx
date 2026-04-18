@@ -1139,6 +1139,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
 
+  // --- CONTEGGI per tab link (calcolati su predictions originali, stessa logica di UnifiedPredictions) ---
+  const tabCounts = useMemo(() => {
+    const all = predictions.filter(p => !p.is_exact_score && p.pronostici?.length);
+    let pronostici = 0, elite = 0, alto = 0;
+    for (const p of all) {
+      for (const pr of (p.pronostici || [])) {
+        if (pr.tipo === 'RISULTATO_ESATTO') continue;
+        const q = pr.quota || (pr.tipo === 'SEGNO' && p.odds ? (p.odds as any)[pr.pronostico] : null)
+          || (pr.tipo === 'DOPPIA_CHANCE' && p.odds ? (p.odds as any)[pr.pronostico] : null)
+          || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
+        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
+        if (!q || q < soglia) pronostici++;
+        if (q != null && q >= soglia) alto++;
+        if (pr.elite) elite++;
+      }
+    }
+    return { pronostici, elite, alto };
+  }, [predictions]);
+
   // --- PRE-FILTRO: solo pronostici con mixer === true, lista unica ---
   const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score).map(p => {
     const mixerOnly = p.pronostici?.filter((pr: any) => pr.mixer === true) || [];
@@ -3360,9 +3379,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         }}>
           {/* Link verso pagina originale */}
           {[
-            { id: 'pronostici', label: 'Pronostici', icon: '🏆', color: theme.cyan },
-            { id: 'elite', label: 'Elite', icon: '👑', color: '#f59e0b' },
-            { id: 'alto_rendimento', label: 'Alto Rendimento', icon: '💎', color: theme.gold }
+            { id: 'pronostici', label: `Pronostici (${tabCounts.pronostici})`, icon: '🏆', color: theme.cyan },
+            { id: 'elite', label: `Elite (${tabCounts.elite})`, icon: '👑', color: '#f59e0b' },
+            { id: 'alto_rendimento', label: `Alto Rendimento (${tabCounts.alto})`, icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}

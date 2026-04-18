@@ -3443,7 +3443,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 transition: 'all 0.15s'
               }}
             >
-              🧪 Mixer
+              🧪 Mixer ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)})
             </button>
           )}
         </div>

@@ -53,3 +53,7 @@ icons8-*.png
 mockup-*.html
 preview-*.html
 public/test-*.html
+
+# Report locali (LibreOffice/Word)
+*.odt
+*.docx

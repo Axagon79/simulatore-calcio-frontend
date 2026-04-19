@@ -117,6 +117,8 @@ interface Prediction {
     tipo: string; pronostico: string; confidence: number; stars: number; quota?: number; hit?: boolean | null;
     probabilita_stimata?: number | null; stake?: number; edge?: number; profit_loss?: number | null;
     prob_mercato?: number | null; prob_modello?: number | null; has_odds?: boolean;
+    // Kelly unificato (backend post Commit 5)
+    prob_calibrata?: number | null; low_value?: boolean; source_group?: string;
   }>;
   confidence_segno: number;
   confidence_gol: number;
@@ -1146,6 +1148,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           background: 'rgba(255,255,255,0.05)', borderRadius: '3px', padding: '1px 4px',
                         }} title={`Stake: ${p.stake}/10 (${getStakeLabel(p.stake)})`}>
                           S:{p.stake}
+                        </span>
+                      )}
+                      {(p as any).low_value === true && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: '700', color: '#F59E0B',
+                          background: isLight ? '#fef3c7' : 'rgba(245,158,11,0.15)',
+                          border: `1px solid ${isLight ? '#f59e0b' : 'rgba(245,158,11,0.5)'}`,
+                          borderRadius: '3px', padding: '1px 5px',
+                          display: 'inline-flex', alignItems: 'center', gap: '3px',
+                        }} title="Questo pronostico ha margine ridotto: il sistema suggerisce stake minimo">
+                          <span style={{ fontSize: '10px', lineHeight: 1 }}>⚠</span>
+                          Bassa Value
                         </span>
                       )}
                       {p.stake === 0 && p.edge != null && p.edge <= 0 && (

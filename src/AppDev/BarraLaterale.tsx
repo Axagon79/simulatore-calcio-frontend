@@ -17,6 +17,10 @@ interface Pronostico {
   pronostico: string;
   stars?: number;
   confidence?: number;
+  // Kelly unificato (backend post Commit 5)
+  low_value?: boolean;
+  prob_calibrata?: number | null;
+  source_group?: string;
 }
 
 interface Prediction {

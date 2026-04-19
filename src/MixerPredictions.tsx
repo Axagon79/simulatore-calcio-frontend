@@ -294,6 +294,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [hasScrollbar, setHasScrollbar] = useState(false);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -712,6 +713,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         } catch { /* live scores non disponibili, prosegui */ }
 
         setPredictions(unified);
+        setLastUpdate(new Date());
 
       } catch (err: any) {
         console.error('Errore fetch pronostici unified:', err);
@@ -722,6 +724,12 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     };
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
+  // --- RESET accordion su cambio data: nessuna lega/card resta aperta ---
+  useEffect(() => {
+    setCollapsedLeagues(new Set());
+    setExpandedCards(new Set());
   }, [date]);
 
   // --- FOCUS da URL (deep link da Odds Monitor) ---
@@ -1031,11 +1039,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
   const toggleLeague = (leagueName: string) => {
     setCollapsedLeagues(prev => {
-      const next = new Set(prev);
-      if (next.has(leagueName)) next.delete(leagueName);
-      else next.add(leagueName);
-      return next;
+      // Accordion: max 1 lega aperta alla volta.
+      if (prev.has(leagueName)) return new Set();
+      return new Set([leagueName]);
     });
+    // Accordion anche per le card: chiudo qualunque card espansa quando cambio lega.
+    setExpandedCards(new Set());
   };
 
   // --- HR% COLOR SCALE (5 livelli) ---
@@ -1146,6 +1155,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     for (const p of all) {
       for (const pr of (p.pronostici || [])) {
         if (pr.tipo === 'RISULTATO_ESATTO') continue;
+        if (!pr.pronostico || pr.pronostico === 'NO BET') {
+          if (pr.elite) elite++;
+          continue;
+        }
         const q = pr.quota || (pr.tipo === 'SEGNO' && p.odds ? (p.odds as any)[pr.pronostico] : null)
           || (pr.tipo === 'DOPPIA_CHANCE' && p.odds ? (p.odds as any)[pr.pronostico] : null)
           || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
@@ -1418,9 +1431,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const rect = row.getBoundingClientRect();
             const scrollY = window.scrollY;
             setExpandedCards(prev => {
-              const next = new Set(prev);
-              if (next.has(cardKey)) next.delete(cardKey);
-              else {
+              // Accordion: max 1 card aperta alla volta.
+              if (prev.has(cardKey)) return new Set();
+              const next = new Set<string>();
+              {
                 next.add(cardKey);
                 // Carica dettagli on-demand se non già caricati
                 const dk = `${pred.date}|${pred.home}|${pred.away}`;
@@ -3402,6 +3416,29 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* ==================== VISTA PRINCIPALE ==================== */}
         {(<>
+        {/* INDICATORE ULTIMO AGGIORNAMENTO */}
+        {lastUpdate && (
+          <div style={{
+            display: 'flex', justifyContent: 'center', marginBottom: '10px',
+          }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '4px 10px', borderRadius: '999px',
+              background: isLight ? '#e5e7eb' : '#1f2937',
+              border: `1px solid ${isLight ? '#d0d3d8' : '#374151'}`,
+              fontSize: '11px',
+              color: isLight ? '#1f2937' : '#e5e7eb',
+              fontWeight: 500,
+            }}>
+              <span style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: theme.success, display: 'inline-block',
+                boxShadow: `0 0 4px ${theme.success}`,
+              }} />
+              <span>Aggiornato alle {lastUpdate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        )}
         {/* TAB SWITCHER: link verso pagina originale + Mixer attivo */}
         <div data-tour="step-4" style={{
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
@@ -4077,10 +4114,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const tabColor = activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold;
                 const tabLabel = activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento';
                 const tabCount = activeTab === 'pronostici'
-                  ? filteredPredictions.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)
+                  ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
                   : activeTab === 'elite'
                   ? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)
-                  : filteredAltoRendimento.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0);
+                  : filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0);
                 return (
                 <>
                   <span style={{

@@ -294,6 +294,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [hasScrollbar, setHasScrollbar] = useState(false);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -716,6 +717,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         } catch { /* live scores non disponibili, prosegui */ }
 
         setPredictions(unified);
+        setLastUpdate(new Date());
 
       } catch (err: any) {
         console.error('Errore fetch pronostici unified:', err);
@@ -726,6 +728,14 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     };
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
+  // --- RESET accordion su cambio data: nessuna lega/card resta aperta cambiando giorno.
+  // Il reset su cambio tab invece è gestito nell'onClick del tab switcher (per non
+  // interferire col focus URL che imposta activeTab programmaticamente). ---
+  useEffect(() => {
+    setCollapsedLeagues(new Set());
+    setExpandedCards(new Set());
   }, [date]);
 
   // --- FOCUS da URL (deep link da Odds Monitor) ---
@@ -1035,11 +1045,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
   const toggleLeague = (leagueName: string) => {
     setCollapsedLeagues(prev => {
-      const next = new Set(prev);
-      if (next.has(leagueName)) next.delete(leagueName);
-      else next.add(leagueName);
-      return next;
+      // Accordion: max 1 lega aperta alla volta.
+      // Se questa è già aperta -> chiudi tutte. Altrimenti aprila (e chiudi tutte le altre).
+      if (prev.has(leagueName)) return new Set();
+      return new Set([leagueName]);
     });
+    // Accordion anche per le card: chiudo qualunque card espansa quando cambio lega.
+    setExpandedCards(new Set());
   };
 
   // --- HR% COLOR SCALE (5 livelli) ---
@@ -1413,9 +1425,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const rect = row.getBoundingClientRect();
             const scrollY = window.scrollY;
             setExpandedCards(prev => {
-              const next = new Set(prev);
-              if (next.has(cardKey)) next.delete(cardKey);
-              else {
+              // Accordion: max 1 card aperta alla volta.
+              if (prev.has(cardKey)) return new Set();
+              const next = new Set<string>();
+              {
                 next.add(cardKey);
                 // Carica dettagli on-demand se non già caricati
                 const dk = `${pred.date}|${pred.home}|${pred.away}`;
@@ -3397,18 +3410,46 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
         {/* ==================== VISTA PRINCIPALE ==================== */}
         {(<>
+        {/* INDICATORE ULTIMO AGGIORNAMENTO */}
+        {lastUpdate && (
+          <div style={{
+            display: 'flex', justifyContent: 'center', marginBottom: '10px',
+          }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '4px 10px', borderRadius: '999px',
+              background: isLight ? '#e5e7eb' : '#1f2937',
+              border: `1px solid ${isLight ? '#d0d3d8' : '#374151'}`,
+              fontSize: '11px',
+              color: isLight ? '#1f2937' : '#e5e7eb',
+              fontWeight: 500,
+            }}>
+              <span style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: theme.success, display: 'inline-block',
+                boxShadow: `0 0 4px ${theme.success}`,
+              }} />
+              <span>Aggiornato alle {lastUpdate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        )}
         {/* TAB SWITCHER: Pronostici | Alto Rendimento */}
         <div data-tour="step-4" style={{
           display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
         }}>
           {[
-            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '🏆', color: theme.cyan },
+            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)})`, icon: '🏆', color: theme.cyan },
             { id: 'elite' as const, label: `Elite (${elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '👑', color: '#f59e0b' },
-            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '💎', color: theme.gold }
+            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)})`, icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setMarketFilter('tutti'); }}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setMarketFilter('tutti');
+                setCollapsedLeagues(new Set());
+                setExpandedCards(new Set());
+              }}
               onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
               onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.background = theme.surfaceSubtle; }}
               style={{
@@ -4076,10 +4117,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const tabColor = activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold;
                 const tabLabel = activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento';
                 const tabCount = activeTab === 'pronostici'
-                  ? filteredPredictions.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0)
+                  ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
                   : activeTab === 'elite'
                   ? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)
-                  : filteredAltoRendimento.filter(p => hasRealTip(p)).reduce((s, p) => s + (p.pronostici?.length || 0), 0);
+                  : filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0);
                 return (
                 <>
                   <span style={{

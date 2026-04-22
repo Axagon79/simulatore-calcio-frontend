@@ -3502,6 +3502,26 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               🧪 Mixer ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)})
             </button>
           )}
+          {isAdmin && (
+            <button
+              onClick={() => window.location.href = `/best-picks-v2?date=${date}&tab=super_selection`}
+              onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background = theme.surfaceSubtle}
+              style={{
+                background: theme.surfaceSubtle,
+                border: `1px solid ${theme.surface08}`,
+                color: '#fbbf24',
+                padding: '8px 18px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                transition: 'all 0.15s'
+              }}
+            >
+              ⭐ Super Selection ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
+            </button>
+          )}
         </div>
 
         {/* Capsule filtro mercato + Rendimento */}

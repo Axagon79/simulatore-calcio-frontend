@@ -291,6 +291,10 @@ const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronost
 export default function MixerPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
   const [searchParams] = useSearchParams();
   const [date, setDate] = useState(() => searchParams.get('date') || getToday());
+  // View attiva interna: 'mixer' (default) o 'super_selection'. Letta da URL ?tab=super_selection
+  const [activeView, setActiveView] = useState<'mixer' | 'super_selection'>(
+    () => (searchParams.get('tab') === 'super_selection' ? 'super_selection' : 'mixer')
+  );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
@@ -1173,11 +1177,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return { pronostici, elite, alto };
   }, [predictions]);
 
-  // --- PRE-FILTRO: solo pronostici con mixer === true, lista unica ---
-  const allNormalPreds = useMemo(() => predictions.filter(p => !p.is_exact_score).map(p => {
-    const mixerOnly = p.pronostici?.filter((pr: any) => pr.mixer === true) || [];
-    return mixerOnly.length > 0 ? { ...p, pronostici: mixerOnly } : null;
-  }).filter(Boolean) as typeof predictions, [predictions]);
+  // --- PRE-FILTRO: solo pronostici con flag attivo (mixer o super_selection) ---
+  // Il flag usato dipende da activeView: default 'mixer', toggle 'super_selection'.
+  const allNormalPreds = useMemo(() => {
+    const flagKey = activeView === 'super_selection' ? 'super_selection' : 'mixer';
+    return predictions.filter(p => !p.is_exact_score).map(p => {
+      const filtered = p.pronostici?.filter((pr: any) => pr[flagKey] === true) || [];
+      return filtered.length > 0 ? { ...p, pronostici: filtered } : null;
+    }).filter(Boolean) as typeof predictions;
+  }, [predictions, activeView]);
 
   // --- PARTIZIONAMENTO QUOTA (19/04/2026): replica logica UnifiedPredictions ---
   // SEGNO/GOL: q >= 2.51 -> Alto Rendimento. DOPPIA_CHANCE: q >= 2.00 -> Alto Rendimento. Altrimenti Pronostici.
@@ -3484,20 +3492,43 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {tab.icon} {tab.label}
             </button>
           ))}
-          {/* Tab Mixer attivo */}
+          {/* Tab Mixer (cliccabile: attiva la view mixer all'interno della pagina) */}
           <button
+            onClick={() => setActiveView('mixer')}
+            onMouseEnter={e => { if (activeView !== 'mixer') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+            onMouseLeave={e => { if (activeView !== 'mixer') e.currentTarget.style.background = theme.surfaceSubtle; }}
             style={{
-              background: `#10b98120`,
-              border: `1px solid #10b981`,
-              color: '#10b981',
+              background: activeView === 'mixer' ? `#10b98120` : theme.surfaceSubtle,
+              border: `1px solid ${activeView === 'mixer' ? '#10b981' : theme.surface08}`,
+              color: activeView === 'mixer' ? '#10b981' : theme.textDim,
               padding: '8px 18px',
               borderRadius: '8px',
-              cursor: 'default',
+              cursor: 'pointer',
               fontSize: '12px',
-              fontWeight: '700',
+              fontWeight: activeView === 'mixer' ? '700' : '500',
+              transition: 'all 0.15s'
             }}
           >
-            🧪 Mixer ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})
+            🧪 Mixer{activeView === 'mixer' ? ` (${allNormalPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})` : ''}
+          </button>
+          {/* Tab Super Selection (cliccabile: attiva la view super_selection) */}
+          <button
+            onClick={() => setActiveView('super_selection')}
+            onMouseEnter={e => { if (activeView !== 'super_selection') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+            onMouseLeave={e => { if (activeView !== 'super_selection') e.currentTarget.style.background = theme.surfaceSubtle; }}
+            style={{
+              background: activeView === 'super_selection' ? `#fbbf2420` : theme.surfaceSubtle,
+              border: `1px solid ${activeView === 'super_selection' ? '#fbbf24' : theme.surface08}`,
+              color: activeView === 'super_selection' ? '#fbbf24' : theme.textDim,
+              padding: '8px 18px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: activeView === 'super_selection' ? '700' : '500',
+              transition: 'all 0.15s'
+            }}
+          >
+            ⭐ Super Selection{activeView === 'super_selection' ? ` (${allNormalPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})` : ''}
           </button>
         </div>
 

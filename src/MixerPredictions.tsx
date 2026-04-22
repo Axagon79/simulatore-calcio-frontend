@@ -4301,12 +4301,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
-        {/* NESSUN PRONOSTICO MIXER */}
+        {/* NESSUN PRONOSTICO MIXER / SUPER SELECTION */}
         {!loading && !error && predictions.length > 0 && allNormalPreds.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧪</div>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico Mixer per oggi</div>
-            <div style={{ fontSize: '11px', color: theme.textFaint }}>I pronostici Mixer sono quelli che matchano i 74 pattern storicamente vincenti</div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>{activeView === 'super_selection' ? '⭐' : '🧪'}</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>
+              {activeView === 'super_selection' ? 'Nessun pronostico Super Selection per oggi' : 'Nessun pronostico Mixer per oggi'}
+            </div>
+            <div style={{ fontSize: '11px', color: theme.textFaint }}>
+              {activeView === 'super_selection'
+                ? 'I pronostici Super Selection sono quelli con almeno 2 flag su 3 tra Alto Rendimento, Elite e Mixer'
+                : 'I pronostici Mixer sono quelli che matchano i 74 pattern storicamente vincenti'}
+            </div>
           </div>
         )}
 

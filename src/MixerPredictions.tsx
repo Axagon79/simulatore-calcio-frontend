@@ -1195,6 +1195,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
 
   const normalPredictions = useMemo(() => {
+    // In view Super Selection mostriamo tutti i pronostici flaggati,
+    // senza partizione per quota.
+    if (activeView === 'super_selection') return allNormalPreds;
     return allNormalPreds.map(p => {
       const lowQuota = p.pronostici?.filter((pr: any) => {
         if (pr.tipo === 'RISULTATO_ESATTO') return false;
@@ -1204,9 +1207,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }) || [];
       return lowQuota.length > 0 ? { ...p, pronostici: lowQuota } : null;
     }).filter(Boolean) as typeof predictions;
-  }, [allNormalPreds]);
+  }, [allNormalPreds, activeView]);
 
   const altoRendimentoPreds = useMemo(() => {
+    if (activeView === 'super_selection') return allNormalPreds;
     return allNormalPreds.map(p => {
       const highQuota = p.pronostici?.filter((pr: any) => {
         if (pr.tipo === 'RISULTATO_ESATTO') return true;
@@ -1216,7 +1220,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }) || [];
       return highQuota.length > 0 ? { ...p, pronostici: highQuota } : null;
     }).filter(Boolean) as typeof predictions;
-  }, [allNormalPreds]);
+  }, [allNormalPreds, activeView]);
 
   const elitePredictions = allNormalPreds;
 

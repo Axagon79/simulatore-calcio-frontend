@@ -3496,7 +3496,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               transition: 'all 0.15s'
             }}
           >
-            🧪 Mixer{activeView === 'mixer' ? ` (${allNormalPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})` : ''}
+            🧪 Mixer ({predictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)})
           </button>
           {/* Tab Super Selection (cliccabile: attiva la view super_selection) */}
           <button
@@ -3515,7 +3515,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               transition: 'all 0.15s'
             }}
           >
-            ⭐ Super Selection{activeView === 'super_selection' ? ` (${allNormalPreds.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})` : ''}
+            ⭐ Super Selection ({predictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
           </button>
         </div>
 

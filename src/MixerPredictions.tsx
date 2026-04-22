@@ -3674,7 +3674,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     <div onClick={e => { if (!isMobile) e.stopPropagation(); }} style={{ display: 'flex', justifyContent: 'center', gap: isMobile ? '6px' : '10px', marginTop: '10px', flexWrap: 'wrap' as const, maxWidth: isMobile ? '100%' : undefined }}>
                       {[
                         ...(() => {
-                          const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
+                          const tabKey = activeView === 'super_selection' ? 'super_selection' : 'mixer';
                           const mplForLabel = monthlyPLData[tabKey];
                           // Se oggi, somma P/L giorno (frontend) al mese (backend)
                           const dayPl = plUnits ?? 0;
@@ -3687,7 +3687,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         })(),
                         { label: 'P/L Giorno', value: plUnits !== null ? `${plUnits > 0 ? '+' : ''}${plUnits}u` : '—', color: plUnits !== null && plUnits >= 0 ? theme.financePositive : theme.missText },
                         ...(() => {
-                          const tabKey = activeTab === 'elite' ? 'elite' : activeTab === 'alto_rendimento' ? 'alto_rendimento' : 'pronostici';
+                          const tabKey = activeView === 'super_selection' ? 'super_selection' : 'mixer';
                           const mpl = monthlyPLData[tabKey];
                           const isDateToday = date === getToday();
                           const dayPl = plUnits ?? 0;

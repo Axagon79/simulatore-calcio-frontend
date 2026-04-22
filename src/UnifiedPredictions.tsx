@@ -3639,8 +3639,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                       {(() => {
-                        const verified = filterCounts.centrate + filterCounts.mancate;
-                        const hr = verified > 0 ? Math.round((filterCounts.centrate / verified) * 1000) / 10 : null;
+                        // HR: centrate/mancate calcolati inline (come Partite) per caricamento veloce
+                        const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+                        const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                        let centrate = 0, mancate = 0;
+                        hrFiltered.forEach(item => {
+                          item.pronostici?.forEach(p => {
+                            const h = getEffectiveHit(item, p);
+                            if (h === true) centrate++;
+                            else if (h === false) mancate++;
+                          });
+                        });
+                        const verified = centrate + mancate;
+                        const hr = verified > 0 ? Math.round((centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
                         const matchesFinished = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
@@ -3660,7 +3671,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               }}>
                                 <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : hrColor, fontWeight: '700', lineHeight: '14px' }}>HR</span>
                                 <span style={{ fontSize: '9px', fontWeight: '900', color: hrColor, lineHeight: '14px' }}>{hr}%</span>
-                                <span style={{ fontSize: '8px', opacity: 0.6, color: hrColor, lineHeight: '14px' }}>{filterCounts.centrate}/{verified}</span>
+                                <span style={{ fontSize: '8px', opacity: 0.6, color: hrColor, lineHeight: '14px' }}>{centrate}/{verified}</span>
                               </div>
                             )}
                             {matchHR !== null && (

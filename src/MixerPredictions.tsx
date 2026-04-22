@@ -1194,35 +1194,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     || (pr.tipo === 'DOPPIA_CHANCE' && p.odds ? (p.odds as any)[pr.pronostico] : null)
     || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
 
-  const normalPredictions = useMemo(() => {
-    // In view Super Selection mostriamo tutti i pronostici flaggati,
-    // senza partizione per quota.
-    if (activeView === 'super_selection') return allNormalPreds;
-    return allNormalPreds.map(p => {
-      const lowQuota = p.pronostici?.filter((pr: any) => {
-        if (pr.tipo === 'RISULTATO_ESATTO') return false;
-        const q = getQ(pr, p);
-        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
-        return !q || q < soglia;
-      }) || [];
-      return lowQuota.length > 0 ? { ...p, pronostici: lowQuota } : null;
-    }).filter(Boolean) as typeof predictions;
-  }, [allNormalPreds, activeView]);
-
-  const altoRendimentoPreds = useMemo(() => {
-    if (activeView === 'super_selection') return allNormalPreds;
-    return allNormalPreds.map(p => {
-      const highQuota = p.pronostici?.filter((pr: any) => {
-        if (pr.tipo === 'RISULTATO_ESATTO') return true;
-        const q = getQ(pr, p);
-        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
-        return q != null && q >= soglia;
-      }) || [];
-      return highQuota.length > 0 ? { ...p, pronostici: highQuota } : null;
-    }).filter(Boolean) as typeof predictions;
-  }, [allNormalPreds, activeView]);
-
+  // Nella pagina /best-picks-v2 (Mixer e Super Selection) NON applichiamo piu'
+  // la partizione per quota ereditata da UnifiedPredictions: i pattern Mixer
+  // hanno gia' vincoli quota interni e perdere le quote alte (es. q3.00-3.99)
+  // significa nascondere una fetta importante di pronostici validi.
+  // Le 3 liste ritornano tutti i pronostici flaggati (mixer o super_selection
+  // a seconda di activeView). I sub-tab Pronostici/Elite/AR della UI restano
+  // come link di navigazione verso /best-picks, ma non filtrano piu' nulla.
+  const normalPredictions = allNormalPreds;
+  const altoRendimentoPreds = allNormalPreds;
   const elitePredictions = allNormalPreds;
+  // getQ mantenuto perche' usato altrove nella UI (colonne tabella, tooltip)
+  void getQ;
 
   const exactScorePredictions = useMemo(() => predictions.filter(p => p.is_exact_score), [predictions]);
 

@@ -1261,38 +1261,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return acc;
   }, {});
 
-  // --- CONTEGGI FILTRI (rispettano market filter) ---
-  const filterCounts = useMemo(() => {
-    const counts = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-    const source = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-    const marketFiltered = source.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
-    const countItem = (item: Prediction & { hit?: boolean | null }, mode: 'normal' | 're') => {
-      counts.tutte++;
-      const s = getMatchStatus(item);
-      if (s === 'live') counts.live++;
-      else if (s === 'to_play') counts.da_giocare++;
-      else {
-        counts.finite++;
-        if (mode === 're') {
-          const es = getEffectiveScore(item);
-          if (es) {
-            const hit = ((item as any).simulation_data?.top_scores || []).slice(0, 4).some(([s]: [string, number]) => normalizeScore(s) === normalizeScore(es));
-            if (hit) counts.centrate++;
-            else counts.mancate++;
-          }
-        } else {
-          item.pronostici?.forEach(p => {
-            const h = getEffectiveHit(item, p);
-            if (h === true) counts.centrate++;
-            if (h === false) counts.mancate++;
-          });
-        }
-      }
-    };
-    marketFiltered.forEach(p => countItem(p, 'normal'));
-    return counts;
-  }, [predictions, activeTab, marketFilter, sourceFilter]);
-
   // Set partite con RE (per icona 💎 admin)
   const reMatchKeys = useMemo(() => new Set(rePredictions.map(p => `${p.home}|${p.away}`)), [rePredictions]);
 
@@ -4188,7 +4156,26 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
 
           {/* Contenuto filtri — collassabile */}
-          {filtersOpen && (
+          {filtersOpen && (() => {
+            // Conteggi inline (come HR/Partite) per caricamento veloce senza useMemo
+            const fcCounts: Record<string, number> = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
+            const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+            const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+            fcFiltered.forEach(item => {
+              fcCounts.tutte++;
+              const s = getMatchStatus(item);
+              if (s === 'live') fcCounts.live++;
+              else if (s === 'to_play') fcCounts.da_giocare++;
+              else {
+                fcCounts.finite++;
+                item.pronostici?.forEach(p => {
+                  const h = getEffectiveHit(item, p);
+                  if (h === true) fcCounts.centrate++;
+                  if (h === false) fcCounts.mancate++;
+                });
+              }
+            });
+            return (
             <div style={{
               display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: '10px',
               padding: isMobile ? '0 10px 12px' : '0 16px 14px',
@@ -4219,13 +4206,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       }}
                     >
                       {f.icon} {f.label}
-                      {filterCounts[f.id] > 0 && (
+                      {fcCounts[f.id] > 0 && (
                         <span style={{
                           fontSize: isMobile ? '8px' : '9px', fontWeight: '800',
                           background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
                           padding: '1px 5px', borderRadius: '10px', marginLeft: '1px'
                         }}>
-                          {filterCounts[f.id]}
+                          {fcCounts[f.id]}
                         </span>
                       )}
                     </button>
@@ -4259,13 +4246,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       }}
                     >
                       {f.icon} {f.label}
-                      {filterCounts[f.id] > 0 && (
+                      {fcCounts[f.id] > 0 && (
                         <span style={{
                           fontSize: isMobile ? '8px' : '9px', fontWeight: '800',
                           background: statusFilter === f.id ? `${f.color}30` : theme.surface05,
                           padding: '1px 5px', borderRadius: '10px', marginLeft: '1px'
                         }}>
-                          {filterCounts[f.id]}
+                          {fcCounts[f.id]}
                         </span>
                       )}
                     </button>
@@ -4273,7 +4260,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
         </>)}
 

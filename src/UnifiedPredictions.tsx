@@ -1777,6 +1777,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   const isCurrent = verIdx === 0;
                                   const ts = doc.created_at ? new Date(doc.created_at) : null;
                                   const tsLabel = ts ? `${ts.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : '';
+                                  // Sfondo alternato per blocchi versione (più chiaro/più scuro)
+                                  const rowBg = verIdx % 2 === 0
+                                    ? (isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)')
+                                    : (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)');
                                   // Label versione
                                   let verTypeLabel = 'Notte';
                                   if (ver.startsWith('nightly')) verTypeLabel = 'Notte';
@@ -1785,20 +1789,29 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                   const verLabel = isCurrent ? `Attuale${tsLabel ? ` (${tsLabel})` : ''}` : `${verTypeLabel}${tsLabel ? ` · ${tsLabel}` : ''}`;
                                   if (isNB) {
                                     rows.push(
-                                      <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                      <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>
                                         <td style={{ padding: '3px 4px', color: theme.danger, fontWeight: 700 }}>NO BET</td>
                                         <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
                                         <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
                                       </tr>
                                     );
                                   } else {
+                                    // Conta i gruppi di mercato presenti nello stato attuale della partita
+                                    // (SEGNO+DC fanno gruppo "SEGNO", GOL+RE fanno gruppo "GOL")
+                                    const currentPron = pred.pronostici || [];
+                                    const hasSegnoGroup = currentPron.some((pr: any) => (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') && pr.pronostico !== 'NO BET');
+                                    const hasGolGroup = currentPron.some((pr: any) => (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO') && pr.pronostico !== 'NO BET');
+                                    // Se ho un solo gruppo attivo nella partita, mostro tutto lo storico (no filtro)
+                                    // Se ho entrambi i gruppi, filtro per gruppo della pill corrente
+                                    const showAllTypes = !(hasSegnoGroup && hasGolGroup);
                                     const isSegnoCol = p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE';
-                                    const filtered = (doc.pronostici || []).filter((pr: any) =>
-                                      isSegnoCol ? (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') : (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO')
-                                    );
+                                    const filtered = (doc.pronostici || []).filter((pr: any) => {
+                                      if (showAllTypes) return true;
+                                      return isSegnoCol ? (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') : (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO');
+                                    });
                                     if (filtered.length === 0) {
                                       rows.push(
-                                        <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
+                                        <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>
                                           <td style={{ padding: '3px 4px', color: theme.textDim, fontWeight: 700 }}>—</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
@@ -1806,9 +1819,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                       );
                                     }
                                     filtered.forEach((pr: any, prIdx: number) => {
+                                      // Quando mostro tutti i tipi (caso 1 gruppo attivo), prefisso il tipo per chiarezza
+                                      const tipoPrefix = showAllTypes ? (
+                                        pr.tipo === 'DOPPIA_CHANCE' ? 'DC ' :
+                                        pr.tipo === 'GOL' ? 'GOL ' :
+                                        pr.tipo === 'RISULTATO_ESATTO' ? 'RE ' :
+                                        pr.tipo === 'SEGNO' ? 'SEGNO ' : ''
+                                      ) : '';
+                                      const pronText = pr.pronostico === 'NO BET' ? 'NO BET' : `${tipoPrefix}${pr.pronostico || '—'}`;
+                                      const pronColor = pr.pronostico === 'NO BET' ? theme.danger : theme.cyan;
                                       rows.push(
-                                        <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}` }}>
-                                          <td style={{ padding: '3px 4px', color: theme.cyan, fontWeight: 700 }}>{pr.pronostico || '—'}{pr.elite && <span title="Elite" style={{ fontSize: '9px', marginLeft: '3px' }}>👑</span>}</td>
+                                        <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>
+                                          <td style={{ padding: '3px 4px', color: pronColor, fontWeight: 700 }}>{pronText}{pr.elite && <span title="Elite" style={{ fontSize: '9px', marginLeft: '3px' }}>👑</span>}</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{prIdx === 0 ? verLabel : ''}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{pr.stake || '—'}</td>
                                         </tr>

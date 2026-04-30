@@ -1899,6 +1899,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </span>
                     </div>
                   )}
+                  {/* Shield Badge + Attivazione (dentro il box Pronostici, sopra le pillole) */}
+                  {canSee && !canSeeAll && purchasedMatches.has(matchKey) && (
+                    <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
+                      {shieldedMatches.has(matchKey) ? (
+                        <span style={{
+                          fontSize: '11px', fontWeight: 700, color: '#f0c040',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          padding: '3px 8px', borderRadius: '4px',
+                          background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
+                        }}>
+                          Protetto
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); activateShield(matchKey, pred.home, pred.away); }}
+                          disabled={(shields ?? 0) < 1}
+                          style={{
+                            fontSize: '11px', fontWeight: 600, cursor: (shields ?? 0) < 1 ? 'default' : 'pointer',
+                            color: (shields ?? 0) < 1 ? theme.textDim : '#f0c040',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            padding: '3px 8px', borderRadius: '4px',
+                            background: (shields ?? 0) < 1 ? theme.surface05 : 'rgba(240,192,64,0.08)',
+                            border: `1px solid ${(shields ?? 0) < 1 ? theme.surface15 : 'rgba(240,192,64,0.2)'}`,
+                            fontFamily: 'inherit',
+                          }}
+                          title={(shields ?? 0) < 1 ? 'Nessun Shield disponibile' : 'Se il pronostico perde, crediti rimborsati'}
+                        >
+                          Attiva Shield ({shields ?? 0})
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {/* Tabella 2 colonne */}
                   <div style={{ display: 'flex', gap: '8px', filter: canSee ? 'none' : 'blur(6px)', pointerEvents: canSee ? 'auto' as const : 'none' as const }}>
                     {/* Colonna SEGNO */}
@@ -1922,38 +1954,6 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </>
               );
             })()}
-            {/* Shield Badge + Attivazione */}
-            {canSee && !canSeeAll && purchasedMatches.has(matchKey) && (
-              <div style={{ marginLeft: '8px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {shieldedMatches.has(matchKey) ? (
-                  <span style={{
-                    fontSize: '11px', fontWeight: 700, color: '#f0c040',
-                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                    padding: '3px 8px', borderRadius: '4px',
-                    background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
-                  }}>
-                    Protetto
-                  </span>
-                ) : (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); activateShield(matchKey, pred.home, pred.away); }}
-                    disabled={(shields ?? 0) < 1}
-                    style={{
-                      fontSize: '11px', fontWeight: 600, cursor: (shields ?? 0) < 1 ? 'default' : 'pointer',
-                      color: (shields ?? 0) < 1 ? theme.textDim : '#f0c040',
-                      display: 'inline-flex', alignItems: 'center', gap: '4px',
-                      padding: '3px 8px', borderRadius: '4px',
-                      background: (shields ?? 0) < 1 ? theme.surface05 : 'rgba(240,192,64,0.08)',
-                      border: `1px solid ${(shields ?? 0) < 1 ? theme.surface15 : 'rgba(240,192,64,0.2)'}`,
-                      fontFamily: 'inherit',
-                    }}
-                    title={(shields ?? 0) < 1 ? 'Nessun Shield disponibile' : 'Se il pronostico perde, crediti rimborsati'}
-                  >
-                    Attiva Shield ({shields ?? 0})
-                  </button>
-                )}
-              </div>
-            )}
 
             {/* Banner Aggiornamento Pronostico (casi A/B/C/D) */}
             {canSee && !canSeeAll && purchasedMatches.has(matchKey) && (() => {

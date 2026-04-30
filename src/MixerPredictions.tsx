@@ -1637,13 +1637,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           return (
             <div
               style={{
-                position: 'absolute', top: '50%', transform: 'translateY(-50%)', right: isMobile ? '56px' : '65px',
+                position: 'absolute', top: isMobile ? '8px' : '8px', right: isMobile ? '56px' : '65px',
                 zIndex: 5,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: isMobile ? '22px' : '24px', height: isMobile ? '22px' : '24px',
+                width: isMobile ? '21px' : '24px', height: isMobile ? '21px' : '24px',
                 borderRadius: '50%',
                 background: bg, border: `1px solid ${border}`,
-                fontSize: isMobile ? '12px' : '13px', lineHeight: 1,
+                fontSize: isMobile ? '11px' : '13px', lineHeight: 1,
               }}
               title={title}
             >

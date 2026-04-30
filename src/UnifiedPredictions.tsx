@@ -1638,7 +1638,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           return (
             <div
               style={{
-                position: 'absolute', top: isMobile ? '4px' : '4px', right: isMobile ? '56px' : '65px',
+                position: 'absolute', top: isMobile ? '5px' : '6px', right: isMobile ? '56px' : '65px',
                 zIndex: 5,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: isMobile ? '21px' : '24px', height: isMobile ? '21px' : '24px',

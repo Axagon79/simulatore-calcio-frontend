@@ -1631,13 +1631,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           } else {
             bg = isLight ? 'rgba(220,38,38,0.18)' : 'rgba(239,68,68,0.18)';
             border = isLight ? 'rgba(185,28,28,0.50)' : 'rgba(239,68,68,0.45)';
-            title = 'Pronostico bloccato — clicca per sbloccare';
+            title = 'Pronostico bloccato';
             emoji = '🔒';
           }
           return (
             <div
               style={{
-                position: 'absolute', top: isMobile ? '3px' : '5px', right: isMobile ? '56px' : '65px',
+                position: 'absolute', top: '50%', transform: 'translateY(-50%)', right: isMobile ? '56px' : '65px',
                 zIndex: 5,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: isMobile ? '22px' : '24px', height: isMobile ? '22px' : '24px',

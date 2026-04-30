@@ -404,7 +404,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   });
 
   useEffect(() => {
-    if (!user || canSeeAll) return;
+    if (!user) return;
     const loadPurchases = async () => {
       try {
         const token = await getIdToken();
@@ -418,7 +418,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       } catch { /* silent */ }
     };
     loadPurchases();
-  }, [user, date, canSeeAll]);
+  }, [user, date]);
 
   useEffect(() => {
     if (!user) return;
@@ -1959,7 +1959,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                   )}
                   {/* Shield Badge + Attivazione (dentro il box Pronostici, sopra le pillole) */}
-                  {canSee && !canSeeAll && purchasedMatches.has(matchKey) && (
+                  {canSee && purchasedMatches.has(matchKey) && (
                     <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
                       {shieldedMatches.has(matchKey) ? (
                         <span style={{

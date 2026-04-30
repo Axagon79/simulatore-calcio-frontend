@@ -1916,17 +1916,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           onClick={(e) => { e.stopPropagation(); activateShield(matchKey, pred.home, pred.away); }}
                           disabled={(shields ?? 0) < 1}
                           style={{
-                            fontSize: '11px', fontWeight: 600, cursor: (shields ?? 0) < 1 ? 'default' : 'pointer',
-                            color: (shields ?? 0) < 1 ? theme.textDim : '#f0c040',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            padding: '3px 8px', borderRadius: '4px',
-                            background: (shields ?? 0) < 1 ? theme.surface05 : 'rgba(240,192,64,0.08)',
-                            border: `1px solid ${(shields ?? 0) < 1 ? theme.surface15 : 'rgba(240,192,64,0.2)'}`,
+                            fontSize: '12px', fontWeight: 700, cursor: (shields ?? 0) < 1 ? 'default' : 'pointer',
+                            color: (shields ?? 0) < 1 ? theme.textDim : (isLight ? '#b45309' : '#fde68a'),
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            padding: '5px 18px', borderRadius: '6px',
+                            background: (shields ?? 0) < 1 ? theme.surface05 : (isLight ? 'rgba(240,192,64,0.30)' : 'rgba(240,192,64,0.18)'),
+                            border: `1px solid ${(shields ?? 0) < 1 ? theme.surface15 : (isLight ? 'rgba(180,83,9,0.55)' : 'rgba(240,192,64,0.45)')}`,
                             fontFamily: 'inherit',
+                            boxShadow: (shields ?? 0) < 1 ? 'none' : (isLight ? '0 0 6px rgba(180,83,9,0.18)' : '0 0 8px rgba(240,192,64,0.2)'),
                           }}
                           title={(shields ?? 0) < 1 ? 'Nessun Shield disponibile' : 'Se il pronostico perde, crediti rimborsati'}
                         >
-                          Attiva Shield ({shields ?? 0})
+                          🛡️ Attiva Shield ({shields ?? 0})
                         </button>
                       )}
                     </div>

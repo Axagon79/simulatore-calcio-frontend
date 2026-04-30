@@ -420,6 +420,23 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     loadPurchases();
   }, [user, date, canSeeAll]);
 
+  useEffect(() => {
+    if (!user) return;
+    const loadShielded = async () => {
+      try {
+        const token = await getIdToken();
+        const res = await fetch(`${API_BASE}/wallet/shielded-matches`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setShieldedMatches(new Set(data.match_keys || []));
+        }
+      } catch { /* silent */ }
+    };
+    loadShielded();
+  }, [user]);
+
   const canSeePrediction = useCallback((matchKey: string) => {
     return canSeeAll || purchasedMatches.has(matchKey);
   }, [canSeeAll, purchasedMatches]);
@@ -1601,40 +1618,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           // Partita finita e mai acquistata → niente badge
           if (isFinished && !purchased) return null;
           // Determina stato e colori
-          let bg = '', fg = '', border = '', icon: React.ReactNode = null, title = '';
+          let bg = '', border = '', emoji = '', title = '';
           if (protectedKey) {
             bg = isLight ? 'rgba(240,192,64,0.30)' : 'rgba(240,192,64,0.18)';
-            fg = isLight ? '#b45309' : '#fde68a';
             border = isLight ? 'rgba(180,83,9,0.55)' : 'rgba(240,192,64,0.45)';
             title = 'Pronostico protetto da Shield';
-            icon = (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-            );
+            emoji = '🛡️';
           } else if (purchased) {
             bg = isLight ? 'rgba(34,197,94,0.20)' : 'rgba(34,197,94,0.18)';
-            fg = isLight ? '#15803d' : '#86efac';
             border = isLight ? 'rgba(21,128,61,0.50)' : 'rgba(34,197,94,0.45)';
             title = 'Pronostico sbloccato';
-            icon = (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="8" cy="14" r="4"/>
-                <path d="M11 14h10v3M18 14v6"/>
-              </svg>
-            );
+            emoji = '🔑';
           } else {
-            // bloccata
             bg = isLight ? 'rgba(220,38,38,0.18)' : 'rgba(239,68,68,0.18)';
-            fg = isLight ? '#b91c1c' : '#fca5a5';
             border = isLight ? 'rgba(185,28,28,0.50)' : 'rgba(239,68,68,0.45)';
             title = 'Pronostico bloccato — clicca per sbloccare';
-            icon = (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="11" width="16" height="10" rx="2"/>
-                <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-              </svg>
-            );
+            emoji = '🔒';
           }
           return (
             <div
@@ -1644,11 +1643,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: isMobile ? '22px' : '24px', height: isMobile ? '22px' : '24px',
                 borderRadius: '50%',
-                background: bg, color: fg, border: `1px solid ${border}`,
+                background: bg, border: `1px solid ${border}`,
+                fontSize: isMobile ? '12px' : '13px', lineHeight: 1,
               }}
               title={title}
             >
-              {icon}
+              {emoji}
             </div>
           );
         })()}

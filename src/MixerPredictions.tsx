@@ -1915,6 +1915,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <button
                           onClick={(e) => { e.stopPropagation(); activateShield(matchKey, pred.home, pred.away); }}
                           disabled={(shields ?? 0) < 1}
+                          onMouseEnter={(shields ?? 0) < 1 ? undefined : (e) => {
+                            e.currentTarget.style.background = isLight ? 'rgba(240,192,64,0.50)' : 'rgba(240,192,64,0.32)';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.boxShadow = isLight ? '0 0 10px rgba(180,83,9,0.35)' : '0 0 12px rgba(240,192,64,0.4)';
+                          }}
+                          onMouseLeave={(shields ?? 0) < 1 ? undefined : (e) => {
+                            e.currentTarget.style.background = isLight ? 'rgba(240,192,64,0.30)' : 'rgba(240,192,64,0.18)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = isLight ? '0 0 6px rgba(180,83,9,0.18)' : '0 0 8px rgba(240,192,64,0.2)';
+                          }}
                           style={{
                             fontSize: '12px', fontWeight: 700, cursor: (shields ?? 0) < 1 ? 'default' : 'pointer',
                             color: (shields ?? 0) < 1 ? theme.textDim : (isLight ? '#b45309' : '#fde68a'),
@@ -1924,6 +1934,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             border: `1px solid ${(shields ?? 0) < 1 ? theme.surface15 : (isLight ? 'rgba(180,83,9,0.55)' : 'rgba(240,192,64,0.45)')}`,
                             fontFamily: 'inherit',
                             boxShadow: (shields ?? 0) < 1 ? 'none' : (isLight ? '0 0 6px rgba(180,83,9,0.18)' : '0 0 8px rgba(240,192,64,0.2)'),
+                            transition: 'transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease',
                           }}
                           title={(shields ?? 0) < 1 ? 'Nessun Shield disponibile' : 'Se il pronostico perde, crediti rimborsati'}
                         >

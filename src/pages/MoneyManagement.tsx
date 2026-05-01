@@ -95,6 +95,18 @@ export default function MoneyManagement({ onBack }: { onBack?: () => void }) {
         <p>Al contrario, uno stake 4 con confidence 65% significa che le quote offrono un valore eccezionale rispetto alla nostra stima.</p>
       </Section>
 
+      {/* Info rimborsi pronostici protetti */}
+      <div style={{
+        background: 'rgba(0,240,255,0.05)',
+        border: '1px solid rgba(0,240,255,0.15)',
+        borderRadius: '10px', padding: '14px', marginBottom: '16px',
+        fontSize: '12px', color: theme.textDim, lineHeight: 1.6,
+        display: 'flex', gap: '10px', alignItems: 'flex-start'
+      }}>
+        <span style={{ color: theme.cyan, fontSize: '16px', lineHeight: 1 }}>ℹ️</span>
+        <span>I crediti dei pronostici protetti che non si avverano vengono accreditati automaticamente entro le prime ore del mattino successivo alla fine partita.</span>
+      </div>
+
       {/* Disclaimer */}
       <div style={{
         background: 'rgba(255,42,109,0.05)',

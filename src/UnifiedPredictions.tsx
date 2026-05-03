@@ -1691,9 +1691,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
                       </span>
                       {activeTab !== 'elite' && p.elite && <span title="Elite" style={{ fontSize: '10px' }}>👑</span>}
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
-                      {quota && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
-                      {source && (
+                      {p.pronostico !== 'NO BET' && (
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
+                      )}
+                      {quota && p.pronostico !== 'NO BET' && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
+                      {source && p.pronostico !== 'NO BET' && source !== 'placeholder' && (
                         <span title={source} style={{
                           fontSize: '8px', fontWeight: '700',
                           color: source.includes('_screm') ? (isLight ? '#9333ea' : '#c084fc') : '#a78bfa',
@@ -1855,37 +1857,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                       </tr>
                                     );
                                   } else {
-                                    // Conta i gruppi di mercato presenti nello stato attuale della partita
-                                    // (SEGNO+DC fanno gruppo "SEGNO", GOL+RE fanno gruppo "GOL")
-                                    const currentPron = pred.pronostici || [];
-                                    const hasSegnoGroup = currentPron.some((pr: any) => (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') && pr.pronostico !== 'NO BET');
-                                    const hasGolGroup = currentPron.some((pr: any) => (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO') && pr.pronostico !== 'NO BET');
-                                    // Se ho un solo gruppo attivo nella partita, mostro tutto lo storico (no filtro)
-                                    // Se ho entrambi i gruppi, filtro per gruppo della pill corrente
-                                    const showAllTypes = !(hasSegnoGroup && hasGolGroup);
+                                    // Ogni pillola mostra solo lo storico del proprio gruppo:
+                                    // - pillola SEGNO/DC -> tip SEGNO+DC
+                                    // - pillola GOL/RE   -> tip GOL+RE
                                     const isSegnoCol = p.tipo === 'SEGNO' || p.tipo === 'DOPPIA_CHANCE';
-                                    const filtered = (doc.pronostici || []).filter((pr: any) => {
-                                      if (showAllTypes) return true;
-                                      return isSegnoCol ? (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') : (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO');
-                                    });
+                                    const filtered = (doc.pronostici || []).filter((pr: any) =>
+                                      isSegnoCol ? (pr.tipo === 'SEGNO' || pr.tipo === 'DOPPIA_CHANCE') : (pr.tipo === 'GOL' || pr.tipo === 'RISULTATO_ESATTO')
+                                    );
                                     if (filtered.length === 0) {
+                                      // Run passata senza tip per il gruppo: assenza == NO BET implicito
                                       rows.push(
                                         <tr key={`${ver}_${verIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>
-                                          <td style={{ padding: '3px 4px', color: theme.textDim, fontWeight: 700 }}>—</td>
+                                          <td style={{ padding: '3px 4px', color: theme.danger, fontWeight: 700 }}>NO BET</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.textDim, fontWeight: 600 }}>—</td>
                                         </tr>
                                       );
                                     }
                                     filtered.forEach((pr: any, prIdx: number) => {
-                                      // Quando mostro tutti i tipi (caso 1 gruppo attivo), prefisso il tipo per chiarezza
-                                      const tipoPrefix = showAllTypes ? (
-                                        pr.tipo === 'DOPPIA_CHANCE' ? 'DC ' :
-                                        pr.tipo === 'GOL' ? 'GOL ' :
-                                        pr.tipo === 'RISULTATO_ESATTO' ? 'RE ' :
-                                        pr.tipo === 'SEGNO' ? 'SEGNO ' : ''
-                                      ) : '';
-                                      const pronText = pr.pronostico === 'NO BET' ? 'NO BET' : `${tipoPrefix}${pr.pronostico || '—'}`;
+                                      const pronText = pr.pronostico === 'NO BET' ? 'NO BET' : (pr.pronostico || '—');
                                       const pronColor = pr.pronostico === 'NO BET' ? theme.danger : theme.cyan;
                                       rows.push(
                                         <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>

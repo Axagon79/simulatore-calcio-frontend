@@ -321,6 +321,8 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const monthlyPLData = plCalcolato.mese;
   const totalPLData = plCalcolato.totale;
   const isAdmin = checkAdmin();
+  // Count tip PME (per il bottone admin "🧬 PME (N)" che linka a /best-picks-v2?tab=pme)
+  const [pmeCount, setPmeCount] = useState<number | null>(null);
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
@@ -419,6 +421,25 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     };
     loadPurchases();
   }, [user, date]);
+
+  // Count tip PME per il bottone admin "🧬 PME (N)" (visibile solo a isAdmin)
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const loadPmeCount = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/simulation/pme-predictions?date=${date}`, {
+          headers: { 'x-admin-key': '000128' }
+        });
+        const j = await r.json();
+        if (!cancelled) setPmeCount(j?.stats?.total ?? 0);
+      } catch {
+        if (!cancelled) setPmeCount(null);
+      }
+    };
+    loadPmeCount();
+    return () => { cancelled = true; };
+  }, [isAdmin, date]);
 
   useEffect(() => {
     if (!user) return;
@@ -3573,6 +3594,26 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}
             >
               ⭐ Super Selection ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => window.location.href = `/best-picks-v2?date=${date}&tab=pme`}
+              onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background = theme.surfaceSubtle}
+              style={{
+                background: theme.surfaceSubtle,
+                border: `1px solid ${theme.surface08}`,
+                color: '#a855f7',
+                padding: '8px 18px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                transition: 'all 0.15s'
+              }}
+            >
+              🧬 PME ({pmeCount ?? '...'})
             </button>
           )}
         </div>

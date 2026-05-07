@@ -291,9 +291,14 @@ const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronost
 export default function MixerPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
   const [searchParams] = useSearchParams();
   const [date, setDate] = useState(() => searchParams.get('date') || getToday());
-  // View attiva interna: 'mixer' (default) o 'super_selection'. Letta da URL ?tab=super_selection
-  const [activeView, setActiveView] = useState<'mixer' | 'super_selection'>(
-    () => (searchParams.get('tab') === 'super_selection' ? 'super_selection' : 'mixer')
+  // View attiva interna: 'mixer' (default), 'super_selection' o 'pme'. Letta da URL ?tab=
+  const [activeView, setActiveView] = useState<'mixer' | 'super_selection' | 'pme'>(
+    () => {
+      const tab = searchParams.get('tab');
+      if (tab === 'super_selection') return 'super_selection';
+      if (tab === 'pme') return 'pme';
+      return 'mixer';
+    }
   );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -321,6 +326,8 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   const monthlyPLData = plCalcolato.mese;
   const totalPLData = plCalcolato.totale;
   const isAdmin = checkAdmin();
+  // Count tip PME (caricato sempre, anche fuori dalla view PME, per il numerino del bottone)
+  const [pmeCount, setPmeCount] = useState<number | null>(null);
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
@@ -650,12 +657,20 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
       setLoading(true);
       setError(null);
       try {
-        // Predictions dal context (precaricate all'avvio), live scores in parallelo
-        const cached = getCachedPredictions(date);
-        const [predData, liveRes] = await Promise.all([
-          cached ? Promise.resolve(cached) : fetchCachedPredictions(date),
-          fetch(`${API_BASE}/live-scores?date=${date}`).catch(() => null),
-        ]);
+        // Quando activeView e' 'pme' carica da endpoint dedicato /pme-predictions
+        // (collezione daily_predictions_pme, scrematura gia' applicata).
+        // Altrimenti usa la cache predictions condivisa con /best-picks (daily_predictions_unified).
+        let predData: any;
+        if (activeView === 'pme') {
+          const r = await fetch(`${API_BASE}/simulation/pme-predictions?date=${date}`, {
+            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+          });
+          predData = await r.json();
+        } else {
+          const cached = getCachedPredictions(date);
+          predData = cached ?? await fetchCachedPredictions(date);
+        }
+        const liveRes = await fetch(`${API_BASE}/live-scores?date=${date}`).catch(() => null);
 
         const unified: Prediction[] = (predData.predictions || []) as Prediction[];
 
@@ -746,6 +761,29 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
       }
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, activeView]);
+
+  // --- FETCH count tip PME per data corrente (per il numerino del bottone PME) ---
+  // Effettuato anche quando activeView != 'pme', cosi' il bottone mostra sempre il count.
+  // La query e' leggera (solo conteggio), non blocca il rendering.
+  useEffect(() => {
+    let cancelled = false;
+    const loadPmeCount = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/simulation/pme-predictions?date=${date}`, {
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+        });
+        const j = await r.json();
+        if (cancelled) return;
+        const total = j?.stats?.total ?? 0;
+        setPmeCount(total);
+      } catch {
+        if (!cancelled) setPmeCount(null);
+      }
+    };
+    loadPmeCount();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
@@ -1194,9 +1232,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     return { pronostici, elite, alto };
   }, [predictions]);
 
-  // --- PRE-FILTRO: solo pronostici con flag attivo (mixer o super_selection) ---
-  // Il flag usato dipende da activeView: default 'mixer', toggle 'super_selection'.
+  // --- PRE-FILTRO: solo pronostici con flag attivo (mixer / super_selection / pme) ---
+  // Il flag usato dipende da activeView. Per PME il caricamento e' gia' filtrato
+  // dal backend (collezione daily_predictions_pme dedicata), ma applichiamo lo stesso
+  // filtro client-side per consistenza con il pattern delle altre view.
   const allNormalPreds = useMemo(() => {
+    if (activeView === 'pme') {
+      // I pronostici PME hanno tutti source='pme'. Mostra tutti i tip.
+      return predictions.filter(p => !p.is_exact_score).map(p => {
+        const filtered = p.pronostici?.filter((pr: any) => pr.source === 'pme') || [];
+        return filtered.length > 0 ? { ...p, pronostici: filtered } : null;
+      }).filter(Boolean) as typeof predictions;
+    }
     const flagKey = activeView === 'super_selection' ? 'super_selection' : 'mixer';
     return predictions.filter(p => !p.is_exact_score).map(p => {
       const filtered = p.pronostici?.filter((pr: any) => pr[flagKey] === true) || [];
@@ -3567,6 +3614,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             }}
           >
             ⭐ Super Selection ({predictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
+          </button>
+          {/* Tab PME (Pattern Match Engine) - cliccabile: attiva la view pme */}
+          <button
+            onClick={() => setActiveView('pme')}
+            onMouseEnter={e => { if (activeView !== 'pme') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
+            onMouseLeave={e => { if (activeView !== 'pme') e.currentTarget.style.background = theme.surfaceSubtle; }}
+            style={{
+              background: activeView === 'pme' ? `#a855f720` : theme.surfaceSubtle,
+              border: `1px solid ${activeView === 'pme' ? '#a855f7' : theme.surface08}`,
+              color: activeView === 'pme' ? '#a855f7' : theme.textDim,
+              padding: '8px 18px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: activeView === 'pme' ? '700' : '500',
+              transition: 'all 0.15s'
+            }}
+          >
+            🧬 PME ({pmeCount ?? '...'})
           </button>
         </div>
 

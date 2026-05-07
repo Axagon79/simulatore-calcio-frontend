@@ -29,10 +29,14 @@ interface PredictionVersionFull {
   [key: string]: any;
 }
 
+// 'moe' = endpoint /prediction-versions (storico MoE/Mixer/SuperSelection).
+// 'pme' = endpoint /prediction-versions-pme (storico PME, collezione separata).
+type PredictionSource = 'moe' | 'pme';
+
 interface PredictionVersionsContextType {
-  getVersionsLight: (date: string) => PredictionVersionLight[] | null;
-  fetchVersionsLight: (date: string) => Promise<PredictionVersionLight[]>;
-  fetchVersionsFull: (date: string, match_key: string) => Promise<PredictionVersionFull[]>;
+  getVersionsLight: (date: string, source?: PredictionSource) => PredictionVersionLight[] | null;
+  fetchVersionsLight: (date: string, source?: PredictionSource) => Promise<PredictionVersionLight[]>;
+  fetchVersionsFull: (date: string, match_key: string, source?: PredictionSource) => Promise<PredictionVersionFull[]>;
   loading: boolean;
 }
 
@@ -57,10 +61,15 @@ function getOtherDates(): string[] {
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const adminHeaders: HeadersInit = isLocalhost ? { 'x-admin-key': '000128' } : {};
 
+// Helper: sceglie l'endpoint corretto (MoE vs PME) in base al source.
+function endpointFor(source: PredictionSource): string {
+  return source === 'pme' ? '/prediction-versions-pme' : '/prediction-versions';
+}
+
 // Fetch leggera: solo campi minimi per partite ritirate
-async function fetchLight(date: string): Promise<PredictionVersionLight[]> {
+async function fetchLight(date: string, source: PredictionSource = 'moe'): Promise<PredictionVersionLight[]> {
   try {
-    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&keys_only=true`, { headers: adminHeaders });
+    const res = await fetch(`${API_BASE}${endpointFor(source)}?date=${date}&keys_only=true`, { headers: adminHeaders });
     if (!res.ok) return [];
     const data = await res.json();
     return data.versions || [];
@@ -70,9 +79,9 @@ async function fetchLight(date: string): Promise<PredictionVersionLight[]> {
 }
 
 // Fetch completa: storico versioni per singola partita
-async function fetchFull(date: string, match_key: string): Promise<PredictionVersionFull[]> {
+async function fetchFull(date: string, match_key: string, source: PredictionSource = 'moe'): Promise<PredictionVersionFull[]> {
   try {
-    const res = await fetch(`${API_BASE}/prediction-versions?date=${date}&match_key=${encodeURIComponent(match_key)}`, { headers: adminHeaders });
+    const res = await fetch(`${API_BASE}${endpointFor(source)}?date=${date}&match_key=${encodeURIComponent(match_key)}`, { headers: adminHeaders });
     if (!res.ok) return [];
     const data = await res.json();
     return data.versions || [];
@@ -85,19 +94,28 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionVersionsProvider({ children }: { children: ReactNode }) {
-  const cacheRef = useRef<Record<string, PredictionVersionLight[]>>({});
-  const inflightRef = useRef<Record<string, Promise<PredictionVersionLight[]>>>({});
+  // Cache separate per source: 'moe' e 'pme' hanno endpoint e collezioni distinte
+  // → niente mescolamento tra storici (regola: doc PME stanno in
+  // daily_predictions_pme + prediction_versions_pme, MoE in unified+versions).
+  const cacheRef = useRef<Record<PredictionSource, Record<string, PredictionVersionLight[]>>>({
+    moe: {}, pme: {},
+  });
+  const inflightRef = useRef<Record<PredictionSource, Record<string, Promise<PredictionVersionLight[]>>>>({
+    moe: {}, pme: {},
+  });
   const [loading, setLoading] = useState(true);
 
-  const fetchWithDedup = useCallback(async (date: string): Promise<PredictionVersionLight[]> => {
-    if (cacheRef.current[date]) return cacheRef.current[date];
-    if (date in inflightRef.current) return inflightRef.current[date];
-    const promise = fetchLight(date).then(versions => {
-      cacheRef.current[date] = versions;
-      delete inflightRef.current[date];
+  const fetchWithDedup = useCallback(async (date: string, source: PredictionSource = 'moe'): Promise<PredictionVersionLight[]> => {
+    const cache = cacheRef.current[source];
+    const inflight = inflightRef.current[source];
+    if (cache[date]) return cache[date];
+    if (date in inflight) return inflight[date];
+    const promise = fetchLight(date, source).then(versions => {
+      cache[date] = versions;
+      delete inflight[date];
       return versions;
     });
-    inflightRef.current[date] = promise;
+    inflight[date] = promise;
     return promise;
   }, []);
 
@@ -106,17 +124,25 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
 
     const prefetchAll = async () => {
       const today = getToday();
-      const versions = await fetchWithDedup(today);
+      // Prefetch parallelo MoE + PME per oggi (sblocca loading appena MoE ok)
+      const moeToday = await fetchWithDedup(today, 'moe');
       if (cancelled) return;
-      cacheRef.current[today] = versions;
+      cacheRef.current.moe[today] = moeToday;
       setLoading(false);
+      // PME today subito dopo (best-effort)
+      fetchWithDedup(today, 'pme').catch(() => undefined);
 
       const others = getOtherDates();
       for (const date of others) {
         if (cancelled) return;
-        if (cacheRef.current[date]) continue;
-        await delay(500);
-        await fetchWithDedup(date);
+        if (!cacheRef.current.moe[date]) {
+          await delay(500);
+          await fetchWithDedup(date, 'moe');
+        }
+        if (!cacheRef.current.pme[date]) {
+          await delay(500);
+          await fetchWithDedup(date, 'pme').catch(() => undefined);
+        }
       }
     };
 
@@ -129,16 +155,16 @@ export function PredictionVersionsProvider({ children }: { children: ReactNode }
     return () => { cancelled = true; clearInterval(interval); };
   }, [fetchWithDedup]);
 
-  const getVersionsLight = useCallback((date: string): PredictionVersionLight[] | null => {
-    return cacheRef.current[date] ?? null;
+  const getVersionsLight = useCallback((date: string, source: PredictionSource = 'moe'): PredictionVersionLight[] | null => {
+    return cacheRef.current[source][date] ?? null;
   }, []);
 
-  const fetchVersionsLight = useCallback(async (date: string): Promise<PredictionVersionLight[]> => {
-    return fetchWithDedup(date);
+  const fetchVersionsLight = useCallback(async (date: string, source: PredictionSource = 'moe'): Promise<PredictionVersionLight[]> => {
+    return fetchWithDedup(date, source);
   }, [fetchWithDedup]);
 
-  const fetchVersionsFull = useCallback(async (date: string, match_key: string): Promise<PredictionVersionFull[]> => {
-    return fetchFull(date, match_key);
+  const fetchVersionsFull = useCallback(async (date: string, match_key: string, source: PredictionSource = 'moe'): Promise<PredictionVersionFull[]> => {
+    return fetchFull(date, match_key, source);
   }, []);
 
   return (

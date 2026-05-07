@@ -19,6 +19,7 @@ interface PLGiorno {
   alto_rendimento: SezioneData;
   mixer?: SezioneData;
   super_selection?: SezioneData;
+  pme?: SezioneData;
 }
 
 interface PLCalcolato {
@@ -42,7 +43,7 @@ const PLStoricoContext = createContext<PLStoricoContextType | null>(null);
 
 // --- Helper: somma sezioni ---
 const EMPTY_SEZ: SezioneData = { pl: 0, bets: 0, wins: 0, staked: 0, hr: 0, roi: 0 };
-const SEZIONI = ['tutti', 'pronostici', 'elite', 'alto_rendimento', 'mixer', 'super_selection'] as const;
+const SEZIONI = ['tutti', 'pronostici', 'elite', 'alto_rendimento', 'mixer', 'super_selection', 'pme'] as const;
 
 function sommaSezioni(docs: PLGiorno[]): Record<string, SezioneData> {
   const result: Record<string, SezioneData> = {};
@@ -94,7 +95,8 @@ export function PLStoricoProvider({ children }: { children: ReactNode }) {
     if (giorni.length === 0) {
       const empty = {
         tutti: { ...EMPTY_SEZ }, pronostici: { ...EMPTY_SEZ }, elite: { ...EMPTY_SEZ },
-        alto_rendimento: { ...EMPTY_SEZ }, mixer: { ...EMPTY_SEZ }, super_selection: { ...EMPTY_SEZ }
+        alto_rendimento: { ...EMPTY_SEZ }, mixer: { ...EMPTY_SEZ }, super_selection: { ...EMPTY_SEZ },
+        pme: { ...EMPTY_SEZ }
       };
       return { giorno: empty, mese: empty, totale: empty };
     }
@@ -106,11 +108,13 @@ export function PLStoricoProvider({ children }: { children: ReactNode }) {
           tutti: giornoDoc.tutti, pronostici: giornoDoc.pronostici, elite: giornoDoc.elite,
           alto_rendimento: giornoDoc.alto_rendimento,
           mixer: giornoDoc.mixer || { ...EMPTY_SEZ },
-          super_selection: giornoDoc.super_selection || { ...EMPTY_SEZ }
+          super_selection: giornoDoc.super_selection || { ...EMPTY_SEZ },
+          pme: giornoDoc.pme || { ...EMPTY_SEZ }
         }
       : {
           tutti: { ...EMPTY_SEZ }, pronostici: { ...EMPTY_SEZ }, elite: { ...EMPTY_SEZ },
-          alto_rendimento: { ...EMPTY_SEZ }, mixer: { ...EMPTY_SEZ }, super_selection: { ...EMPTY_SEZ }
+          alto_rendimento: { ...EMPTY_SEZ }, mixer: { ...EMPTY_SEZ }, super_selection: { ...EMPTY_SEZ },
+          pme: { ...EMPTY_SEZ }
         };
 
     // Mese: somma dal primo del mese fino alla data selezionata

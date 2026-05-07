@@ -19,7 +19,7 @@ export default function WalletBadge() {
   // Non mostrare se: non loggato, su rotta con navbar, su rotta esclusa,
   // o su rotta AppDev catchall (qualsiasi path non in lista rotte esplicite)
   const EXPLICIT_ROUTES = [
-    '/best-picks', '/wallet', '/step-system', '/money-tracker',
+    '/best-picks', '/best-picks-v2', '/wallet', '/step-system', '/money-tracker',
     '/money-management', '/bankroll', '/sistema-c',
     '/simulate', '/prezzi',
   ];
@@ -38,7 +38,7 @@ export default function WalletBadge() {
       style={{
         position: 'fixed',
         top: '18px',
-        right: '185px',
+        right: '170px',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',

@@ -392,7 +392,10 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
 
     setVersionLoading(prev => new Set([...prev, fetchKey]));
     try {
-      const versions = await fetchVersionsFull(date, fetchKey);
+      // Storico PME e' separato (collezione prediction_versions_pme): quando la
+      // view attiva e' 'pme' usiamo l'endpoint dedicato per non mescolare gli storici.
+      const versionsSource = activeView === 'pme' ? 'pme' : 'moe';
+      const versions = await fetchVersionsFull(date, fetchKey, versionsSource);
       setVersionCache(prev => ({ ...prev, [fetchKey]: versions }));
     } catch { /* silent */ }
     setVersionLoading(prev => { const s = new Set(prev); s.delete(fetchKey); return s; });
@@ -675,9 +678,11 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         const unified: Prediction[] = (predData.predictions || []) as Prediction[];
 
         // Merge: aggiungi partite ritirate da prediction_versions (dal context o fetch on-demand)
+        // Usa l'endpoint dedicato se la view e' 'pme' (storico separato).
         {
           try {
-            const versionsLight = getVersionsLight(date) ?? await fetchVersionsLight(date);
+            const versionsSource = activeView === 'pme' ? 'pme' : 'moe';
+            const versionsLight = getVersionsLight(date, versionsSource) ?? await fetchVersionsLight(date, versionsSource);
             // Normalizza come fa il backend: lowercase + spazi → underscore
             const normalizeKey = (d: string, h: string, a: string) =>
               `${d}_${h.trim().toLowerCase().replace(/\s+/g, '_')}_${a.trim().toLowerCase().replace(/\s+/g, '_')}`;
@@ -3284,7 +3289,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
                   }}>Best Picks</span>
                 </h1>
-                {/* Badge P/L e Yield fissi (Tutti) — posizionati assoluti tra Best Picks e crediti */}
+                {/* Badge P/L e Yield fissi — posizionati assoluti tra Best Picks e crediti.
+                    Il rendimento GLOBALE (tutti) include MoE+Mixer+SuperSelection+PME ed e' sempre
+                    visibile in qualsiasi view. La sezione PME e' gia' fusa in 'tutti' lato backend
+                    (popola_pl_storico.py), quindi qui basta una sola riga. */}
                 {(() => {
                   const day = dailyPLData.tutti;
                   const tutti = monthlyPLData.tutti;

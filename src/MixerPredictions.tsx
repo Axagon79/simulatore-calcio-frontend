@@ -2288,9 +2288,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </div>
             </div>
 
-            {/* Top Score — risultati più probabili dalla simulazione */}
-            {(pred as any).simulation_data?.top_scores && (() => {
+            {/* Top Score — risultati più probabili. */}
+            {/* MoE: simulation_data.top_scores (output Monte Carlo). */}
+            {/* PME: pme_re_top4_coerenti (top 4 RE coerenti coi pronostici emessi, */}
+            {/*       ordinati con algoritmo calibrato — vedi wiki/concetti/algoritmo-re-card-pme.md). */}
+            {(activeView === 'pme' ? (pred as any).pme_re_top4_coerenti?.length > 0 : !!(pred as any).simulation_data?.top_scores) && (() => {
               const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
+              const isPmeView = activeView === 'pme';
+              const items: Array<{ score: string; count: number | string }> = isPmeView
+                ? ((pred as any).pme_re_top4_coerenti as Array<{ score: string; freq: number; n_pool: number }>).slice(0, 4)
+                    .map(r => ({ score: r.score, count: `${r.freq}/${r.n_pool}` }))
+                : ((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3)
+                    .map(([s, c]) => ({ score: s, count: c }));
               return (
                 <div style={{
                   marginTop: '0', marginBottom: '8px', marginLeft: '8px',
@@ -2302,7 +2311,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const,
                 }}>
                   <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
-                  {((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3).map(([score, count], i, arr) => {
+                  {items.map(({ score, count }, i, arr) => {
                     const normS = normalizeScore(score);
                     const es = getEffectiveScore(pred);
                     const reHit = es && normS === normalizeScore(es);

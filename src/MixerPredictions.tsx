@@ -1399,7 +1399,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (detail.segno_dettaglio && !pred.segno_dettaglio) pred.segno_dettaglio = detail.segno_dettaglio;
       if (detail.segno_dettaglio_raw && !pred.segno_dettaglio_raw) pred.segno_dettaglio_raw = detail.segno_dettaglio_raw;
       if (detail.gol_dettaglio && !pred.gol_dettaglio) pred.gol_dettaglio = detail.gol_dettaglio;
-      if (detail.simulation_data && !(pred as any).simulation_data) (pred as any).simulation_data = detail.simulation_data;
+      // Su tab PME NON iniettare simulation_data: appartiene al doc MoE della stessa partita
+      // e non ha senso mostrarlo nella card PME (che ha la sua capsula pme_re_top4_coerenti).
+      if (detail.simulation_data && !(pred as any).simulation_data && activeView !== 'pme') (pred as any).simulation_data = detail.simulation_data;
       if (detail.analysis_free && !pred.analysis_free) pred.analysis_free = detail.analysis_free;
       if (detail.streak_home && !pred.streak_home) pred.streak_home = detail.streak_home;
       if (detail.streak_away && !pred.streak_away) pred.streak_away = detail.streak_away;

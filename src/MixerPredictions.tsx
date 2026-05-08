@@ -2296,8 +2296,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
               const isPmeView = activeView === 'pme';
               const items: Array<{ score: string; count: number | string }> = isPmeView
-                ? ((pred as any).pme_re_top4_coerenti as Array<{ score: string; freq: number; n_pool: number }>).slice(0, 4)
-                    .map(r => ({ score: r.score, count: `${r.freq}/${r.n_pool}` }))
+                ? ((pred as any).pme_re_top4_coerenti as Array<{ score: string; pct_coerenza?: number }>).slice(0, 4)
+                    .map(r => ({ score: r.score, count: `${r.pct_coerenza ?? 0}%` }))
                 : ((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3)
                     .map(([s, c]) => ({ score: s, count: c }));
               return (

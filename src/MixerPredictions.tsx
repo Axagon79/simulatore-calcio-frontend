@@ -328,6 +328,9 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   const isAdmin = checkAdmin();
   // Count tip PME (caricato sempre, anche fuori dalla view PME, per il numerino del bottone)
   const [pmeCount, setPmeCount] = useState<number | null>(null);
+  // Dataset MoE caricato sempre (anche quando activeView='pme'), per i conteggi dei tab
+  // Pronostici/Elite/AR/Mixer/SuperSel: devono restare fissi indipendentemente dal tab attivo.
+  const [moePredictions, setMoePredictions] = useState<Prediction[]>([]);
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
@@ -792,6 +795,27 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
+  // --- FETCH dataset MoE (sempre, anche quando activeView='pme') ---
+  // Necessario per mantenere i conteggi dei tab Pronostici/Elite/AR/Mixer/SuperSel
+  // fissi indipendentemente dal tab attivo (regola: i numerini tra parentesi non
+  // devono cambiare quando si switcha tra tab).
+  useEffect(() => {
+    let cancelled = false;
+    const loadMoe = async () => {
+      try {
+        const cached = getCachedPredictions(date);
+        const data = cached ?? await fetchCachedPredictions(date);
+        if (cancelled) return;
+        setMoePredictions((data?.predictions || []) as Prediction[]);
+      } catch {
+        if (!cancelled) setMoePredictions([]);
+      }
+    };
+    loadMoe();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
   // --- RESET accordion su cambio data: nessuna lega/card resta aperta ---
   useEffect(() => {
     setCollapsedLeagues(new Set());
@@ -1215,8 +1239,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
 
   // --- CONTEGGI per tab link (calcolati su predictions originali, stessa logica di UnifiedPredictions) ---
+  // Conteggi dei tab Pronostici/Elite/Alto Rendimento: sempre calcolati sul dataset MoE
+  // fisso (moePredictions), così i numeri non cambiano quando l'utente switcha tra tab
+  // (es. tab PME) — i tab MoE devono mostrare sempre lo stesso conteggio.
   const tabCounts = useMemo(() => {
-    const all = predictions.filter(p => !p.is_exact_score && p.pronostici?.length);
+    const all = moePredictions.filter(p => !p.is_exact_score && p.pronostici?.length);
     let pronostici = 0, elite = 0, alto = 0;
     for (const p of all) {
       for (const pr of (p.pronostici || [])) {
@@ -1235,7 +1262,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }
     }
     return { pronostici, elite, alto };
-  }, [predictions]);
+  }, [moePredictions]);
+
+  // Conteggi tab Mixer e Super Selection: stesso pattern, calcolati sul dataset MoE fisso
+  // (i flag mixer/super_selection vivono nei tip MoE).
+  const mixerCount = useMemo(() =>
+    moePredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)
+  , [moePredictions]);
+  const superSelectionCount = useMemo(() =>
+    moePredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)
+  , [moePredictions]);
 
   // --- PRE-FILTRO: solo pronostici con flag attivo (mixer / super_selection / pme) ---
   // Il flag usato dipende da activeView. Per PME il caricamento e' gia' filtrato
@@ -3602,7 +3638,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               transition: 'all 0.15s'
             }}
           >
-            🧪 Mixer ({predictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)})
+            🧪 Mixer ({mixerCount})
           </button>
           {/* Tab Super Selection (cliccabile: attiva la view super_selection) */}
           <button
@@ -3621,7 +3657,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               transition: 'all 0.15s'
             }}
           >
-            ⭐ Super Selection ({predictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
+            ⭐ Super Selection ({superSelectionCount})
           </button>
           {/* Tab PME (Pattern Match Engine) - cliccabile: attiva la view pme */}
           <button

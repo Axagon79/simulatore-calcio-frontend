@@ -1967,7 +1967,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                       rows.push(
                                         <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>
                                           <td style={{ padding: '3px 4px', color: pronColor, fontWeight: 700 }}>{pronText}{pr.elite && <span title="Elite" style={{ fontSize: '9px', marginLeft: '3px' }}>👑</span>}</td>
-                                          <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{prIdx === 0 ? verLabel : ''}</td>
+                                          <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{verLabel}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{pr.stake || '—'}</td>
                                         </tr>
                                       );

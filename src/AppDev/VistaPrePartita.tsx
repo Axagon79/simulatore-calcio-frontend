@@ -45,8 +45,6 @@ interface VistaPrePartitaProps {
   setViewState: Dispatch<SetStateAction<ViewState>>;
   simMode: SimMode;
   setSimMode: Dispatch<SetStateAction<SimMode>>;
-  isFlashActive: boolean;
-  setIsFlashActive: Dispatch<SetStateAction<boolean>>;
   configAlgo: number;
   setConfigAlgo: Dispatch<SetStateAction<number>>;
   customCycles: number;
@@ -73,8 +71,6 @@ export default function VistaPrePartita({
   setViewState,
   simMode,
   setSimMode,
-  isFlashActive,
-  setIsFlashActive,
   configAlgo,
   setConfigAlgo,
   customCycles,
@@ -1050,10 +1046,10 @@ export default function VistaPrePartita({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input
                       type="number"
-                      min="1"
+                      min="100"
                       max="999999"
-                      value={isFlashActive ? 1 : (customCycles === 0 ? '' : customCycles)}
-                      disabled={isFlashActive || viewState === 'simulating'}
+                      value={customCycles === 0 ? '' : customCycles}
+                      disabled={viewState === 'simulating'}
                       onFocus={(e) => e.target.select()}
                       onClick={(e) => (e.target as HTMLInputElement).select()}
                       onKeyDown={(e) => {
@@ -1062,8 +1058,8 @@ export default function VistaPrePartita({
                         }
                       }}
                       onBlur={() => {
-                        if (!customCycles || customCycles === 0) {
-                          setCustomCycles(1);
+                        if (!customCycles || customCycles < 100) {
+                          setCustomCycles(100);
                         }
                       }}
                       onChange={(e) => {
@@ -1091,26 +1087,6 @@ export default function VistaPrePartita({
                         MozAppearance: 'textfield'
                       }}
                     />
-                    <button
-                      onClick={() => setIsFlashActive(!isFlashActive)}
-                      disabled={viewState === 'simulating'}
-                      style={{
-                        background: isFlashActive ? '#ff9800' : (isLight ? '#e5e7eb' : '#1a1a1a'),
-                        border: isFlashActive ? '1px solid #ff9800' : `1px solid ${isLight ? '#d1d5db' : '#333'}`,
-                        color: isFlashActive ? '#fff' : (isLight ? '#6b7280' : '#aaa'),
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        marginTop: '15px',
-                        padding: '5px 12px',
-                        borderRadius: '6px',
-                        marginBottom: '15px',
-                        cursor: 'pointer',
-                        transition: '0.2s',
-                        boxShadow: isFlashActive ? '0 0 10px rgba(255, 152, 0, 0.4)' : 'none'
-                      }}
-                    >
-                      {isFlashActive ? '⚡ FLASH ON' : '⚡ FLASH OFF'}
-                    </button>
                   </div>
                 </div>
 
@@ -1118,7 +1094,7 @@ export default function VistaPrePartita({
                   data-tour="sim-algo-select"
                   value={configAlgo}
                   onChange={(e) => setConfigAlgo(Number(e.target.value))}
-                  disabled={isFlashActive || viewState === 'simulating'}
+                  disabled={viewState === 'simulating'}
                   style={{
                     width: '100%',
                     height: '30px',
@@ -1144,7 +1120,6 @@ export default function VistaPrePartita({
                 <div style={{ display: 'flex', gap: '5px', marginTop: '2px' }}>
                 <button
                   onClick={() => setSimMode('fast')}
-                  disabled={isFlashActive}
                   style={{
                       flex: '1',
                       height: '36px',
@@ -1165,7 +1140,6 @@ export default function VistaPrePartita({
                   <button
                     data-tour="sim-mode-animated"
                     onClick={() => setSimMode('animated')}
-                    disabled={isFlashActive}
                     style={{
                       flex: '1',
                       height: '36px',
@@ -1190,9 +1164,7 @@ export default function VistaPrePartita({
                   disabled={viewState === 'simulating'}
                   style={{
                     width: '100%',
-                    background: isFlashActive
-                      ? `linear-gradient(180deg, #ff9800 0%, #ff5722 100%)`
-                      : `linear-gradient(180deg, ${theme.cyan} 0%, #008b8b 100%)`,
+                    background: `linear-gradient(180deg, ${theme.cyan} 0%, #008b8b 100%)`,
                     color: '#000',
                     border: 'none',
                     borderRadius: '8px',
@@ -1202,14 +1174,12 @@ export default function VistaPrePartita({
                     cursor: viewState === 'simulating' ? 'not-allowed' : 'pointer',
                     textTransform: 'uppercase',
                     marginTop: '10px',
-                    boxShadow: isFlashActive
-                      ? `0 4px 15px rgba(255, 87, 34, 0.4)`
-                      : `0 4px 15px ${theme.cyan}40`,
+                    boxShadow: `0 4px 15px ${theme.cyan}40`,
                     transition: 'all 0.3s',
                     opacity: viewState === 'simulating' ? 0.7 : 1
                   }}
                 >
-                  {isFlashActive ? ' ESEGUI FLASH' : 'AVVIA SIMULAZIONE'}
+                  AVVIA SIMULAZIONE
                 </button>
               </div>
             </div>

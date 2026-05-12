@@ -191,10 +191,8 @@ export default function AppDev() {
       if (data.cycles !== undefined) setCustomCycles(data.cycles);
       if (data.mode === 'fast') {
         setSimMode('fast');
-        setIsFlashActive(true);
       } else {
         setSimMode('animated');
-        setIsFlashActive(false);
       }
 
       // Arricchisci il match con league per il fallback in startSimulation
@@ -213,23 +211,6 @@ export default function AppDev() {
       console.error('🔍 QUICKSIM: ERRORE', err);
     }
   }, []);
-
-  const handleAskAI = (matchData: any) => {
-    // Prepariamo un riassunto tecnico per l'IA
-    const promptTecnico = `
-      Analizza questa partita finita ${matchData.predicted_score}. 
-      Confidence: ${matchData.report_scommesse.Analisi_Profonda.Confidence_Globale}.
-      Deviazione Standard: ${matchData.report_scommesse.Analisi_Profonda.Deviazione_Standard_Totale}.
-      Spiega all'utente il motivo di questo pronostico basandoti sui dati.
-    `;
-  
-    // Inviamo il messaggio al sistema di chat che hai già
-    addBotMessage("Sto analizzando i dati del DeepAnalyzer per spiegarti il pronostico..."); //
-    
-    // In futuro, qui chiamerai la tua API di Gemini o GPT passando 'promptTecnico'
-    console.log("Dati inviati all'IA:", promptTecnico);
-  };
-
 
 // Wrapper locale: passa automaticamente la lega corrente alla funzione estratta
 const getStemmaLeagueUrl = (mongoId?: string) => {
@@ -333,9 +314,6 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
  
   const [configSaveDb, setConfigSaveDb] = useState(false); // Salva su DB? (Checkbox)
   const [configDebug, setConfigDebug] = useState(true);    // Debug Mode? (Checkbox)
-
- // STATO PER L'INTERRUTTORE FLASH (Aggiungi questo)
-  const [isFlashActive, setIsFlashActive] = useState<boolean>(false);
 
 
 
@@ -705,11 +683,6 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   const useAlgo = algoOverride !== null ? algoOverride : configAlgo;
   const useCycles = cyclesOverride !== null ? cyclesOverride : customCycles;
 
-  // 2. GESTIONE FLASH MODE
-  if (isFlashActive) {
-      setSimMode('fast');
-  }
-
   // ✅ FASE 1: Reset Stati e Avvio Grafica
   setViewState('simulating');
   setIsWarmingUp(true);
@@ -718,11 +691,11 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
   setFormations(null);
   setPlayerEvents({});
   
-  // Parametri finali
-  const finalAlgo = isFlashActive ? 1 : useAlgo;
-  const finalCycles = isFlashActive ? 1 : useCycles;
+  // Parametri finali (minimo 100 cicli garantiti)
+  const finalAlgo = useAlgo;
+  const finalCycles = Math.max(useCycles, 100);
 
-  console.log(`🚀 AVVIO EFFETTIVO: Flash=${isFlashActive} | Algo=${finalAlgo} | Cicli=${finalCycles}`);
+  console.log(`🚀 AVVIO EFFETTIVO: Algo=${finalAlgo} | Cicli=${finalCycles}`);
 
   // FIX LEAGUE: Calcoliamo il nome del campionato in modo robusto
   // (Prende quello del menu, o quello globale, o quello del match, o fallback)
@@ -818,7 +791,7 @@ const startSimulation = async (algoOverride: number | null = null, cyclesOverrid
       setPopupOpacity(0);
       setTimeout(() => {
         setShowFormationsPopup(false);
-        if (isFlashActive || simMode === 'fast') {
+        if (simMode === 'fast') {
           setSimResult(enrichedData);
           setViewState('result');
           addBotMessage(`Analisi completata! Risultato previsto: ${enrichedData.predicted_score || '-:-'}.`);
@@ -1898,7 +1871,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             data={simResult}
             homeName={selectedMatch?.home || 'Team Casa'}
             awayName={selectedMatch?.away || 'Team Ospite'}
-            onOpenAIExplanation={() => handleAskAI(simResult)}
           />
         </Suspense>
       </div>
@@ -2525,8 +2497,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
               setViewState={setViewState}
               simMode={simMode}
               setSimMode={setSimMode}
-              isFlashActive={isFlashActive}
-              setIsFlashActive={setIsFlashActive}
               configAlgo={configAlgo}
               setConfigAlgo={setConfigAlgo}
               customCycles={customCycles}

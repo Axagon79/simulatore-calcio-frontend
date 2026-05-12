@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { checkAdmin } from './permissions';
 import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
@@ -290,7 +290,31 @@ const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronost
 
 export default function UnifiedPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
   const [searchParams] = useSearchParams();
-  const [date, setDate] = useState(() => searchParams.get('date') || getToday());
+  const navigate = useNavigate();
+  // Init data: se la navigazione e' un refresh esplicito (F5), ignora ?date= e usa oggi.
+  // Per link diretti / navigazione interna, rispetta ?date= se presente.
+  const [date, setDate] = useState(() => {
+    const isReload = (() => {
+      try {
+        const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+        return navEntry?.type === 'reload';
+      } catch { return false; }
+    })();
+    if (isReload) return getToday();
+    return searchParams.get('date') || getToday();
+  });
+  // Se reload: pulisci ?date= dall'URL al primo render (cosi' al prossimo F5 e' coerente)
+  useEffect(() => {
+    try {
+      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      if (navEntry?.type === 'reload' && searchParams.get('date')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('date');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch { /* no-op */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
@@ -3558,7 +3582,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           ))}
           {isAdmin && (
             <button
-              onClick={() => window.location.href = `/best-picks-v2?date=${date}`}
+              onClick={() => navigate(`/best-picks-v2?date=${date}`)}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
               onMouseLeave={e => e.currentTarget.style.background = theme.surfaceSubtle}
               style={{
@@ -3578,7 +3602,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           )}
           {isAdmin && (
             <button
-              onClick={() => window.location.href = `/best-picks-v2?date=${date}&tab=super_selection`}
+              onClick={() => navigate(`/best-picks-v2?date=${date}&tab=super_selection`)}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
               onMouseLeave={e => e.currentTarget.style.background = theme.surfaceSubtle}
               style={{
@@ -3598,7 +3622,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           )}
           {isAdmin && (
             <button
-              onClick={() => window.location.href = `/best-picks-v2?date=${date}&tab=pme`}
+              onClick={() => navigate(`/best-picks-v2?date=${date}&tab=pme`)}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
               onMouseLeave={e => e.currentTarget.style.background = theme.surfaceSubtle}
               style={{

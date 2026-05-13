@@ -1705,6 +1705,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
                       {activeTab !== 'elite' && p.elite && <span title="Elite" style={{ fontSize: '10px', marginLeft: '2px' }}>👑</span>}
+                      {(p as any).concorde_moe === true && (
+                        <span
+                          title="Doppio Segnale: MoE e PME concordano su questo pronostico GOL"
+                          style={{ fontSize: '11px', marginLeft: '2px' }}
+                        >🤝</span>
+                      )}
                       {quota && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                       <span

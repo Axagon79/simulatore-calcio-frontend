@@ -1635,6 +1635,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
                       {activeTab !== 'elite' && p.elite && <span title="Elite" style={{ fontSize: '10px', marginLeft: '2px' }}>👑</span>}
+                      {(p as any).concorde_moe === true && <span title="Doppio Segnale: MoE e PME concordano su questo pronostico GOL" style={{ fontSize: '11px', marginLeft: '2px' }}>🤝</span>}
                       {quota && <span style={{ fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                       <span
@@ -1736,6 +1737,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {p.tipo === 'DOPPIA_CHANCE' ? `DC: ${p.pronostico}` : p.tipo === 'RISULTATO_ESATTO' ? `RE ${p.pronostico.replace(':', '-')}` : p.pronostico}
                       </span>
                       {activeTab !== 'elite' && p.elite && <span title="Elite" style={{ fontSize: '10px' }}>👑</span>}
+                      {(p as any).concorde_moe === true && <span title="Doppio Segnale: MoE e PME concordano su questo pronostico GOL" style={{ fontSize: '11px', marginLeft: '2px' }}>🤝</span>}
                       {p.pronostico !== 'NO BET' && (
                         <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                       )}
@@ -1924,7 +1926,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                                       const pronColor = pr.pronostico === 'NO BET' ? theme.danger : theme.cyan;
                                       rows.push(
                                         <tr key={`${ver}_${verIdx}_${prIdx}`} style={{ borderBottom: `1px solid ${theme.surface05}`, background: rowBg }}>
-                                          <td style={{ padding: '3px 4px', color: pronColor, fontWeight: 700 }}>{pronText}{pr.elite && <span title="Elite" style={{ fontSize: '9px', marginLeft: '3px' }}>👑</span>}</td>
+                                          <td style={{ padding: '3px 4px', color: pronColor, fontWeight: 700 }}>{pronText}{pr.elite && <span title="Elite" style={{ fontSize: '9px', marginLeft: '3px' }}>👑</span>}{(pr as any).concorde_moe === true && <span title="Doppio Segnale: MoE e PME concordano su questo pronostico GOL" style={{ fontSize: '10px', marginLeft: '3px' }}>🤝</span>}</td>
                                           <td style={{ padding: '3px 4px', color: isCurrent ? theme.cyan : theme.textDim, fontWeight: isCurrent ? 700 : 400 }}>{prIdx === 0 ? verLabel : ''}</td>
                                           <td style={{ padding: '3px 4px', textAlign: 'center', color: theme.text, fontWeight: 600 }}>{pr.stake || '—'}</td>
                                         </tr>

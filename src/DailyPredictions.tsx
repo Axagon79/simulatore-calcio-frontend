@@ -1104,6 +1104,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       fontSize: '11px'
                     }}>
                       <span style={{ fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
+                      {(p as any).concorde_moe === true && <span title="Doppio Segnale: MoE e PME concordano su questo pronostico GOL" style={{ fontSize: '11px', marginLeft: '2px' }}>🤝</span>}
                       {quota && <span style={{ fontWeight: '700', color: '#4dd0e1' }}>@{Number(quota).toFixed(2)}</span>}
                       {isHit !== null && <span>{isHit ? '✅' : '❌'}</span>}
                     </span>
@@ -1136,6 +1137,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       display: 'flex', alignItems: 'center', gap: '8px'
                     }}>
                       <span style={{ fontSize: '12px', fontWeight: '800', color: nameColor }}>{p.pronostico}</span>
+                      {(p as any).concorde_moe === true && <span title="Doppio Segnale: MoE e PME concordano su questo pronostico GOL" style={{ fontSize: '12px', marginLeft: '2px' }}>🤝</span>}
                       <span style={{ position: 'relative', display: 'inline-block', fontSize: '14px', lineHeight: 1 }}>
                         <span style={{ color: 'rgba(255,255,255,0.12)' }}>★</span>
                         <span style={{ position: 'absolute', left: 0, top: 0, overflow: 'hidden', width: `${p.confidence || 0}%`, color: theme.gold }}>★</span>

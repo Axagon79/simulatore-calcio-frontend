@@ -1096,6 +1096,32 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
       .finally(() => setLoading(false));
   }, [date, selectedLeague]);
 
+  // --- POLLING LIVE SCORES ogni 15 secondi (allineato a UnifiedPredictions.tsx) ---
+  // Aggiorna live_score / live_status / live_minute / real_score senza ricaricare
+  // l'intero doc match (che e' grosso e contiene gli indicatori).
+  useEffect(() => {
+    const mergeLive = (items: MatchDoc[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number; real_score?: string }>): MatchDoc[] =>
+      items.map(item => {
+        const live = scores.find(s => s.home === item.home && s.away === item.away);
+        return live ? { ...item, live_score: live.live_score, live_status: live.live_status, live_minute: live.live_minute, real_score: live.real_score ?? item.real_score } : item;
+      });
+
+    const pollLive = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/live-scores?date=${date}`);
+        const data = await res.json();
+        if (data.success && data.scores?.length > 0) {
+          const scores = data.scores;
+          setMatches(prev => mergeLive(prev, scores));
+        }
+      } catch { /* silenzioso */ }
+    };
+
+    pollLive();
+    const interval = setInterval(pollLive, 15000);
+    return () => clearInterval(interval);
+  }, [date]);
+
   const kpi = useMemo(() => {
     let alertRossi = 0, beAlert = 0, aggioSum = 0, aggioCount = 0;
     for (const m of matches) {

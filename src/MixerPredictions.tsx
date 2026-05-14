@@ -687,12 +687,13 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
       setLoading(true);
       setError(null);
       try {
-        // Quando activeView e' 'pme' carica da endpoint dedicato /pme-predictions
-        // (collezione daily_predictions_pme, scrematura gia' applicata).
+        // Quando activeView e' 'pme' (alias frontend: tab "AI OST" = Odds + Stats =
+        // Sistema Z) carica da /sistema-z-predictions (collezione predictions_sistema_z).
+        // Il nome interno 'pme' e' rimasto storico, l'utente vede "AI OST".
         // Altrimenti usa la cache predictions condivisa con /best-picks (daily_predictions_unified).
         let predData: any;
         if (activeView === 'pme') {
-          const r = await fetch(`${API_BASE}/simulation/pme-predictions?date=${date}`, {
+          const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
             headers: isAdmin ? { 'x-admin-key': '000128' } : {}
           });
           predData = await r.json();
@@ -796,14 +797,14 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, activeView]);
 
-  // --- FETCH count tip PME per data corrente (per il numerino del bottone PME) ---
+  // --- FETCH count tip Sistema Z / AI OST (per il numerino del bottone) ---
   // Effettuato anche quando activeView != 'pme', cosi' il bottone mostra sempre il count.
-  // La query e' leggera (solo conteggio), non blocca il rendering.
+  // Nome interno della variabile resta pmeCount per non riscrivere tutto il file.
   useEffect(() => {
     let cancelled = false;
     const loadPmeCount = async () => {
       try {
-        const r = await fetch(`${API_BASE}/simulation/pme-predictions?date=${date}`, {
+        const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
           headers: isAdmin ? { 'x-admin-key': '000128' } : {}
         });
         const j = await r.json();
@@ -3700,11 +3701,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           >
             ⭐ Super Selection ({superSelectionCount})
           </button>
-          {/* Tab PME (Pattern Match Engine) - cliccabile: attiva la view pme */}
+          {/* Tab AI OST (Odds + Stats = Sistema Z). Nome interno activeView 'pme'
+              mantenuto per non riscrivere tutto il file. L'utente vede "AI OST". */}
           <button
             onClick={() => setActiveView('pme')}
             onMouseEnter={e => { if (activeView !== 'pme') e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
             onMouseLeave={e => { if (activeView !== 'pme') e.currentTarget.style.background = theme.surfaceSubtle; }}
+            title="AI OST = Odds + Stats. Pronostici sintetizzati da un'AI che incrocia il commento delle quote (Odds Monitor) con il commento statistico (Best Picks Premium)."
             style={{
               background: activeView === 'pme' ? `#a855f720` : theme.surfaceSubtle,
               border: `1px solid ${activeView === 'pme' ? '#a855f7' : theme.surface08}`,
@@ -3717,7 +3720,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               transition: 'all 0.15s'
             }}
           >
-            🧬 PME ({pmeCount ?? '...'})
+            🎯 AI OST ({pmeCount ?? '...'})
           </button>
         </div>
 

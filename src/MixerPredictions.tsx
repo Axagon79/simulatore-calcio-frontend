@@ -421,7 +421,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     try {
       // Storico PME e' separato (collezione prediction_versions_pme): quando la
       // view attiva e' 'pme' usiamo l'endpoint dedicato per non mescolare gli storici.
-      const versionsSource = activeView === 'pme' ? 'pme' : 'moe';
+      const versionsSource = activeView === 'pme' ? 'sistema_z' : 'moe';
       const versions = await fetchVersionsFull(date, fetchKey, versionsSource);
       setVersionCache(prev => ({ ...prev, [fetchKey]: versions }));
     } catch { /* silent */ }
@@ -709,7 +709,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         // Usa l'endpoint dedicato se la view e' 'pme' (storico separato).
         {
           try {
-            const versionsSource = activeView === 'pme' ? 'pme' : 'moe';
+            const versionsSource = activeView === 'pme' ? 'sistema_z' : 'moe';
             const versionsLight = getVersionsLight(date, versionsSource) ?? await fetchVersionsLight(date, versionsSource);
             // Normalizza come fa il backend: lowercase + spazi → underscore
             const normalizeKey = (d: string, h: string, a: string) =>

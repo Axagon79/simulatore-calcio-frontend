@@ -29,9 +29,10 @@ interface PredictionVersionFull {
   [key: string]: any;
 }
 
-// 'moe' = endpoint /prediction-versions (storico MoE/Mixer/SuperSelection).
-// 'pme' = endpoint /prediction-versions-pme (storico PME, collezione separata).
-type PredictionSource = 'moe' | 'pme';
+// 'moe'       = endpoint /prediction-versions          (storico MoE/Mixer/SuperSelection).
+// 'pme'       = endpoint /prediction-versions-pme      (storico PME, deprecato, collezione separata).
+// 'sistema_z' = endpoint /prediction-versions-sistema-z (storico AI OST / Sistema Z, 2 fasi).
+type PredictionSource = 'moe' | 'pme' | 'sistema_z';
 
 interface PredictionVersionsContextType {
   getVersionsLight: (date: string, source?: PredictionSource) => PredictionVersionLight[] | null;
@@ -61,9 +62,11 @@ function getOtherDates(): string[] {
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const adminHeaders: HeadersInit = isLocalhost ? { 'x-admin-key': '000128' } : {};
 
-// Helper: sceglie l'endpoint corretto (MoE vs PME) in base al source.
+// Helper: sceglie l'endpoint corretto in base al source.
 function endpointFor(source: PredictionSource): string {
-  return source === 'pme' ? '/prediction-versions-pme' : '/prediction-versions';
+  if (source === 'sistema_z') return '/prediction-versions-sistema-z';
+  if (source === 'pme') return '/prediction-versions-pme';
+  return '/prediction-versions';
 }
 
 // Fetch leggera: solo campi minimi per partite ritirate

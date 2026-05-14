@@ -3639,7 +3639,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 transition: 'all 0.15s'
               }}
             >
-              🧬 PME ({pmeCount ?? '...'})
+              🎯 AI OST ({pmeCount ?? '...'})
             </button>
           )}
         </div>

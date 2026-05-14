@@ -809,7 +809,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         });
         const j = await r.json();
         if (cancelled) return;
-        const total = j?.stats?.total ?? 0;
+        const total = Array.isArray(j?.predictions) ? j.predictions.length : 0;
         setPmeCount(total);
       } catch {
         if (!cancelled) setPmeCount(null);
@@ -1304,9 +1304,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   // filtro client-side per consistenza con il pattern delle altre view.
   const allNormalPreds = useMemo(() => {
     if (activeView === 'pme') {
-      // I pronostici PME hanno tutti source='pme'. Mostra tutti i tip.
+      // AI OST = Sistema Z. I pronostici hanno source='sistema_z' (normalizzato lato backend).
       return predictions.filter(p => !p.is_exact_score).map(p => {
-        const filtered = p.pronostici?.filter((pr: any) => pr.source === 'pme') || [];
+        const filtered = p.pronostici?.filter((pr: any) => pr.source === 'sistema_z') || [];
         return filtered.length > 0 ? { ...p, pronostici: filtered } : null;
       }).filter(Boolean) as typeof predictions;
     }
@@ -4537,16 +4537,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
-        {/* NESSUN PRONOSTICO MIXER / SUPER SELECTION */}
+        {/* NESSUN PRONOSTICO MIXER / SUPER SELECTION / AI OST */}
         {!loading && !error && predictions.length > 0 && allNormalPreds.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>{activeView === 'super_selection' ? '⭐' : '🧪'}</div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>{activeView === 'super_selection' ? '⭐' : activeView === 'pme' ? '🎯' : '🧪'}</div>
             <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>
-              {activeView === 'super_selection' ? 'Nessun pronostico Super Selection per oggi' : 'Nessun pronostico Mixer per oggi'}
+              {activeView === 'super_selection'
+                ? 'Nessun pronostico Super Selection per oggi'
+                : activeView === 'pme'
+                ? 'Nessun pronostico AI OST per oggi'
+                : 'Nessun pronostico Mixer per oggi'}
             </div>
             <div style={{ fontSize: '11px', color: theme.textFaint }}>
               {activeView === 'super_selection'
                 ? 'I pronostici Super Selection sono quelli con almeno 2 flag su 3 tra Alto Rendimento, Elite e Mixer'
+                : activeView === 'pme'
+                ? 'I pronostici AI OST (Odds + Stats) sono emessi dal Sistema Z che sintetizza commenti Premium e Odds Monitor'
                 : 'I pronostici Mixer sono quelli che matchano i 74 pattern storicamente vincenti'}
             </div>
           </div>

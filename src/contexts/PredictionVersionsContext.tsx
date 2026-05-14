@@ -97,14 +97,15 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionVersionsProvider({ children }: { children: ReactNode }) {
-  // Cache separate per source: 'moe' e 'pme' hanno endpoint e collezioni distinte
+  // Cache separate per source: 'moe', 'pme' e 'sistema_z' hanno endpoint e collezioni distinte
   // → niente mescolamento tra storici (regola: doc PME stanno in
-  // daily_predictions_pme + prediction_versions_pme, MoE in unified+versions).
+  // daily_predictions_pme + prediction_versions_pme, MoE in unified+versions,
+  // Sistema Z in predictions_sistema_z + prediction_versions_sistema_z).
   const cacheRef = useRef<Record<PredictionSource, Record<string, PredictionVersionLight[]>>>({
-    moe: {}, pme: {},
+    moe: {}, pme: {}, sistema_z: {},
   });
   const inflightRef = useRef<Record<PredictionSource, Record<string, Promise<PredictionVersionLight[]>>>>({
-    moe: {}, pme: {},
+    moe: {}, pme: {}, sistema_z: {},
   });
   const [loading, setLoading] = useState(true);
 

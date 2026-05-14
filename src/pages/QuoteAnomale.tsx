@@ -1005,6 +1005,15 @@ function MobileCard({ m, date, preds, aiAnalysis, aiLoading, canSeeAi, onFetchAi
 }
 
 // --- PAGINA PRINCIPALE ---
+// Merge dei campi live (score/status/minute/real_score) da /live-scores sui MatchDoc.
+// Match per home/away normalizzati (combaciano tra h2h_by_round e quote_anomale).
+function mergeLive(items: MatchDoc[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number; real_score?: string }>): MatchDoc[] {
+  return items.map(item => {
+    const live = scores.find(s => s.home === item.home && s.away === item.away);
+    return live ? { ...item, live_score: live.live_score, live_status: live.live_status, live_minute: live.live_minute, real_score: live.real_score ?? item.real_score } : item;
+  });
+}
+
 export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const [date, setDate] = useState(formatDate(new Date()));
   const [matches, setMatches] = useState<MatchDoc[]>([]);
@@ -1087,38 +1096,53 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
       .catch(() => {});
   }, [date]);
 
+  // --- FETCH PRINCIPALE + ALLINEAMENTO LIVE-SCORES ---
+  // Fix race condition: il fetch /quote-anomale/matches restituisce il doc QA che
+  // puo' avere live_status/live_minute "vecchi" (es. partita Finished ma campi live
+  // ancora a "Live" 31'). Dopo aver impostato i match, lanciamo SUBITO una fetch
+  // /live-scores (che legge da h2h_by_round, sempre allineato) e facciamo merge dei
+  // campi live_*. Cosi' l'ultimo stato applicato e' sempre quello fresco.
   useEffect(() => {
     setLoading(true); setError(''); setSelectedMatchKey(null);
     const url = `${API_BASE}/quote-anomale/matches?date=${date}${selectedLeague ? `&league=${encodeURIComponent(selectedLeague)}` : ''}`;
-    fetch(url)
-      .then(r => r.json())
-      .then(d => { if (d.success) setMatches(d.data); else setError(d.message || 'Errore'); })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
+    let alive = true;
+    (async () => {
+      try {
+        const resp = await fetch(url);
+        const d = await resp.json();
+        if (!alive) return;
+        if (!d.success) { setError(d.message || 'Errore'); return; }
+        // 1. Imposto i match dal fetch principale
+        let items: MatchDoc[] = d.data;
+        // 2. Allineo subito i live-scores (vince h2h_by_round su quote_anomale per i live_*)
+        try {
+          const ls = await fetch(`${API_BASE}/live-scores?date=${date}`);
+          const lsData = await ls.json();
+          if (alive && lsData.success && lsData.scores?.length > 0) {
+            items = mergeLive(items, lsData.scores);
+          }
+        } catch { /* silenzioso */ }
+        if (alive) setMatches(items);
+      } catch (e: unknown) {
+        if (alive) setError((e as Error).message);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
   }, [date, selectedLeague]);
 
   // --- POLLING LIVE SCORES ogni 15 secondi (allineato a UnifiedPredictions.tsx) ---
-  // Aggiorna live_score / live_status / live_minute / real_score senza ricaricare
-  // l'intero doc match (che e' grosso e contiene gli indicatori).
   useEffect(() => {
-    const mergeLive = (items: MatchDoc[], scores: Array<{ home: string; away: string; live_score: string; live_status: string; live_minute: number; real_score?: string }>): MatchDoc[] =>
-      items.map(item => {
-        const live = scores.find(s => s.home === item.home && s.away === item.away);
-        return live ? { ...item, live_score: live.live_score, live_status: live.live_status, live_minute: live.live_minute, real_score: live.real_score ?? item.real_score } : item;
-      });
-
     const pollLive = async () => {
       try {
         const res = await fetch(`${API_BASE}/live-scores?date=${date}`);
         const data = await res.json();
         if (data.success && data.scores?.length > 0) {
-          const scores = data.scores;
-          setMatches(prev => mergeLive(prev, scores));
+          setMatches(prev => mergeLive(prev, data.scores));
         }
       } catch { /* silenzioso */ }
     };
-
-    pollLive();
     const interval = setInterval(pollLive, 15000);
     return () => clearInterval(interval);
   }, [date]);

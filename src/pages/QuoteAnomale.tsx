@@ -18,6 +18,7 @@ interface Rendimento {
 interface MatchDoc {
   match_key: string; date: string; league?: string; league_raw?: string;
   match_time: string; home_raw: string; away_raw: string;
+  home?: string; away?: string;  // nomi normalizzati (combaciano con h2h_by_round e /live-scores)
   quote_apertura: QuoteSet; quote_chiusura?: QuoteSet;
   semaforo?: { '1': Semaforo; 'X': Semaforo; '2': Semaforo };
   alert_breakeven?: { aggio_tot: number; '1': AlertBE; 'X': AlertBE; '2': AlertBE };

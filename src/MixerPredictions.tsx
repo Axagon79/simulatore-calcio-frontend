@@ -2351,16 +2351,181 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </div>
             </div>
 
-            {/* Top Score — risultati più probabili. */}
-            {/* MoE: simulation_data.top_scores (output Monte Carlo). */}
-            {/* PME: pme_re_top4_coerenti (top 4 RE coerenti coi pronostici emessi, */}
-            {/*       ordinati con algoritmo calibrato — vedi wiki/concetti/algoritmo-re-card-pme.md). */}
-            {(activeView === 'pme' ? (pred as any).pme_re_top4_coerenti?.length > 0 : !!(pred as any).simulation_data?.top_scores) && (() => {
+            {/* AI OST (Sistema Z): 2 capsule con le motivazioni AI Mistral
+                Fase 1 (notturna) e Fase 2 (pre-match T-2h). Ogni capsula
+                contiene 4 blocchi (segno/gol/peso/risultati esatti) + 1
+                blocco extra "confronto Fase 1" nella capsula Fase 2.
+                Entrambe chiuse di default, collassabili indipendentemente. */}
+            {activeView === 'pme' && (() => {
+              const motNott = (pred as any).motivazione_notturna || null;
+              const motPre = (pred as any).motivazione_pre_match || null;
+              const hasNott = motNott && (motNott.segno || motNott.gol || motNott.peso || motNott.legacy);
+              const hasPre = motPre && (motPre.segno || motPre.gol || motPre.peso || motPre.legacy);
+              if (!hasNott && !hasPre) return null;
+
+              const formatTs = (ts: string | null): string => {
+                if (!ts) return '';
+                try {
+                  const d = new Date(ts);
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  const hh = String(d.getHours()).padStart(2, '0');
+                  const mi = String(d.getMinutes()).padStart(2, '0');
+                  return `${dd}/${mm} alle ${hh}:${mi}`;
+                } catch { return ''; }
+              };
+
+              const renderCapsula = (
+                label: string,
+                emoji: string,
+                ts: string | null,
+                mot: any,
+                accentColor: string,
+                bgColor: string,
+                isFase2: boolean,
+                capsuleKey: string,
+              ) => {
+                const isOpen = expandedSections.has(capsuleKey);
+                const re: string[] = Array.isArray(mot?.risultati_esatti_top3) ? mot.risultati_esatti_top3 : [];
+                // Blocchi accoppiati: motivazione mercato + motivazione peso del mercato.
+                const blocks: Array<{ title: string; text: string; subtext?: string }> = [];
+                if (mot?.segno) {
+                  blocks.push({
+                    title: 'Pronostico Segno',
+                    text: mot.segno,
+                    subtext: mot?.peso_segno || undefined,
+                  });
+                }
+                if (mot?.gol) {
+                  blocks.push({
+                    title: 'Pronostico Gol',
+                    text: mot.gol,
+                    subtext: mot?.peso_gol || undefined,
+                  });
+                }
+                // Solo Fase 2: sezione confronto
+                if (isFase2 && mot?.confronto_fase1) {
+                  blocks.push({ title: 'Confronto con la lettura notturna', text: mot.confronto_fase1 });
+                }
+                // Fallback peso globale (doc emessi prima dello split peso_segno/peso_gol)
+                if (!mot?.peso_segno && !mot?.peso_gol && mot?.peso) {
+                  blocks.push({ title: 'Convinzione', text: mot.peso });
+                }
+                // Fallback finale: doc legacy senza nessun sotto-campo
+                if (blocks.length === 0 && mot?.legacy) {
+                  blocks.push({ title: 'Lettura completa', text: mot.legacy });
+                }
+                return (
+                  <div key={capsuleKey} style={{ marginLeft: '8px', marginBottom: '8px' }}>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); toggleSection(capsuleKey, e); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        cursor: 'pointer', padding: '8px 12px',
+                        background: bgColor,
+                        border: `1px solid ${accentColor}40`,
+                        borderRadius: isOpen ? '6px 6px 0 0' : '6px',
+                        transition: 'all 0.2s',
+                        userSelect: 'none' as const,
+                      }}
+                    >
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: accentColor, letterSpacing: '0.3px' }}>
+                        {emoji} {label}
+                        {ts && <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 400, color: theme.textDim }}>· {formatTs(ts)}</span>}
+                      </span>
+                      <span style={{ fontSize: '10px', color: accentColor, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                    </div>
+                    {isOpen && (
+                      <div style={{
+                        padding: '10px 14px',
+                        background: isLight ? '#ffffff' : 'rgba(0,0,0,0.25)',
+                        border: `1px solid ${accentColor}40`,
+                        borderTop: 'none',
+                        borderRadius: '0 0 6px 6px',
+                        fontSize: '12.5px', lineHeight: '1.5',
+                        color: theme.text,
+                      }}>
+                        {blocks.map((b, i) => (
+                          <div key={i} style={{ marginBottom: i === blocks.length - 1 && re.length === 0 ? 0 : '12px' }}>
+                            <div style={{
+                              fontSize: '11px', fontWeight: 700, color: accentColor,
+                              textTransform: 'uppercase' as const, letterSpacing: '0.5px',
+                              marginBottom: '4px',
+                            }}>{b.title}</div>
+                            <div style={{ color: theme.text, marginBottom: b.subtext ? '6px' : 0 }}>{b.text}</div>
+                            {b.subtext && (
+                              <div style={{
+                                color: theme.textDim,
+                                fontStyle: 'italic' as const,
+                                paddingLeft: '8px',
+                                borderLeft: `2px solid ${accentColor}40`,
+                              }}>{b.subtext}</div>
+                            )}
+                          </div>
+                        ))}
+                        {re.length > 0 && (
+                          <div>
+                            <div style={{
+                              fontSize: '11px', fontWeight: 700, color: accentColor,
+                              textTransform: 'uppercase' as const, letterSpacing: '0.5px',
+                              marginBottom: '6px',
+                            }}>Tre risultati esatti più probabili</div>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' as const }}>
+                              {re.slice(0, 3).map((s, i) => (
+                                <span key={i} style={{
+                                  display: 'inline-block',
+                                  padding: '4px 10px',
+                                  background: `${accentColor}20`,
+                                  border: `1px solid ${accentColor}40`,
+                                  borderRadius: '4px',
+                                  fontSize: '13px', fontWeight: 700,
+                                  color: theme.text,
+                                  fontVariantNumeric: 'tabular-nums' as const,
+                                }}>{s}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              };
+
+              return (
+                <>
+                  {hasNott && renderCapsula(
+                    'Lettura notturna',
+                    '🌙',
+                    motNott.timestamp,
+                    motNott,
+                    isLight ? '#6366f1' : '#818cf8',  // indaco
+                    isLight ? '#eef2ff' : 'rgba(99,102,241,0.10)',
+                    false,
+                    `${matchId}-mot-nott`,
+                  )}
+                  {hasPre && renderCapsula(
+                    'Aggiornamento pre-partita',
+                    '⚡',
+                    motPre.timestamp,
+                    motPre,
+                    isLight ? '#0891b2' : '#22d3ee',  // ciano
+                    isLight ? '#ecfeff' : 'rgba(34,211,238,0.10)',
+                    true,
+                    `${matchId}-mot-pre`,
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Top Score — risultati più probabili (solo MoE/non Sistema Z).
+                Sistema Z mostra i propri 3 risultati esatti DENTRO le capsule. */}
+            {activeView !== 'pme' && (() => {
               const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
               const isPmeView = activeView === 'pme';
               const items: Array<{ score: string; count: number | string }> = isPmeView
-                ? ((pred as any).pme_re_top4_coerenti as Array<{ score: string; pct_coerenza?: number }>).slice(0, 4)
-                    .map(r => ({ score: r.score, count: `${r.pct_coerenza ?? 0}%` }))
+                ? ((pred as any).risultati_esatti_top3 as Array<string>).slice(0, 3)
+                    .map(s => ({ score: s, count: '' }))
                 : ((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3)
                     .map(([s, c]) => ({ score: s, count: c }));
               return (
@@ -2373,7 +2538,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
                   filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const,
                 }}>
-                  <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
+                  <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>{isPmeView ? 'Risultati piu\' probabili:' : 'Top Score:'}</span>
                   {items.map(({ score, count }, i, arr) => {
                     const normS = normalizeScore(score);
                     const es = getEffectiveScore(pred);

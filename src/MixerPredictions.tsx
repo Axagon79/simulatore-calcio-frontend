@@ -809,7 +809,15 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         });
         const j = await r.json();
         if (cancelled) return;
-        const total = Array.isArray(j?.predictions) ? j.predictions.length : 0;
+        // Conteggio TIP emessi (segno.emit + gol.emit), non partite.
+        // Allineato agli altri tab (Pronostici/Elite/AR/Mixer/SS) che contano tip singoli.
+        const preds = Array.isArray(j?.predictions) ? j.predictions : [];
+        const total = preds.reduce((sum: number, p: any) => {
+          let tips = 0;
+          if (p?.segno?.emit) tips += 1;
+          if (p?.gol?.emit) tips += 1;
+          return sum + tips;
+        }, 0);
         setPmeCount(total);
       } catch {
         if (!cancelled) setPmeCount(null);

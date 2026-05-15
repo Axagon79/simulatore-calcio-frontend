@@ -459,7 +459,17 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
           headers: { 'x-admin-key': '000128' }
         });
         const j = await r.json();
-        if (!cancelled) setPmeCount(Array.isArray(j?.predictions) ? j.predictions.length : 0);
+        if (!cancelled) {
+          // Conteggio TIP emessi (segno.emit + gol.emit), non partite.
+          const preds = Array.isArray(j?.predictions) ? j.predictions : [];
+          const total = preds.reduce((sum: number, p: any) => {
+            let tips = 0;
+            if (p?.segno?.emit) tips += 1;
+            if (p?.gol?.emit) tips += 1;
+            return sum + tips;
+          }, 0);
+          setPmeCount(total);
+        }
       } catch {
         if (!cancelled) setPmeCount(null);
       }

@@ -294,13 +294,16 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // Init data: se la navigazione e' un refresh esplicito (F5), ignora ?date= e usa oggi.
   // Per link diretti / navigazione interna, rispetta ?date= se presente.
   const [date, setDate] = useState(() => {
-    const isReload = (() => {
+    // Flag globale condiviso con UnifiedPredictions: F5 detection scatta solo
+    // al primo mount della sessione SPA, non a ogni cambio rotta.
+    const _hasDetected = typeof window !== 'undefined' && !!(window as any).__aiSimF5Detected;
+    if (!_hasDetected) {
+      if (typeof window !== 'undefined') (window as any).__aiSimF5Detected = true;
       try {
         const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-        return navEntry?.type === 'reload';
-      } catch { return false; }
-    })();
-    if (isReload) return getToday();
+        if (navEntry?.type === 'reload') return getToday();
+      } catch { /* fallthrough */ }
+    }
     return searchParams.get('date') || getToday();
   });
   // Se reload: pulisci ?date= dall'URL al primo render (cosi' al prossimo F5 e' coerente)

@@ -288,19 +288,34 @@ interface UnifiedPredictionsProps {
 /** Controlla se una prediction ha almeno un pronostico reale (non NO BET) */
 const hasRealTip = (p: Prediction) => p.pronostici?.some((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET') ?? false;
 
+// Flag globale window: la detection "F5 → torna a oggi" deve scattare solo al
+// primo mount della sessione SPA, non a ogni cambio rotta. performance.
+// getEntriesByType resta valida per l'intera sessione, quindi senza questo flag
+// i mount successivi a una navigate interna confondono e usano getToday()
+// perdendo la data scelta. Flag su window cosi' UnifiedPredictions e
+// MixerPredictions lo condividono attraverso cambi rotta.
+const _hasF5BeenDetected = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return !!(window as any).__aiSimF5Detected;
+};
+const _markF5Detected = (): void => {
+  if (typeof window !== 'undefined') (window as any).__aiSimF5Detected = true;
+};
+
 export default function UnifiedPredictions({ onBack, onNavigateToLeague }: UnifiedPredictionsProps) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // Init data: se la navigazione e' un refresh esplicito (F5), ignora ?date= e usa oggi.
-  // Per link diretti / navigazione interna, rispetta ?date= se presente.
+  // Init data: se e' il PRIMO mount della sessione SPA e quel mount e' un
+  // refresh F5, ignora ?date= e usa oggi. Per i mount successivi (cambio rotta
+  // tra /best-picks e /best-picks-v2) rispetta sempre ?date=.
   const [date, setDate] = useState(() => {
-    const isReload = (() => {
+    if (!_hasF5BeenDetected()) {
+      _markF5Detected();
       try {
         const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-        return navEntry?.type === 'reload';
-      } catch { return false; }
-    })();
-    if (isReload) return getToday();
+        if (navEntry?.type === 'reload') return getToday();
+      } catch { /* fallthrough */ }
+    }
     return searchParams.get('date') || getToday();
   });
   // Se reload: pulisci ?date= dall'URL al primo render (cosi' al prossimo F5 e' coerente)

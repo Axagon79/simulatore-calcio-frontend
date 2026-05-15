@@ -452,11 +452,14 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     let cancelled = false;
     const loadPmeCount = async () => {
       try {
-        const r = await fetch(`${API_BASE}/simulation/pme-predictions?date=${date}`, {
+        // Il bottone AI OST in Unified deve mostrare il count Sistema Z
+        // (allineato a MixerPredictions). Era rimasto al vecchio endpoint
+        // /pme-predictions: bug del 15/05/2026.
+        const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
           headers: { 'x-admin-key': '000128' }
         });
         const j = await r.json();
-        if (!cancelled) setPmeCount(j?.stats?.total ?? 0);
+        if (!cancelled) setPmeCount(Array.isArray(j?.predictions) ? j.predictions.length : 0);
       } catch {
         if (!cancelled) setPmeCount(null);
       }

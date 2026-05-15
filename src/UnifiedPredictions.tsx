@@ -460,14 +460,14 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         });
         const j = await r.json();
         if (!cancelled) {
-          // Conteggio TIP emessi (segno.emit + gol.emit), non partite.
+          // Conteggio tip emessi, allineato esattamente al tab Pronostici
+          // (filter pronostico && != 'NO BET').
           const preds = Array.isArray(j?.predictions) ? j.predictions : [];
-          const total = preds.reduce((sum: number, p: any) => {
-            let tips = 0;
-            if (p?.segno?.emit) tips += 1;
-            if (p?.gol?.emit) tips += 1;
-            return sum + tips;
-          }, 0);
+          const total = preds.reduce(
+            (s: number, p: any) =>
+              s + (p?.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0),
+            0
+          );
           setPmeCount(total);
         }
       } catch {

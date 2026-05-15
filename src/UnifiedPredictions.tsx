@@ -888,8 +888,20 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     e.stopPropagation();
     setExpandedSections(prev => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        // Mutua esclusione per i popover "X tip" delle card: aprirne uno
+        // chiude tutti gli altri *-tips, cosi' non restano popover multipli
+        // aperti contemporaneamente. Altre sezioni (commento, dettaglio,
+        // MC, ecc.) restano indipendenti.
+        if (key.endsWith('-tips')) {
+          for (const k of Array.from(next)) {
+            if (k.endsWith('-tips')) next.delete(k);
+          }
+        }
+        next.add(key);
+      }
       return next;
     });
   };

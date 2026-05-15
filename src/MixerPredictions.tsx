@@ -928,8 +928,18 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     e.stopPropagation();
     setExpandedSections(prev => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        // Mutua esclusione per i popover "X tip" delle card: aprirne uno
+        // chiude tutti gli altri *-tips. Altre sezioni indipendenti.
+        if (key.endsWith('-tips')) {
+          for (const k of Array.from(next)) {
+            if (k.endsWith('-tips')) next.delete(k);
+          }
+        }
+        next.add(key);
+      }
       return next;
     });
   };

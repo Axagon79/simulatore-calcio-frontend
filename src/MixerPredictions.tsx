@@ -1180,6 +1180,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     setExpandedCards(new Set());
   };
 
+  // Reset accordion + card aperte quando si cambia tab (Mixer / Super Selection
+  // / AI OST). Senza questo, una lega aperta in Mixer restava aperta anche in
+  // Super Selection, con stato visivo confondente.
+  useEffect(() => {
+    setCollapsedLeagues(new Set());
+    setExpandedCards(new Set());
+    setExpandedSections(new Set());
+  }, [activeView]);
+
   // --- HR% COLOR SCALE (5 livelli) ---
   const getHRColor = (hr: number, threshold: number): string => {
     if (hr < threshold * 0.5) return theme.missText;

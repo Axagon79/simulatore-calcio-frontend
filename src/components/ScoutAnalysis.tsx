@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getTheme, getThemeMode } from '../AppDev/costanti';
+import { getThemeMode } from '../AppDev/costanti';
 
 const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
 const FONT_FAMILY = '"Inter", system-ui, sans-serif';
 
-const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
 const accentColor = isLight ? '#047857' : '#6ee7b7';

@@ -2494,7 +2494,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           </div>
                         ))}
                         {re.length > 0 && (
-                          <div>
+                          <div style={{ marginBottom: mot?.odds_snapshot ? '12px' : 0 }}>
                             <div style={{
                               fontSize: '11px', fontWeight: 700, color: accentColor,
                               textTransform: 'uppercase' as const, letterSpacing: '0.5px',
@@ -2516,6 +2516,35 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             </div>
                           </div>
                         )}
+                        {mot?.odds_snapshot && (() => {
+                          const o = mot.odds_snapshot;
+                          const q = (k: string) => {
+                            const v = o?.[k];
+                            return (typeof v === 'number' && v > 0) ? v.toFixed(2) : '—';
+                          };
+                          return (
+                            <div style={{ marginTop: '14px', opacity: 0.75 }}>
+                              <div style={{
+                                fontSize: '10px', color: theme.textDim,
+                                fontStyle: 'italic' as const, marginBottom: '4px',
+                                lineHeight: '1.4',
+                              }}>
+                                Quote nel momento di questa lettura (fotografia di riferimento, non sono le quote attuali):
+                              </div>
+                              <div style={{
+                                fontSize: '11px',
+                                color: theme.textDim, lineHeight: '1.55',
+                                fontVariantNumeric: 'tabular-nums' as const,
+                              }}>
+                                1 {q('1')} · X {q('X')} · 2 {q('2')} &nbsp;|&nbsp;
+                                O 1.5 {q('over_15')} · U 1.5 {q('under_15')} &nbsp;|&nbsp;
+                                O 2.5 {q('over_25')} · U 2.5 {q('under_25')} &nbsp;|&nbsp;
+                                O 3.5 {q('over_35')} · U 3.5 {q('under_35')} &nbsp;|&nbsp;
+                                GG {q('gg')} · NG {q('ng')}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

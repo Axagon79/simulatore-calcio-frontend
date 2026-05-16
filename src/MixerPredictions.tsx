@@ -3905,15 +3905,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </div>
           </div>
         )}
-        {/* TAB SWITCHER: link verso pagina originale + Mixer attivo */}
+        {/* TAB SWITCHER: 3 link verso pagina originale + 3 tab interni (Mixer / Super Selection / AI OST).
+            Su desktop tutti su una riga sola.
+            Su mobile flex-wrap per disporli su 2 righe (3+3) automaticamente. */}
         <div data-tour="step-4" style={{
-          display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '8px',
+          marginBottom: '25px',
+          flexWrap: isMobile ? ('wrap' as const) : ('nowrap' as const),
         }}>
           {/* Link verso pagina originale */}
           {[
-            { id: 'pronostici', label: `Pronostici (${tabCounts.pronostici})`, icon: '🏆', color: theme.cyan },
-            { id: 'elite', label: `Elite (${tabCounts.elite})`, icon: '👑', color: '#f59e0b' },
-            { id: 'alto_rendimento', label: `Alto Rendimento (${tabCounts.alto})`, icon: '💎', color: theme.gold }
+            { id: 'pronostici', name: 'Pronostici', count: tabCounts.pronostici, icon: '🏆', color: theme.cyan },
+            { id: 'elite', name: 'Elite', count: tabCounts.elite, icon: '👑', color: '#f59e0b' },
+            { id: 'alto_rendimento', name: 'Alto Rendimento', count: tabCounts.alto, icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
@@ -3924,15 +3930,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 background: theme.surfaceSubtle,
                 border: `1px solid ${theme.surface08}`,
                 color: theme.textDim,
-                padding: '8px 18px',
+                padding: isMobile ? '6px 4px' : '8px 14px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: isMobile ? '11px' : '12px',
                 fontWeight: '500',
-                transition: 'all 0.15s'
+                transition: 'all 0.15s',
+                lineHeight: isMobile ? '1.2' : undefined,
+                ...(isMobile
+                  ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                  : { whiteSpace: 'nowrap' as const }),
               }}
             >
-              {tab.icon} {tab.label}
+              {isMobile
+                ? <>{tab.icon} {tab.name}<br/>({tab.count})</>
+                : <>{tab.icon} {tab.name} ({tab.count})</>}
             </button>
           ))}
           {/* Tab Mixer (cliccabile: attiva la view mixer all'interno della pagina) */}
@@ -3944,15 +3956,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               background: activeView === 'mixer' ? `#10b98120` : theme.surfaceSubtle,
               border: `1px solid ${activeView === 'mixer' ? '#10b981' : theme.surface08}`,
               color: activeView === 'mixer' ? '#10b981' : theme.textDim,
-              padding: '8px 18px',
+              padding: isMobile ? '6px 4px' : '8px 14px',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '12px',
+              fontSize: isMobile ? '11px' : '12px',
               fontWeight: activeView === 'mixer' ? '700' : '500',
-              transition: 'all 0.15s'
+              transition: 'all 0.15s',
+              lineHeight: isMobile ? '1.2' : undefined,
+              ...(isMobile
+                ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                : { whiteSpace: 'nowrap' as const }),
             }}
           >
-            🧪 Mixer ({mixerCount})
+            {isMobile ? <>🧪 Mixer<br/>({mixerCount})</> : <>🧪 Mixer ({mixerCount})</>}
           </button>
           {/* Tab Super Selection (cliccabile: attiva la view super_selection) */}
           <button
@@ -3963,15 +3979,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               background: activeView === 'super_selection' ? `#fbbf2420` : theme.surfaceSubtle,
               border: `1px solid ${activeView === 'super_selection' ? '#fbbf24' : theme.surface08}`,
               color: activeView === 'super_selection' ? '#fbbf24' : theme.textDim,
-              padding: '8px 18px',
+              padding: isMobile ? '6px 4px' : '8px 14px',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '12px',
+              fontSize: isMobile ? '11px' : '12px',
               fontWeight: activeView === 'super_selection' ? '700' : '500',
-              transition: 'all 0.15s'
+              transition: 'all 0.15s',
+              lineHeight: isMobile ? '1.2' : undefined,
+              ...(isMobile
+                ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                : { whiteSpace: 'nowrap' as const }),
             }}
           >
-            ⭐ Super Selection ({superSelectionCount})
+            {isMobile ? <>⭐ Super Selection<br/>({superSelectionCount})</> : <>⭐ Super Selection ({superSelectionCount})</>}
           </button>
           {/* Tab AI OST (Odds + Stats = Sistema Z). Nome interno activeView 'pme'
               mantenuto per non riscrivere tutto il file. L'utente vede "AI OST". */}
@@ -3984,15 +4004,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               background: activeView === 'pme' ? `#a855f720` : theme.surfaceSubtle,
               border: `1px solid ${activeView === 'pme' ? '#a855f7' : theme.surface08}`,
               color: activeView === 'pme' ? '#a855f7' : theme.textDim,
-              padding: '8px 18px',
+              padding: isMobile ? '6px 4px' : '8px 14px',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '12px',
+              fontSize: isMobile ? '11px' : '12px',
               fontWeight: activeView === 'pme' ? '700' : '500',
-              transition: 'all 0.15s'
+              transition: 'all 0.15s',
+              lineHeight: isMobile ? '1.2' : undefined,
+              ...(isMobile
+                ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                : { whiteSpace: 'nowrap' as const }),
             }}
           >
-            🎯 AI OST ({pmeCount ?? '...'})
+            {isMobile ? <>🎯 AI OST<br/>({pmeCount ?? '...'})</> : <>🎯 AI OST ({pmeCount ?? '...'})</>}
           </button>
         </div>
 

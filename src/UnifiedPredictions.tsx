@@ -461,17 +461,15 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     loadPurchases();
   }, [user, date]);
 
-  // Count tip PME per il bottone admin "🧬 PME (N)" (visibile solo a isAdmin)
+  // Count tip Sistema Z per il bottone "🎯 AI OST (N)" — visibile a tutti gli
+  // utenti dal 16/05/2026 (prima il fetch era gated da isAdmin, quindi i non-admin
+  // vedevano sempre '...' come conteggio).
   useEffect(() => {
-    if (!isAdmin) return;
     let cancelled = false;
     const loadPmeCount = async () => {
       try {
-        // Il bottone AI OST in Unified deve mostrare il count Sistema Z
-        // (allineato a MixerPredictions). Era rimasto al vecchio endpoint
-        // /pme-predictions: bug del 15/05/2026.
         const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
-          headers: { 'x-admin-key': '000128' }
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
         });
         const j = await r.json();
         if (!cancelled) {
@@ -3603,14 +3601,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             </div>
           </div>
         )}
-        {/* TAB SWITCHER: Pronostici | Alto Rendimento */}
+        {/* TAB SWITCHER: Pronostici | Elite | Alto Rendimento | Mixer | Super Selection | AI OST.
+            Su desktop tutti i 6 tab stanno su una riga sola.
+            Su mobile abilitiamo flex-wrap per disporre i tab su 2 righe (la riga si spezza
+            automaticamente in base alla larghezza). */}
         <div data-tour="step-4" style={{
-          display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px'
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '8px',
+          marginBottom: '25px',
+          flexWrap: isMobile ? ('wrap' as const) : ('nowrap' as const),
         }}>
           {[
-            { id: 'pronostici' as const, label: `Pronostici (${normalPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)})`, icon: '🏆', color: theme.cyan },
-            { id: 'elite' as const, label: `Elite (${elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)})`, icon: '👑', color: '#f59e0b' },
-            { id: 'alto_rendimento' as const, label: `Alto Rendimento (${altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)})`, icon: '💎', color: theme.gold }
+            { id: 'pronostici' as const, name: 'Pronostici', count: normalPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0), icon: '🏆', color: theme.cyan },
+            { id: 'elite' as const, name: 'Elite', count: elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0), icon: '👑', color: '#f59e0b' },
+            { id: 'alto_rendimento' as const, name: 'Alto Rendimento', count: altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0), icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
@@ -3626,15 +3631,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 background: activeTab === tab.id ? `${tab.color}20` : theme.surfaceSubtle,
                 border: `1px solid ${activeTab === tab.id ? tab.color : theme.surface08}`,
                 color: activeTab === tab.id ? tab.color : theme.textDim,
-                padding: '8px 18px',
+                padding: isMobile ? '6px 4px' : '8px 14px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: isMobile ? '11px' : '12px',
                 fontWeight: activeTab === tab.id ? '700' : '500',
-                transition: 'all 0.15s'
+                transition: 'all 0.15s',
+                lineHeight: isMobile ? '1.2' : undefined,
+                ...(isMobile
+                  ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                  : { whiteSpace: 'nowrap' as const }),
               }}
             >
-              {tab.icon} {tab.label}
+              {isMobile
+                ? <>{tab.icon} {tab.name}<br/>({tab.count})</>
+                : <>{tab.icon} {tab.name} ({tab.count})</>}
             </button>
           ))}
           {/* 3 link a /best-picks-v2 (Mixer, Super Selection, AI OST) — visibili a tutti
@@ -3649,15 +3660,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 background: theme.surfaceSubtle,
                 border: `1px solid ${theme.surface08}`,
                 color: '#10b981',
-                padding: '8px 18px',
+                padding: isMobile ? '6px 4px' : '8px 14px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: isMobile ? '11px' : '12px',
                 fontWeight: '500',
-                transition: 'all 0.15s'
+                transition: 'all 0.15s',
+                lineHeight: isMobile ? '1.2' : undefined,
+                ...(isMobile
+                  ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                  : { whiteSpace: 'nowrap' as const }),
               }}
             >
-              🧪 Mixer ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)})
+              {(() => {
+                const c = allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0);
+                return isMobile ? <>🧪 Mixer<br/>({c})</> : <>🧪 Mixer ({c})</>;
+              })()}
             </button>
           )}
           {(
@@ -3669,15 +3687,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 background: theme.surfaceSubtle,
                 border: `1px solid ${theme.surface08}`,
                 color: '#fbbf24',
-                padding: '8px 18px',
+                padding: isMobile ? '6px 4px' : '8px 14px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: isMobile ? '11px' : '12px',
                 fontWeight: '500',
-                transition: 'all 0.15s'
+                transition: 'all 0.15s',
+                lineHeight: isMobile ? '1.2' : undefined,
+                ...(isMobile
+                  ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                  : { whiteSpace: 'nowrap' as const }),
               }}
             >
-              ⭐ Super Selection ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
+              {(() => {
+                const c = allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0);
+                return isMobile ? <>⭐ Super Selection<br/>({c})</> : <>⭐ Super Selection ({c})</>;
+              })()}
             </button>
           )}
           {(
@@ -3689,15 +3714,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 background: theme.surfaceSubtle,
                 border: `1px solid ${theme.surface08}`,
                 color: '#a855f7',
-                padding: '8px 18px',
+                padding: isMobile ? '6px 4px' : '8px 14px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: isMobile ? '11px' : '12px',
                 fontWeight: '500',
-                transition: 'all 0.15s'
+                transition: 'all 0.15s',
+                lineHeight: isMobile ? '1.2' : undefined,
+                ...(isMobile
+                  ? { flex: '0 0 calc((100% - 16px) / 3)', minWidth: 0, textAlign: 'center' as const, whiteSpace: 'normal' as const }
+                  : { whiteSpace: 'nowrap' as const }),
               }}
             >
-              🎯 AI OST ({pmeCount ?? '...'})
+              {isMobile
+                ? <>🎯 AI OST<br/>({pmeCount ?? '...'})</>
+                : <>🎯 AI OST ({pmeCount ?? '...'})</>}
             </button>
           )}
         </div>
@@ -3832,7 +3863,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         const hr = verified > 0 ? Math.round((centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        const matchesFinished = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
+                        // Source delle "Partite finite" deve essere lo stesso del HR
+                        // (hrSource), altrimenti su Alto Rendimento il count restava a 0
+                        // perche' veniva pescato exactScorePredictions invece di altoRendimentoPreds.
+                        const matchesFinished = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
                         const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
                           const score = p.real_score || p.live_score;
                           return score ? calculateHitFromScore(score, pr.pronostico, pr.tipo) === true : false;

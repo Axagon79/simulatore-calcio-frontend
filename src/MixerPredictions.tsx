@@ -1,3 +1,32 @@
+// NAMING — regola generale:
+// Quando vedi "PME" / "pme" nel codice, e' SEMPRE il vero Pattern Match Engine
+// (pipeline notturna ai_engine/calculators/pme_pipeline_step.py, step [45/49],
+// collezione `daily_predictions_pme`, badge "Doppio Segnale MoE+PME", contributo
+// al P/L "tutti" via popola_pl_storico.py). Il PME e' vivo e funzionante.
+//
+// RUOLO ATTUALE DEL PME (dal 14/05/2026): non e' piu' una sezione visiva dedicata
+// per l'utente. Lavora sottotraccia come filtro di concordanza sui pronostici di
+// mercato GOL: quando il PME concorda con il pronostico GOL di un'altra sezione
+// (Pronostici / Alto Rendimento / Elite / Mixer / Super Selection), il pronostico
+// riceve il badge "Doppio Segnale". La concordanza e' attiva su tutte le sezioni
+// TRANNE AI OST (potrebbe essere estesa in futuro, decisione aperta).
+//
+// UNICA ECCEZIONE: la stringa 'pme' usata come valore dello stato React `activeView`
+// (e quindi nel URL `?tab=pme`). Da quando il 14/05/2026 il tab admin "PME" della
+// pagina Best Picks v2 e' stato riconvertito a mostrare Sistema Z, la stringa 'pme'
+// nello stato e' rimasta come scorciatoia per non rifare un rename massivo, ma
+// l'etichetta utente e' "AI OST" (Odds + Stats = Sistema Z, collezione
+// `predictions_sistema_z`, endpoint `/simulation/sistema-z-predictions`).
+//
+// Riassunto pratico:
+//   - `activeView === 'pme'` (solo qui)           => tab AI OST / Sistema Z
+//   - tutto il resto ('PME', 'daily_predictions_pme', 'pme_re_top4_coerenti',
+//     'Doppio Segnale MoE+PME', `pmeCount` come variabile contatore tab, ...)
+//                                                  => Pattern Match Engine vero
+//
+// Documentazione completa:
+// g:\AI_Simulator_vault\wiki\moduli\pronostici\files\src__MixerPredictions.tsx.md
+// g:\AI_Simulator_vault\wiki\moduli\pronostici\files\functions_python__ai_engine__calculators__pme_pipeline_step.py.md
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { checkAdmin } from './permissions';
@@ -1454,8 +1483,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (detail.segno_dettaglio && !pred.segno_dettaglio) pred.segno_dettaglio = detail.segno_dettaglio;
       if (detail.segno_dettaglio_raw && !pred.segno_dettaglio_raw) pred.segno_dettaglio_raw = detail.segno_dettaglio_raw;
       if (detail.gol_dettaglio && !pred.gol_dettaglio) pred.gol_dettaglio = detail.gol_dettaglio;
-      // Su tab PME NON iniettare simulation_data: appartiene al doc MoE della stessa partita
-      // e non ha senso mostrarlo nella card PME (che ha la sua capsula pme_re_top4_coerenti).
+      // Su tab AI OST (activeView==='pme') NON iniettare simulation_data: appartiene al doc MoE
+      // della stessa partita e non ha senso mostrarlo nella card AI OST (che ha i propri 3 risultati
+      // esatti via `risultati_esatti_top3` dentro le capsule motivazione).
       if (detail.simulation_data && !(pred as any).simulation_data && activeView !== 'pme') (pred as any).simulation_data = detail.simulation_data;
       if (detail.analysis_free && !pred.analysis_free) pred.analysis_free = detail.analysis_free;
       if (detail.streak_home && !pred.streak_home) pred.streak_home = detail.streak_home;
@@ -2522,12 +2552,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 Sistema Z mostra i propri 3 risultati esatti DENTRO le capsule. */}
             {activeView !== 'pme' && (() => {
               const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
-              const isPmeView = activeView === 'pme';
-              const items: Array<{ score: string; count: number | string }> = isPmeView
-                ? ((pred as any).risultati_esatti_top3 as Array<string>).slice(0, 3)
-                    .map(s => ({ score: s, count: '' }))
-                : ((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3)
-                    .map(([s, c]) => ({ score: s, count: c }));
+              const items: Array<{ score: string; count: number | string }> =
+                ((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3)
+                  .map(([s, c]) => ({ score: s, count: c }));
               return (
                 <div style={{
                   marginTop: '0', marginBottom: '8px', marginLeft: '8px',
@@ -2538,7 +2565,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
                   filter: canSee ? 'none' : 'blur(5px)', userSelect: canSee ? 'auto' as const : 'none' as const,
                 }}>
-                  <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>{isPmeView ? 'Risultati piu\' probabili:' : 'Top Score:'}</span>
+                  <span style={{ fontSize: '11px', color: theme.textDim, fontWeight: 600 }}>Top Score:</span>
                   {items.map(({ score, count }, i, arr) => {
                     const normS = normalizeScore(score);
                     const es = getEffectiveScore(pred);
@@ -3563,7 +3590,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   }}>Best Picks</span>
                 </h1>
                 {/* Badge P/L e Yield fissi — posizionati assoluti tra Best Picks e crediti.
-                    Il rendimento GLOBALE (tutti) include MoE+Mixer+SuperSelection+PME ed e' sempre
+                    Il rendimento GLOBALE (tutti) include MoE+Mixer+SuperSelection+PME (qui PME =
+                    Pattern Match Engine vero, che gira ancora in pipeline notturna su
+                    daily_predictions_pme — distinto dal tab "AI OST" che usa activeView='pme'
+                    come scorciatoia di naming per Sistema Z, vedi header file) ed e' sempre
                     visibile in qualsiasi view. La sezione PME e' gia' fusa in 'tutti' lato backend
                     (popola_pl_storico.py), quindi qui basta una sola riga. */}
                 {(() => {

@@ -1504,7 +1504,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const isPremiumBusy = !!premiumLoading[matchId];
     const isDeepDiveLoaded = !!deepdiveAnalysis[matchId] || !!pred.analysis_deepdive;
     const isDeepDiveBusy = !!deepdiveLoading[matchId];
-    const hasAnalysis = pred.analysis_score !== undefined;
+    // Mostra il blocco "Analisi Match" (3 bottoni Free/Premium/Scout) quando esiste
+    // analysis_score (cards MoE) oppure quando siamo nel tab AI OST (Sistema Z, dove
+    // analysis_score non c'e' ma Scout/Premium sono comunque rilevanti).
+    const hasAnalysis = pred.analysis_score !== undefined || activeView === 'pme';
     const analysisScore = pred.analysis_score ?? 0;
     const analysisScoreColor = analysisScore >= 70 ? theme.success : analysisScore >= 40 ? '#facc15' : theme.danger;
 

@@ -3637,7 +3637,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {tab.icon} {tab.label}
             </button>
           ))}
-          {isAdmin && (
+          {/* 3 link a /best-picks-v2 (Mixer, Super Selection, AI OST) — visibili a tutti
+              dal 16/05/2026, prima erano gated per isAdmin. Rilascio pubblico della
+              rotta /best-picks-v2 dopo che Sistema Z + Scout sono in produzione. */}
+          {(
             <button
               onClick={() => navigate(`/best-picks-v2?date=${date}`)}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
@@ -3657,7 +3660,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               🧪 Mixer ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)})
             </button>
           )}
-          {isAdmin && (
+          {(
             <button
               onClick={() => navigate(`/best-picks-v2?date=${date}&tab=super_selection`)}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}
@@ -3677,7 +3680,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               ⭐ Super Selection ({allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)})
             </button>
           )}
-          {isAdmin && (
+          {(
             <button
               onClick={() => navigate(`/best-picks-v2?date=${date}&tab=pme`)}
               onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'}

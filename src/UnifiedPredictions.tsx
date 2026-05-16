@@ -16,6 +16,7 @@ import { sharePrediction } from './utils/shareCard';
 import { getRoutingRule, isOptimized } from './utils/routingRules';
 import StemmaImg from './components/StemmaImg';
 import LogoVirgo from './components/LogoVirgo';
+import ScoutAnalysis from './components/ScoutAnalysis';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
@@ -2518,10 +2519,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </div>
                     ) : isDeepDiveLoaded ? (
                       <div>
-                        <div style={{ whiteSpace: 'pre-wrap' as const }}>{(() => {
+                        {(() => {
                           const raw: any = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
-                          return typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
-                        })()}</div>
+                          const txt = typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
+                          return <ScoutAnalysis text={txt} />;
+                        })()}
                         <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
                           <span
                             onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}

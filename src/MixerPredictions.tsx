@@ -45,6 +45,7 @@ import { sharePrediction } from './utils/shareCard';
 import { getRoutingRule, isOptimized } from './utils/routingRules';
 import StemmaImg from './components/StemmaImg';
 import LogoVirgo from './components/LogoVirgo';
+import ScoutAnalysis from './components/ScoutAnalysis';
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
 
@@ -2475,6 +2476,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         borderRadius: isOpen ? '6px 6px 0 0' : '6px',
                         transition: 'all 0.2s',
                         userSelect: 'none' as const,
+                        fontFamily: '"Inter", system-ui, sans-serif',
                       }}
                     >
                       <span style={{ fontSize: '12px', fontWeight: 700, color: accentColor, letterSpacing: '0.3px' }}>
@@ -2492,6 +2494,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         borderRadius: '0 0 6px 6px',
                         fontSize: '12.5px', lineHeight: '1.5',
                         color: theme.text,
+                        fontFamily: '"Inter", system-ui, sans-serif',
                       }}>
                         {blocks.map((b, i) => (
                           <div key={i} style={{ marginBottom: i === blocks.length - 1 && re.length === 0 ? 0 : '12px' }}>
@@ -2820,10 +2823,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </div>
                     ) : isDeepDiveLoaded ? (
                       <div>
-                        <div style={{ whiteSpace: 'pre-wrap' as const }}>{(() => {
+                        {(() => {
                           const raw: any = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
-                          return typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
-                        })()}</div>
+                          const txt = typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
+                          return <ScoutAnalysis text={txt} />;
+                        })()}
                         <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
                           <span
                             onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}

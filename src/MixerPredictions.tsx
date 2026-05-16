@@ -2599,9 +2599,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 Sistema Z mostra i propri 3 risultati esatti DENTRO le capsule. */}
             {activeView !== 'pme' && (() => {
               const isLive = !pred.real_score && (getMatchStatus(pred) === 'live' || (pred.live_status === 'Finished' && !!pred.live_score));
+              // Su Mixer/Super Selection alcune partite non hanno simulation_data.top_scores
+              // (es. partite portate da prediction_versions o doc senza il campo MoE).
+              // Guard difensivo: se manca, salta il render della sezione Top Score.
+              const topScoresRaw = ((pred as any).simulation_data?.top_scores) as Array<[string, number]> | undefined;
+              if (!Array.isArray(topScoresRaw) || topScoresRaw.length === 0) return null;
               const items: Array<{ score: string; count: number | string }> =
-                ((pred as any).simulation_data.top_scores as Array<[string, number]>).slice(0, 3)
-                  .map(([s, c]) => ({ score: s, count: c }));
+                topScoresRaw.slice(0, 3).map(([s, c]) => ({ score: s, count: c }));
               return (
                 <div style={{
                   marginTop: '0', marginBottom: '8px', marginLeft: '8px',

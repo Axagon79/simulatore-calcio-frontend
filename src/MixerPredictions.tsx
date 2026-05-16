@@ -714,10 +714,12 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   }, [datePickerOpen]);
 
   // --- FETCH DATA (Unified + prediction_versions per partite ritirate) ---
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+  // `silent=true` evita di mostrare lo spinner durante il polling (refresh in background).
+  const fetchData = useCallback(async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         // Quando activeView e' 'pme' (alias frontend: tab "AI OST" = Odds + Stats =
         // Sistema Z) carica da /sistema-z-predictions (collezione predictions_sistema_z).
@@ -820,14 +822,27 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
 
       } catch (err: any) {
         console.error('Errore fetch pronostici unified:', err);
-        setError(err.message || 'Errore di connessione');
+        if (!silent) setError(err.message || 'Errore di connessione');
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
-    };
-    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, activeView]);
+
+  // Trigger iniziale + ad ogni cambio date/activeView (spinner visibile)
+  useEffect(() => {
+    fetchData(false);
+  }, [date, activeView, fetchData]);
+
+  // Polling silenzioso ogni 60s per intercettare aggiornamenti Fase 2 + Scout
+  // senza richiedere F5 all'utente. Non tocca lo spinner ne' lo state di errore.
+  // Indipendente dal polling live-scores (15s) che resta invariato.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // --- FETCH count tip Sistema Z / AI OST (per il numerino del bottone) ---
   // Effettuato anche quando activeView != 'pme', cosi' il bottone mostra sempre il count.

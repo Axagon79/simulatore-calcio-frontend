@@ -718,10 +718,12 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   }, [datePickerOpen]);
 
   // --- FETCH DATA (Unified + prediction_versions per partite ritirate) ---
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+  // `silent=true` evita di mostrare lo spinner durante il polling (refresh in background).
+  const fetchData = useCallback(async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         // Predictions dal context (precaricate all'avvio), live scores in parallelo
         const cached = getCachedPredictions(date);
@@ -813,14 +815,27 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 
       } catch (err: any) {
         console.error('Errore fetch pronostici unified:', err);
-        setError(err.message || 'Errore di connessione');
+        if (!silent) setError(err.message || 'Errore di connessione');
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
-    };
-    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
+
+  // Trigger iniziale + ad ogni cambio date (spinner visibile)
+  useEffect(() => {
+    fetchData(false);
+  }, [date, fetchData]);
+
+  // Polling silenzioso ogni 60s per intercettare aggiornamenti Fase 2 + Scout
+  // senza richiedere F5 all'utente. Non tocca lo spinner ne' lo state di errore.
+  // Indipendente dal polling live-scores (15s) che resta invariato.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // --- RESET accordion su cambio data: nessuna lega/card resta aperta cambiando giorno.
   // Il reset su cambio tab invece è gestito nell'onClick del tab switcher (per non

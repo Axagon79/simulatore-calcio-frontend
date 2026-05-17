@@ -1050,11 +1050,15 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const fetchAiAnalysis = async (matchKey: string) => {
     if (aiAnalysis[matchKey] || aiLoading[matchKey]) return;
     setAiLoading(prev => ({ ...prev, [matchKey]: true }));
+    // Strategia: passa preferPhase=pre_match. Il backend ritorna il commento
+    // pre_match se gia' presente in cache, altrimenti ritorna il nightly senza
+    // chiamare Mistral al volo (evitiamo generazione user-triggered prima del
+    // T-2h, che e' compito dello scheduler Sistema Z Fase 2).
     try {
       const resp = await fetch(`${API_BASE}/quote-anomale/analysis-premium`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ match_key: matchKey, date, isAdmin }),
+        body: JSON.stringify({ match_key: matchKey, date, isAdmin, preferPhase: 'pre_match' }),
       });
       const data = await resp.json();
       if (data.success) {

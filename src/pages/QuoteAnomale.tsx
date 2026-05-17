@@ -745,8 +745,8 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
   );
 }
 
-function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact }: {
-  matchKey: string; analysis?: string; loading?: boolean; canSee: boolean; onFetch: (mk: string) => void; compact?: boolean;
+function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact, phase }: {
+  matchKey: string; analysis?: string; loading?: boolean; canSee: boolean; onFetch: (mk: string) => void; compact?: boolean; phase?: string;
 }) {
   const [open, setOpen] = useState(false);
   const hasAnalysis = !!analysis;
@@ -788,6 +788,16 @@ function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact
           whiteSpace: 'pre-wrap',
         }}>
           {analysis}
+          {phase && phase !== 'legacy' && (
+            <div style={{
+              marginTop: 8, paddingTop: 6,
+              borderTop: `1px solid ${theme.cyan}33`,
+              fontSize: 9, color: theme.textDim, fontStyle: 'italic' as const,
+              textAlign: 'right' as const,
+            }}>
+              {phase === 'nightly' ? '(F1)' : phase === 'pre_match' ? '(F2)' : `(${phase})`}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -845,9 +855,9 @@ const CHART_TABS = [
 function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }
 
 // --- CARD MOBILE ---
-function MobileCard({ m, date, preds, aiAnalysis, aiLoading, canSeeAi, onFetchAi }: {
+function MobileCard({ m, date, preds, aiAnalysis, aiLoading, aiPhase, canSeeAi, onFetchAi }: {
   m: MatchDoc; date: string; preds?: PredEntry[];
-  aiAnalysis?: string; aiLoading?: boolean; canSeeAi: boolean; onFetchAi: (mk: string) => void;
+  aiAnalysis?: string; aiLoading?: boolean; aiPhase?: string; canSeeAi: boolean; onFetchAi: (mk: string) => void;
 }) {
   const rend = m.rendimento_chiusura || m.rendimento_apertura;
   const [showIndicators, setShowIndicators] = useState(false);
@@ -899,7 +909,7 @@ function MobileCard({ m, date, preds, aiAnalysis, aiLoading, canSeeAi, onFetchAi
         <>
           {/* Pronostici SEGNO */}
           {<PredictionRow preds={preds} m={m} compact />}
-          <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis} loading={aiLoading} canSee={canSeeAi} onFetch={onFetchAi} compact />
+          <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis} loading={aiLoading} canSee={canSeeAi} onFetch={onFetchAi} compact phase={aiPhase} />
           {/* Tabella unica: quote + indicatori */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: 'monospace' }}>
             <thead>
@@ -1035,6 +1045,8 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const canSeeAi = isAdmin || isPremiumUser;
   const [aiAnalysis, setAiAnalysis] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
+  // Metadati firma: phase ("nightly" | "pre_match" | "legacy") salvata accanto al testo.
+  const [aiPhase, setAiPhase] = useState<Record<string, string>>({});
   const fetchAiAnalysis = async (matchKey: string) => {
     if (aiAnalysis[matchKey] || aiLoading[matchKey]) return;
     setAiLoading(prev => ({ ...prev, [matchKey]: true }));
@@ -1047,6 +1059,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
       const data = await resp.json();
       if (data.success) {
         setAiAnalysis(prev => ({ ...prev, [matchKey]: data.analysis }));
+        if (data.phase) setAiPhase(prev => ({ ...prev, [matchKey]: data.phase }));
       }
     } catch { /* silenzioso */ }
     setAiLoading(prev => ({ ...prev, [matchKey]: false }));
@@ -1444,7 +1457,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                               <tr style={{ background: isLight ? '#f0f7ff' : '#0c1929' }}>
                                 <td colSpan={14} style={{ padding: 0, borderBottom: `1px solid ${theme.textDim}22` }}>
                                   <PredictionRow preds={predictions[m.match_key]} m={m} />
-                                  <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis[m.match_key]} loading={aiLoading[m.match_key]} canSee={canSeeAi} onFetch={fetchAiAnalysis} />
+                                  <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis[m.match_key]} loading={aiLoading[m.match_key]} canSee={canSeeAi} onFetch={fetchAiAnalysis} phase={aiPhase[m.match_key]} />
                                 </td>
                               </tr>
                             )}
@@ -1509,6 +1522,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                     preds={predictions[m.match_key]}
                     aiAnalysis={aiAnalysis[m.match_key]}
                     aiLoading={aiLoading[m.match_key]}
+                    aiPhase={aiPhase[m.match_key]}
                     canSeeAi={canSeeAi}
                     onFetchAi={fetchAiAnalysis}
                   />

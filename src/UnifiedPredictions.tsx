@@ -201,6 +201,7 @@ interface Prediction {
   analysis_premium_nightly?: string | { text: string; fase?: string; ts?: string; model?: string };
   analysis_deepdive?: string;
   analysis_deepdive_ts?: string;
+  analysis_deepdive_effort?: string;
 }
 
 // Helper per estrarre testo del commento Premium dal nuovo formato (oggetto firmato)
@@ -2590,6 +2591,32 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           const raw: any = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
                           const txt = typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
                           return <ScoutAnalysis text={txt} />;
+                        })()}
+                        {(() => {
+                          // Footer firma Scout: data/ora + (F1) per lite notturna, (F2) per deep T-6h.
+                          const ts = pred.analysis_deepdive_ts;
+                          if (!ts) return null;
+                          const effort = pred.analysis_deepdive_effort;
+                          const fase = (effort === 'deep') ? 'F2' : (effort === 'lite' ? 'F1' : null);
+                          try {
+                            const d = new Date(ts);
+                            if (isNaN(d.getTime())) return null;
+                            const gg = String(d.getDate()).padStart(2, '0');
+                            const mm = String(d.getMonth() + 1).padStart(2, '0');
+                            const hh = String(d.getHours()).padStart(2, '0');
+                            const mi = String(d.getMinutes()).padStart(2, '0');
+                            const txtFirma = `Generato il ${gg}/${mm} alle ${hh}:${mi}${fase ? ` (${fase})` : ''}`;
+                            return (
+                              <div style={{
+                                marginTop: '10px', paddingTop: '8px',
+                                borderTop: `1px solid ${theme.surface15}`,
+                                fontSize: '10px', color: theme.textDim, fontStyle: 'italic' as const,
+                                textAlign: 'right' as const,
+                              }}>{txtFirma}</div>
+                            );
+                          } catch {
+                            return null;
+                          }
                         })()}
                         {isAdmin && (
                           <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>

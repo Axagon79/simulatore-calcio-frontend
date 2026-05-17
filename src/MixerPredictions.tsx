@@ -225,9 +225,27 @@ interface Prediction {
   analysis_free?: string;
   analysis_alerts?: Array<{ id: string; severity: number; text: string }>;
   analysis_score?: number;
-  analysis_premium?: string;
+  // Schema legacy (stringa) e nuovo (oggetto firmato): l'helper getPremiumText() gestisce entrambi.
+  analysis_premium?: string | { text: string; fase?: string; ts?: string; model?: string };
+  analysis_premium_nightly?: string | { text: string; fase?: string; ts?: string; model?: string };
   analysis_deepdive?: string;
   analysis_deepdive_ts?: string;
+}
+
+// Helper per estrarre testo del commento Premium dal nuovo formato (oggetto firmato)
+// o dal vecchio formato (stringa legacy). Prima `analysis_premium_nightly`, poi fallback.
+function getPremiumText(pred: { analysis_premium?: any; analysis_premium_nightly?: any }): string | undefined {
+  const fromNew = pred.analysis_premium_nightly;
+  if (fromNew) {
+    if (typeof fromNew === 'string') return fromNew;
+    if (typeof fromNew === 'object' && fromNew.text) return fromNew.text;
+  }
+  const legacy = pred.analysis_premium;
+  if (legacy) {
+    if (typeof legacy === 'string') return legacy;
+    if (typeof legacy === 'object' && legacy.text) return legacy.text;
+  }
+  return undefined;
 }
 
 // --- HELPERS ---
@@ -1517,7 +1535,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const canSee = canSeePrediction(matchKey) || isFinished;
     const matchId = `${pred.home}-${pred.away}-${pred.date}`;
     const currentAnalysisTab = analysisTab[matchId];
-    const isPremiumLoaded = !!premiumAnalysis[matchId] || !!pred.analysis_premium;
+    const isPremiumLoaded = !!premiumAnalysis[matchId] || !!getPremiumText(pred);
     const isPremiumBusy = !!premiumLoading[matchId];
     const isDeepDiveLoaded = !!deepdiveAnalysis[matchId] || !!pred.analysis_deepdive;
     const isDeepDiveBusy = !!deepdiveLoading[matchId];
@@ -2795,7 +2813,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         🤖 Analisi in corso...
                       </div>
                     ) : isPremiumLoaded ? (
-                      <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || pred.analysis_premium}</div>
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || getPremiumText(pred)}</div>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
                         Premi il tab Premium per generare l'analisi

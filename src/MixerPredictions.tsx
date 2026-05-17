@@ -248,6 +248,36 @@ function getPremiumText(pred: { analysis_premium?: any; analysis_premium_nightly
   return undefined;
 }
 
+function getPremiumMeta(pred: { analysis_premium?: any; analysis_premium_nightly?: any }): { ts?: string; fase?: string } | undefined {
+  const fromNew = pred.analysis_premium_nightly;
+  if (fromNew && typeof fromNew === 'object' && fromNew.text) {
+    return { ts: fromNew.ts, fase: fromNew.fase };
+  }
+  const legacy = pred.analysis_premium;
+  if (legacy && typeof legacy === 'object' && legacy.text) {
+    return { ts: legacy.ts, fase: legacy.fase };
+  }
+  return undefined;
+}
+
+function formatFirma(meta: { ts?: string; fase?: string } | undefined): string | undefined {
+  if (!meta || !meta.ts) return undefined;
+  try {
+    const d = new Date(meta.ts);
+    if (isNaN(d.getTime())) return undefined;
+    const gg = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    let suffix = '';
+    if (meta.fase === 'nightly') suffix = ' (F1)';
+    else if (meta.fase === 'pre_match') suffix = ' (F2)';
+    return `Generato il ${gg}/${mm} alle ${hh}:${mi}${suffix}`;
+  } catch {
+    return undefined;
+  }
+}
+
 // --- HELPERS ---
 const getGolQuota = (pronostico: string, odds: any): number | null => {
   const map: Record<string, string> = {
@@ -2813,7 +2843,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         🤖 Analisi in corso...
                       </div>
                     ) : isPremiumLoaded ? (
-                      <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || getPremiumText(pred)}</div>
+                      <div>
+                        <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || getPremiumText(pred)}</div>
+                        {(() => {
+                          const firma = formatFirma(getPremiumMeta(pred));
+                          if (!firma) return null;
+                          return (
+                            <div style={{
+                              marginTop: '10px', paddingTop: '8px',
+                              borderTop: `1px solid ${theme.surface15}`,
+                              fontSize: '10px', color: theme.textDim, fontStyle: 'italic' as const,
+                              textAlign: 'right' as const,
+                            }}>{firma}</div>
+                          );
+                        })()}
+                      </div>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
                         Premi il tab Premium per generare l'analisi

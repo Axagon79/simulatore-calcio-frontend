@@ -368,6 +368,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
   const [deepdiveAnalysis, setDeepdiveAnalysis] = useState<Record<string, string>>({});
   const [deepdiveLoading, setDeepdiveLoading] = useState<Record<string, boolean>>({});
+  const [deepdiveInfo, setDeepdiveInfo] = useState<Record<string, string>>({});
 
   // --- Premium Unlock (sequenza segreta P-F-P-F-P-F-P-P-P-P-P, max 2s tra click) ---
   const UNLOCK_SEQ = 'pfpfpfppppp';
@@ -1455,24 +1456,25 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (isDeepDiveBusy) return;
       if (isDeepDiveLoaded && !forceRefresh) return;
       setDeepdiveLoading(prev => ({ ...prev, [matchId]: true }));
+      setDeepdiveInfo(prev => ({ ...prev, [matchId]: '' }));
       try {
         const resp = await fetch(`${API_BASE}/chat/match-deepdive`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, league: pred.league || '', isAdmin: 'true', forceRefresh }),
+          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, league: pred.league || '', isAdmin: isAdmin ? 'true' : 'false', forceRefresh }),
         });
-        const data = await resp.json();
+        const data = await resp.json().catch(() => ({ success: false, error: 'Scout non disponibile al momento. Riprova piu tardi.' }));
         if (data.success) {
           // Normalizza: Mistral può salvare {type,text} invece di stringa
           const text = typeof data.analysis === 'string' ? data.analysis
             : data.analysis?.text || data.analysis?.content || JSON.stringify(data.analysis);
           setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: text }));
         } else {
-          setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: `\u26a0\ufe0f ${data.error || 'Errore durante la ricerca web. Riprova tra qualche minuto.'}` }));
+          setDeepdiveInfo(prev => ({ ...prev, [matchId]: data.error || 'Scout non disponibile al momento. Riprova piu tardi.' }));
         }
       } catch (err) {
         console.error('DeepDive analysis error:', err);
-        setDeepdiveAnalysis(prev => ({ ...prev, [matchId]: '\u26a0\ufe0f Connessione fallita. Verifica la connessione e riprova.' }));
+        setDeepdiveInfo(prev => ({ ...prev, [matchId]: 'Scout non disponibile al momento. Verifica la connessione e riprova.' }));
       } finally {
         setDeepdiveLoading(prev => ({ ...prev, [matchId]: false }));
       }
@@ -2536,6 +2538,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             >🔄 Aggiorna</span>
                           </div>
                         )}
+                      </div>
+                    ) : deepdiveInfo[matchId] ? (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '14px 12px',
+                        color: theme.text,
+                        fontSize: '12px',
+                        lineHeight: 1.6,
+                        background: isLight ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.08)',
+                        border: `1px dashed ${isLight ? 'rgba(16,185,129,0.30)' : 'rgba(110,231,183,0.30)'}`,
+                        borderRadius: '6px',
+                      }}>
+                        🔎 {deepdiveInfo[matchId]}
                       </div>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>

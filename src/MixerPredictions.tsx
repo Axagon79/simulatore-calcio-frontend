@@ -2828,16 +2828,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           const txt = typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
                           return <ScoutAnalysis text={txt} />;
                         })()}
-                        <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
-                          <span
-                            onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}
-                            style={{
-                              cursor: 'pointer', fontSize: '10px', color: theme.textDim,
-                              padding: '2px 8px', borderRadius: '8px',
-                              border: `1px solid ${theme.surface15}`,
-                            }}
-                          >🔄 Aggiorna</span>
-                        </div>
+                        {isAdmin && (
+                          <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}
+                              style={{
+                                cursor: 'pointer', fontSize: '10px', color: theme.textDim,
+                                padding: '2px 8px', borderRadius: '8px',
+                                border: `1px solid ${theme.surface15}`,
+                              }}
+                            >🔄 Aggiorna</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>

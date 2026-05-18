@@ -1,887 +1,865 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getThemeMode, API_BASE } from '../AppDev/costanti';
-
-const isLight = getThemeMode() === 'light';
-
-// Palette: rispetta il design Mockup D Home (vedi news_mockups/claude_design_bundle/project/Mockup D - Home.html)
-const c = {
-  bg: isLight ? '#f0f2f5' : '#0a0b0f',
-  bg2: isLight ? '#ffffff' : '#0d0f15',
-  bg3: isLight ? '#e8eaef' : '#11141c',
-  line: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
-  lineStrong: isLight ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)',
-  text: isLight ? '#111827' : 'rgba(255,255,255,0.92)',
-  textDim: isLight ? '#6b7280' : 'rgba(255,255,255,0.55)',
-  textFaint: isLight ? '#9ca3af' : 'rgba(255,255,255,0.30)',
-  cyan: isLight ? '#0891b2' : '#22d3ee',
-  cyanInk: isLight ? '#ffffff' : '#04141a',
-  green: isLight ? '#16a34a' : '#4ade80',
-  yellow: isLight ? '#ca8a04' : '#facc15',
-  red: isLight ? '#dc2626' : '#ef4444',
-  pronBarBg: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
-  crestShadow: isLight ? 'inset 0 0 0 1px rgba(0,0,0,0.10)' : 'inset 0 0 0 1px rgba(255,255,255,0.18)',
-};
-
-const FONT_SANS = '"Inter","Segoe UI",system-ui,sans-serif';
-const FONT_MONO = '"JetBrains Mono","Consolas",ui-monospace,monospace';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface NewsProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-type TabKey = 'today' | 'tomorrow' | 'after';
-
-const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-
-function formatDateLabel(d: Date): string {
-  return `${d.getDate()} ${MESI[d.getMonth()]}`;
-}
-
-function isoDate(d: Date): string {
-  // YYYY-MM-DD locale (non UTC)
-  const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
-
-const VALID_TABS: TabKey[] = ['today', 'tomorrow', 'after'];
-
-// Mappa league name -> chiave nazione per il filtro cascata
-// Solo nazioni con copertura attiva nel prodotto; estendibile.
-const LEAGUE_TO_COUNTRY: Record<string, string> = {
-  'Premier League': 'inghilterra',
-  'Championship': 'inghilterra',
-  'Serie A': 'italia',
-  'Serie B': 'italia',
-  'LaLiga': 'spagna',
-  'La Liga': 'spagna',
-  'Bundesliga': 'germania',
-  '2. Bundesliga': 'germania',
-  'Ligue 1': 'francia',
-  'Ligue 2': 'francia',
-  'Eredivisie': 'olanda',
-  'Primeira Liga': 'portogallo',
-  'Allsvenskan': 'svezia',
-  'Veikkausliiga': 'finlandia',
-  'Brasileirao': 'brasile',
-  'Brasileirão': 'brasile',
-  'Brasileirão Serie A': 'brasile',
-  'Major League Soccer': 'usa',
-  'MLS': 'usa',
-  'Champions League': 'europa',
-  'Europa League': 'europa',
-};
-
-const COUNTRY_LABEL: Record<string, string> = {
-  inghilterra: 'Inghilterra',
-  italia: 'Italia',
-  spagna: 'Spagna',
-  germania: 'Germania',
-  francia: 'Francia',
-  olanda: 'Olanda',
-  portogallo: 'Portogallo',
-  svezia: 'Svezia',
-  finlandia: 'Finlandia',
-  brasile: 'Brasile',
-  usa: 'USA',
-  europa: 'Coppe europee',
-};
-
-// Colore "dot" per lega (visivo nell'eyebrow articolo)
-function leagueDotColor(league: string): string {
-  if (league.includes('Premier')) return '#a855f7';
-  if (league.includes('Allsvenskan')) return c.yellow;
-  if (league.includes('Brasil')) return c.green;
-  if (league.includes('Veikkaus')) return c.cyan;
-  if (league.includes('Serie A') || league.includes('Serie B')) return '#3b82f6';
-  if (league.includes('LaLiga') || league.includes('La Liga')) return '#ef4444';
-  if (league.includes('Bundesliga')) return '#f97316';
-  if (league.includes('Ligue')) return '#6366f1';
-  if (league.includes('MLS') || league.includes('Major League')) return '#0ea5e9';
-  return c.textDim;
-}
-
-// Crest gradient deterministico dal nome squadra (no foto, identità AI-first)
-function crestGradient(name: string): string {
-  // Hash semplice del nome
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  const palette: Array<[string, string]> = [
-    ['#ff7373', '#c81919'],
-    ['#6b7280', '#0a0b0f'],
-    ['#f87171', '#991b1b'],
-    ['#60a5fa', '#1e40af'],
-    ['#93c5fd', '#1e3a8a'],
-    ['#38bdf8', '#0369a1'],
-    ['#4ade80', '#166534'],
-    ['#fbbf24', '#b45309'],
-    ['#a78bfa', '#5b21b6'],
-    ['#f472b6', '#9d174d'],
-  ];
-  const p = palette[Math.abs(h) % palette.length];
-  return `radial-gradient(circle at 35% 30%, ${p[0]}, ${p[1]} 70%)`;
-}
-
-// Iniziale per crest (3 char max)
-function crestLabel(name: string): string {
-  if (!name) return '?';
-  const parts = name.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].substring(0, 3).toUpperCase();
-  return parts.slice(0, 2).map(p => p[0]).join('').toUpperCase();
-}
-
-interface PronosticoTip {
-  tipo?: string;
-  pronostico?: string;
-  confidence?: number;
-  quota?: number | null;
-  source?: string;
-  peso_ai?: number;
-  stake?: number;
-}
-
-interface Match {
+interface ArticleLink {
   home: string;
   away: string;
   date: string;
-  match_time?: string;
-  league?: string;
-  lega?: string;
-  pronostici?: PronosticoTip[];
-  source_primary?: string;
-  scout_lite?: { decisione?: string; segno?: any; gol?: any; scout_text?: string; computed_at?: string };
-  scout_deep?: { decisione?: string; segno?: any; gol?: any; scout_text?: string; computed_at?: string };
-  motivazione?: string;
 }
 
-interface ApiResp {
-  success?: boolean;
-  predictions?: Match[];
-  date?: string;
-}
+const COUNTRIES: Record<string, { label: string; leagues: Record<string, string> }> = {
+  inghilterra: { label: 'Inghilterra', leagues: { 'premier-league': 'Premier League' } },
+  svezia:      { label: 'Svezia',      leagues: { 'allsvenskan': 'Allsvenskan' } },
+  brasile:     { label: 'Brasile',     leagues: { 'brasileirao': 'Brasileirão' } },
+  finlandia:   { label: 'Finlandia',   leagues: { 'veikkausliiga': 'Veikkausliiga' } },
+};
 
-export default function News({ onBack }: NewsProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+const ARTICLES = [
+  { id: 'a-1', country: 'inghilterra', league: 'premier-league' },
+  { id: 'a-2', country: 'inghilterra', league: 'premier-league' },
+  { id: 'a-3', country: 'svezia',      league: 'allsvenskan' },
+  { id: 'a-4', country: 'svezia',      league: 'allsvenskan' },
+  { id: 'a-5', country: 'brasile',     league: 'brasileirao' },
+  { id: 'a-6', country: 'finlandia',   league: 'veikkausliiga' },
+  { id: 'a-7', country: 'brasile',     league: 'brasileirao' },
+];
+
+const STYLES = `
+  :root{
+    --bg:#0a0b0f;
+    --bg-2:#0d0f15;
+    --bg-3:#11141c;
+    --line:rgba(255,255,255,0.08);
+    --line-strong:rgba(255,255,255,0.14);
+    --t:rgba(255,255,255,0.92);
+    --t-dim:rgba(255,255,255,0.55);
+    --t-faint:rgba(255,255,255,0.30);
+    --cyan:#22d3ee;
+    --cyan-ink:#04141a;
+    --green:#4ade80;
+    --yellow:#facc15;
+    --red:#ef4444;
+    --pron-bar-bg:rgba(255,255,255,0.06);
+    --crest-shadow:inset 0 0 0 1px rgba(255,255,255,0.18);
+    --rail-dot:var(--bg);
+  }
+  :root[data-theme="light"]{
+    --bg:#f0f2f5;
+    --bg-2:#ffffff;
+    --bg-3:#e8eaef;
+    --line:rgba(0,0,0,0.08);
+    --line-strong:rgba(0,0,0,0.14);
+    --t:#111827;
+    --t-dim:#6b7280;
+    --t-faint:#9ca3af;
+    --cyan:#0891b2;
+    --cyan-ink:#ffffff;
+    --green:#16a34a;
+    --yellow:#ca8a04;
+    --red:#dc2626;
+    --pron-bar-bg:rgba(0,0,0,0.06);
+    --crest-shadow:inset 0 0 0 1px rgba(0,0,0,0.10);
+    --rail-dot:var(--bg-2);
+  }
+  .news-root *{box-sizing:border-box}
+  .news-root{background:var(--bg);color:var(--t);font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .news-root .mono{font-family:'JetBrains Mono','Consolas',ui-monospace,monospace;font-feature-settings:"ss01","cv11"}
+  .news-root a{color:inherit;text-decoration:none}
+
+  .news-root .chyron{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line)}
+  .news-root .chyron-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding:10px 24px}
+  .news-root .brand{display:flex;align-items:center;gap:10px}
+  .news-root .brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#22d3ee 0%, #0ea5b7 100%);display:grid;place-items:center;color:#04141a;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18);font-family:'JetBrains Mono',monospace;font-size:14px}
+  .news-root .brand-name{font-weight:600;letter-spacing:-0.01em;font-size:14.5px;line-height:1.1}
+  .news-root .brand-name span{color:var(--cyan)}
+  .news-root .brand-sub{font-size:11px;color:var(--t-dim);letter-spacing:0.04em;text-transform:uppercase;margin-top:2px}
+  .news-root .live{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:11px;color:var(--t-dim);letter-spacing:0.06em;text-transform:uppercase}
+  .news-root .live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:newsPulse 1.4s infinite}
+  @keyframes newsPulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .news-root .clock{display:flex;gap:14px;align-items:center;color:var(--t-dim);font-size:12px}
+  .news-root .clock .mono{color:var(--t)}
+  .news-root .theme-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:transparent;color:var(--t-dim);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;font-family:inherit;cursor:pointer;transition:color .15s, border-color .15s}
+  .news-root .theme-toggle:hover{color:var(--t);border-color:var(--line-strong)}
+  .news-root .theme-toggle .icn{font-size:13px;line-height:1}
+
+  .news-root .ticker{border-top:1px solid var(--line);background:var(--bg-3);overflow:hidden}
+  .news-root .ticker-row{display:flex;align-items:stretch;height:38px}
+  .news-root .ticker-tag{flex:none;padding:0 14px;display:grid;place-items:center;background:var(--cyan);color:var(--cyan-ink);font-weight:700;font-size:11px;letter-spacing:0.12em}
+  .news-root .ticker-track{flex:1;overflow:hidden;position:relative}
+  .news-root .ticker-track::after,.news-root .ticker-track::before{content:"";position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none}
+  .news-root .ticker-track::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+  .news-root .ticker-track::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+  .news-root .ticker-strip{display:flex;align-items:center;gap:36px;height:100%;animation:newsSlide 60s linear infinite;white-space:nowrap;padding-left:24px}
+  @keyframes newsSlide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .news-root .ti{display:inline-flex;align-items:center;gap:10px;font-size:12.5px;color:var(--t-dim)}
+  .news-root .ti b{color:var(--t);font-weight:500}
+  .news-root .ti .mono{color:var(--cyan);font-size:11.5px}
+  .news-root .ti .sep{color:var(--t-faint)}
+
+  .news-root .tabs-wrap{border-bottom:1px solid var(--line);background:var(--bg)}
+  .news-root .tabs{max-width:1280px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between}
+  .news-root .tabs-left{display:flex;gap:2px}
+  .news-root .tab{padding:18px 22px 16px;color:var(--t-dim);font-weight:500;font-size:13.5px;border-bottom:2px solid transparent;cursor:pointer;display:flex;gap:10px;align-items:baseline}
+  .news-root .tab .day{color:var(--t)}
+  .news-root .tab .date{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-faint)}
+  .news-root .tab.active{color:var(--t);border-color:var(--cyan)}
+  .news-root .tab.active .date{color:var(--cyan)}
+  .news-root .tabs-meta{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--t-dim)}
+  .news-root .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--t);font-size:11.5px}
+  .news-root .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+  .news-root .count-pill{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-dim)}
+
+  .news-root .masthead{max-width:1280px;margin:0 auto;padding:48px 28px 22px}
+  .news-root .mast-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--t-faint);display:flex;gap:14px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+  .news-root .mast-eyebrow .sep{color:var(--t-faint)}
+  .news-root .mast-eyebrow b{color:var(--cyan);font-weight:500}
+  .news-root .mast-title{font-size:48px;line-height:1.05;letter-spacing:-0.03em;margin:0;font-weight:600;text-wrap:balance;max-width:1000px}
+  .news-root .mast-title em{font-style:normal;color:var(--cyan)}
+  .news-root .mast-deck{color:var(--t-dim);font-size:16px;margin-top:14px;max-width:760px;line-height:1.6;text-wrap:pretty}
+  .news-root .mast-deck b{color:var(--t);font-weight:500}
+
+  .news-root .filter-wrap{max-width:1280px;margin:0 auto;padding:8px 28px 0}
+  .news-root .filter-bar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:0}
+  .news-root .filter-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;overflow-x:auto;scrollbar-width:none}
+  .news-root .filter-row::-webkit-scrollbar{display:none}
+  .news-root .filter-row .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);flex:none;padding-right:4px}
+  .news-root .filter-row .sep{color:var(--t-faint);user-select:none;font-size:13px;flex:none}
+  .news-root .f-link{font-size:14px;color:var(--t-dim);cursor:pointer;white-space:nowrap;transition:color .15s;padding:2px 0;flex:none;letter-spacing:-0.005em;background:none;border:none;font-family:inherit}
+  .news-root .f-link:hover{color:var(--t)}
+  .news-root .f-link.on{color:var(--cyan);font-weight:500}
+  .news-root .filter-row.leagues{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:none}
+  .news-root .filter-row.leagues.show{display:flex}
+  .news-root .filter-row.leagues .lbl::before{content:"↳ ";color:var(--t-faint);margin-right:4px}
+  .news-root .filter-row.leagues .f-link{font-size:13px}
+
+  .news-root .breadcrumb{max-width:1280px;margin:0 auto;padding:18px 28px 0;display:none;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t-dim)}
+  .news-root .breadcrumb.show{display:flex}
+  .news-root .breadcrumb .crumb-path{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .news-root .breadcrumb .crumb-path span:not(.sep){color:var(--t)}
+  .news-root .breadcrumb .crumb-path .sep{color:var(--t-faint)}
+  .news-root .breadcrumb .crumb-path b{color:var(--cyan);font-weight:500}
+  .news-root .clear-filter{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--t-dim);border:1px solid var(--line);padding:5px 11px;border-radius:999px;transition:color .15s, border-color .15s;background:none;font-family:inherit;font-size:inherit;letter-spacing:inherit;text-transform:inherit}
+  .news-root .clear-filter:hover{color:var(--t);border-color:var(--line-strong)}
+  .news-root .clear-filter .x{font-size:14px;line-height:1}
+
+  .news-root .empty-state{display:none;text-align:center;padding:60px 20px;color:var(--t-dim);font-size:15px;max-width:480px;margin:0 auto}
+  .news-root .empty-state.show{display:block}
+  .news-root .empty-state .eye{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);margin-bottom:14px}
+
+  .news-root .layout{max-width:1280px;margin:0 auto;padding:32px 28px 80px;display:grid;grid-template-columns:180px 1fr;gap:48px;align-items:start}
+  .news-root .index-rail{position:sticky;top:128px;align-self:start}
+  .news-root .ir-h{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--t-faint);margin-bottom:14px}
+  .news-root .ir-h .ir-count{color:var(--cyan)}
+  .news-root .ir-list{display:flex;flex-direction:column;border-left:1px solid var(--line);padding-left:14px;gap:1px}
+  .news-root .ir-item{padding:9px 0;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--t-dim);position:relative;cursor:pointer;line-height:1.3}
+  .news-root .ir-item::before{content:"";position:absolute;left:-19px;top:14px;width:8px;height:8px;border-radius:50%;background:var(--rail-dot);border:1px solid var(--line-strong)}
+  .news-root .ir-item .lbl{display:block;font-family:'Inter',sans-serif;font-size:11px;color:var(--t-faint);margin-top:1px}
+  .news-root .ir-item.active{color:var(--cyan)}
+  .news-root .ir-item.active::before{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 0 4px rgba(34,211,238,0.18)}
+  :root[data-theme="light"] .news-root .ir-item.active::before{box-shadow:0 0 0 4px rgba(8,145,178,0.15)}
+  .news-root .ir-foot{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t-faint);line-height:1.5}
+
+  .news-root .stack{display:flex;flex-direction:column;gap:0}
+  .news-root .article{padding:36px 0 40px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 260px;gap:36px;align-items:start}
+  .news-root .article:first-child{padding-top:0}
+  .news-root .article:last-child{border-bottom:none}
+  .news-root .a-eyebrow{display:flex;gap:12px;align-items:center;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--t-faint);flex-wrap:wrap}
+  .news-root .a-eyebrow .league{color:var(--t-dim)}
+  .news-root .a-eyebrow .league .ld{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+  .news-root .a-eyebrow .ko{color:var(--t);background:var(--bg-3);padding:3px 8px;border-radius:4px;letter-spacing:0.06em}
+  .news-root .a-eyebrow .deep{color:var(--green);border:1px solid currentColor;padding:3px 8px;border-radius:4px;background:transparent;font-weight:600;opacity:.95}
+  .news-root .match-line{display:flex;align-items:center;gap:16px;margin:8px 0 18px}
+  .news-root .ml-team{display:flex;align-items:center;gap:10px}
+  .news-root .ml-crest{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#0a0b0f;box-shadow:var(--crest-shadow);flex:none}
+  .news-root .ml-name{font-size:15px;font-weight:500;letter-spacing:-0.005em}
+  .news-root .ml-vs{color:var(--t-faint);font-family:'JetBrains Mono',monospace;font-size:13px}
+  .news-root .a-title{font-size:28px;line-height:1.18;letter-spacing:-0.022em;margin:0 0 14px;font-weight:600;text-wrap:balance}
+  .news-root .a-title a:hover{color:var(--cyan)}
+  .news-root .a-lede{color:var(--t-dim);font-size:15px;line-height:1.65;margin:0 0 14px;text-wrap:pretty}
+  .news-root .a-lede b{color:var(--t);font-weight:500}
+  .news-root .a-bullets{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--t-dim)}
+  .news-root .a-bullets li{padding-left:18px;position:relative}
+  .news-root .a-bullets li::before{content:"→";position:absolute;left:0;color:var(--cyan);font-family:'JetBrains Mono',monospace}
+  .news-root .a-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px dashed var(--line);padding-top:14px;margin-top:8px}
+  .news-root .by-line{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-faint);display:flex;gap:10px;flex-wrap:wrap}
+  .news-root .by-line b{color:var(--t-dim);font-weight:500}
+  .news-root .read-link{display:inline-flex;align-items:center;gap:6px;color:var(--cyan);font-size:13.5px;font-weight:500;border-bottom:1px solid currentColor;padding-bottom:1px;opacity:.8}
+  .news-root .read-link:hover{opacity:1}
+
+  .news-root .pron-card{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px}
+  .news-root .pron-h{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);display:flex;justify-content:space-between;align-items:center}
+  .news-root .pron-h .src-count{color:var(--t-dim)}
+  .news-root .pron-main{display:flex;justify-content:space-between;align-items:flex-end;gap:14px}
+  .news-root .pron-pick{font-size:13px;color:var(--t-dim)}
+  .news-root .pron-pick b{display:block;font-size:20px;color:var(--t);font-weight:600;margin-bottom:2px;letter-spacing:-0.01em}
+  .news-root .pron-num{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:600;color:var(--cyan);line-height:1;letter-spacing:-0.03em}
+  .news-root .pron-num.med{color:var(--yellow)}
+  .news-root .pron-num small{font-size:14px;color:var(--t-dim);margin-left:1px;font-weight:400}
+  .news-root .pron-bar{height:5px;background:var(--pron-bar-bg);border-radius:3px;overflow:hidden}
+  .news-root .pron-bar i{display:block;height:100%;background:var(--cyan)}
+  .news-root .pron-bar.med i{background:var(--yellow)}
+  .news-root .pron-stats{display:flex;flex-direction:column;border-top:1px solid var(--line);padding-top:12px}
+  .news-root .pron-stats .r{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-faint)}
+  .news-root .pron-stats .r b{color:var(--t);font-weight:500}
+  .news-root .pron-foot{display:flex;flex-direction:column;gap:8px}
+  .news-root .open-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--cyan);color:var(--cyan-ink);border:1px solid var(--cyan);font-weight:600;padding:10px 14px;border-radius:999px;font-size:12.5px;cursor:pointer;text-decoration:none;transition:opacity .15s}
+  .news-root .open-btn:hover{opacity:.85}
+  .news-root .open-btn .arrow{transition:transform .15s}
+  .news-root .open-btn:hover .arrow{transform:translateX(2px)}
+
+  .news-root .article.feature .a-title{font-size:36px;line-height:1.1}
+  .news-root .article.feature .match-line .ml-crest{width:44px;height:44px;font-size:15px}
+  .news-root .article.feature .match-line .ml-name{font-size:18px}
+
+  .news-root .site-foot{max-width:1280px;margin:0 auto;padding:32px 28px 60px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t-faint);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+  .news-root .site-foot b{color:var(--t-dim);font-weight:500}
+
+  .news-root .c-ars{background:radial-gradient(circle at 35% 30%, #ff7373, #c81919 70%);color:#fff}
+  .news-root .c-new{background:radial-gradient(circle at 35% 30%, #6b7280, #0a0b0f 70%);color:#fff}
+  .news-root .c-liv{background:radial-gradient(circle at 35% 30%, #f87171, #991b1b 70%);color:#fff}
+  .news-root .c-cry{background:radial-gradient(circle at 35% 30%, #60a5fa, #1e40af 70%);color:#fff}
+  .news-root .c-aik{background:radial-gradient(circle at 35% 30%, #1f2937, #000 70%);color:#facc15}
+  .news-root .c-dju{background:radial-gradient(circle at 35% 30%, #93c5fd, #1e3a8a 70%);color:#fff}
+  .news-root .c-mff{background:radial-gradient(circle at 35% 30%, #38bdf8, #0369a1 70%);color:#fff}
+  .news-root .c-ham{background:radial-gradient(circle at 35% 30%, #4ade80, #166534 70%);color:#fff}
+  .news-root .c-fla{background:radial-gradient(circle at 35% 30%, #ef4444, #7f1d1d 70%);color:#fff}
+  .news-root .c-atm{background:radial-gradient(circle at 35% 30%, #374151, #000 70%);color:#fff}
+  .news-root .c-bot{background:radial-gradient(circle at 35% 30%, #4b5563, #000 70%);color:#fff}
+  .news-root .c-int{background:radial-gradient(circle at 35% 30%, #f87171, #991b1b 70%);color:#fff}
+  .news-root .c-hjk{background:radial-gradient(circle at 35% 30%, #60a5fa, #1d4ed8 70%);color:#fff}
+  .news-root .c-itu{background:radial-gradient(circle at 35% 30%, #fbbf24, #b45309 70%);color:#0a0b0f}
+
+  @media (max-width:1080px){
+    .news-root .layout{grid-template-columns:1fr;gap:24px}
+    .news-root .index-rail{position:static;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:16px}
+    .news-root .ir-list{flex-direction:row;flex-wrap:wrap;border-left:none;padding-left:0;gap:12px}
+    .news-root .ir-item{padding:4px 12px 4px 14px;border:1px solid var(--line);border-radius:6px}
+    .news-root .ir-item::before{display:none}
+    .news-root .ir-foot{display:none}
+    .news-root .article{grid-template-columns:1fr}
+  }
+  @media (max-width:760px){
+    .news-root .chyron-row{padding:10px 16px;gap:10px;grid-template-columns:auto 1fr auto}
+    .news-root .brand-sub{display:none}
+    .news-root .live{font-size:10px;padding:3px 8px}
+    .news-root .clock span:first-child{display:none}
+    .news-root .tabs{padding:0 16px}
+    .news-root .tab{padding:14px 12px 12px}
+    .news-root .masthead, .news-root .filter-wrap, .news-root .breadcrumb, .news-root .layout, .news-root .site-foot{padding-left:16px;padding-right:16px}
+    .news-root .mast-title{font-size:30px}
+    .news-root .mast-deck{font-size:14.5px}
+    .news-root .article.feature .a-title, .news-root .a-title{font-size:22px}
+    .news-root .pron-card{padding:14px}
+    .news-root .filter-row{gap:14px}
+  }
+  @media (max-width:480px){
+    .news-root .tabs-meta .pill{display:none}
+    .news-root .ticker-tag{padding:0 10px;font-size:10px}
+  }
+`;
+
+const TickerStrip: React.FC = () => (
+  <div className="ticker-strip">
+    {[0,1].map(loop => (
+      <React.Fragment key={loop}>
+        <span className="ti"><span className="mono">15:00</span><b>Premier · Arsenal–Newcastle</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">71%</span></span>
+        <span className="ti"><span className="mono">17:00</span><b>Premier · Liverpool–Crystal Palace</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">78%</span></span>
+        <span className="ti"><span className="mono">17:30</span><b>Allsvenskan · AIK–Djurgården</b> <span className="sep">·</span> pronostico <b>X</b> conf. <span className="mono">42%</span></span>
+        <span className="ti"><span className="mono">19:00</span><b>Allsvenskan · Malmö–Hammarby</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">61%</span></span>
+        <span className="ti"><span className="mono">20:00</span><b>Brasileirão · Flamengo–Atlético MG</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">63%</span></span>
+        <span className="ti"><span className="mono">21:15</span><b>Veikkausliiga · HJK–Inter Turku</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">58%</span></span>
+        <span className="ti"><span className="mono">22:30</span><b>Brasileirão · Botafogo–Internacional</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">54%</span></span>
+      </React.Fragment>
+    ))}
+  </div>
+);
+
+const TODAY_DATE = '2026-05-18';
+
+const ARTICLE_LINKS: Record<string, ArticleLink> = {
+  'a-1': { home: 'Arsenal',     away: 'Newcastle',          date: TODAY_DATE },
+  'a-2': { home: 'Liverpool',   away: 'Crystal Palace',     date: TODAY_DATE },
+  'a-3': { home: 'AIK',         away: 'Djurgården',         date: TODAY_DATE },
+  'a-4': { home: 'Malmö FF',    away: 'Hammarby',           date: TODAY_DATE },
+  'a-5': { home: 'Flamengo',    away: 'Atlético Mineiro',   date: TODAY_DATE },
+  'a-6': { home: 'HJK',         away: 'Inter Turku',        date: TODAY_DATE },
+  'a-7': { home: 'Botafogo',    away: 'Internacional',      date: TODAY_DATE },
+};
+
+const News: React.FC<NewsProps> = ({ onBack }) => {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [clockMono, setClockMono] = useState('14:32:07 CEST');
+  const [activeTab, setActiveTab] = useState<string>('oggi');
+  const [activeCountry, setActiveCountry] = useState<string>('');
+  const [activeLeague, setActiveLeague] = useState<string>('');
+  const [activeRail, setActiveRail] = useState<string>('a-1');
 
-  const initialTab: TabKey = (() => {
-    const t = searchParams.get('tab');
-    return t && (VALID_TABS as string[]).includes(t) ? (t as TabKey) : 'today';
-  })();
-  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
-  const [activeCountry, setActiveCountry] = useState<string>(searchParams.get('paese') || '');
-  const [activeLeague, setActiveLeague] = useState<string>(searchParams.get('lega') || '');
-
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [now, setNow] = useState<Date>(new Date());
-
-  // Tick del clock ogni secondo (per il chyron stile broadcast)
+  // load theme
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('ai-sim-news-theme');
+    if (saved === 'light') setTheme('light');
+  }, []);
+
+  // apply theme
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('ai-sim-news-theme', theme);
+  }, [theme]);
+
+  // clock
+  useEffect(() => {
+    const id = setInterval(() => {
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setClockMono(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} CEST`);
+    }, 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Sync URL ↔ stato (tab + filtri)
+  // load Google Fonts
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (next.get('tab') !== activeTab) next.set('tab', activeTab);
-    if (activeCountry) next.set('paese', activeCountry); else next.delete('paese');
-    if (activeLeague) next.set('lega', activeLeague); else next.delete('lega');
-    if (next.toString() !== searchParams.toString()) {
-      setSearchParams(next, { replace: true });
-    }
-  }, [activeTab, activeCountry, activeLeague, searchParams, setSearchParams]);
-
-  // Date per le 3 tab (locale browser)
-  const dates = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-    const after = new Date(today); after.setDate(today.getDate() + 2);
-    return { today, tomorrow, after };
+    if (typeof document === 'undefined') return;
+    const id = 'ai-sim-news-fonts';
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap';
+    document.head.appendChild(link);
   }, []);
 
-  const activeDate = activeTab === 'today' ? dates.today : activeTab === 'tomorrow' ? dates.tomorrow : dates.after;
+  const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
 
-  // Fetch articoli per la tab attiva (usa endpoint OST: ha tutti i campi + scout_lite/deep + source_primary)
-  useEffect(() => {
-    let cancelled = false;
-    const dstr = isoDate(activeDate);
-    setLoading(true);
-    setError(null);
-    fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${dstr}`)
-      .then(r => r.json())
-      .then((data: ApiResp) => {
-        if (cancelled) return;
-        const preds = Array.isArray(data?.predictions) ? data.predictions : [];
-        // Filtro: solo partite con articolo (scout_lite o scout_deep popolato).
-        // Se non popolato, niente "articolo" da mostrare nella sezione News.
-        const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text));
-        setMatches(withArticle);
-      })
-      .catch(err => {
-        if (!cancelled) setError(err?.message || 'Errore di rete');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [activeDate]);
-
-  // Helper: ricava nazione da league
-  const countryOfMatch = (m: Match): string => {
-    const league = m.league || m.lega || '';
-    return LEAGUE_TO_COUNTRY[league] || '';
-  };
-  // Helper: slug lega (lower + senza spazi + senza accenti)
-  const leagueSlug = (league: string): string =>
-    league.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-');
-
-  // Nazioni e leghe disponibili per la giornata (solo quelle con almeno 1 articolo)
-  const { countries, leagues } = useMemo(() => {
-    const cset = new Set<string>();
-    const lset = new Map<string, { slug: string; name: string; country: string }>();
-    matches.forEach(m => {
-      const ctry = countryOfMatch(m);
-      if (ctry) cset.add(ctry);
-      const lg = m.league || m.lega;
-      if (lg) {
-        const slug = leagueSlug(lg);
-        if (!lset.has(slug)) lset.set(slug, { slug, name: lg, country: ctry });
-      }
-    });
-    return {
-      countries: Array.from(cset).sort(),
-      leagues: Array.from(lset.values()),
-    };
-  }, [matches]);
-
-  // Articoli filtrati
-  const filteredMatches = useMemo(() => {
-    return matches.filter(m => {
-      if (activeCountry && countryOfMatch(m) !== activeCountry) return false;
-      if (activeLeague) {
-        const lg = m.league || m.lega || '';
-        if (leagueSlug(lg) !== activeLeague) return false;
-      }
-      return true;
-    }).sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
-  }, [matches, activeCountry, activeLeague]);
-
-  // Leghe da mostrare nella riga "leghe": solo del paese attivo
-  const leaguesForCountry = useMemo(() => {
-    if (!activeCountry) return [];
-    return leagues.filter(l => l.country === activeCountry);
-  }, [leagues, activeCountry]);
-
-  // Apri pagina articolo (route /news/articolo con home+away+date)
-  const openArticle = (m: Match) => {
-    const params = new URLSearchParams({ home: m.home, away: m.away, date: m.date });
-    if (activeCountry) params.set('paese', activeCountry);
-    if (activeLeague) params.set('lega', activeLeague);
+  const openArticle = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const lnk = ARTICLE_LINKS[id];
+    if (!lnk) return;
+    const params = new URLSearchParams({ home: lnk.home, away: lnk.away, date: lnk.date });
     navigate(`/news/articolo?${params.toString()}`);
   };
 
-  const tabs: Array<{ key: TabKey; label: string; subLabel: string }> = [
-    { key: 'today', label: 'Oggi', subLabel: formatDateLabel(dates.today) },
-    { key: 'tomorrow', label: 'Domani', subLabel: formatDateLabel(dates.tomorrow) },
-    { key: 'after', label: 'Dopodomani', subLabel: formatDateLabel(dates.after) },
-  ];
-
-  // Conteggio leghe nella view corrente
-  const visibleLeagues = new Set(filteredMatches.map(m => m.league || m.lega || ''));
-
-  // Clock formattato
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const clockStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-  const dateStr = `${['dom','lun','mar','mer','gio','ven','sab'][now.getDay()]} ${now.getDate()} ${MESI[now.getMonth()]} ${now.getFullYear()}`;
-
-  // Helper: estrai pronostico principale per ticker e sidecar
-  const getPrimaryTip = (m: Match): { label: string; confidence: number } | null => {
-    if (!m.pronostici || m.pronostici.length === 0) return null;
-    // Prendi quello con confidenza piu' alta
-    const sorted = [...m.pronostici].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-    const top = sorted[0];
-    if (!top.pronostico || top.pronostico === 'NO BET') return null;
-    return { label: top.pronostico, confidence: top.confidence || 0 };
+  const handleCountry = (c: string) => {
+    if (activeCountry === c || c === '') {
+      setActiveCountry('');
+      setActiveLeague('');
+    } else {
+      setActiveCountry(c);
+      setActiveLeague('');
+    }
   };
 
-  // Estrai lede dal testo scout (prime 2-3 frasi pulite, senza titoli di sezione e senza blocco JSON)
-  const getLede = (m: Match): string => {
-    const text = m.scout_deep?.scout_text || m.scout_lite?.scout_text || '';
-    if (!text) return '';
-    // strip citazioni [[N]], strip blocco json finale, strip titoli **...**
-    let clean = text
-      .replace(/```\s*json[\s\S]*?```/gi, '')
-      .replace(/```\s*json[\s\S]*$/i, '')
-      .replace(/\s*\[\[[\d,\s]+\]\]/g, '')
-      .replace(/\*\*[^*]+\*\*/g, ' ');
-    // prendi le prime 280 caratteri
-    clean = clean.replace(/\s+/g, ' ').trim();
-    if (clean.length > 280) clean = clean.substring(0, 280).replace(/\s+\S*$/, '') + '…';
-    return clean;
+  const handleLeague = (lg: string) => {
+    setActiveLeague(prev => (prev === lg ? '' : lg));
   };
 
-  // Quale modello? deep / lite badge
-  const articleEffort = (m: Match): 'DEEP' | 'LITE' => (m.scout_deep?.scout_text ? 'DEEP' : 'LITE');
+  const clearFilter = () => {
+    setActiveCountry('');
+    setActiveLeague('');
+  };
+
+  const isVisible = (country: string, league: string) => {
+    const matchC = !activeCountry || activeCountry === country;
+    const matchL = !activeLeague || activeLeague === league;
+    return matchC && matchL;
+  };
+
+  const visibleArticles = ARTICLES.filter(a => isVisible(a.country, a.league));
+  const visibleLeagues = new Set(visibleArticles.map(a => a.league));
+  const shown = visibleArticles.length;
+  const legheCount = visibleLeagues.size;
+  const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} · ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
+  const mastCountText = `${shown} ${shown === 1 ? 'articolo pubblicato' : 'articoli pubblicati'}`;
+
+  const currentLeagues = activeCountry ? COUNTRIES[activeCountry].leagues : null;
+  const hideStyle = (visible: boolean): React.CSSProperties => ({ display: visible ? '' : 'none' });
+
+  const isLight = theme === 'light';
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: c.bg,
-      fontFamily: FONT_SANS,
-      fontSize: 15,
-      lineHeight: 1.55,
-      color: c.text,
-      WebkitFontSmoothing: 'antialiased',
-    }}>
-      <style>{`
-        @keyframes news-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-        @keyframes news-slide { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-      `}</style>
+    <div className="news-root" data-screen-label="Mockup D · Home">
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
-      {/* CHYRON (testata broadcast) */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: c.bg,
-        borderBottom: `1px solid ${c.line}`,
-      }}>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'auto 1fr auto',
-          alignItems: 'center', gap: 16, padding: '10px 24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={onBack} style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: 'linear-gradient(135deg,#22d3ee 0%, #0ea5b7 100%)',
-              display: 'grid', placeItems: 'center', color: '#04141a',
-              fontWeight: 700, fontFamily: FONT_MONO, fontSize: 14,
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)',
-              border: 'none', cursor: 'pointer',
-            }} title="Torna indietro">A</button>
+      {/* ============ CHYRON ============ */}
+      <header className="chyron">
+        <div className="chyron-row">
+          <div className="brand" onClick={onBack} style={onBack ? { cursor: 'pointer' } : undefined}>
+            <div className="brand-mark">A</div>
             <div>
-              <div style={{ fontWeight: 600, letterSpacing: '-0.01em', fontSize: 14.5, lineHeight: 1.1 }}>
-                AI<span style={{ color: c.cyan }}>·</span>Simulator
-              </div>
-              <div style={{
-                fontSize: 11, color: c.textDim,
-                letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 2,
-              }}>Newsroom synth · v2.4</div>
+              <div className="brand-name">AI<span>·</span>Simulator</div>
+              <div className="brand-sub">Newsroom synth · v2.4</div>
             </div>
           </div>
           <div style={{ justifySelf: 'center' }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '4px 10px', border: `1px solid ${c.line}`, borderRadius: 999,
-              fontSize: 11, color: c.textDim,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-            }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: c.red, boxShadow: `0 0 8px ${c.red}`,
-                animation: 'news-pulse 1.4s infinite',
-              }} />
-              News feed live
-            </span>
+            <span className="live"><span className="live-dot" />News feed live</span>
           </div>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center', color: c.textDim, fontSize: 12 }}>
-            <span>{dateStr}</span>
-            <span style={{ fontFamily: FONT_MONO, color: c.text }}>{clockStr} CEST</span>
+          <div className="clock">
+            <span>Lun 18 mag 2026</span>
+            <span className="mono">{clockMono}</span>
+            <button className="theme-toggle" onClick={toggleTheme} aria-label="Cambia tema">
+              <span className="icn">{isLight ? '☾' : '☀'}</span>
+              <span>{isLight ? 'Scuro' : 'Chiaro'}</span>
+            </button>
           </div>
         </div>
-
-        {/* TICKER */}
-        <div style={{
-          borderTop: `1px solid ${c.line}`,
-          background: c.bg3,
-          overflow: 'hidden',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'stretch', height: 38 }}>
-            <div style={{
-              padding: '0 14px', display: 'grid', placeItems: 'center',
-              background: c.cyan, color: c.cyanInk,
-              fontWeight: 700, fontSize: 11, letterSpacing: '0.12em', flex: 'none',
-              fontFamily: FONT_MONO,
-            }}>AI · DESK</div>
-            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 36, height: '100%',
-                animation: filteredMatches.length > 0 ? 'news-slide 60s linear infinite' : 'none',
-                whiteSpace: 'nowrap', paddingLeft: 24,
-              }}>
-                {[...filteredMatches, ...filteredMatches].map((m, i) => {
-                  const tip = getPrimaryTip(m);
-                  return (
-                    <span key={`tk-${i}`} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 10,
-                      fontSize: 12.5, color: c.textDim,
-                    }}>
-                      <span style={{ fontFamily: FONT_MONO, color: c.cyan, fontSize: 11.5 }}>{m.match_time || '—'}</span>
-                      <b style={{ color: c.text, fontWeight: 500 }}>{m.league} · {m.home}–{m.away}</b>
-                      {tip && (
-                        <>
-                          <span style={{ color: c.textFaint }}>·</span>
-                          <span>pronostico <b style={{ color: c.text, fontWeight: 500 }}>{tip.label}</b></span>
-                          <span>conf. <span style={{ fontFamily: FONT_MONO, color: c.cyan }}>{tip.confidence.toFixed(0)}%</span></span>
-                        </>
-                      )}
-                    </span>
-                  );
-                })}
-                {filteredMatches.length === 0 && !loading && (
-                  <span style={{ fontSize: 12.5, color: c.textDim, fontStyle: 'italic' }}>
-                    Nessun articolo per la giornata selezionata
-                  </span>
-                )}
-              </div>
+        <div className="ticker">
+          <div className="ticker-row">
+            <div className="ticker-tag">AI · DESK</div>
+            <div className="ticker-track">
+              <TickerStrip />
             </div>
           </div>
         </div>
       </header>
 
-      {/* TABS */}
-      <div style={{ borderBottom: `1px solid ${c.line}`, background: c.bg }}>
-        <div style={{
-          maxWidth: 1280, margin: '0 auto', padding: '0 28px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', gap: 2 }}>
-            {tabs.map(t => {
-              const active = t.key === activeTab;
-              return (
-                <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-                  padding: '18px 22px 16px',
-                  color: active ? c.text : c.textDim,
-                  fontWeight: 500, fontSize: 13.5,
-                  borderBottom: `2px solid ${active ? c.cyan : 'transparent'}`,
-                  borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-                  cursor: 'pointer',
-                  display: 'flex', gap: 10, alignItems: 'baseline',
-                  background: 'transparent',
-                  fontFamily: 'inherit',
-                }}>
-                  <span style={{ color: active ? c.text : c.textDim }}>{t.label}</span>
-                  <span style={{
-                    fontFamily: FONT_MONO, fontSize: 11.5,
-                    color: active ? c.cyan : c.textFaint,
-                  }}>{t.subLabel}</span>
-                </button>
-              );
-            })}
+      {/* ============ TABS ============ */}
+      <div className="tabs-wrap">
+        <div className="tabs">
+          <div className="tabs-left">
+            <div className={`tab ${activeTab === 'oggi' ? 'active' : ''}`} onClick={() => setActiveTab('oggi')}><span className="day">Oggi</span><span className="date">18 mag</span></div>
+            <div className={`tab ${activeTab === 'domani' ? 'active' : ''}`} onClick={() => setActiveTab('domani')}><span className="day">Domani</span><span className="date">19 mag</span></div>
+            <div className={`tab ${activeTab === 'dopodomani' ? 'active' : ''}`} onClick={() => setActiveTab('dopodomani')}><span className="day">Dopodomani</span><span className="date">20 mag</span></div>
           </div>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 12, color: c.textDim }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              border: `1px solid ${c.line}`, borderRadius: 999,
-              padding: '5px 12px', color: c.text, fontSize: 11.5,
-            }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: c.green, boxShadow: `0 0 6px ${c.green}`,
-              }} />
-              Modello DEEP · T-6h
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11.5, color: c.textDim }}>
-              {filteredMatches.length} articol{filteredMatches.length === 1 ? 'o' : 'i'} · {visibleLeagues.size} {visibleLeagues.size === 1 ? 'lega' : 'leghe'}
-            </span>
+          <div className="tabs-meta">
+            <span className="pill"><span className="dot" />Modello DEEP · T-6h</span>
+            <span className="count-pill">{countText}</span>
           </div>
         </div>
       </div>
 
-      {/* MASTHEAD EDITORIALE */}
-      <section style={{ maxWidth: 1280, margin: '0 auto', padding: '48px 28px 22px' }}>
-        <div style={{
-          fontFamily: FONT_MONO, fontSize: 11.5, letterSpacing: '0.18em',
-          textTransform: 'uppercase', color: c.textFaint,
-          display: 'flex', gap: 14, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap',
-        }}>
-          <span>Edizione del giorno</span>
-          <span style={{ color: c.textFaint }}>·</span>
-          <span style={{ fontFamily: FONT_MONO }}>{isoDate(activeDate).replace(/-/g, ' · ')}</span>
-          <span style={{ color: c.textFaint }}>·</span>
-          <b style={{ color: c.cyan, fontWeight: 500 }}>
-            {filteredMatches.length} articol{filteredMatches.length === 1 ? 'o pubblicato' : 'i pubblicati'}
-          </b>
-          <span style={{ color: c.textFaint }}>·</span>
+      {/* ============ MASTHEAD ============ */}
+      <section className="masthead">
+        <div className="mast-eyebrow">
+          <span>Edizione del giorno</span><span className="sep">·</span>
+          <span className="mono">18 · 05 · 2026</span><span className="sep">·</span>
+          <b>{mastCountText}</b><span className="sep">·</span>
           <span>generati da redazione AI</span>
         </div>
-        <h1 style={{
-          fontSize: 'clamp(28px, 5vw, 48px)', lineHeight: 1.05, letterSpacing: '-0.03em',
-          margin: 0, fontWeight: 600, maxWidth: 1000,
-        }}>
-          Una redazione che <em style={{ fontStyle: 'normal', color: c.cyan }}>scrive sola</em>. {filteredMatches.length} articol{filteredMatches.length === 1 ? 'o' : 'i'} per le partite di {activeTab === 'today' ? 'oggi' : activeTab === 'tomorrow' ? 'domani' : 'dopodomani'}.
-        </h1>
-        <p style={{ color: c.textDim, fontSize: 16, marginTop: 14, maxWidth: 760, lineHeight: 1.6 }}>
-          Ogni giorno il nostro motore di sintesi legge <b style={{ color: c.text, fontWeight: 500 }}>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma — completo di <b style={{ color: c.text, fontWeight: 500 }}>pronostico AI</b> con livello di confidenza. Nessun giornalista umano è coinvolto. È pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
+        <h1 className="mast-title">Una redazione che <em>scrive sola</em>. Sette articoli per le partite di stasera, prima del kickoff.</h1>
+        <p className="mast-deck">
+          Ogni giorno il nostro motore di sintesi legge <b>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma — completo di <b>pronostico AI</b> con livello di confidenza. Nessun giornalista umano è coinvolto. È pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
         </p>
       </section>
 
-      {/* FILTRO */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '8px 28px 0' }}>
-        <div style={{
-          borderTop: `1px solid ${c.line}`, borderBottom: `1px solid ${c.line}`,
-          padding: '14px 0',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', overflowX: 'auto',
-          }}>
-            <span style={{
-              fontFamily: FONT_MONO, fontSize: 10.5, letterSpacing: '0.16em',
-              textTransform: 'uppercase', color: c.textFaint, paddingRight: 4,
-            }}>Notizie da</span>
-            <FilterLink
-              label="Tutte"
-              active={!activeCountry}
-              onClick={() => { setActiveCountry(''); setActiveLeague(''); }}
-            />
-            {countries.map(ctry => (
-              <span key={ctry} style={{ display: 'inline-flex', alignItems: 'center', gap: 18 }}>
-                <span style={{ color: c.textFaint }}>·</span>
-                <FilterLink
-                  label={COUNTRY_LABEL[ctry] || ctry}
-                  active={activeCountry === ctry}
-                  onClick={() => { setActiveCountry(activeCountry === ctry ? '' : ctry); setActiveLeague(''); }}
-                />
-              </span>
+      {/* ============ FILTRO ============ */}
+      <div className="filter-wrap">
+        <div className="filter-bar">
+          <div className="filter-row countries">
+            <span className="lbl">Notizie da</span>
+            <button className={`f-link ${activeCountry === '' ? 'on' : ''}`} onClick={() => handleCountry('')}>Tutte</button>
+            <span className="sep">·</span>
+            <button className={`f-link ${activeCountry === 'inghilterra' ? 'on' : ''}`} onClick={() => handleCountry('inghilterra')}>Inghilterra</button>
+            <span className="sep">·</span>
+            <button className={`f-link ${activeCountry === 'svezia' ? 'on' : ''}`} onClick={() => handleCountry('svezia')}>Svezia</button>
+            <span className="sep">·</span>
+            <button className={`f-link ${activeCountry === 'brasile' ? 'on' : ''}`} onClick={() => handleCountry('brasile')}>Brasile</button>
+            <span className="sep">·</span>
+            <button className={`f-link ${activeCountry === 'finlandia' ? 'on' : ''}`} onClick={() => handleCountry('finlandia')}>Finlandia</button>
+          </div>
+          <div className={`filter-row leagues ${activeCountry ? 'show' : ''}`}>
+            <span className="lbl">Leghe</span>
+            <button className={`f-link ${activeLeague === '' ? 'on' : ''}`} onClick={() => setActiveLeague('')}>Tutte</button>
+            {currentLeagues && Object.entries(currentLeagues).map(([slug, label]) => (
+              <React.Fragment key={slug}>
+                <span className="sep">·</span>
+                <button className={`f-link ${activeLeague === slug ? 'on' : ''}`} onClick={() => handleLeague(slug)}>{label}</button>
+              </React.Fragment>
             ))}
           </div>
-          {activeCountry && leaguesForCountry.length > 0 && (
-            <div style={{
-              marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${c.line}`,
-              display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
-            }}>
-              <span style={{
-                fontFamily: FONT_MONO, fontSize: 10.5, letterSpacing: '0.16em',
-                textTransform: 'uppercase', color: c.textFaint,
-              }}>↳ Leghe</span>
-              <FilterLink
-                label="Tutte"
-                active={!activeLeague}
-                onClick={() => setActiveLeague('')}
-                size="small"
-              />
-              {leaguesForCountry.map(l => (
-                <span key={l.slug} style={{ display: 'inline-flex', alignItems: 'center', gap: 18 }}>
-                  <span style={{ color: c.textFaint }}>·</span>
-                  <FilterLink
-                    label={l.name}
-                    active={activeLeague === l.slug}
-                    onClick={() => setActiveLeague(activeLeague === l.slug ? '' : l.slug)}
-                    size="small"
-                  />
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* BREADCRUMB ATTIVO */}
-      {activeCountry && (
-        <div style={{
-          maxWidth: 1280, margin: '0 auto', padding: '18px 28px 0',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          fontFamily: FONT_MONO, fontSize: 11.5, letterSpacing: '0.12em',
-          textTransform: 'uppercase', color: c.textDim,
-        }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ color: c.text }}>Notizie</span>
-            <span style={{ color: c.textFaint }}>/</span>
-            <span style={{ color: c.text }}>{COUNTRY_LABEL[activeCountry] || activeCountry}</span>
-            {activeLeague && (
-              <>
-                <span style={{ color: c.textFaint }}>/</span>
-                <b style={{ color: c.cyan, fontWeight: 500 }}>
-                  {leaguesForCountry.find(l => l.slug === activeLeague)?.name || activeLeague}
-                </b>
-              </>
-            )}
-          </div>
-          <span
-            onClick={() => { setActiveCountry(''); setActiveLeague(''); }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-              color: c.textDim, border: `1px solid ${c.line}`, padding: '5px 11px',
-              borderRadius: 999,
-            }}
-          >
-            <span style={{ fontSize: 14, lineHeight: 1 }}>×</span> Rimuovi filtro
-          </span>
+      {/* breadcrumb */}
+      <div className={`breadcrumb ${activeCountry ? 'show' : ''}`}>
+        <div className="crumb-path">
+          <span>Notizie</span>
+          {activeCountry && (
+            <>
+              <span className="sep">/</span>
+              <span>{COUNTRIES[activeCountry].label}</span>
+            </>
+          )}
+          {activeCountry && activeLeague && (
+            <>
+              <span className="sep">/</span>
+              <b>{COUNTRIES[activeCountry].leagues[activeLeague]}</b>
+            </>
+          )}
         </div>
-      )}
+        <button className="clear-filter" onClick={clearFilter}><span className="x">×</span> Rimuovi filtro</button>
+      </div>
 
-      {/* LAYOUT: index rail + articoli */}
-      <div style={{
-        maxWidth: 1280, margin: '0 auto', padding: '32px 28px 80px',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 180px) 1fr',
-        gap: 48, alignItems: 'start',
-      }}
-        className="news-layout"
-      >
-        {/* INDEX RAIL */}
-        <aside style={{ position: 'sticky', top: 128, alignSelf: 'start' }} className="news-index-rail">
-          <div style={{
-            fontFamily: FONT_MONO, fontSize: 10.5, letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: c.textFaint, marginBottom: 14,
-          }}>
-            Indice · {activeTab === 'today' ? 'oggi' : activeTab === 'tomorrow' ? 'domani' : 'dopodomani'}{' '}
-            <span style={{ color: c.cyan }}>({filteredMatches.length})</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: `1px solid ${c.line}`, paddingLeft: 14, gap: 1 }}>
-            {filteredMatches.map(m => (
+      {/* ============ LAYOUT ============ */}
+      <div className="layout">
+        <aside className="index-rail">
+          <div className="ir-h">Indice · oggi <span className="ir-count">({shown})</span></div>
+          <div className="ir-list">
+            {[
+              { id: 'a-1', country: 'inghilterra', league: 'premier-league', time: '15:00', label: 'Arsenal · Newcastle' },
+              { id: 'a-2', country: 'inghilterra', league: 'premier-league', time: '17:00', label: 'Liverpool · Crystal Palace' },
+              { id: 'a-3', country: 'svezia', league: 'allsvenskan', time: '17:30', label: 'AIK · Djurgården' },
+              { id: 'a-4', country: 'svezia', league: 'allsvenskan', time: '19:00', label: 'Malmö FF · Hammarby' },
+              { id: 'a-5', country: 'brasile', league: 'brasileirao', time: '20:00', label: 'Flamengo · Atl. Mineiro' },
+              { id: 'a-6', country: 'finlandia', league: 'veikkausliiga', time: '21:15', label: 'HJK · Inter Turku' },
+              { id: 'a-7', country: 'brasile', league: 'brasileirao', time: '22:30', label: 'Botafogo · Internacional' },
+            ].map(it => (
               <a
-                key={`ir-${m.home}-${m.away}`}
-                onClick={() => openArticle(m)}
-                style={{
-                  padding: '9px 0', fontFamily: FONT_MONO, fontSize: 12.5,
-                  color: c.textDim, position: 'relative', cursor: 'pointer', lineHeight: 1.3,
-                }}
+                key={it.id}
+                href={`#${it.id}`}
+                className={`ir-item ${activeRail === it.id ? 'active' : ''}`}
+                style={hideStyle(isVisible(it.country, it.league))}
+                onClick={() => setActiveRail(it.id)}
               >
-                <span style={{
-                  position: 'absolute', left: -19, top: 14,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: c.bg, border: `1px solid ${c.lineStrong}`,
-                }} />
-                {m.match_time || '—'}
-                <span style={{
-                  display: 'block', fontFamily: FONT_SANS, fontSize: 11,
-                  color: c.textFaint, marginTop: 1,
-                }}>{m.home} · {m.away}</span>
+                {it.time}<span className="lbl">{it.label}</span>
               </a>
             ))}
           </div>
-          <div style={{
-            marginTop: 24, paddingTop: 18,
-            borderTop: `1px solid ${c.line}`,
-            fontFamily: FONT_MONO, fontSize: 10.5, color: c.textFaint, lineHeight: 1.5,
-          }}>
+          <div className="ir-foot">
             Pubblicazione automatica T-6h dal kickoff. Nessun intervento editoriale umano.
           </div>
         </aside>
 
-        {/* STACK ARTICOLI */}
-        <main style={{ display: 'flex', flexDirection: 'column' }}>
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: c.textDim }}>
-              Caricamento articoli…
-            </div>
-          )}
-          {!loading && error && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: c.red }}>
-              Errore: {error}
-            </div>
-          )}
-          {!loading && !error && filteredMatches.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: c.textDim, maxWidth: 480, margin: '0 auto' }}>
-              <div style={{
-                fontFamily: FONT_MONO, fontSize: 11, letterSpacing: '0.16em',
-                textTransform: 'uppercase', color: c.textFaint, marginBottom: 14,
-              }}>Nessun articolo</div>
-              <p>
-                {activeCountry || activeLeague
-                  ? 'Nessuna partita corrisponde al filtro selezionato per questa giornata.'
-                  : 'Nessun articolo disponibile per questa giornata. Gli articoli vengono pubblicati a partire da T-6h dal kickoff.'}
+        <main className="stack">
+          <div className={`empty-state ${shown === 0 ? 'show' : ''}`}>
+            <div className="eye">Nessun articolo</div>
+            <p>Nessuna partita corrisponde al filtro selezionato per la giornata di oggi.</p>
+          </div>
+
+          {/* 1 — ARSENAL · NEWCASTLE (FEATURE) */}
+          <article className="article feature" id="a-1" style={hideStyle(isVisible('inghilterra', 'premier-league'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#a855f7' }} />Premier League · 38ª giornata</span>
+                <span className="ko">Kickoff 15:00 · Emirates</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-ars">A</div><div className="ml-name">Arsenal</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-new">N</div><div className="ml-name">Newcastle</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-1" onClick={(e) => openArticle(e, 'a-1')} style={{ cursor: 'pointer' }}>Arsenal cerca il sorpasso sul filo: Arteta conferma Saka dal 1', Howe risponde con un 4-3-3 più aggressivo</a></h2>
+              <p className="a-lede">
+                L'ultima giornata di Premier League vale la <b>qualificazione diretta in Champions</b> per entrambe le squadre, separate da otto punti in classifica ma con una differenza reti che pende dalla parte dei londinesi. Arteta recupera Saliba dopo il turno di squalifica e dovrebbe rilanciare Saka dal 1' nonostante l'affaticamento muscolare segnalato in conferenza giovedì. Newcastle arriva con Isak in forma — sei gol nelle ultime cinque trasferte — ma la difesa di Howe ha incassato gol in 6 delle ultime 7 fuori casa.
               </p>
-            </div>
-          )}
-          {!loading && !error && filteredMatches.map((m, idx) => {
-            const tip = getPrimaryTip(m);
-            const effort = articleEffort(m);
-            const lede = getLede(m);
-            const isFeature = idx === 0;
-            return (
-              <article
-                key={`art-${m.home}-${m.away}`}
-                style={{
-                  padding: idx === 0 ? '0 0 40px' : '36px 0 40px',
-                  borderBottom: idx < filteredMatches.length - 1 ? `1px solid ${c.line}` : 'none',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 260px',
-                  gap: 36, alignItems: 'start',
-                }}
-                className="news-article"
-              >
-                <div>
-                  {/* eyebrow */}
-                  <div style={{
-                    display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14,
-                    fontFamily: FONT_MONO, fontSize: 11, letterSpacing: '0.14em',
-                    textTransform: 'uppercase', color: c.textFaint, flexWrap: 'wrap',
-                  }}>
-                    <span style={{ color: c.textDim }}>
-                      <span style={{
-                        width: 6, height: 6, borderRadius: '50%', display: 'inline-block',
-                        marginRight: 6, verticalAlign: 'middle',
-                        background: leagueDotColor(m.league || ''),
-                      }} />
-                      {m.league}
-                    </span>
-                    <span style={{
-                      color: c.text, background: c.bg3, padding: '3px 8px', borderRadius: 4,
-                      letterSpacing: '0.06em',
-                    }}>Kickoff {m.match_time || '—'}</span>
-                    <span style={{
-                      color: effort === 'DEEP' ? c.green : c.yellow,
-                      border: `1px solid currentColor`, padding: '3px 8px', borderRadius: 4,
-                      fontWeight: 600,
-                    }}>{effort}</span>
-                  </div>
-
-                  {/* match line */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '8px 0 18px' }}>
-                    <CrestMatch name={m.home} feature={isFeature} />
-                    <span style={{ color: c.textFaint, fontFamily: FONT_MONO, fontSize: 13 }}>vs</span>
-                    <CrestMatch name={m.away} feature={isFeature} />
-                  </div>
-
-                  {/* title */}
-                  <h2 style={{
-                    fontSize: isFeature ? 36 : 28, lineHeight: isFeature ? 1.1 : 1.18,
-                    letterSpacing: '-0.022em', margin: '0 0 14px', fontWeight: 600,
-                  }}>
-                    <a onClick={() => openArticle(m)} style={{ cursor: 'pointer' }}>
-                      Pronostico {m.home}-{m.away}: {tip ? `${tip.label} con confidenza ${tip.confidence.toFixed(0)}%` : 'analisi pre-partita'}
-                    </a>
-                  </h2>
-
-                  {/* lede */}
-                  {lede && (
-                    <p style={{
-                      color: c.textDim, fontSize: 15, lineHeight: 1.65, margin: '0 0 14px',
-                    }}>{lede}</p>
-                  )}
-
-                  {/* footer */}
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    flexWrap: 'wrap', gap: 14,
-                    borderTop: `1px dashed ${c.line}`, paddingTop: 14, marginTop: 8,
-                  }}>
-                    <div style={{
-                      fontFamily: FONT_MONO, fontSize: 11.5, color: c.textFaint,
-                      display: 'flex', gap: 10, flexWrap: 'wrap',
-                    }}>
-                      <b style={{ color: c.textDim, fontWeight: 500 }}>La Redazione di AI Simulator</b>
-                    </div>
-                    <a onClick={() => openArticle(m)} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      color: c.cyan, fontSize: 13.5, fontWeight: 500,
-                      borderBottom: '1px solid currentColor', paddingBottom: 1, opacity: 0.8,
-                      cursor: 'pointer',
-                    }}>Leggi l'articolo completo →</a>
-                  </div>
+              <ul className="a-bullets">
+                <li>Saka dovrebbe partire titolare nonostante un fastidio agli adduttori; in panchina pronto Trossard</li>
+                <li>Newcastle prova un 4-3-3 più aggressivo: dentro Anderson sulla mediana, Joelinton avanzato</li>
+                <li>Storico recente: 3 vittorie Arsenal nelle ultime 5 H2H, ma nessuna delle tre con più di un gol di scarto</li>
+              </ul>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span>
+                  <span>·</span>
+                  <span>pubblicato <b>09:14 CEST</b></span>
+                  <span>·</span>
+                  <span>1.840 parole · 6 min</span>
                 </div>
+                <a className="read-link" href="#a-1" onClick={(e) => openArticle(e, 'a-1')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">14 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Vittoria 1</b>esito home · spread +1.4</div>
+                <div className="pron-num">71<small>%</small></div>
+              </div>
+              <div className="pron-bar"><i style={{ width: '71%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>2.14 / 1.02</b></div>
+                <div className="r"><span>Form casa</span><b>W W D W W</b></div>
+                <div className="r"><span>Quota mercato</span><b>1.72</b></div>
+                <div className="r"><span>Linea vs market</span><b style={{ color: 'var(--green)' }}>+ value</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-1" onClick={(e) => openArticle(e, 'a-1')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
 
-                {/* sidecar pronostico */}
-                <aside style={{
-                  background: c.bg2, border: `1px solid ${c.line}`, borderRadius: 10, padding: 18,
-                  display: 'flex', flexDirection: 'column', gap: 14,
-                }} className="news-sidecar">
-                  <div style={{
-                    fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.16em',
-                    textTransform: 'uppercase', color: c.textFaint,
-                  }}>Pronostico AI</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 14 }}>
-                    <div style={{ fontSize: 13, color: c.textDim }}>
-                      <b style={{ display: 'block', fontSize: 20, color: c.text, fontWeight: 600, marginBottom: 2, letterSpacing: '-0.01em' }}>
-                        {tip?.label || '—'}
-                      </b>
-                      {effort === 'DEEP' ? 'Scout Deep · T-6h' : 'Scout Lite · notturna'}
-                    </div>
-                    <div style={{
-                      fontFamily: FONT_MONO, fontSize: 34, fontWeight: 600,
-                      color: (tip?.confidence || 0) >= 60 ? c.cyan : c.yellow,
-                      lineHeight: 1, letterSpacing: '-0.03em',
-                    }}>
-                      {tip ? tip.confidence.toFixed(0) : '—'}
-                      <small style={{ fontSize: 14, color: c.textDim, marginLeft: 1, fontWeight: 400 }}>%</small>
-                    </div>
-                  </div>
-                  <div style={{ height: 5, background: c.pronBarBg, borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${tip?.confidence || 0}%`,
-                      background: (tip?.confidence || 0) >= 60 ? c.cyan : c.yellow,
-                    }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <a onClick={() => openArticle(m)} style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      background: c.cyan, color: c.cyanInk, border: `1px solid ${c.cyan}`,
-                      fontWeight: 600, padding: '10px 14px', borderRadius: 999, fontSize: 12.5,
-                      cursor: 'pointer',
-                    }}>Apri articolo completo →</a>
-                  </div>
-                </aside>
-              </article>
-            );
-          })}
+          {/* 2 — LIVERPOOL · CRYSTAL PALACE */}
+          <article className="article" id="a-2" style={hideStyle(isVisible('inghilterra', 'premier-league'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#a855f7' }} />Premier League · 38ª giornata</span>
+                <span className="ko">Kickoff 17:00 · Anfield</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-liv">L</div><div className="ml-name">Liverpool</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-cry">C</div><div className="ml-name">Crystal Palace</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-2" onClick={(e) => openArticle(e, 'a-2')} style={{ cursor: 'pointer' }}>Festa Anfield, ma Slot blinda la formazione: Salah dalla panchina, Glasner cerca i tre punti europei</a></h2>
+              <p className="a-lede">
+                Liverpool ha vinto il titolo da due giornate e Slot ha promesso una rotazione "completa, ma non incosciente". Salah parte fuori — terzo turno consecutivo — e dovrebbe lasciare spazio a Chiesa esterno destro. <b>Crystal Palace gioca per la Conference</b>: Glasner conferma il 3-4-2-1 con Mateta punta. L'allenatore austriaco ha lamentato in conferenza la fatica accumulata dopo la finale di FA Cup.
+              </p>
+              <ul className="a-bullets">
+                <li>Possibile esordio dal 1' per il giovane Danns a centrocampo</li>
+                <li>Liverpool senza tiri in porta solo 2 volte ad Anfield in stagione</li>
+              </ul>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
+                  <span>pub. <b>10:02 CEST</b></span><span>·</span>
+                  <span>1.620 parole · 5 min</span>
+                </div>
+                <a className="read-link" href="#a-2" onClick={(e) => openArticle(e, 'a-2')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">12 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
+                <div className="pron-num">78<small>%</small></div>
+              </div>
+              <div className="pron-bar"><i style={{ width: '78%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>2.38 / 0.92</b></div>
+                <div className="r"><span>Form casa</span><b>W W W L W</b></div>
+                <div className="r"><span>Quota mercato</span><b>1.42</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-2" onClick={(e) => openArticle(e, 'a-2')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
+
+          {/* 3 — AIK · DJURGÅRDEN */}
+          <article className="article" id="a-3" style={hideStyle(isVisible('svezia', 'allsvenskan'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#facc15' }} />Allsvenskan · 9ª giornata</span>
+                <span className="ko">Kickoff 17:30 · Strawberry Arena</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-aik">A</div><div className="ml-name">AIK</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-dju">D</div><div className="ml-name">Djurgården</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-3" onClick={(e) => openArticle(e, 'a-3')} style={{ cursor: 'pointer' }}>Tvillingderbyt sotto la pioggia: AIK punta sull'asse Otieno-Guidetti, Djurgården perde Kåhre per squalifica</a></h2>
+              <p className="a-lede">
+                Il derby di Stoccolma arriva al penultimo posto delle giornate "facili" per AIK — quattro partite contro top-6 nelle prossime sei. Norling sceglie il 4-2-3-1 con <b>Otieno e Guidetti</b> sull'asse offensivo destro; la mossa è coerente con un xG creato superiore del 18% quando giocano insieme. Djurgården perde Kåhre per squalifica e Lundgren è in dubbio: dentro Berg dal 1', sistema invariato.
+              </p>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
+                  <span>pub. <b>11:30 CEST</b></span><span>·</span>
+                  <span>1.480 parole</span>
+                </div>
+                <a className="read-link" href="#a-3" onClick={(e) => openArticle(e, 'a-3')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">11 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Pareggio X</b>derby equilibrato</div>
+                <div className="pron-num med">42<small>%</small></div>
+              </div>
+              <div className="pron-bar med"><i style={{ width: '42%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>1.34 / 1.16</b></div>
+                <div className="r"><span>H2H ultimi 10</span><b>3 - 4 - 3</b></div>
+                <div className="r"><span>Quota mercato</span><b>3.60</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-3" onClick={(e) => openArticle(e, 'a-3')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
+
+          {/* 4 — MALMÖ FF · HAMMARBY */}
+          <article className="article" id="a-4" style={hideStyle(isVisible('svezia', 'allsvenskan'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#facc15' }} />Allsvenskan · 9ª giornata</span>
+                <span className="ko">Kickoff 19:00 · Eleda Stadion</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-mff">M</div><div className="ml-name">Malmö FF</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-ham">H</div><div className="ml-name">Hammarby</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-4" onClick={(e) => openArticle(e, 'a-4')} style={{ cursor: 'pointer' }}>Eleda sold-out: Tomasson testa la nuova punta centrale, Hammarby con un 5-3-2 di emergenza</a></h2>
+              <p className="a-lede">
+                Malmö in striscia positiva da quattro partite, capolista provvisorio in attesa dell'AIK. Tomasson <b>cambia struttura</b>: 4-3-3 con Nanasi a sinistra e Hakšabanović dietro Larsson — assetto inedito ma testato nelle amichevoli di marzo. Hammarby vive una crisi parallela in difesa: tre titolari out, costruzione bassa con il 5-3-2.
+              </p>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
+                  <span>pub. <b>12:18 CEST</b></span><span>·</span>
+                  <span>1.720 parole</span>
+                </div>
+                <a className="read-link" href="#a-4" onClick={(e) => openArticle(e, 'a-4')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">13 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
+                <div className="pron-num">61<small>%</small></div>
+              </div>
+              <div className="pron-bar"><i style={{ width: '61%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>1.86 / 1.12</b></div>
+                <div className="r"><span>Form casa</span><b>W W D W W</b></div>
+                <div className="r"><span>Quota mercato</span><b>1.95</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-4" onClick={(e) => openArticle(e, 'a-4')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
+
+          {/* 5 — FLAMENGO · ATL. MINEIRO */}
+          <article className="article" id="a-5" style={hideStyle(isVisible('brasile', 'brasileirao'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#4ade80' }} />Brasileirão · 8ª giornata</span>
+                <span className="ko">Kickoff 20:00 · Maracanã</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-fla">F</div><div className="ml-name">Flamengo</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-atm">A</div><div className="ml-name">Atlético Mineiro</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-5" onClick={(e) => openArticle(e, 'a-5')} style={{ cursor: 'pointer' }}>Maracanã pieno: Filipe Luís rilancia Pedro al centro dell'attacco, problemi a centrocampo per il Galo</a></h2>
+              <p className="a-lede">
+                Flamengo seconda dietro al Botafogo per soli due punti, ma con una partita in meno. Filipe Luís — al primo mese sulla panchina — recupera Pedro dopo l'infortunio di aprile e lo rimette al centro del 4-3-3 al posto di Bruno Henrique. <b>Atlético Mineiro</b> arriva senza Hulk (squalificato) e con Otávio in dubbio: Milito potrebbe schierare un 4-1-4-1 di copertura.
+              </p>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
+                  <span>pub. <b>13:04 CEST</b></span><span>·</span>
+                  <span>1.910 parole</span>
+                </div>
+                <a className="read-link" href="#a-5" onClick={(e) => openArticle(e, 'a-5')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">15 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
+                <div className="pron-num">63<small>%</small></div>
+              </div>
+              <div className="pron-bar"><i style={{ width: '63%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>1.74 / 1.13</b></div>
+                <div className="r"><span>Form casa</span><b>W D W W L</b></div>
+                <div className="r"><span>Quota mercato</span><b>1.88</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-5" onClick={(e) => openArticle(e, 'a-5')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
+
+          {/* 6 — HJK · INTER TURKU */}
+          <article className="article" id="a-6" style={hideStyle(isVisible('finlandia', 'veikkausliiga'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#22d3ee' }} />Veikkausliiga · 10ª giornata</span>
+                <span className="ko">Kickoff 21:15 · Bolt Arena</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-hjk">H</div><div className="ml-name">HJK</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-itu">I</div><div className="ml-name">Inter Turku</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-6" onClick={(e) => openArticle(e, 'a-6')} style={{ cursor: 'pointer' }}>Bolt Arena: Koskinen prova il 3-4-3, Inter Turku con la coppia Anier-Ngueukam in attacco</a></h2>
+              <p className="a-lede">
+                HJK capolista, ma con una difesa che ha concesso gol in cinque delle ultime sei: Koskinen cambia disegno e passa al <b>3-4-3</b> con Hostikka braccetto sinistro. Inter Turku terzo in classifica, gioca il match più importante della stagione fin qui: Källman ha confermato in conferenza che Anier e Ngueukam partono insieme dal 1' per la prima volta.
+              </p>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
+                  <span>pub. <b>13:42 CEST</b></span><span>·</span>
+                  <span>1.380 parole</span>
+                </div>
+                <a className="read-link" href="#a-6" onClick={(e) => openArticle(e, 'a-6')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">9 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
+                <div className="pron-num">58<small>%</small></div>
+              </div>
+              <div className="pron-bar"><i style={{ width: '58%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>1.58 / 1.16</b></div>
+                <div className="r"><span>Form casa</span><b>W W L W D</b></div>
+                <div className="r"><span>Quota mercato</span><b>2.10</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-6" onClick={(e) => openArticle(e, 'a-6')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
+
+          {/* 7 — BOTAFOGO · INTERNACIONAL */}
+          <article className="article" id="a-7" style={hideStyle(isVisible('brasile', 'brasileirao'))}>
+            <div>
+              <div className="a-eyebrow">
+                <span className="league"><span className="ld" style={{ background: '#4ade80' }} />Brasileirão · 8ª giornata</span>
+                <span className="ko">Kickoff 22:30 · Nilton Santos</span>
+                <span className="deep">DEEP</span>
+              </div>
+              <div className="match-line">
+                <div className="ml-team"><div className="ml-crest c-bot">B</div><div className="ml-name">Botafogo</div></div>
+                <div className="ml-vs">vs</div>
+                <div className="ml-team"><div className="ml-crest c-int">I</div><div className="ml-name">Internacional</div></div>
+              </div>
+              <h2 className="a-title"><a href="#a-7" onClick={(e) => openArticle(e, 'a-7')} style={{ cursor: 'pointer' }}>Nilton Santos: Almada falso nove, Roger Machado conferma il 4-2-3-1 nonostante l'assenza di Borré</a></h2>
+              <p className="a-lede">
+                Botafogo capolista con percentuale-vittoria 67% in stagione, ma stanco — terza partita in sette giorni. Cavalieri rinuncia a Tiquinho e <b>schiera Almada falso nove</b> per liberare gli inserimenti di Savarino. Internacional senza Borré (infortunato) e senza Wanderson (squalificato): Wesley unica punta, Aguirre conferma il modulo.
+              </p>
+              <div className="a-foot">
+                <div className="by-line">
+                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
+                  <span>pub. <b>14:00 CEST</b></span><span>·</span>
+                  <span>1.560 parole</span>
+                </div>
+                <a className="read-link" href="#a-7" onClick={(e) => openArticle(e, 'a-7')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+              </div>
+            </div>
+            <aside className="pron-card">
+              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">12 fonti</span></div>
+              <div className="pron-main">
+                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
+                <div className="pron-num">54<small>%</small></div>
+              </div>
+              <div className="pron-bar"><i style={{ width: '54%' }} /></div>
+              <div className="pron-stats">
+                <div className="r"><span>xG attesi</span><b>1.42 / 1.11</b></div>
+                <div className="r"><span>Form casa</span><b>W W W D W</b></div>
+                <div className="r"><span>Quota mercato</span><b>2.05</b></div>
+              </div>
+              <div className="pron-foot">
+                <a className="open-btn" href="#a-7" onClick={(e) => openArticle(e, 'a-7')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+              </div>
+            </aside>
+          </article>
         </main>
       </div>
 
-      {/* FOOTER */}
-      <footer style={{
-        maxWidth: 1280, margin: '0 auto', padding: '32px 28px 60px',
-        borderTop: `1px solid ${c.line}`,
-        fontFamily: FONT_MONO, fontSize: 11, color: c.textFaint,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        flexWrap: 'wrap', gap: 14,
-      }}>
-        <div>Tutti i contenuti sono generati da modelli linguistici. <b style={{ color: c.textDim, fontWeight: 500 }}>Le previsioni non costituiscono consigli di scommessa.</b></div>
-        <div>build · {isoDate(new Date()).replace(/-/g, '.')} · pipeline</div>
+      <footer className="site-foot">
+        <div>Tutti i contenuti sono generati da modelli linguistici. <b>Le previsioni non costituiscono consigli di scommessa.</b></div>
+        <div>build · 2026.05.18 · pipeline #11471 · /v1/research</div>
       </footer>
-
-      {/* Responsive */}
-      <style>{`
-        @media (max-width: 1080px) {
-          .news-layout { grid-template-columns: 1fr !important; gap: 24px !important; }
-          .news-index-rail { position: static !important; background: ${c.bg2}; border: 1px solid ${c.line}; border-radius: 10px; padding: 16px; }
-          .news-article { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 760px) {
-          .news-layout { padding: 24px 16px 60px !important; }
-        }
-      `}</style>
     </div>
   );
-}
+};
 
-function FilterLink({ label, active, onClick, size }: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  size?: 'small' | 'normal';
-}) {
-  return (
-    <span
-      onClick={onClick}
-      style={{
-        fontSize: size === 'small' ? 13 : 14,
-        color: active ? c.cyan : c.textDim,
-        cursor: 'pointer', whiteSpace: 'nowrap',
-        padding: '2px 0',
-        fontWeight: active ? 500 : 400,
-      }}
-    >{label}</span>
-  );
-}
-
-function CrestMatch({ name, feature }: { name: string; feature: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{
-        width: feature ? 44 : 34, height: feature ? 44 : 34, borderRadius: '50%',
-        display: 'grid', placeItems: 'center',
-        fontWeight: 700, fontSize: feature ? 15 : 13, color: '#0a0b0f',
-        boxShadow: c.crestShadow, flex: 'none',
-        background: crestGradient(name),
-      }}>{crestLabel(name)}</div>
-      <div style={{ fontSize: feature ? 18 : 15, fontWeight: 500, letterSpacing: '-0.005em' }}>{name}</div>
-    </div>
-  );
-}
+export default News;

@@ -630,6 +630,11 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
         if (found) {
           console.log('[auto-open] MATCH TROVATO', found.home, 'vs', found.away);
           setTodayData(data.leagues);
+          // Resetta league a '' per evitare che l'useEffect[league] (riga 682)
+          // resetti viewState='list' subito dopo. Quell'useEffect resetta il
+          // pre-match quando rileva un cambio di lega selezionata.
+          setLeague('');
+          setActiveLeague(null);
           setSelectedMatch(found);
           setViewState('pre-match');
         } else {
@@ -637,10 +642,11 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
         }
       } catch (err) {
         console.error('[auto-open] errore fetch', err);
-      } finally {
-        const cleanUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, '', cleanUrl);
       }
+      // NON puliamo l'URL: un altro listener (savedNav/popstate) reagisce e
+      // ripristina la vista 'list' resettando la nostra impostazione pre-match.
+      // Il param resta nell'URL, la guardia autoOpenAttempted impedisce comunque
+      // il doppio trigger durante la sessione.
     })();
   }, []);
 

@@ -17,6 +17,22 @@ const bgB = isLight ? '#e5e7eb' : 'rgb(17, 21, 23)';
 const stripCitations = (raw: string): string =>
   raw.replace(/\s*\[\[[\d,\s]+\]\]/g, '');
 
+// Lo Scout LITE (e in alcuni casi anche il DEEP) aggiunge in coda all'articolo
+// un blocco JSON delimitato da ```json ... ``` con il pronostico strutturato.
+// Quel blocco e' inteso SOLO per il parser backend (scout_nightly_lite.py /
+// scout_prematch_deep.py): non deve essere mostrato all'utente nella capsula.
+// Il LITE meno potente del DEEP a volte non chiude correttamente il fence,
+// quindi tolleriamo anche fence aperto (fino a fine testo).
+const stripJsonBlock = (raw: string): string => {
+  // 1. Blocco ben formato: ```json ... ```
+  let cleaned = raw.replace(/```\s*json[\s\S]*?```/gi, '');
+  // 2. Fence aperto non chiuso: ```json fino a fine stringa
+  cleaned = cleaned.replace(/```\s*json[\s\S]*$/i, '');
+  // 3. JSON nudo a fine articolo (senza fence): `{ "decisione": ... }` finale
+  cleaned = cleaned.replace(/\{\s*"decisione"\s*:[\s\S]*\}\s*$/, '');
+  return cleaned.trimEnd();
+};
+
 const splitSections = (text: string): string[] => {
   const re = /(\*\*(?:Formazioni|Tattica|Notizie|Contesto|Ipotizza)[^*]*\*\*)/i;
   const parts = text.split(re).filter((s) => s && s.trim());
@@ -171,7 +187,7 @@ const buildComponents = (isLastSection: boolean) => ({
 });
 
 export default function ScoutAnalysis({ text }: Props) {
-  const clean = stripCitations(text || '');
+  const clean = stripJsonBlock(stripCitations(text || ''));
   const sections = splitSections(clean);
   useEffect(() => {
     const id = 'scout-font-link';

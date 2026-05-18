@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '../AppDev/costanti';
+import { assegnaRedattore } from './news/assegnazione';
 
 interface NewsProps {
   onBack?: () => void;
@@ -43,6 +44,7 @@ interface Match {
   scout_deep?: { scout_text?: string; computed_at?: string };
   expected_total_goals?: number | null;
   news_meta?: NewsMeta;
+  odds?: Record<string, any> | null;
   home_mongo_id?: string | null;
   away_mongo_id?: string | null;
   home_logo_url?: string | null;
@@ -157,6 +159,35 @@ const extractLede = (text: string): string => {
     .trim();
   if (clean.length > 280) clean = clean.substring(0, 280).replace(/\s+\S*$/, '') + '…';
   return clean;
+};
+
+// Estrae la quota dal blocco odds di una partita data l'etichetta del pronostico.
+// Le quote DC (1X/X2/12) si calcolano combinando 1, X, 2 con formula 1/(1/a + 1/b).
+const getQuoteFromOdds = (odds: Record<string, any> | undefined | null, pronostico: string | null | undefined): number | null => {
+  if (!odds || !pronostico) return null;
+  const p = String(pronostico).trim();
+  const num = (v: any) => (typeof v === 'number' && isFinite(v) && v > 0 ? v : null);
+  const o1 = num(odds['1']), oX = num(odds['X']), o2 = num(odds['2']);
+  const dcCombine = (a: number | null, b: number | null) => {
+    if (a == null || b == null) return null;
+    return 1 / (1 / a + 1 / b);
+  };
+  if (p === '1') return o1;
+  if (p === 'X') return oX;
+  if (p === '2') return o2;
+  if (p === 'Doppia Chance 1X' || p === '1X') return dcCombine(o1, oX);
+  if (p === 'Doppia Chance X2' || p === 'X2') return dcCombine(oX, o2);
+  if (p === 'Doppia Chance 12' || p === '12') return dcCombine(o1, o2);
+  const norm = p.toLowerCase().replace(/\s+/g, '');
+  if (norm === 'over1.5' || norm === 'over15') return num(odds.over_15);
+  if (norm === 'under1.5' || norm === 'under15') return num(odds.under_15);
+  if (norm === 'over2.5' || norm === 'over25') return num(odds.over_25);
+  if (norm === 'under2.5' || norm === 'under25') return num(odds.under_25);
+  if (norm === 'over3.5' || norm === 'over35') return num(odds.over_35);
+  if (norm === 'under3.5' || norm === 'under35') return num(odds.under_35);
+  if (norm === 'gol' || norm === 'goal' || norm === 'gg') return num(odds.gg);
+  if (norm === 'nogol' || norm === 'nogoal' || norm === 'ng') return num(odds.ng);
+  return null;
 };
 
 // Top tip = pronostico con confidence piu' alta != NO BET.
@@ -758,6 +789,8 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             const confMed = conf < 60;
             const dotColor = leagueDotColor(m.league || '');
             const title = `${m.home}–${m.away}: ${tip?.pronostico ? `pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : 'analisi pre-partita'}`;
+            // Redattore assegnato (deterministico: stessa partita = sempre stesso redattore)
+            const redattore = assegnaRedattore({ home: m.home, away: m.away, date: m.date, league: m.league || m.lega || '' });
             return (
               <article key={id} className={`article ${isFeature ? 'feature' : ''}`} id={id}>
                 <div>
@@ -826,7 +859,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   {lede && <p className="a-lede">{lede}</p>}
                   <div className="a-foot">
                     <div className="by-line">
-                      <span><b>La Redazione di AI Simulator</b></span>
+                      <span>Articolo a cura di <b>{redattore.nome}</b></span>
                     </div>
                     <a className="read-link" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
                   </div>
@@ -847,7 +880,10 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                     <div className="r"><span>xG medio · casa</span><b>{m.news_meta?.home?.xg_avg != null ? m.news_meta.home.xg_avg.toFixed(2) : missingTag('xG casa')}</b></div>
                     <div className="r"><span>xG medio · trasf.</span><b>{m.news_meta?.away?.xg_avg != null ? m.news_meta.away.xg_avg.toFixed(2) : missingTag('xG trasferta')}</b></div>
                     <div className="r"><span>Gol totali attesi</span><b>{m.expected_total_goals != null ? m.expected_total_goals.toFixed(2) : missingTag('gol attesi')}</b></div>
-                    <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : missingTag('quota')}</b></div>
+                    <div className="r"><span>Quota mercato</span><b>{(() => {
+                      const q = tip?.quota || getQuoteFromOdds(m.odds, tip?.pronostico);
+                      return q ? q.toFixed(2) : missingTag('quota');
+                    })()}</b></div>
                   </div>
                   <div className="pron-foot">
                     <a className="open-btn" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>

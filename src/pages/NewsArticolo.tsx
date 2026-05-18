@@ -2,6 +2,8 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../AppDev/costanti';
+import { assegnaRedattore, selezionaTopPronostici } from './news/assegnazione';
+import RedattoreProfilo from './news/RedattoreProfilo';
 
 interface NewsArticoloProps {
   onBack?: () => void;
@@ -75,6 +77,7 @@ interface MatchA {
   scout_deep?: { scout_text?: string; computed_at?: string };
   expected_total_goals?: number | null;
   news_meta?: NewsMetaA;
+  odds?: Record<string, any> | null;
   // mongo_id squadre per costruire l'URL stemma Firebase Storage
   home_mongo_id?: string | null;
   away_mongo_id?: string | null;
@@ -247,6 +250,35 @@ const crestInitialA = (name: string): string => {
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
+// Estrae la quota dal blocco odds di una partita data l'etichetta del pronostico.
+// Le DC (1X/X2/12) si calcolano combinando 1, X, 2: 1/(1/a + 1/b).
+const getQuoteFromOddsA = (odds: Record<string, any> | undefined | null, pronostico: string | null | undefined): number | null => {
+  if (!odds || !pronostico) return null;
+  const p = String(pronostico).trim();
+  const num = (v: any) => (typeof v === 'number' && isFinite(v) && v > 0 ? v : null);
+  const o1 = num(odds['1']), oX = num(odds['X']), o2 = num(odds['2']);
+  const dcCombine = (a: number | null, b: number | null) => {
+    if (a == null || b == null) return null;
+    return 1 / (1 / a + 1 / b);
+  };
+  if (p === '1') return o1;
+  if (p === 'X') return oX;
+  if (p === '2') return o2;
+  if (p === 'Doppia Chance 1X' || p === '1X') return dcCombine(o1, oX);
+  if (p === 'Doppia Chance X2' || p === 'X2') return dcCombine(oX, o2);
+  if (p === 'Doppia Chance 12' || p === '12') return dcCombine(o1, o2);
+  const norm = p.toLowerCase().replace(/\s+/g, '');
+  if (norm === 'over1.5' || norm === 'over15') return num(odds.over_15);
+  if (norm === 'under1.5' || norm === 'under15') return num(odds.under_15);
+  if (norm === 'over2.5' || norm === 'over25') return num(odds.over_25);
+  if (norm === 'under2.5' || norm === 'under25') return num(odds.under_25);
+  if (norm === 'over3.5' || norm === 'over35') return num(odds.over_35);
+  if (norm === 'under3.5' || norm === 'under35') return num(odds.under_35);
+  if (norm === 'gol' || norm === 'goal' || norm === 'gg') return num(odds.gg);
+  if (norm === 'nogol' || norm === 'nogoal' || norm === 'ng') return num(odds.ng);
+  return null;
+};
+
 const getTopTipA = (m: MatchA): PronosticoTip | null => {
   if (!m.pronostici || m.pronostici.length === 0) return null;
   const sorted = [...m.pronostici].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
@@ -521,6 +553,8 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   // Versione articolo scelta dall'utente: 'AUTO' = default (deep se presente, altrimenti lite).
   // L'utente puo' forzare 'LITE' o 'DEEP' col toggle in cima all'articolo.
   const [viewingVersion, setViewingVersion] = useState<'AUTO' | 'LITE' | 'DEEP'>('AUTO');
+  // Modale profilo redattore aperto/chiuso.
+  const [profiloOpen, setProfiloOpen] = useState(false);
   const [clockMono, setClockMono] = useState('00:00');
   const [activeToc, setActiveToc] = useState(0);
 
@@ -676,6 +710,16 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const home = matchData?.home || homeQ;
   const away = matchData?.away || awayQ;
   const league = matchData?.league || matchData?.lega || '';
+  // Redattore assegnato alla partita (deterministico).
+  const redattore = useMemo(
+    () => assegnaRedattore({ home, away, date: matchData?.date || dateQ, league }),
+    [home, away, matchData?.date, dateQ, league]
+  );
+  // Top 3 pronostici anti-conflitto.
+  const topPronostici = useMemo(
+    () => selezionaTopPronostici(matchData?.pronostici, matchData?.odds, 3),
+    [matchData?.pronostici, matchData?.odds]
+  );
   const dotColor = leagueDotColorA(league);
   const kickoff = matchData?.match_time || '';
   const expectedTotalGoals = matchData?.expected_total_goals ?? null;
@@ -813,7 +857,14 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 Articolo generato dalla redazione AI di AI Simulator a partire da fonti pubbliche, conferenze stampa e dati statistici. Tipo: <b>{effort === 'DEEP' ? 'Scout Deep' : 'Scout Lite'}</b>.
               </p>
               <div className="byline-row">
-                <span><b>Firmato</b> <span className="author">La Redazione di AI Simulator</span></span>
+                <span><b>Firmato da</b>{' '}
+                  <span
+                    className="author"
+                    onClick={() => setProfiloOpen(true)}
+                    style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                    title="Apri scheda redattore"
+                  >{redattore.nome}</span>
+                </span>
                 <span className="sep">·</span>
                 <span>Pub. <b>{pubLabel || missingTag('data pubblicazione')}</b></span>
                 <span className="sep">·</span>
@@ -1074,19 +1125,60 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
 
             {/* SIDECAR */}
             <aside className="sidecar">
+              {/* CARD 1: Le nostre preferenze - top 3 pronostici scelti dalla redazione AI */}
               <div className="pron-card">
-                <div className="pron-h"><span>Pronostico AI</span><b>{citationCount > 0 ? `${citationCount} citazioni` : todoTag('numero fonti')}</b></div>
-                <div className="pron-main">
-                  <div className="pron-pick">
-                    <b>{tip?.pronostico || missingTag('pronostico')}</b>
-                    {tip?.tipo || 'esito principale'}
-                  </div>
-                  <div className={`pron-num${confMed ? ' med' : ''}`}>
-                    {tip ? conf.toFixed(0) : '—'}<small>%</small>
-                  </div>
+                <div className="pron-h">
+                  <span>Le nostre preferenze</span>
+                  <b>
+                    a cura di{' '}
+                    <span
+                      onClick={() => setProfiloOpen(true)}
+                      style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                      title="Apri scheda redattore"
+                    >{redattore.nome}</span>
+                  </b>
                 </div>
-                <div className={`pron-bar${confMed ? ' med' : ''}`}><i style={{ width: `${conf}%` }} /></div>
-                <div className="pron-marks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+                {topPronostici.length === 0 ? (
+                  <div style={{ padding: '8px 0', color: 'var(--t-faint)', fontSize: 13 }}>
+                    Nessun pronostico disponibile.
+                  </div>
+                ) : (
+                  topPronostici.map((p, i) => {
+                    const isMed = p.confidence < 60;
+                    return (
+                      <div key={`pp-${i}`} style={{
+                        display: 'flex', flexDirection: 'column', gap: 8,
+                        paddingBottom: 14,
+                        borderBottom: i < topPronostici.length - 1 ? '1px dotted var(--line)' : 'none',
+                        marginBottom: i < topPronostici.length - 1 ? 4 : 0,
+                      }}>
+                        <div className="pron-main">
+                          <div className="pron-pick">
+                            <b>{p.pronostico}</b>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--t-faint)' }}>
+                              {p.famiglia === 'segno' ? 'Segno' : p.famiglia === 'over_under' ? 'Over/Under' : p.famiglia === 'gol_no_gol' ? 'Gol/No Gol' : 'Altro'}
+                              {p.quota != null ? ` · quota ${p.quota.toFixed(2)}` : ''}
+                            </span>
+                          </div>
+                          <div className={`pron-num${isMed ? ' med' : ''}`} style={{ fontSize: 28 }}>
+                            {p.confidence.toFixed(0)}<small>%</small>
+                          </div>
+                        </div>
+                        <div className={`pron-bar${isMed ? ' med' : ''}`}>
+                          <i style={{ width: `${p.confidence}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div className="pron-foot">
+                  <a className="btn primary" href="#" onClick={(e) => e.preventDefault()}>Apri scheda Match Day <span className="arrow">→</span></a>
+                </div>
+              </div>
+
+              {/* CARD 2: Dati partita - statistiche strutturate */}
+              <div className="pron-card">
+                <div className="pron-h"><span>Dati partita</span><b>{citationCount > 0 ? `${citationCount} citazioni` : ''}</b></div>
                 <div className="pron-stats">
                   <div className="r"><span>xG medio · casa</span><b>{homeMeta.xg_avg != null ? homeMeta.xg_avg.toFixed(2) : missingTag('xG casa')}</b></div>
                   <div className="r"><span>xG medio · trasf.</span><b>{awayMeta.xg_avg != null ? awayMeta.xg_avg.toFixed(2) : missingTag('xG trasferta')}</b></div>
@@ -1094,28 +1186,8 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   <div className="r"><span>Modulo · casa</span><b>{lineupHome.formation || homeMeta.formation_default || missingTag('modulo casa')}</b></div>
                   <div className="r"><span>Modulo · trasf.</span><b>{lineupAway.formation || awayMeta.formation_default || missingTag('modulo trasferta')}</b></div>
                   <div className="r"><span>Arbitro</span><b>{arbitroInfo?.name || missingTag('arbitro')}</b></div>
-                  <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : missingTag('quota')}</b></div>
                   <div className="r"><span>Assenti · casa</span><b>{assentiHome.length > 0 ? `${assentiHome.length} indisponibili` : missingTag('assenti casa')}</b></div>
                   <div className="r"><span>Assenti · trasf.</span><b>{assentiAway.length > 0 ? `${assentiAway.length} indisponibili` : missingTag('assenti trasferta')}</b></div>
-                </div>
-                <div className="pron-foot">
-                  <a className="btn primary" href="#" onClick={(e) => e.preventDefault()}>Apri scheda Match Day <span className="arrow">→</span></a>
-                </div>
-              </div>
-
-              <div className="sc-card">
-                <div className="sc-h">Tutti i tip</div>
-                <div className="sc-list">
-                  {matchData.pronostici && matchData.pronostici.length > 0 ? (
-                    matchData.pronostici.map((p, i) => (
-                      <div className="r" key={`tip-${i}`}>
-                        <span>{p.tipo || p.pronostico}</span>
-                        <b>{p.pronostico} · {(p.confidence || 0).toFixed(0)}%</b>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="r"><span>Tip</span><b>{missingTag('pronostici')}</b></div>
-                  )}
                 </div>
               </div>
             </aside>
@@ -1186,6 +1258,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
         <div>Tutti i contenuti sono generati da modelli linguistici. <b>Le previsioni non costituiscono consigli di scommessa.</b></div>
         <div>build · {new Date().toISOString().substring(0, 10).replace(/-/g, '.')} · /v1/research</div>
       </footer>
+
+      {/* Modale profilo redattore (apre/chiude via stato profiloOpen) */}
+      {profiloOpen && <RedattoreProfilo redattore={redattore} onClose={() => setProfiloOpen(false)} />}
     </div>
   );
 };

@@ -14,16 +14,18 @@ import { getThemeMode } from '../AppDev/costanti';
 // La 5a sezione "Ipotizza un pronostico" viene esclusa: e' gia' mostrata
 // nel sidecar pronostico della pagina articolo.
 
-const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
-const FONT_FAMILY = '"Inter", system-ui, sans-serif';
+// Font allineati al Mockup D: Inter per testo, JetBrains Mono per dati/eyebrow.
+const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap';
+const FONT_FAMILY = '"Inter", "Segoe UI", system-ui, sans-serif';
 const FONT_MONO = '"JetBrains Mono", "Consolas", ui-monospace, monospace';
 
 const isLight = getThemeMode() === 'light';
 
+// Palette allineata al Mockup D Articolo (--t / --t-dim / --t-faint)
 const c = {
   text: isLight ? '#111827' : 'rgba(255,255,255,0.92)',
-  textDim: isLight ? '#374151' : 'rgba(255,255,255,0.78)',
-  textFaint: isLight ? '#6b7280' : 'rgba(255,255,255,0.45)',
+  textDim: isLight ? '#6b7280' : 'rgba(255,255,255,0.55)',
+  textFaint: isLight ? '#9ca3af' : 'rgba(255,255,255,0.30)',
   cyan: isLight ? '#0891b2' : '#22d3ee',
   line: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
 };

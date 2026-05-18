@@ -435,8 +435,10 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const [error, setError] = useState<string | null>(null);
 
   // Placeholder inline distinti.
-  const TODO_INLINE = <span className="missing" title="Da sistemare: questo dato non e' ancora popolato dal backend">da sistemare</span>;
-  const MISSING_INLINE = <span className="missing" title="Dato non disponibile per questa partita">?</span>;
+  const todoTag = (label: string) =>
+    <span className="missing" title={`Da sistemare: "${label}" non e' ancora popolato dal backend`}>da sistemare: {label}</span>;
+  const missingTag = (label: string) =>
+    <span className="missing" title={`"${label}" non disponibile per questa partita`}>?</span>;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -613,9 +615,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
             <div className="a-head-main">
               <button className="backlink" onClick={onBack ?? (() => navigate('/news'))}>← Torna alle notizie</button>
               <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: dotColor }} />{league || TODO_INLINE}</span>
+                <span className="league"><span className="ld" style={{ background: dotColor }} />{league || todoTag('lega')}</span>
                 <span className="sep">·</span>
-                <span className="giornata">{TODO_INLINE} giornata</span>
+                <span className="giornata">{todoTag('giornata')}</span>
                 <span className="sep">·</span>
                 <span className={effort === 'DEEP' ? 'deep' : 'deep'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
               </div>
@@ -628,11 +630,11 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               <div className="byline-row">
                 <span><b>Firmato</b> <span className="author">La Redazione di AI Simulator</span></span>
                 <span className="sep">·</span>
-                <span>Pub. <b>{pubLabel || MISSING_INLINE}</b></span>
+                <span>Pub. <b>{pubLabel || missingTag('data pubblicazione')}</b></span>
                 <span className="sep">·</span>
-                <span><b>{TODO_INLINE}</b> di lettura</span>
+                <span><b>{todoTag('tempo di lettura')}</b></span>
                 <span className="sep">·</span>
-                <span><b>{TODO_INLINE}</b> consultate</span>
+                <span><b>{todoTag('numero fonti')}</b></span>
               </div>
             </div>
           </section>
@@ -644,19 +646,19 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <div className="poster-crest" style={{ background: crestGradientA(home), color: '#fff' }}>{crestInitialA(home)}</div>
                 <div>
                   <div className="poster-name">{home}</div>
-                  <div className="poster-meta">{TODO_INLINE} · forma {TODO_INLINE}</div>
+                  <div className="poster-meta">{todoTag('posizione classifica casa')} · forma {todoTag('forma casa')}</div>
                 </div>
               </div>
               <div className="poster-center">
-                <div className="poster-ko">{kickoff || MISSING_INLINE}</div>
+                <div className="poster-ko">{kickoff || missingTag('orario kickoff')}</div>
                 <div className="poster-when">Kickoff · <b>{fmtDateLong(dateQ)}</b></div>
-                <div className="poster-where">{TODO_INLINE}</div>
+                <div className="poster-where">{todoTag('stadio')}</div>
               </div>
               <div className="poster-team away">
                 <div className="poster-crest" style={{ background: crestGradientA(away), color: '#fff' }}>{crestInitialA(away)}</div>
                 <div>
                   <div className="poster-name">{away}</div>
-                  <div className="poster-meta">{TODO_INLINE} · forma {TODO_INLINE}</div>
+                  <div className="poster-meta">{todoTag('posizione classifica trasferta')} · forma {todoTag('forma trasferta')}</div>
                 </div>
               </div>
             </div>
@@ -687,7 +689,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           <div className="layout">
             <article className="body">
               {sections.length === 0 && (
-                <p>{TODO_INLINE} testo Scout non disponibile per questa partita.</p>
+                <p>{missingTag('testo Scout')} testo Scout non disponibile per questa partita.</p>
               )}
               {sections.map((sec, idx) => (
                 <section key={`s-${idx}`} className="section" id={SEC_ID[sec.kind]}>
@@ -713,10 +715,10 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
             {/* SIDECAR */}
             <aside className="sidecar">
               <div className="pron-card">
-                <div className="pron-h"><span>Pronostico AI</span><b>{TODO_INLINE} fonti</b></div>
+                <div className="pron-h"><span>Pronostico AI</span><b>{todoTag('numero fonti')}</b></div>
                 <div className="pron-main">
                   <div className="pron-pick">
-                    <b>{tip?.pronostico || MISSING_INLINE}</b>
+                    <b>{tip?.pronostico || missingTag('pronostico')}</b>
                     {tip?.tipo || 'esito principale'}
                   </div>
                   <div className={`pron-num${confMed ? ' med' : ''}`}>
@@ -726,13 +728,13 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <div className={`pron-bar${confMed ? ' med' : ''}`}><i style={{ width: `${conf}%` }} /></div>
                 <div className="pron-marks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
                 <div className="pron-stats">
-                  <div className="r"><span>xG attesi · casa</span><b>{TODO_INLINE}</b></div>
-                  <div className="r"><span>xG attesi · trasf.</span><b>{TODO_INLINE}</b></div>
-                  <div className="r"><span>Form ultime 5 · casa</span><b>{TODO_INLINE}</b></div>
-                  <div className="r"><span>Form ultime 5 · trasf.</span><b>{TODO_INLINE}</b></div>
-                  <div className="r"><span>H2H ultimi 10</span><b>{TODO_INLINE}</b></div>
-                  <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : MISSING_INLINE}</b></div>
-                  <div className="r"><span>Infortuni rilevanti</span><b>{TODO_INLINE}</b></div>
+                  <div className="r"><span>xG attesi · casa</span><b>{todoTag('xG casa')}</b></div>
+                  <div className="r"><span>xG attesi · trasf.</span><b>{todoTag('xG trasferta')}</b></div>
+                  <div className="r"><span>Form ultime 5 · casa</span><b>{todoTag('forma casa')}</b></div>
+                  <div className="r"><span>Form ultime 5 · trasf.</span><b>{todoTag('forma trasferta')}</b></div>
+                  <div className="r"><span>H2H ultimi 10</span><b>{todoTag('H2H')}</b></div>
+                  <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : missingTag('quota')}</b></div>
+                  <div className="r"><span>Infortuni rilevanti</span><b>{todoTag('infortuni')}</b></div>
                 </div>
                 <div className="pron-foot">
                   <a className="btn primary" href="#" onClick={(e) => e.preventDefault()}>Apri scheda Match Day <span className="arrow">→</span></a>
@@ -750,7 +752,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                       </div>
                     ))
                   ) : (
-                    <div className="r"><span>Tip</span><b>{MISSING_INLINE}</b></div>
+                    <div className="r"><span>Tip</span><b>{missingTag('pronostici')}</b></div>
                   )}
                 </div>
               </div>
@@ -764,7 +766,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               <span className="meta">Sintesi via you.com /v1/research{computedAt ? ` · ultimo retrieval ${pubLabel}` : ''}</span>
             </div>
             <div className="sources-grid">
-              <div className="source-item"><span className="name">{TODO_INLINE}</span><span className="kind">—</span><span className="when">—</span></div>
+              <div className="source-item"><span className="name">{todoTag('elenco fonti consultate')}</span><span className="kind">—</span><span className="when">—</span></div>
             </div>
           </section>
 

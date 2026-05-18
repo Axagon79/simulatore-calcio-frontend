@@ -379,8 +379,10 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const [error, setError] = useState<string | null>(null);
 
   // Placeholder inline riutilizzabili nel JSX.
-  const TODO_INLINE = <span className="missing" title="Da sistemare: questo dato non e' ancora popolato dal backend">da sistemare</span>;
-  const MISSING_INLINE = <span className="missing" title="Dato non disponibile per questa partita">?</span>;
+  const todoTag = (label: string) =>
+    <span className="missing" title={`Da sistemare: "${label}" non e' ancora popolato dal backend`}>da sistemare: {label}</span>;
+  const missingTag = (label: string) =>
+    <span className="missing" title={`"${label}" non disponibile per questa partita`}>?</span>;
   const MISSING_PLAIN = '—';
 
   // load theme
@@ -703,9 +705,9 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   <div className="a-eyebrow">
                     <span className="league">
                       <span className="ld" style={{ background: dotColor }} />
-                      {m.league || m.lega || <>{TODO_INLINE}</>}
+                      {m.league || m.lega || todoTag('lega')}
                     </span>
-                    <span className="ko">Kickoff {m.match_time || <>{MISSING_INLINE}</>}{' '}· <span title="Da sistemare: stadio non popolato dal backend" className="missing">stadio: da sistemare</span></span>
+                    <span className="ko">Kickoff {m.match_time || missingTag('orario')}{' '}· {todoTag('stadio')}</span>
                     <span className={effort === 'DEEP' ? 'deep' : 'lite'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
                   </div>
                   <div className="match-line">
@@ -743,9 +745,9 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   </div>
                   <div className={`pron-bar${confMed ? ' med' : ''}`}><i style={{ width: `${conf}%` }} /></div>
                   <div className="pron-stats">
-                    <div className="r"><span>xG attesi</span><b><span className="missing" title="Da sistemare: xG separati casa/trasferta non ancora calcolati dal backend">da sistemare</span></b></div>
-                    <div className="r"><span>Form casa</span><b><span className="missing" title="Da sistemare: stringa forma WWDWW non ancora calcolata dal backend">da sistemare</span></b></div>
-                    <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : <span className="missing" title="Dato non disponibile per questa partita">?</span>}</b></div>
+                    <div className="r"><span>xG attesi</span><b>{todoTag('xG casa/trasferta')}</b></div>
+                    <div className="r"><span>Form casa</span><b>{todoTag('forma ultime 5')}</b></div>
+                    <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : missingTag('quota')}</b></div>
                   </div>
                   <div className="pron-foot">
                     <a className="open-btn" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>

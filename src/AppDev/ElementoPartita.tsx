@@ -171,7 +171,7 @@ export default function ElementoPartita({
                   away: match.away,
                   date: dateStr,
                 });
-                window.location.href = `/news?${params.toString()}`;
+                window.location.href = `/news/articolo?${params.toString()}`;
               }}
               onTouchStart={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
@@ -648,7 +648,7 @@ export default function ElementoPartita({
                 away: match.away,
                 date: dateStr,
               });
-              window.location.href = `/news?${params.toString()}`;
+              window.location.href = `/news/articolo?${params.toString()}`;
             }}
             title="Apri news partita"
             style={{

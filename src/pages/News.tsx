@@ -50,7 +50,7 @@ const COUNTRY_LABEL: Record<string, string> = {
   brasile: 'Brasile', usa: 'USA', europa: 'Coppe europee',
 };
 const leagueSlug = (lg: string): string =>
-  (lg || '').toLowerCase().normalize('NFD').replace(/[Ì€-Í¯]/g, '').replace(/\s+/g, '-');
+  (lg || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-');
 
 const leagueDotColor = (league: string): string => {
   const lg = league || '';

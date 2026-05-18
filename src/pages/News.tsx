@@ -26,6 +26,8 @@ interface NewsMetaSide {
 }
 interface NewsMeta {
   giornata?: number | null;
+  stadio?: { name?: string | null; city?: string | null; capacity?: number | null; source?: string | null } | null;
+  arbitro?: { name?: string | null; source?: string | null } | null;
   home: NewsMetaSide;
   away: NewsMetaSide;
 }
@@ -764,7 +766,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                       <span className="ld" style={{ background: dotColor }} />
                       {m.league || m.lega || todoTag('lega')}
                     </span>
-                    <span className="ko">Kickoff {m.match_time || missingTag('orario')}{' '}· {todoTag('stadio')}</span>
+                    <span className="ko">Kickoff {m.match_time || missingTag('orario')}{m.news_meta?.stadio?.name ? <>{' '}· {m.news_meta.stadio.name}</> : <>{' '}· {missingTag('stadio')}</>}</span>
                     <span className={effort === 'DEEP' ? 'deep' : 'lite'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
                   </div>
                   <div className="match-line">
@@ -842,8 +844,9 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   </div>
                   <div className={`pron-bar${confMed ? ' med' : ''}`}><i style={{ width: `${conf}%` }} /></div>
                   <div className="pron-stats">
-                    <div className="r"><span>xG attesi</span><b>{todoTag('xG casa/trasferta')}</b></div>
-                    <div className="r"><span>Form casa</span><b>{todoTag('forma ultime 5')}</b></div>
+                    <div className="r"><span>xG medio · casa</span><b>{m.news_meta?.home?.xg_avg != null ? m.news_meta.home.xg_avg.toFixed(2) : missingTag('xG casa')}</b></div>
+                    <div className="r"><span>xG medio · trasf.</span><b>{m.news_meta?.away?.xg_avg != null ? m.news_meta.away.xg_avg.toFixed(2) : missingTag('xG trasferta')}</b></div>
+                    <div className="r"><span>Gol totali attesi</span><b>{m.expected_total_goals != null ? m.expected_total_goals.toFixed(2) : missingTag('gol attesi')}</b></div>
                     <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : missingTag('quota')}</b></div>
                   </div>
                   <div className="pron-foot">

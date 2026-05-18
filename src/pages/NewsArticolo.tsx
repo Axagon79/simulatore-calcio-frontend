@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getThemeMode, API_BASE } from '../AppDev/costanti';
-import ScoutAnalysis from '../components/ScoutAnalysis';
+import ScoutArticle from '../components/ScoutArticle';
 
 const isLight = getThemeMode() === 'light';
 
@@ -369,7 +369,7 @@ export default function NewsArticolo({ onBack }: NewsArticoloProps) {
 
             <article style={{ minWidth: 0, maxWidth: 760 }}>
               {scoutText ? (
-                <ScoutAnalysis text={scoutText} />
+                <ScoutArticle text={scoutText} />
               ) : (
                 <div style={{ color: c.textDim, fontStyle: 'italic' }}>
                   Articolo non disponibile per questa partita.

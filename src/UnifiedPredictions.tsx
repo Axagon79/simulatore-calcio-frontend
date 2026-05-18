@@ -1850,17 +1850,40 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ fontSize: '10px', fontWeight: '700', color: getConfidenceColor(p.confidence) }}>{p.confidence?.toFixed(0)}%</span>
                       )}
                       {quota && p.pronostico !== 'NO BET' && <span style={{ fontSize: '11px', fontWeight: '700', color: theme.quotaText }}>@{Number(quota).toFixed(2)}</span>}
-                      {source && p.pronostico !== 'NO BET' && source !== 'placeholder' && (
-                        <span title={source} style={{
-                          fontSize: '8px', fontWeight: '700',
-                          color: source.includes('_screm') ? (isLight ? '#9333ea' : '#c084fc') : '#a78bfa',
-                          background: source.includes('_screm') ? 'rgba(192,132,252,0.12)' : 'rgba(167,139,250,0.12)',
-                          borderRadius: '3px', padding: '1px 4px',
-                          ...(!isMobile ? { maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle', minWidth: 0, flexShrink: 1 } : {}),
-                        }}>
-                          {source.includes('_screm') ? 'S8F' : source}
-                        </span>
-                      )}
+                      {source && p.pronostico !== 'NO BET' && source !== 'placeholder' && (() => {
+                        // Mappatura source -> {label, title, color, bg}. Allineato a MixerPredictions.
+                        let label = source;
+                        let title = source;
+                        let color = '#a78bfa';
+                        let bg = 'rgba(167,139,250,0.12)';
+                        if (source === 'sistema_z') {
+                          label = 'Z'; title = 'Sistema Z (pipeline statistica)';
+                          color = isLight ? '#0369a1' : '#7dd3fc';
+                          bg = isLight ? 'rgba(125,211,252,0.18)' : 'rgba(125,211,252,0.12)';
+                        } else if (source === 'scout_deep') {
+                          label = 'SD'; title = 'Scout DEEP (T-6h, ricerca web You.com)';
+                          color = isLight ? '#16a34a' : '#4ade80';
+                          bg = isLight ? 'rgba(74,222,128,0.18)' : 'rgba(74,222,128,0.12)';
+                        } else if (source === 'scout_lite') {
+                          label = 'SL'; title = 'Scout LITE (notturna anticipata, ricerca web You.com)';
+                          color = isLight ? '#ca8a04' : '#facc15';
+                          bg = isLight ? 'rgba(250,204,21,0.20)' : 'rgba(250,204,21,0.14)';
+                        } else if (source.includes('_screm')) {
+                          label = 'S8F'; title = source;
+                          color = isLight ? '#9333ea' : '#c084fc';
+                          bg = 'rgba(192,132,252,0.12)';
+                        }
+                        return (
+                          <span title={title} style={{
+                            fontSize: '8px', fontWeight: '700',
+                            color, background: bg,
+                            borderRadius: '3px', padding: '1px 4px',
+                            ...(!isMobile ? { maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle', minWidth: 0, flexShrink: 1 } : {}),
+                          }}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                       {(() => {
                         const rr = getRoutingRule((p as any).routing_rule, isLight);
                         if (!rr || !isOptimized((p as any).routing_rule)) return null;

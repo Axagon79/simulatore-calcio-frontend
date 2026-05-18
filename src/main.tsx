@@ -48,6 +48,7 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const QuoteAnomale = lazy(() => import('./pages/QuoteAnomale'));
+const News = lazy(() => import('./pages/News'));
 
 import ErrorBoundary from './components/ErrorBoundary';
 import OnboardingTour from './components/OnboardingTour';
@@ -114,6 +115,7 @@ function AppRoot() {
           <Route path="/ticket-ai" element={<ProtectedRoute><Bollette onBack={goBack} /></ProtectedRoute>} />
           <Route path="/ticket-stats" element={<ProtectedRoute><BolletteStats onBack={() => navigate('/ticket-ai')} /></ProtectedRoute>} />
           <Route path="/quote-anomale" element={<QuoteAnomale onBack={goBack} />} />
+          <Route path="/news" element={<News onBack={goBack} />} />
           <Route path="/contatti" element={<ContactPage onBack={goBack} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy onBack={goBack} />} />
           <Route path="/termini" element={<TermsPage />} />

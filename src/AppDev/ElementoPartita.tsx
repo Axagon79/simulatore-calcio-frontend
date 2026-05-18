@@ -19,6 +19,10 @@ interface ElementoPartitaProps {
   isLive?: boolean;
   onOpenCoachAI?: (home: string, away: string, date: string, league: string) => void;
   leagueName?: string;
+  // viewMode discrimina il contesto della card:
+  // 'today' = vista Match Day (Oggi) -> mostra icona giornale che apre la pagina News
+  // 'calendar' (default) = visione calendario / coppe -> mostra robottino Coach AI
+  viewMode?: 'today' | 'calendar';
 }
 
 export default function ElementoPartita({
@@ -31,7 +35,8 @@ export default function ElementoPartita({
   theme,
   isLive,
   onOpenCoachAI,
-  leagueName
+  leagueName,
+  viewMode = 'calendar',
 }: ElementoPartitaProps) {
   const isLight = getThemeMode() === 'light';
 
@@ -146,8 +151,76 @@ export default function ElementoPartita({
             </span>
           </span>
         )}
-        {/* Robottino Coach AI — immagine cliccabile */}
-        {isMobile && isExpanded && onOpenCoachAI && (
+        {/* Icona contestuale: News (giornale) in Match Day / Coach AI (robottino) altrove.
+            Stessa condizione visiva del robottino originale: mobile + expanded. */}
+        {isMobile && isExpanded && viewMode === 'today' && (
+          <>
+            <style>{`
+              @keyframes newsPulse {
+                0%, 100% { filter: drop-shadow(0 5px 8px ${theme.cyan}55); }
+                50% { filter: drop-shadow(0 5px 16px ${theme.cyan}bb) drop-shadow(0 5px 28px ${theme.cyan}55); }
+              }
+            `}</style>
+            <div
+              data-tour="news-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                const dateStr = match.date_obj ? match.date_obj.split('T')[0] : '';
+                const params = new URLSearchParams({
+                  home: match.home,
+                  away: match.away,
+                  date: dateStr,
+                });
+                window.location.href = `/news?${params.toString()}`;
+              }}
+              onTouchStart={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '-7px',
+                transform: 'translateX(-50%)',
+                zIndex: 10,
+                cursor: 'pointer',
+                padding: '2px 6px 0px 6px',
+                borderRadius: '20px',
+                border: 'none',
+                background: 'transparent',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              aria-label="Apri news partita"
+            >
+              <div
+                style={{
+                  height: '55px',
+                  width: '55px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '40px',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  animation: 'newsPulse 2.5s ease-in-out infinite',
+                }}
+                aria-hidden
+              >📰</div>
+              <span style={{
+                color: theme.cyan,
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.5px',
+                marginTop: '-4px',
+                marginBottom: '3px',
+                pointerEvents: 'none',
+              }}>News</span>
+            </div>
+          </>
+        )}
+        {/* Robottino Coach AI — immagine cliccabile (vista calendario / coppe) */}
+        {isMobile && isExpanded && viewMode !== 'today' && onOpenCoachAI && (
           <>
             <style>{`
               @keyframes coachPulse {
@@ -556,8 +629,75 @@ export default function ElementoPartita({
         </>
       ) : null}
 
-      {/* Bottone Coach AI — Desktop */}
-      {!isMobile && onOpenCoachAI && (
+      {/* Bottone contestuale Desktop — News (giornale) in Match Day. Icona grande + scritta "News" sotto. */}
+      {!isMobile && viewMode === 'today' && (
+        <>
+          <style>{`
+            .news-btn-desktop:hover .news-btn-icon {
+              transform: scale(1.1);
+            }
+          `}</style>
+          <button
+            data-tour="news-btn"
+            className="news-btn-desktop"
+            onClick={(e) => {
+              e.stopPropagation();
+              const dateStr = match.date_obj ? match.date_obj.split('T')[0] : '';
+              const params = new URLSearchParams({
+                home: match.home,
+                away: match.away,
+                date: dateStr,
+              });
+              window.location.href = `/news?${params.toString()}`;
+            }}
+            title="Apri news partita"
+            style={{
+              position: 'relative',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 6px',
+              flexShrink: 0,
+              marginLeft: '8px',
+              minWidth: '40px',
+              minHeight: '40px',
+            }}
+          >
+            <span
+              className="news-btn-icon"
+              style={{
+                fontSize: '32px',
+                lineHeight: 1,
+                pointerEvents: 'none',
+                transition: 'transform 0.2s ease',
+                filter: `drop-shadow(0 2px 4px ${theme.cyan}80)`,
+              }}
+              aria-hidden
+            >📰</span>
+            <span style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%) rotate(-15deg)',
+              color: theme.cyan,
+              fontSize: '7px',
+              fontWeight: 900,
+              letterSpacing: '0.3px',
+              pointerEvents: 'none',
+              textTransform: 'uppercase',
+              fontStyle: 'italic',
+              textShadow: isLight
+                ? '0 0 4px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.3)'
+                : '0 0 4px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.7)',
+              whiteSpace: 'nowrap',
+            }}>News</span>
+          </button>
+        </>
+      )}
+      {!isMobile && viewMode !== 'today' && onOpenCoachAI && (
         <button
           data-tour="coach-ai-btn"
           onClick={(e) => {

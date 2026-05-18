@@ -1618,6 +1618,44 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
             LIVE
           </button>
 
+          {/* Separatore verticale: la capsula News non e' un filtro,
+              e' un link alla pagina news. Va staccata visivamente. */}
+          <span style={{
+            width: '1px',
+            height: '20px',
+            background: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.12)',
+            marginLeft: '14px',
+            marginRight: '4px',
+            flexShrink: 0,
+          }} />
+
+          {/* Capsula News: porta alla pagina news tab Oggi.
+              Punto d'accesso "globale" alla sezione editoriale, in alternativa
+              all'icona 📰 per singola partita su ogni riga. */}
+          <button
+            onClick={() => { window.location.href = '/news?tab=today'; }}
+            title="Apri la pagina News"
+            style={{
+              padding: '6px 12px', borderRadius: '16px',
+              border: `1px solid ${theme.cyan}55`,
+              background: isLight ? 'rgba(8,145,178,0.08)' : `${theme.cyan}15`,
+              color: theme.cyan,
+              fontWeight: 800, fontSize: '11px',
+              cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = isLight ? 'rgba(8,145,178,0.15)' : `${theme.cyan}25`;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = isLight ? 'rgba(8,145,178,0.08)' : `${theme.cyan}15`;
+            }}
+          >
+            <span style={{ fontSize: '13px', lineHeight: 1 }} aria-hidden>📰</span>
+            NEWS
+            <span style={{ fontSize: '12px', lineHeight: 1, marginLeft: '2px' }} aria-hidden>→</span>
+          </button>
+
           <span style={{ fontSize: '11px', color: theme.textFaint, marginLeft: 'auto' }}>
             {totalFiltered} partite
           </span>
@@ -1707,6 +1745,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
                     isLive={isLive}
                     onOpenCoachAI={handleOpenCoachAI}
                     leagueName={group.league_name || ''}
+                    viewMode="today"
                   />
                   </div>
                 );

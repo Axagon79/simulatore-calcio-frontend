@@ -411,8 +411,11 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Best Picks', onClick: () => { window.location.href = '/best-picks'; } },
               { label: 'Ticket AI', onClick: () => { window.location.href = '/ticket-ai'; } },
             ]},
-            { label: 'Oggi', items: [
+            { label: 'News', items: [
               { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
+              { label: 'Oggi', onClick: () => { window.location.href = '/news?tab=today'; } },
+              { label: 'Domani', onClick: () => { window.location.href = '/news?tab=tomorrow'; } },
+              { label: 'Dopodomani', onClick: () => { window.location.href = '/news?tab=after'; } },
             ]},
             { label: 'Competizioni', items: [
               ...leagues.map(l => ({ label: l.name, onClick: () => onSelectLeague(l.id) })),

@@ -580,39 +580,57 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
   // --- AUTO-OPEN MATCH DA QUERY PARAM ?openMatch=home|away|date ---
   // Permette ad altre pagine (es. News articolo) di linkare direttamente alla
-  // scheda Match Day di una partita specifica. Setta viewMode='today',
-  // aspetta che todayData sia caricato, cerca la partita per (home, away, date)
-  // e la apre in pre-match. Il param viene poi ripulito dall'URL.
+  // scheda Match Day di una partita specifica, indipendentemente dalla data.
+  // Flusso: legge i 3 param, fa una fetch dedicata su /matches-today?date=DATE,
+  // cerca la partita, setta selectedMatch + viewState='pre-match', pulisce URL.
+  // NON dipende da todayData (che ha solo oggi): supporta domani, dopodomani,
+  // qualsiasi data futura.
+  const autoOpenAttempted = useRef(false);
   useEffect(() => {
+    if (autoOpenAttempted.current) return;
     const sp = new URLSearchParams(window.location.search);
     const raw = sp.get('openMatch');
     if (!raw) return;
-    // Forza la vista "Oggi" se non e' gia' attiva (innesca fetchTodayMatches).
-    if (viewMode !== 'today') {
-      setViewMode('today');
-      return; // re-tenta al prossimo render quando viewMode cambia
-    }
-    if (!todayData) return; // aspetta il fetch
+    autoOpenAttempted.current = true;
+
     const [home, away, date] = raw.split('|');
-    if (!home || !away) return;
+    if (!home || !away || !date) return;
     const norm = (s: string) => (s || '').toLowerCase().trim();
-    let found: Match | null = null;
-    for (const grp of todayData) {
-      for (const m of (grp.matches || [])) {
-        if (norm(m.home) === norm(home) && norm(m.away) === norm(away)) {
-          if (!date || (m.date || '').startsWith(date)) { found = m; break; }
+
+    // Forza la vista "Oggi" (la scheda pre-match e' integrata in quella view).
+    setViewMode('today');
+
+    // Fetch dedicato per la data richiesta — niente attesa di todayData.
+    (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/matches-today?date=${date}`);
+        const data = await response.json();
+        if (!data.success) return;
+        let found: Match | null = null;
+        for (const grp of (data.leagues || [])) {
+          for (const m of (grp.matches || [])) {
+            if (norm(m.home) === norm(home) && norm(m.away) === norm(away)) {
+              found = m;
+              break;
+            }
+          }
+          if (found) break;
         }
+        if (found) {
+          // Aggiorno anche todayData cosi' la vista "Oggi" mostra le partite
+          // della data richiesta invece di quelle di today reale.
+          setTodayData(data.leagues);
+          setSelectedMatch(found);
+          setViewState('pre-match');
+        }
+      } catch (err) {
+        console.error('Auto-open match: errore fetch', err);
+      } finally {
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', cleanUrl);
       }
-      if (found) break;
-    }
-    if (found) {
-      setSelectedMatch(found);
-      setViewState('pre-match');
-    }
-    // Pulisce il query param senza ricaricare (evita re-trigger).
-    const cleanUrl = window.location.pathname + window.location.hash;
-    window.history.replaceState({}, '', cleanUrl);
-  }, [viewMode, todayData]);
+    })();
+  }, []);
 
   // --- POLLING LIVE SCORES (ogni 60 secondi) ---
   useEffect(() => {

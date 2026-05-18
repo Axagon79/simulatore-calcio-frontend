@@ -33,6 +33,26 @@ interface ApiRespA {
 
 const MESI_A = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
+// Mappa lega -> nazione (slug) per il breadcrumb.
+const LEAGUE_TO_COUNTRY_A: Record<string, string> = {
+  'Premier League': 'inghilterra', 'Championship': 'inghilterra',
+  'Serie A': 'italia', 'Serie B': 'italia',
+  'LaLiga': 'spagna', 'La Liga': 'spagna',
+  'Bundesliga': 'germania', '2. Bundesliga': 'germania',
+  'Ligue 1': 'francia', 'Ligue 2': 'francia',
+  'Eredivisie': 'olanda', 'Primeira Liga': 'portogallo',
+  'Allsvenskan': 'svezia', 'Veikkausliiga': 'finlandia',
+  'Brasileirao': 'brasile', 'Brasileirão': 'brasile', 'Brasileirão Serie A': 'brasile',
+  'Major League Soccer': 'usa', 'MLS': 'usa',
+  'Champions League': 'europa', 'Europa League': 'europa',
+};
+const COUNTRY_LABEL_A: Record<string, string> = {
+  inghilterra: 'Inghilterra', italia: 'Italia', spagna: 'Spagna',
+  germania: 'Germania', francia: 'Francia', olanda: 'Olanda',
+  portogallo: 'Portogallo', svezia: 'Svezia', finlandia: 'Finlandia',
+  brasile: 'Brasile', usa: 'USA', europa: 'Coppe europee',
+};
+
 // Strip dei marker dello Scout text (citation, blocco JSON finale, "peso N").
 const stripScout = (raw: string): string => {
   if (!raw) return '';
@@ -553,7 +573,16 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           </div>
           <div className="crumb-top">
             <a onClick={handleBack} href="/news">Notizie</a>
-            {league && (<><span className="sep">/</span><b>{league}</b></>)}
+            {(() => {
+              const countrySlug = LEAGUE_TO_COUNTRY_A[league] || '';
+              const countryLabel = COUNTRY_LABEL_A[countrySlug] || '';
+              return (
+                <>
+                  {countryLabel && (<><span className="sep">/</span><a onClick={handleBack} href="/news">{countryLabel}</a></>)}
+                  {league && (<><span className="sep">/</span><b>{league}</b></>)}
+                </>
+              );
+            })()}
           </div>
           <div className="topbar-right">
             <span>{fmtDateLong(dateQ)}</span>

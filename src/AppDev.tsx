@@ -630,11 +630,13 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
         if (found) {
           console.log('[auto-open] MATCH TROVATO', found.home, 'vs', found.away);
           setTodayData(data.leagues);
-          // Resetta league a '' per evitare che l'useEffect[league] (riga 682)
-          // resetti viewState='list' subito dopo. Quell'useEffect resetta il
-          // pre-match quando rileva un cambio di lega selezionata.
+          // ATTENZIONE: activeLeague NON deve essere null, altrimenti AppDev
+          // renderizza <DashboardHome> e NON il blocco MAIN ARENA col pre-match
+          // (vedi riga 2058: `if (!activeLeague) return <DashboardHome>`).
+          // Usiamo 'TODAY' come fa onGoToToday della dashboard.
+          setActiveLeague('TODAY');
+          // Reset league (id lega selezionata) per evitare reset useEffect[league].
           setLeague('');
-          setActiveLeague(null);
           setSelectedMatch(found);
           setViewState('pre-match');
         } else {
@@ -2597,6 +2599,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
         {/* MAIN ARENA */}
         <div style={styles.arena}>
+          {(() => { console.log('[render arena] viewState=', viewState, 'viewMode=', viewMode, 'selectedMatch=', selectedMatch?.home, 'vs', selectedMatch?.away, 'activeLeague=', activeLeague); return null; })()}
           {viewState === 'list' && viewMode === 'today' && renderTodayMatches()}
           {viewState === 'list' && viewMode === 'calendar' && renderMatchList()}
           {viewState === 'pre-match' && (

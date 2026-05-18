@@ -578,6 +578,42 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     fetchTodayMatches();
   }, [viewMode]);
 
+  // --- AUTO-OPEN MATCH DA QUERY PARAM ?openMatch=home|away|date ---
+  // Permette ad altre pagine (es. News articolo) di linkare direttamente alla
+  // scheda Match Day di una partita specifica. Setta viewMode='today',
+  // aspetta che todayData sia caricato, cerca la partita per (home, away, date)
+  // e la apre in pre-match. Il param viene poi ripulito dall'URL.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const raw = sp.get('openMatch');
+    if (!raw) return;
+    // Forza la vista "Oggi" se non e' gia' attiva (innesca fetchTodayMatches).
+    if (viewMode !== 'today') {
+      setViewMode('today');
+      return; // re-tenta al prossimo render quando viewMode cambia
+    }
+    if (!todayData) return; // aspetta il fetch
+    const [home, away, date] = raw.split('|');
+    if (!home || !away) return;
+    const norm = (s: string) => (s || '').toLowerCase().trim();
+    let found: Match | null = null;
+    for (const grp of todayData) {
+      for (const m of (grp.matches || [])) {
+        if (norm(m.home) === norm(home) && norm(m.away) === norm(away)) {
+          if (!date || (m.date || '').startsWith(date)) { found = m; break; }
+        }
+      }
+      if (found) break;
+    }
+    if (found) {
+      setSelectedMatch(found);
+      setViewState('pre-match');
+    }
+    // Pulisce il query param senza ricaricare (evita re-trigger).
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+  }, [viewMode, todayData]);
+
   // --- POLLING LIVE SCORES (ogni 60 secondi) ---
   useEffect(() => {
     if (viewMode !== 'today' || !todayData) return;

@@ -1207,7 +1207,11 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   })
                 )}
                 <div className="pron-foot">
-                  <a className="btn primary" href="#" onClick={(e) => e.preventDefault()}>Apri scheda Match Day <span className="arrow">→</span></a>
+                  <a className="btn primary" href="/" onClick={(e) => {
+                    e.preventDefault();
+                    const params = new URLSearchParams({ openMatch: `${home}|${away}|${dateQ}` });
+                    navigate(`/?${params.toString()}`);
+                  }}>Apri scheda Match Day <span className="arrow">→</span></a>
                 </div>
               </div>
 
@@ -1245,7 +1249,11 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               <p>
                 <b>Articolo generato automaticamente</b> dalla redazione AI di AI Simulator a partire da fonti pubbliche, conferenze stampa e dati statistici. Nessun intervento editoriale umano. Le previsioni non costituiscono consigli di scommessa.
               </p>
-              <a className="matchday-btn" href="#" onClick={(e) => e.preventDefault()}>Apri scheda Match Day · {home}–{away} →</a>
+              <a className="matchday-btn" href="/" onClick={(e) => {
+                e.preventDefault();
+                const params = new URLSearchParams({ openMatch: `${home}|${away}|${dateQ}` });
+                navigate(`/?${params.toString()}`);
+              }}>Apri scheda Match Day · {home}–{away} →</a>
             </div>
           </section>
 

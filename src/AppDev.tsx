@@ -590,25 +590,36 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
     if (autoOpenAttempted.current) return;
     const sp = new URLSearchParams(window.location.search);
     const raw = sp.get('openMatch');
+    console.log('[auto-open] search=', window.location.search, 'raw=', raw);
     if (!raw) return;
     autoOpenAttempted.current = true;
 
     const [home, away, date] = raw.split('|');
-    if (!home || !away || !date) return;
+    console.log('[auto-open] parsed:', { home, away, date });
+    if (!home || !away || !date) {
+      console.warn('[auto-open] parametri incompleti, abort');
+      return;
+    }
     const norm = (s: string) => (s || '').toLowerCase().trim();
 
-    // Forza la vista "Oggi" (la scheda pre-match e' integrata in quella view).
     setViewMode('today');
 
-    // Fetch dedicato per la data richiesta — niente attesa di todayData.
     (async () => {
       try {
-        const response = await fetch(`${API_BASE}/matches-today?date=${date}`);
+        const url = `${API_BASE}/matches-today?date=${date}`;
+        console.log('[auto-open] fetch', url);
+        const response = await fetch(url);
         const data = await response.json();
-        if (!data.success) return;
+        console.log('[auto-open] response', { success: data.success, leagues: (data.leagues || []).length });
+        if (!data.success) {
+          console.warn('[auto-open] backend non success', data);
+          return;
+        }
         let found: Match | null = null;
+        const allTeams: string[] = [];
         for (const grp of (data.leagues || [])) {
           for (const m of (grp.matches || [])) {
+            allTeams.push(`${m.home} vs ${m.away}`);
             if (norm(m.home) === norm(home) && norm(m.away) === norm(away)) {
               found = m;
               break;
@@ -617,14 +628,15 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
           if (found) break;
         }
         if (found) {
-          // Aggiorno anche todayData cosi' la vista "Oggi" mostra le partite
-          // della data richiesta invece di quelle di today reale.
+          console.log('[auto-open] MATCH TROVATO', found.home, 'vs', found.away);
           setTodayData(data.leagues);
           setSelectedMatch(found);
           setViewState('pre-match');
+        } else {
+          console.warn('[auto-open] match NON trovato. Cercavo:', { home, away }, 'tra:', allTeams);
         }
       } catch (err) {
-        console.error('Auto-open match: errore fetch', err);
+        console.error('[auto-open] errore fetch', err);
       } finally {
         const cleanUrl = window.location.pathname + window.location.hash;
         window.history.replaceState({}, '', cleanUrl);

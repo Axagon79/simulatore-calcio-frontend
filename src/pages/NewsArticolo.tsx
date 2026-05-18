@@ -14,6 +14,55 @@ interface PronosticoTip {
   quota?: number | null;
   source?: string;
 }
+interface LineupSide {
+  formation?: string | null;
+  titolari?: string[];
+  source?: string | null;
+}
+interface AssenteRecord {
+  nome: string;
+  motivo?: string | null;
+  status?: string | null;
+  source?: string | null;
+}
+interface NewsMetaSideA {
+  xg_avg?: number | null;
+  total_volume_avg?: number | null;
+  rank?: number | null;
+  points?: number | null;
+  played?: number | null;
+  wins?: number | null;
+  draws?: number | null;
+  losses?: number | null;
+  formation_default?: string | null;
+  lineup?: LineupSide;
+  assenti?: AssenteRecord[];
+}
+interface StadioRecord {
+  name?: string | null;
+  city?: string | null;
+  capacity?: number | null;
+  source?: string | null;
+}
+interface ArbitroRecord {
+  name?: string | null;
+  source?: string | null;
+}
+interface CitazioneRecord {
+  autore?: string | null;
+  ruolo?: string | null;
+  squadra?: 'home' | 'away' | string | null;
+  frase?: string | null;
+  fonte?: string | null;
+}
+interface NewsMetaA {
+  giornata?: number | null;
+  stadio?: StadioRecord | null;
+  arbitro?: ArbitroRecord | null;
+  citazioni?: CitazioneRecord[];
+  home: NewsMetaSideA;
+  away: NewsMetaSideA;
+}
 interface MatchA {
   home: string;
   away: string;
@@ -24,6 +73,13 @@ interface MatchA {
   pronostici?: PronosticoTip[];
   scout_lite?: { scout_text?: string; computed_at?: string };
   scout_deep?: { scout_text?: string; computed_at?: string };
+  expected_total_goals?: number | null;
+  news_meta?: NewsMetaA;
+  // Stato partita: live e finale (propagati da daemon_live_scores via unified).
+  real_score?: string | null;       // "H:A" stringa, es. "2:1" - presente quando finita
+  live_score?: string | null;       // "H:A" durante la partita
+  live_status?: string | null;      // es. "1H", "HT", "2H", "FT", "LIVE"
+  live_minute?: number | string | null; // es. 67 o "67"
 }
 interface ApiRespA {
   success?: boolean;
@@ -421,6 +477,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  // Versione articolo scelta dall'utente: 'AUTO' = default (deep se presente, altrimenti lite).
+  // L'utente puo' forzare 'LITE' o 'DEEP' col toggle in cima all'articolo.
+  const [viewingVersion, setViewingVersion] = useState<'AUTO' | 'LITE' | 'DEEP'>('AUTO');
   const [clockMono, setClockMono] = useState('00:00');
   const [activeToc, setActiveToc] = useState(0);
 
@@ -534,8 +593,26 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   };
 
   // Calcoli derivati dal match.
-  const effort: 'DEEP' | 'LITE' = matchData?.scout_deep?.scout_text ? 'DEEP' : 'LITE';
+  // Versione articolo visualizzata: default DEEP se presente, altrimenti LITE.
+  // L'utente puo' forzare con il toggle (state viewingVersion).
+  const hasDeep = !!matchData?.scout_deep?.scout_text;
+  const hasLite = !!matchData?.scout_lite?.scout_text;
+  const effort: 'DEEP' | 'LITE' =
+    viewingVersion === 'LITE' && hasLite ? 'LITE'
+    : viewingVersion === 'DEEP' && hasDeep ? 'DEEP'
+    : (hasDeep ? 'DEEP' : 'LITE');
   const scoutText = (effort === 'DEEP' ? matchData?.scout_deep?.scout_text : matchData?.scout_lite?.scout_text) || '';
+  // Timestamp di pubblicazione di ciascuna versione (per il toggle).
+  const deepComputedAt = matchData?.scout_deep?.computed_at || '';
+  const liteComputedAt = matchData?.scout_lite?.computed_at || '';
+  const fmtTime = (iso: string) => {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch { return ''; }
+  };
   const cleanText = useMemo(() => stripScout(scoutText), [scoutText]);
   const sections = useMemo(() => splitSections(cleanText).filter(s => s.kind !== 'ipotizza'), [cleanText]);
   const tip = matchData ? getTopTipA(matchData) : null;
@@ -560,6 +637,73 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const league = matchData?.league || matchData?.lega || '';
   const dotColor = leagueDotColorA(league);
   const kickoff = matchData?.match_time || '';
+  const expectedTotalGoals = matchData?.expected_total_goals ?? null;
+
+  // Stato live / finale della partita per mostrare il risultato nel poster.
+  // real_score = "H:A" quando finita (propagato da daemon_live_scores in unified).
+  // live_score = "H:A" durante la partita; live_status = "1H/HT/2H/FT/LIVE"; live_minute = minuto.
+  const parseScore = (s?: string | null): { h: string; a: string } | null => {
+    if (!s || typeof s !== 'string') return null;
+    const parts = s.split(':');
+    if (parts.length !== 2) return null;
+    return { h: parts[0].trim(), a: parts[1].trim() };
+  };
+  const realParsed = parseScore(matchData?.real_score);
+  const liveParsed = parseScore(matchData?.live_score);
+  const isFinished = !!realParsed && (matchData?.live_status === 'FT' || !matchData?.live_status || matchData?.live_status === 'finished');
+  const isLive = !isFinished && !!liveParsed && !!matchData?.live_status && matchData?.live_status !== 'notstarted';
+  const displayScore = isFinished ? realParsed : isLive ? liveParsed : null;
+  const matchStateLabel = isFinished
+    ? 'Finale'
+    : isLive
+      ? (matchData?.live_minute != null ? `${matchData.live_minute}' · ${matchData.live_status}` : `Live · ${matchData?.live_status}`)
+      : null;
+
+  // Derivati da scoutText: numero parole + tempo di lettura stimato (200 parole/min)
+  const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
+  const readingMin = Math.max(1, Math.round(wordCount / 200));
+  // Citazioni distinte presenti nello scoutText originale [[N]] o [[N, M, ...]]
+  const citationCount = useMemo(() => {
+    const set = new Set<number>();
+    const re = /\[\[([\d,\s]+)\]\]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(scoutText)) !== null) {
+      m[1].split(',').forEach(s => {
+        const n = parseInt(s.trim(), 10);
+        if (!isNaN(n)) set.add(n);
+      });
+    }
+    return set.size;
+  }, [scoutText]);
+
+  // news_meta: dati strutturati arricchiti (bzzoiro + scout merge).
+  const meta = matchData?.news_meta;
+  const giornata = meta?.giornata ?? null;
+  const homeMeta = meta?.home || {};
+  const awayMeta = meta?.away || {};
+  const stadioInfo = meta?.stadio || null;
+  const arbitroInfo = meta?.arbitro || null;
+  const citazioni = meta?.citazioni || [];
+  const lineupHome = homeMeta.lineup || {};
+  const lineupAway = awayMeta.lineup || {};
+  const assentiHome = homeMeta.assenti || [];
+  const assentiAway = awayMeta.assenti || [];
+
+  const fmtRank = (side: NewsMetaSideA) => {
+    if (side.rank == null) return null;
+    return `${side.rank}° · ${side.points ?? '?'} PTS`;
+  };
+  const fmtRecord = (side: NewsMetaSideA) => {
+    if (side.wins == null || side.draws == null || side.losses == null) return null;
+    return `${side.wins}V ${side.draws}N ${side.losses}P`;
+  };
+  const fmtStadio = (s: StadioRecord | null) => {
+    if (!s || !s.name) return null;
+    const parts = [s.name];
+    if (s.city) parts.push(s.city);
+    if (s.capacity) parts.push(`${s.capacity.toLocaleString('it-IT')} posti`);
+    return parts.join(' · ');
+  };
 
   return (
     <div className="article-root" data-screen-label="Mockup D · Articolo">
@@ -617,7 +761,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               <div className="a-eyebrow">
                 <span className="league"><span className="ld" style={{ background: dotColor }} />{league || todoTag('lega')}</span>
                 <span className="sep">·</span>
-                <span className="giornata">{todoTag('giornata')}</span>
+                <span className="giornata">{giornata != null ? `${giornata}ª giornata` : missingTag('giornata')}</span>
                 <span className="sep">·</span>
                 <span className={effort === 'DEEP' ? 'deep' : 'deep'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
               </div>
@@ -632,10 +776,48 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <span className="sep">·</span>
                 <span>Pub. <b>{pubLabel || missingTag('data pubblicazione')}</b></span>
                 <span className="sep">·</span>
-                <span><b>{todoTag('tempo di lettura')}</b></span>
+                <span><b>{readingMin} min</b> di lettura</span>
                 <span className="sep">·</span>
-                <span><b>{todoTag('numero fonti')}</b></span>
+                <span><b>{wordCount}</b> parole</span>
               </div>
+
+              {/* Toggle versione articolo: visibile solo se l'utente ha entrambe le versioni */}
+              {hasDeep && hasLite && (
+                <div style={{
+                  display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
+                  marginTop: 14, fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+                  color: 'var(--t-faint)',
+                }}>
+                  <span>Versione:</span>
+                  <button
+                    onClick={() => setViewingVersion('DEEP')}
+                    style={{
+                      cursor: 'pointer',
+                      background: effort === 'DEEP' ? 'var(--cyan)' : 'transparent',
+                      color: effort === 'DEEP' ? 'var(--cyan-ink)' : 'var(--t-dim)',
+                      border: `1px solid ${effort === 'DEEP' ? 'var(--cyan)' : 'var(--line-strong)'}`,
+                      borderRadius: 999,
+                      padding: '6px 12px',
+                      fontFamily: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit',
+                      textTransform: 'inherit', fontWeight: 600,
+                    }}
+                  >Aggiornata T-6h{deepComputedAt ? ` · ${fmtTime(deepComputedAt)}` : ''}</button>
+                  <button
+                    onClick={() => setViewingVersion('LITE')}
+                    style={{
+                      cursor: 'pointer',
+                      background: effort === 'LITE' ? 'var(--cyan)' : 'transparent',
+                      color: effort === 'LITE' ? 'var(--cyan-ink)' : 'var(--t-dim)',
+                      border: `1px solid ${effort === 'LITE' ? 'var(--cyan)' : 'var(--line-strong)'}`,
+                      borderRadius: 999,
+                      padding: '6px 12px',
+                      fontFamily: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit',
+                      textTransform: 'inherit', fontWeight: 600,
+                    }}
+                  >Notturna{liteComputedAt ? ` · ${fmtTime(liteComputedAt)}` : ''}</button>
+                </div>
+              )}
             </div>
           </section>
 
@@ -646,19 +828,49 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <div className="poster-crest" style={{ background: crestGradientA(home), color: '#fff' }}>{crestInitialA(home)}</div>
                 <div>
                   <div className="poster-name">{home}</div>
-                  <div className="poster-meta">{todoTag('posizione classifica casa')} · forma {todoTag('forma casa')}</div>
+                  <div className="poster-meta">
+                    {fmtRank(homeMeta) || missingTag('classifica casa')}
+                    {' · '}{fmtRecord(homeMeta) || missingTag('record casa')}
+                  </div>
                 </div>
               </div>
               <div className="poster-center">
-                <div className="poster-ko">{kickoff || missingTag('orario kickoff')}</div>
-                <div className="poster-when">Kickoff · <b>{fmtDateLong(dateQ)}</b></div>
-                <div className="poster-where">{todoTag('stadio')}</div>
+                {displayScore ? (
+                  <>
+                    <div className="poster-ko" style={{
+                      color: isLive ? 'var(--green)' : 'var(--t)',
+                    }}>
+                      {displayScore.h}<span style={{ color: 'var(--t-faint)', margin: '0 8px' }}>–</span>{displayScore.a}
+                    </div>
+                    <div className="poster-when">
+                      {isLive && (
+                        <span style={{
+                          display: 'inline-block',
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: 'var(--red)', boxShadow: '0 0 6px var(--red)',
+                          marginRight: 6, verticalAlign: 'middle',
+                        }} />
+                      )}
+                      <b>{matchStateLabel}</b>
+                    </div>
+                    <div className="poster-where">{fmtStadio(stadioInfo) || todoTag('stadio')}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="poster-ko">{kickoff || missingTag('orario kickoff')}</div>
+                    <div className="poster-when">Kickoff · <b>{fmtDateLong(dateQ)}</b></div>
+                    <div className="poster-where">{fmtStadio(stadioInfo) || todoTag('stadio')}</div>
+                  </>
+                )}
               </div>
               <div className="poster-team away">
                 <div className="poster-crest" style={{ background: crestGradientA(away), color: '#fff' }}>{crestInitialA(away)}</div>
                 <div>
                   <div className="poster-name">{away}</div>
-                  <div className="poster-meta">{todoTag('posizione classifica trasferta')} · forma {todoTag('forma trasferta')}</div>
+                  <div className="poster-meta">
+                    {fmtRank(awayMeta) || missingTag('classifica trasferta')}
+                    {' · '}{fmtRecord(awayMeta) || missingTag('record trasferta')}
+                  </div>
                 </div>
               </div>
             </div>
@@ -710,12 +922,85 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   </ReactMarkdown>
                 </section>
               ))}
+
+              {/* Formazioni probabili: dati strutturati da bzzoiro+scout merge */}
+              {(lineupHome.titolari?.length || lineupAway.titolari?.length) ? (
+                <section className="section" id="sez-formazioni">
+                  <div className="section-eyebrow"><span className="num">05</span> Formazioni probabili</div>
+                  <div className="schema">
+                    <div className="schema-h">
+                      <span>Schema previsto</span>
+                      <b>fonte · {lineupHome.source || lineupAway.source || 'mista'}</b>
+                    </div>
+                    <div className="schema-grid">
+                      <div className="schema-side">
+                        <div className="team-h">{home}</div>
+                        <div className="formation">{lineupHome.formation || homeMeta.formation_default || '?'}</div>
+                        <div className="players">
+                          {(lineupHome.titolari || []).join(' · ') || todoTag('titolari casa')}
+                        </div>
+                        {assentiHome.length > 0 && (
+                          <div style={{ marginTop: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
+                            <span style={{ textTransform: 'uppercase', letterSpacing: '0.12em' }}>Assenti:</span>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {assentiHome.map((a, i) => (
+                                <li key={`ah-${i}`} style={{ color: 'var(--t-dim)' }}>
+                                  <b style={{ color: 'var(--t)', fontWeight: 500 }}>{a.nome}</b>
+                                  {a.motivo ? <span style={{ marginLeft: 6 }}>— {a.motivo}</span> : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      <div className="schema-side">
+                        <div className="team-h">{away}</div>
+                        <div className="formation">{lineupAway.formation || awayMeta.formation_default || '?'}</div>
+                        <div className="players">
+                          {(lineupAway.titolari || []).join(' · ') || todoTag('titolari trasferta')}
+                        </div>
+                        {assentiAway.length > 0 && (
+                          <div style={{ marginTop: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
+                            <span style={{ textTransform: 'uppercase', letterSpacing: '0.12em' }}>Assenti:</span>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {assentiAway.map((a, i) => (
+                                <li key={`aa-${i}`} style={{ color: 'var(--t-dim)' }}>
+                                  <b style={{ color: 'var(--t)', fontWeight: 500 }}>{a.nome}</b>
+                                  {a.motivo ? <span style={{ marginLeft: 6 }}>— {a.motivo}</span> : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
+              {/* Citazioni: dichiarazioni testuali raccolte dalle conferenze stampa */}
+              {citazioni.length > 0 ? (
+                <section className="section" id="sez-citazioni">
+                  <div className="section-eyebrow"><span className="num">06</span> Le voci della vigilia</div>
+                  {citazioni.map((c, i) => (
+                    <blockquote key={`q-${i}`}>
+                      <p className="q">"{c.frase}"</p>
+                      <span className="attrib">
+                        — <b>{c.autore}</b>
+                        {c.ruolo ? <span style={{ opacity: .65 }}>, {c.ruolo}</span> : null}
+                        {c.squadra ? <span style={{ opacity: .65 }}> ({c.squadra === 'home' ? home : c.squadra === 'away' ? away : c.squadra})</span> : null}
+                        {c.fonte ? <span style={{ opacity: .5 }}> · {c.fonte}</span> : null}
+                      </span>
+                    </blockquote>
+                  ))}
+                </section>
+              ) : null}
             </article>
 
             {/* SIDECAR */}
             <aside className="sidecar">
               <div className="pron-card">
-                <div className="pron-h"><span>Pronostico AI</span><b>{todoTag('numero fonti')}</b></div>
+                <div className="pron-h"><span>Pronostico AI</span><b>{citationCount > 0 ? `${citationCount} citazioni` : todoTag('numero fonti')}</b></div>
                 <div className="pron-main">
                   <div className="pron-pick">
                     <b>{tip?.pronostico || missingTag('pronostico')}</b>
@@ -728,13 +1013,15 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <div className={`pron-bar${confMed ? ' med' : ''}`}><i style={{ width: `${conf}%` }} /></div>
                 <div className="pron-marks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
                 <div className="pron-stats">
-                  <div className="r"><span>xG attesi · casa</span><b>{todoTag('xG casa')}</b></div>
-                  <div className="r"><span>xG attesi · trasf.</span><b>{todoTag('xG trasferta')}</b></div>
-                  <div className="r"><span>Form ultime 5 · casa</span><b>{todoTag('forma casa')}</b></div>
-                  <div className="r"><span>Form ultime 5 · trasf.</span><b>{todoTag('forma trasferta')}</b></div>
-                  <div className="r"><span>H2H ultimi 10</span><b>{todoTag('H2H')}</b></div>
+                  <div className="r"><span>xG medio · casa</span><b>{homeMeta.xg_avg != null ? homeMeta.xg_avg.toFixed(2) : missingTag('xG casa')}</b></div>
+                  <div className="r"><span>xG medio · trasf.</span><b>{awayMeta.xg_avg != null ? awayMeta.xg_avg.toFixed(2) : missingTag('xG trasferta')}</b></div>
+                  <div className="r"><span>Gol totali attesi</span><b>{expectedTotalGoals != null ? expectedTotalGoals.toFixed(2) : missingTag('gol attesi')}</b></div>
+                  <div className="r"><span>Modulo · casa</span><b>{lineupHome.formation || homeMeta.formation_default || missingTag('modulo casa')}</b></div>
+                  <div className="r"><span>Modulo · trasf.</span><b>{lineupAway.formation || awayMeta.formation_default || missingTag('modulo trasferta')}</b></div>
+                  <div className="r"><span>Arbitro</span><b>{arbitroInfo?.name || missingTag('arbitro')}</b></div>
                   <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : missingTag('quota')}</b></div>
-                  <div className="r"><span>Infortuni rilevanti</span><b>{todoTag('infortuni')}</b></div>
+                  <div className="r"><span>Assenti · casa</span><b>{assentiHome.length > 0 ? `${assentiHome.length} indisponibili` : missingTag('assenti casa')}</b></div>
+                  <div className="r"><span>Assenti · trasf.</span><b>{assentiAway.length > 0 ? `${assentiAway.length} indisponibili` : missingTag('assenti trasferta')}</b></div>
                 </div>
                 <div className="pron-foot">
                   <a className="btn primary" href="#" onClick={(e) => e.preventDefault()}>Apri scheda Match Day <span className="arrow">→</span></a>

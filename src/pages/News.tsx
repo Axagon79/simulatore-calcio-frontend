@@ -13,6 +13,22 @@ interface PronosticoTip {
   quota?: number | null;
   source?: string;
 }
+interface NewsMetaSide {
+  xg_avg?: number | null;
+  total_volume_avg?: number | null;
+  rank?: number | null;
+  points?: number | null;
+  played?: number | null;
+  wins?: number | null;
+  draws?: number | null;
+  losses?: number | null;
+  formation?: string | null;
+}
+interface NewsMeta {
+  giornata?: number | null;
+  home: NewsMetaSide;
+  away: NewsMetaSide;
+}
 interface Match {
   home: string;
   away: string;
@@ -23,6 +39,8 @@ interface Match {
   pronostici?: PronosticoTip[];
   scout_lite?: { scout_text?: string; computed_at?: string };
   scout_deep?: { scout_text?: string; computed_at?: string };
+  expected_total_goals?: number | null;
+  news_meta?: NewsMeta;
 }
 interface ApiResp {
   success?: boolean;

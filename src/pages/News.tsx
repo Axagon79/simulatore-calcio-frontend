@@ -39,7 +39,7 @@ const LEAGUE_TO_COUNTRY: Record<string, string> = {
   'Ligue 1': 'francia', 'Ligue 2': 'francia',
   'Eredivisie': 'olanda', 'Primeira Liga': 'portogallo',
   'Allsvenskan': 'svezia', 'Veikkausliiga': 'finlandia',
-  'Brasileirao': 'brasile', 'BrasileirÃ£o': 'brasile', 'BrasileirÃ£o Serie A': 'brasile',
+  'Brasileirao': 'brasile', 'Brasileirão': 'brasile', 'Brasileirão Serie A': 'brasile',
   'Major League Soccer': 'usa', 'MLS': 'usa',
   'Champions League': 'europa', 'Europa League': 'europa',
 };
@@ -96,7 +96,7 @@ const extractLede = (text: string): string => {
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
-  if (clean.length > 280) clean = clean.substring(0, 280).replace(/\s+\S*$/, '') + 'â€¦';
+  if (clean.length > 280) clean = clean.substring(0, 280).replace(/\s+\S*$/, '') + '…';
   return clean;
 };
 
@@ -268,7 +268,7 @@ const STYLES = `
   .news-root .a-lede b{color:var(--t);font-weight:500}
   .news-root .a-bullets{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--t-dim)}
   .news-root .a-bullets li{padding-left:18px;position:relative}
-  .news-root .a-bullets li::before{content:"â†’";position:absolute;left:0;color:var(--cyan);font-family:'JetBrains Mono',monospace}
+  .news-root .a-bullets li::before{content:"→";position:absolute;left:0;color:var(--cyan);font-family:'JetBrains Mono',monospace}
   .news-root .a-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px dashed var(--line);padding-top:14px;margin-top:8px}
   .news-root .by-line{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-faint);display:flex;gap:10px;flex-wrap:wrap}
   .news-root .by-line b{color:var(--t-dim);font-weight:500}
@@ -352,13 +352,13 @@ const TickerStrip: React.FC = () => (
   <div className="ticker-strip">
     {[0,1].map(loop => (
       <React.Fragment key={loop}>
-        <span className="ti"><span className="mono">15:00</span><b>Premier Â· Arsenalâ€“Newcastle</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">71%</span></span>
-        <span className="ti"><span className="mono">17:00</span><b>Premier Â· Liverpoolâ€“Crystal Palace</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">78%</span></span>
-        <span className="ti"><span className="mono">17:30</span><b>Allsvenskan Â· AIKâ€“DjurgÃ¥rden</b> <span className="sep">Â·</span> pronostico <b>X</b> conf. <span className="mono">42%</span></span>
-        <span className="ti"><span className="mono">19:00</span><b>Allsvenskan Â· MalmÃ¶â€“Hammarby</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">61%</span></span>
-        <span className="ti"><span className="mono">20:00</span><b>BrasileirÃ£o Â· Flamengoâ€“AtlÃ©tico MG</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">63%</span></span>
-        <span className="ti"><span className="mono">21:15</span><b>Veikkausliiga Â· HJKâ€“Inter Turku</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">58%</span></span>
-        <span className="ti"><span className="mono">22:30</span><b>BrasileirÃ£o Â· Botafogoâ€“Internacional</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">54%</span></span>
+        <span className="ti"><span className="mono">15:00</span><b>Premier · Arsenal–Newcastle</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">71%</span></span>
+        <span className="ti"><span className="mono">17:00</span><b>Premier · Liverpool–Crystal Palace</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">78%</span></span>
+        <span className="ti"><span className="mono">17:30</span><b>Allsvenskan · AIK–Djurgården</b> <span className="sep">·</span> pronostico <b>X</b> conf. <span className="mono">42%</span></span>
+        <span className="ti"><span className="mono">19:00</span><b>Allsvenskan · Malmö–Hammarby</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">61%</span></span>
+        <span className="ti"><span className="mono">20:00</span><b>Brasileirão · Flamengo–Atlético MG</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">63%</span></span>
+        <span className="ti"><span className="mono">21:15</span><b>Veikkausliiga · HJK–Inter Turku</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">58%</span></span>
+        <span className="ti"><span className="mono">22:30</span><b>Brasileirão · Botafogo–Internacional</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">54%</span></span>
       </React.Fragment>
     ))}
   </div>
@@ -509,7 +509,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
 
   const shown = filtered.length;
   const legheCount = visibleLeaguesAll.size;
-  const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} Â· ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
+  const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} · ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
   const mastCountText = `${shown} ${shown === 1 ? 'articolo pubblicato' : 'articoli pubblicati'}`;
 
   const isLight = theme === 'light';
@@ -522,13 +522,13 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     return { today, tomorrow, after };
   }, []);
   const activeDateObj = activeTab === 'oggi' ? datesTabs.today : activeTab === 'domani' ? datesTabs.tomorrow : datesTabs.after;
-  const dateDots = `${String(activeDateObj.getDate()).padStart(2, '0')} Â· ${String(activeDateObj.getMonth() + 1).padStart(2, '0')} Â· ${activeDateObj.getFullYear()}`;
+  const dateDots = `${String(activeDateObj.getDate()).padStart(2, '0')} · ${String(activeDateObj.getMonth() + 1).padStart(2, '0')} · ${activeDateObj.getFullYear()}`;
   const GIORNI = ['dom','lun','mar','mer','gio','ven','sab'];
   const now = new Date();
   const dateLabelChyron = `${GIORNI[now.getDay()]} ${now.getDate()} ${MESI[now.getMonth()]} ${now.getFullYear()}`;
 
   return (
-    <div className="news-root" data-screen-label="Mockup D Â· Home">
+    <div className="news-root" data-screen-label="Mockup D · Home">
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       {/* ============ CHYRON ============ */}
@@ -537,8 +537,8 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           <div className="brand" onClick={onBack} style={onBack ? { cursor: 'pointer' } : undefined}>
             <div className="brand-mark">A</div>
             <div>
-              <div className="brand-name">AI<span>Â·</span>Simulator</div>
-              <div className="brand-sub">Newsroom synth Â· v2.4</div>
+              <div className="brand-name">AI<span>·</span>Simulator</div>
+              <div className="brand-sub">Newsroom synth · v2.4</div>
             </div>
           </div>
           <div style={{ justifySelf: 'center' }}>
@@ -555,7 +555,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         </div>
         <div className="ticker">
           <div className="ticker-row">
-            <div className="ticker-tag">AI Â· DESK</div>
+            <div className="ticker-tag">AI · DESK</div>
             <div className="ticker-track">
               <TickerStrip />
             </div>
@@ -572,7 +572,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             <div className={`tab ${activeTab === 'dopodomani' ? 'active' : ''}`} onClick={() => setActiveTab('dopodomani')}><span className="day">Dopodomani</span><span className="date">{fmtDateLabel(datesTabs.after)}</span></div>
           </div>
           <div className="tabs-meta">
-            <span className="pill"><span className="dot" />Modello DEEP Â· T-6h</span>
+            <span className="pill"><span className="dot" />Modello DEEP · T-6h</span>
             <span className="count-pill">{countText}</span>
           </div>
         </div>
@@ -581,14 +581,14 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       {/* ============ MASTHEAD ============ */}
       <section className="masthead">
         <div className="mast-eyebrow">
-          <span>Edizione del giorno</span><span className="sep">Â·</span>
-          <span className="mono">{dateDots}</span><span className="sep">Â·</span>
-          <b>{mastCountText}</b><span className="sep">Â·</span>
+          <span>Edizione del giorno</span><span className="sep">·</span>
+          <span className="mono">{dateDots}</span><span className="sep">·</span>
+          <b>{mastCountText}</b><span className="sep">·</span>
           <span>generati da redazione AI</span>
         </div>
         <h1 className="mast-title">Una redazione che <em>scrive sola</em>. {shown} articol{shown === 1 ? 'o' : 'i'} per le partite di {activeTab === 'oggi' ? 'stasera' : activeTab === 'domani' ? 'domani' : 'dopodomani'}, prima del kickoff.</h1>
         <p className="mast-deck">
-          Ogni giorno il nostro motore di sintesi legge <b>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma â€” completo di <b>pronostico AI</b> con livello di confidenza. Nessun giornalista umano Ã¨ coinvolto. Ãˆ pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
+          Ogni giorno il nostro motore di sintesi legge <b>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma — completo di <b>pronostico AI</b> con livello di confidenza. Nessun giornalista umano è coinvolto. È pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
         </p>
       </section>
 
@@ -600,7 +600,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             <button className={`f-link ${activeCountry === '' ? 'on' : ''}`} onClick={() => handleCountry('')}>Tutte</button>
             {visibleCountries.map(c => (
               <React.Fragment key={c}>
-                <span className="sep">Â·</span>
+                <span className="sep">·</span>
                 <button className={`f-link ${activeCountry === c ? 'on' : ''}`} onClick={() => handleCountry(c)}>{COUNTRY_LABEL[c] || c}</button>
               </React.Fragment>
             ))}
@@ -611,7 +611,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               <button className={`f-link ${activeLeague === '' ? 'on' : ''}`} onClick={() => setActiveLeague('')}>Tutte</button>
               {visibleLeaguesForCountry.map(l => (
                 <React.Fragment key={l.slug}>
-                  <span className="sep">Â·</span>
+                  <span className="sep">·</span>
                   <button className={`f-link ${activeLeague === l.slug ? 'on' : ''}`} onClick={() => handleLeague(l.slug)}>{l.name}</button>
                 </React.Fragment>
               ))}
@@ -634,7 +634,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               </>
             )}
           </div>
-          <button className="clear-filter" onClick={clearFilter}><span className="x">Ã—</span> Rimuovi filtro</button>
+          <button className="clear-filter" onClick={clearFilter}><span className="x">×</span> Rimuovi filtro</button>
         </div>
       )}
 
@@ -759,7 +759,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
 
       <footer className="site-foot">
         <div>Tutti i contenuti sono generati da modelli linguistici. <b>Le previsioni non costituiscono consigli di scommessa.</b></div>
-        <div>build Â· 2026.05.18 Â· pipeline #11471 Â· /v1/research</div>
+        <div>build · 2026.05.18 · pipeline #11471 · /v1/research</div>
       </footer>
     </div>
   );

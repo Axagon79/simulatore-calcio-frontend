@@ -41,6 +41,10 @@ interface Match {
   scout_deep?: { scout_text?: string; computed_at?: string };
   expected_total_goals?: number | null;
   news_meta?: NewsMeta;
+  home_mongo_id?: string | null;
+  away_mongo_id?: string | null;
+  home_logo_url?: string | null;
+  away_logo_url?: string | null;
 }
 interface ApiResp {
   success?: boolean;
@@ -82,6 +86,41 @@ const leagueDotColor = (league: string): string => {
   if (lg.includes('Ligue')) return '#6366f1';
   if (lg.includes('MLS')) return '#0ea5e9';
   return '#6b7280';
+};
+
+// Stemmi Firebase Storage: stemmi/squadre/{Country_Folder}/{mongo_id}.png
+// Mappa allineata a src/UnifiedPredictions.tsx LEAGUE_TO_FOLDER (autorita').
+const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
+const LEAGUE_TO_FOLDER_N: Record<string, string> = {
+  'Serie A': 'Italy', 'Serie B': 'Italy',
+  'Serie C - Girone A': 'Italy', 'Serie C - Girone B': 'Italy', 'Serie C - Girone C': 'Italy', 'Serie C': 'Italy',
+  'Premier League': 'England', 'Championship': 'England', 'League One': 'England', 'League Two': 'England',
+  'La Liga': 'Spain', 'LaLiga 2': 'Spain',
+  'Bundesliga': 'Germany', '2. Bundesliga': 'Germany', '3. Liga': 'Germany',
+  'Ligue 1': 'France', 'Ligue 2': 'France',
+  'Liga Portugal': 'Portugal', 'Primeira Liga': 'Portugal', 'Liga Portugal 2': 'Portugal',
+  'Eredivisie': 'Netherlands', 'Eerste Divisie': 'Netherlands',
+  'Scottish Prem.': 'Scotland', 'Scottish Premiership': 'Scotland', 'Scottish Championship': 'Scotland',
+  'Allsvenskan': 'Sweden',
+  'Eliteserien': 'Norway',
+  'Superligaen': 'Denmark',
+  'Veikkausliiga': 'Finland',
+  'Jupiler Pro': 'Belgium', 'Jupiler Pro League': 'Belgium',
+  'Süper Lig': 'Turkey', 'Super Lig': 'Turkey', '1. Lig': 'Turkey',
+  'League of Ireland': 'Ireland', 'League of Ireland Premier Division': 'Ireland',
+  'Saudi Pro League': 'Saudi_Arabia',
+  'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil', 'Brasileirão Serie A': 'Brazil', 'Brasileirao Serie A': 'Brazil',
+  'Primera División': 'Argentina',
+  'MLS': 'USA', 'Major League Soccer': 'USA',
+  'Liga MX': 'Mexico',
+  'J1 League': 'Japan',
+  'Champions League': 'Champions_League',
+  'Europa League': 'Europa_League',
+};
+const getStemmaUrl = (mongoId: string | null | undefined, league: string | null | undefined): string => {
+  if (!mongoId) return '';
+  const folder = (league && LEAGUE_TO_FOLDER_N[league]) || 'Altro';
+  return `${STEMMI_BASE}squadre%2F${folder}%2F${mongoId}.png?alt=media`;
 };
 
 // Crest gradient deterministico da hash del nome squadra.
@@ -730,12 +769,52 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   </div>
                   <div className="match-line">
                     <div className="ml-team">
-                      <div className="ml-crest" style={{ background: crestGradient(m.home) }}>{crestInitial(m.home)}</div>
+                      {m.home_mongo_id ? (
+                        <img
+                          className="ml-crest"
+                          src={m.home_logo_url || getStemmaUrl(m.home_mongo_id, m.league || m.lega)}
+                          alt={m.home}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            const fallback = target.nextElementSibling as HTMLElement | null;
+                            target.style.display = 'none';
+                            if (fallback) fallback.style.display = 'grid';
+                          }}
+                          style={{
+                            objectFit: 'contain', background: 'transparent',
+                            borderRadius: 0, boxShadow: 'none',
+                          }}
+                        />
+                      ) : null}
+                      <div className="ml-crest" style={{
+                        background: crestGradient(m.home),
+                        display: m.home_mongo_id ? 'none' : 'grid',
+                      }}>{crestInitial(m.home)}</div>
                       <div className="ml-name">{m.home}</div>
                     </div>
                     <div className="ml-vs">vs</div>
                     <div className="ml-team">
-                      <div className="ml-crest" style={{ background: crestGradient(m.away) }}>{crestInitial(m.away)}</div>
+                      {m.away_mongo_id ? (
+                        <img
+                          className="ml-crest"
+                          src={m.away_logo_url || getStemmaUrl(m.away_mongo_id, m.league || m.lega)}
+                          alt={m.away}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            const fallback = target.nextElementSibling as HTMLElement | null;
+                            target.style.display = 'none';
+                            if (fallback) fallback.style.display = 'grid';
+                          }}
+                          style={{
+                            objectFit: 'contain', background: 'transparent',
+                            borderRadius: 0, boxShadow: 'none',
+                          }}
+                        />
+                      ) : null}
+                      <div className="ml-crest" style={{
+                        background: crestGradient(m.away),
+                        display: m.away_mongo_id ? 'none' : 'grid',
+                      }}>{crestInitial(m.away)}</div>
                       <div className="ml-name">{m.away}</div>
                     </div>
                   </div>

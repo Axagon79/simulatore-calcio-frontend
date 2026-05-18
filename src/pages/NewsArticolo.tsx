@@ -877,7 +877,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                       target.style.display = 'none';
                       if (fallback) fallback.style.display = 'grid';
                     }}
-                    style={{ objectFit: 'contain', background: 'transparent' }}
+                    style={{ objectFit: 'contain', background: 'transparent', borderRadius: 0, boxShadow: 'none' }}
                   />
                 ) : null}
                 <div className="poster-crest" style={{
@@ -933,7 +933,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                       target.style.display = 'none';
                       if (fallback) fallback.style.display = 'grid';
                     }}
-                    style={{ objectFit: 'contain', background: 'transparent' }}
+                    style={{ objectFit: 'contain', background: 'transparent', borderRadius: 0, boxShadow: 'none' }}
                   />
                 ) : null}
                 <div className="poster-crest" style={{

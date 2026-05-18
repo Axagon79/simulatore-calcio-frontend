@@ -1,32 +1,117 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../AppDev/costanti';
 
 interface NewsProps {
   onBack?: () => void;
 }
 
-interface ArticleLink {
+interface PronosticoTip {
+  tipo?: string;
+  pronostico?: string;
+  confidence?: number;
+  quota?: number | null;
+  source?: string;
+}
+interface Match {
   home: string;
   away: string;
   date: string;
+  match_time?: string;
+  league?: string;
+  lega?: string;
+  pronostici?: PronosticoTip[];
+  scout_lite?: { scout_text?: string; computed_at?: string };
+  scout_deep?: { scout_text?: string; computed_at?: string };
+}
+interface ApiResp {
+  success?: boolean;
+  predictions?: Match[];
+  date?: string;
 }
 
-const COUNTRIES: Record<string, { label: string; leagues: Record<string, string> }> = {
-  inghilterra: { label: 'Inghilterra', leagues: { 'premier-league': 'Premier League' } },
-  svezia:      { label: 'Svezia',      leagues: { 'allsvenskan': 'Allsvenskan' } },
-  brasile:     { label: 'Brasile',     leagues: { 'brasileirao': 'Brasileirão' } },
-  finlandia:   { label: 'Finlandia',   leagues: { 'veikkausliiga': 'Veikkausliiga' } },
+// Mappa lega -> nazione (slug) per il filtro a cascata.
+const LEAGUE_TO_COUNTRY: Record<string, string> = {
+  'Premier League': 'inghilterra', 'Championship': 'inghilterra',
+  'Serie A': 'italia', 'Serie B': 'italia',
+  'LaLiga': 'spagna', 'La Liga': 'spagna',
+  'Bundesliga': 'germania', '2. Bundesliga': 'germania',
+  'Ligue 1': 'francia', 'Ligue 2': 'francia',
+  'Eredivisie': 'olanda', 'Primeira Liga': 'portogallo',
+  'Allsvenskan': 'svezia', 'Veikkausliiga': 'finlandia',
+  'Brasileirao': 'brasile', 'BrasileirÃ£o': 'brasile', 'BrasileirÃ£o Serie A': 'brasile',
+  'Major League Soccer': 'usa', 'MLS': 'usa',
+  'Champions League': 'europa', 'Europa League': 'europa',
+};
+const COUNTRY_LABEL: Record<string, string> = {
+  inghilterra: 'Inghilterra', italia: 'Italia', spagna: 'Spagna',
+  germania: 'Germania', francia: 'Francia', olanda: 'Olanda',
+  portogallo: 'Portogallo', svezia: 'Svezia', finlandia: 'Finlandia',
+  brasile: 'Brasile', usa: 'USA', europa: 'Coppe europee',
+};
+const leagueSlug = (lg: string): string =>
+  (lg || '').toLowerCase().normalize('NFD').replace(/[Ì€-Í¯]/g, '').replace(/\s+/g, '-');
+
+const leagueDotColor = (league: string): string => {
+  const lg = league || '';
+  if (lg.includes('Premier')) return '#a855f7';
+  if (lg.includes('Allsvenskan')) return '#facc15';
+  if (lg.includes('Brasil')) return '#4ade80';
+  if (lg.includes('Veikkaus')) return '#22d3ee';
+  if (lg.includes('Serie A') || lg.includes('Serie B')) return '#3b82f6';
+  if (lg.includes('LaLiga') || lg.includes('La Liga')) return '#ef4444';
+  if (lg.includes('Bundesliga')) return '#f97316';
+  if (lg.includes('Ligue')) return '#6366f1';
+  if (lg.includes('MLS')) return '#0ea5e9';
+  return '#6b7280';
 };
 
-const ARTICLES = [
-  { id: 'a-1', country: 'inghilterra', league: 'premier-league' },
-  { id: 'a-2', country: 'inghilterra', league: 'premier-league' },
-  { id: 'a-3', country: 'svezia',      league: 'allsvenskan' },
-  { id: 'a-4', country: 'svezia',      league: 'allsvenskan' },
-  { id: 'a-5', country: 'brasile',     league: 'brasileirao' },
-  { id: 'a-6', country: 'finlandia',   league: 'veikkausliiga' },
-  { id: 'a-7', country: 'brasile',     league: 'brasileirao' },
-];
+// Crest gradient deterministico da hash del nome squadra.
+const crestGradient = (name: string): string => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  const pairs: Array<[string, string]> = [
+    ['#ff7373', '#c81919'], ['#6b7280', '#0a0b0f'], ['#f87171', '#991b1b'],
+    ['#60a5fa', '#1e40af'], ['#93c5fd', '#1e3a8a'], ['#38bdf8', '#0369a1'],
+    ['#4ade80', '#166534'], ['#fbbf24', '#b45309'], ['#a78bfa', '#5b21b6'],
+    ['#f472b6', '#9d174d'],
+  ];
+  const p = pairs[Math.abs(h) % pairs.length];
+  return `radial-gradient(circle at 35% 30%, ${p[0]}, ${p[1]} 70%)`;
+};
+const crestInitial = (name: string): string => {
+  if (!name) return '?';
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+// Lede = primi ~280 char del testo Scout puliti.
+const extractLede = (text: string): string => {
+  if (!text) return '';
+  let clean = text
+    .replace(/```\s*json[\s\S]*?```/gi, '')
+    .replace(/```\s*json[\s\S]*$/i, '')
+    .replace(/\s*\[\[[\d,\s]+\]\]/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (clean.length > 280) clean = clean.substring(0, 280).replace(/\s+\S*$/, '') + 'â€¦';
+  return clean;
+};
+
+// Top tip = pronostico con confidence piu' alta != NO BET.
+const getTopTip = (m: Match): PronosticoTip | null => {
+  if (!m.pronostici || m.pronostici.length === 0) return null;
+  const sorted = [...m.pronostici].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  return sorted.find(p => p.pronostico && p.pronostico !== 'NO BET') || null;
+};
+
+const isoDate = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const fmtDateLabel = (d: Date): string => `${d.getDate()} ${MESI[d.getMonth()]}`;
 
 const STYLES = `
   :root{
@@ -133,7 +218,7 @@ const STYLES = `
   .news-root .f-link.on{color:var(--cyan);font-weight:500}
   .news-root .filter-row.leagues{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:none}
   .news-root .filter-row.leagues.show{display:flex}
-  .news-root .filter-row.leagues .lbl::before{content:"↳ ";color:var(--t-faint);margin-right:4px}
+  .news-root .filter-row.leagues .lbl::before{content:"â†³ ";color:var(--t-faint);margin-right:4px}
   .news-root .filter-row.leagues .f-link{font-size:13px}
 
   .news-root .breadcrumb{max-width:1280px;margin:0 auto;padding:18px 28px 0;display:none;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t-dim)}
@@ -183,7 +268,7 @@ const STYLES = `
   .news-root .a-lede b{color:var(--t);font-weight:500}
   .news-root .a-bullets{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--t-dim)}
   .news-root .a-bullets li{padding-left:18px;position:relative}
-  .news-root .a-bullets li::before{content:"→";position:absolute;left:0;color:var(--cyan);font-family:'JetBrains Mono',monospace}
+  .news-root .a-bullets li::before{content:"â†’";position:absolute;left:0;color:var(--cyan);font-family:'JetBrains Mono',monospace}
   .news-root .a-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px dashed var(--line);padding-top:14px;margin-top:8px}
   .news-root .by-line{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-faint);display:flex;gap:10px;flex-wrap:wrap}
   .news-root .by-line b{color:var(--t-dim);font-weight:500}
@@ -218,6 +303,7 @@ const STYLES = `
   .news-root .site-foot{max-width:1280px;margin:0 auto;padding:32px 28px 60px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t-faint);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
   .news-root .site-foot b{color:var(--t-dim);font-weight:500}
 
+  .news-root .missing{color:var(--yellow);font-style:italic;opacity:.75;border-bottom:1px dotted var(--yellow);cursor:help}
   .news-root .c-ars{background:radial-gradient(circle at 35% 30%, #ff7373, #c81919 70%);color:#fff}
   .news-root .c-new{background:radial-gradient(circle at 35% 30%, #6b7280, #0a0b0f 70%);color:#fff}
   .news-root .c-liv{background:radial-gradient(circle at 35% 30%, #f87171, #991b1b 70%);color:#fff}
@@ -266,38 +352,36 @@ const TickerStrip: React.FC = () => (
   <div className="ticker-strip">
     {[0,1].map(loop => (
       <React.Fragment key={loop}>
-        <span className="ti"><span className="mono">15:00</span><b>Premier · Arsenal–Newcastle</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">71%</span></span>
-        <span className="ti"><span className="mono">17:00</span><b>Premier · Liverpool–Crystal Palace</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">78%</span></span>
-        <span className="ti"><span className="mono">17:30</span><b>Allsvenskan · AIK–Djurgården</b> <span className="sep">·</span> pronostico <b>X</b> conf. <span className="mono">42%</span></span>
-        <span className="ti"><span className="mono">19:00</span><b>Allsvenskan · Malmö–Hammarby</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">61%</span></span>
-        <span className="ti"><span className="mono">20:00</span><b>Brasileirão · Flamengo–Atlético MG</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">63%</span></span>
-        <span className="ti"><span className="mono">21:15</span><b>Veikkausliiga · HJK–Inter Turku</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">58%</span></span>
-        <span className="ti"><span className="mono">22:30</span><b>Brasileirão · Botafogo–Internacional</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">54%</span></span>
+        <span className="ti"><span className="mono">15:00</span><b>Premier Â· Arsenalâ€“Newcastle</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">71%</span></span>
+        <span className="ti"><span className="mono">17:00</span><b>Premier Â· Liverpoolâ€“Crystal Palace</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">78%</span></span>
+        <span className="ti"><span className="mono">17:30</span><b>Allsvenskan Â· AIKâ€“DjurgÃ¥rden</b> <span className="sep">Â·</span> pronostico <b>X</b> conf. <span className="mono">42%</span></span>
+        <span className="ti"><span className="mono">19:00</span><b>Allsvenskan Â· MalmÃ¶â€“Hammarby</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">61%</span></span>
+        <span className="ti"><span className="mono">20:00</span><b>BrasileirÃ£o Â· Flamengoâ€“AtlÃ©tico MG</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">63%</span></span>
+        <span className="ti"><span className="mono">21:15</span><b>Veikkausliiga Â· HJKâ€“Inter Turku</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">58%</span></span>
+        <span className="ti"><span className="mono">22:30</span><b>BrasileirÃ£o Â· Botafogoâ€“Internacional</b> <span className="sep">Â·</span> pronostico <b>1</b> conf. <span className="mono">54%</span></span>
       </React.Fragment>
     ))}
   </div>
 );
 
-const TODAY_DATE = '2026-05-18';
-
-const ARTICLE_LINKS: Record<string, ArticleLink> = {
-  'a-1': { home: 'Arsenal',     away: 'Newcastle',          date: TODAY_DATE },
-  'a-2': { home: 'Liverpool',   away: 'Crystal Palace',     date: TODAY_DATE },
-  'a-3': { home: 'AIK',         away: 'Djurgården',         date: TODAY_DATE },
-  'a-4': { home: 'Malmö FF',    away: 'Hammarby',           date: TODAY_DATE },
-  'a-5': { home: 'Flamengo',    away: 'Atlético Mineiro',   date: TODAY_DATE },
-  'a-6': { home: 'HJK',         away: 'Inter Turku',        date: TODAY_DATE },
-  'a-7': { home: 'Botafogo',    away: 'Internacional',      date: TODAY_DATE },
-};
-
 const News: React.FC<NewsProps> = ({ onBack }) => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [clockMono, setClockMono] = useState('14:32:07 CEST');
-  const [activeTab, setActiveTab] = useState<string>('oggi');
+  const [activeTab, setActiveTab] = useState<'oggi' | 'domani' | 'dopodomani'>('oggi');
   const [activeCountry, setActiveCountry] = useState<string>('');
   const [activeLeague, setActiveLeague] = useState<string>('');
-  const [activeRail, setActiveRail] = useState<string>('a-1');
+  const [activeRail, setActiveRail] = useState<string>('');
+
+  // Dati reali dal backend.
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Placeholder inline riutilizzabili nel JSX.
+  const TODO_INLINE = <span className="missing" title="Da sistemare: questo dato non e' ancora popolato dal backend">da sistemare</span>;
+  const MISSING_INLINE = <span className="missing" title="Dato non disponibile per questa partita">?</span>;
+  const MISSING_PLAIN = '—';
 
   // load theme
   useEffect(() => {
@@ -338,11 +422,69 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
 
   const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
 
-  const openArticle = (e: React.MouseEvent, id: string) => {
+  // Data attiva (oggi/domani/dopodomani) -> ISO YYYY-MM-DD.
+  const activeDateISO = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    if (activeTab === 'domani') d.setDate(d.getDate() + 1);
+    else if (activeTab === 'dopodomani') d.setDate(d.getDate() + 2);
+    return isoDate(d);
+  }, [activeTab]);
+
+  // Fetch partite per la data attiva, tieni solo quelle con testo Scout.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${activeDateISO}`)
+      .then(r => r.json())
+      .then((data: ApiResp) => {
+        if (cancelled) return;
+        const preds = Array.isArray(data?.predictions) ? data.predictions : [];
+        const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text));
+        withArticle.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
+        setMatches(withArticle);
+      })
+      .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeDateISO]);
+
+  const countryOf = (m: Match): string => LEAGUE_TO_COUNTRY[m.league || m.lega || ''] || '';
+
+  // Filtro nazione + lega.
+  const filtered = useMemo(() => matches.filter(m => {
+    if (activeCountry && countryOf(m) !== activeCountry) return false;
+    if (activeLeague) {
+      const lg = m.league || m.lega || '';
+      if (leagueSlug(lg) !== activeLeague) return false;
+    }
+    return true;
+  }), [matches, activeCountry, activeLeague]);
+
+  const visibleCountries = useMemo(() => {
+    const set = new Set<string>();
+    matches.forEach(m => { const c = countryOf(m); if (c) set.add(c); });
+    return Array.from(set).sort();
+  }, [matches]);
+
+  const visibleLeaguesForCountry = useMemo(() => {
+    if (!activeCountry) return [] as Array<{ slug: string; name: string }>;
+    const seen = new Map<string, string>();
+    matches.forEach(m => {
+      if (countryOf(m) !== activeCountry) return;
+      const lg = m.league || m.lega || '';
+      const slug = leagueSlug(lg);
+      if (lg && !seen.has(slug)) seen.set(slug, lg);
+    });
+    return Array.from(seen.entries()).map(([slug, name]) => ({ slug, name }));
+  }, [matches, activeCountry]);
+
+  const visibleLeaguesAll = new Set(filtered.map(m => leagueSlug(m.league || m.lega || '')));
+
+  const openArticle = (e: React.MouseEvent, m: Match) => {
     e.preventDefault();
-    const lnk = ARTICLE_LINKS[id];
-    if (!lnk) return;
-    const params = new URLSearchParams({ home: lnk.home, away: lnk.away, date: lnk.date });
+    const params = new URLSearchParams({ home: m.home, away: m.away, date: m.date });
     navigate(`/news/articolo?${params.toString()}`);
   };
 
@@ -365,26 +507,28 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     setActiveLeague('');
   };
 
-  const isVisible = (country: string, league: string) => {
-    const matchC = !activeCountry || activeCountry === country;
-    const matchL = !activeLeague || activeLeague === league;
-    return matchC && matchL;
-  };
-
-  const visibleArticles = ARTICLES.filter(a => isVisible(a.country, a.league));
-  const visibleLeagues = new Set(visibleArticles.map(a => a.league));
-  const shown = visibleArticles.length;
-  const legheCount = visibleLeagues.size;
-  const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} · ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
+  const shown = filtered.length;
+  const legheCount = visibleLeaguesAll.size;
+  const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} Â· ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
   const mastCountText = `${shown} ${shown === 1 ? 'articolo pubblicato' : 'articoli pubblicati'}`;
-
-  const currentLeagues = activeCountry ? COUNTRIES[activeCountry].leagues : null;
-  const hideStyle = (visible: boolean): React.CSSProperties => ({ display: visible ? '' : 'none' });
 
   const isLight = theme === 'light';
 
+  // Date dei tab per l'eyebrow.
+  const datesTabs = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const after = new Date(today); after.setDate(today.getDate() + 2);
+    return { today, tomorrow, after };
+  }, []);
+  const activeDateObj = activeTab === 'oggi' ? datesTabs.today : activeTab === 'domani' ? datesTabs.tomorrow : datesTabs.after;
+  const dateDots = `${String(activeDateObj.getDate()).padStart(2, '0')} Â· ${String(activeDateObj.getMonth() + 1).padStart(2, '0')} Â· ${activeDateObj.getFullYear()}`;
+  const GIORNI = ['dom','lun','mar','mer','gio','ven','sab'];
+  const now = new Date();
+  const dateLabelChyron = `${GIORNI[now.getDay()]} ${now.getDate()} ${MESI[now.getMonth()]} ${now.getFullYear()}`;
+
   return (
-    <div className="news-root" data-screen-label="Mockup D · Home">
+    <div className="news-root" data-screen-label="Mockup D Â· Home">
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       {/* ============ CHYRON ============ */}
@@ -393,25 +537,25 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           <div className="brand" onClick={onBack} style={onBack ? { cursor: 'pointer' } : undefined}>
             <div className="brand-mark">A</div>
             <div>
-              <div className="brand-name">AI<span>·</span>Simulator</div>
-              <div className="brand-sub">Newsroom synth · v2.4</div>
+              <div className="brand-name">AI<span>Â·</span>Simulator</div>
+              <div className="brand-sub">Newsroom synth Â· v2.4</div>
             </div>
           </div>
           <div style={{ justifySelf: 'center' }}>
             <span className="live"><span className="live-dot" />News feed live</span>
           </div>
           <div className="clock">
-            <span>Lun 18 mag 2026</span>
+            <span>{dateLabelChyron}</span>
             <span className="mono">{clockMono}</span>
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Cambia tema">
-              <span className="icn">{isLight ? '☾' : '☀'}</span>
+              <span className="icn">{isLight ? 'â˜¾' : 'â˜€'}</span>
               <span>{isLight ? 'Scuro' : 'Chiaro'}</span>
             </button>
           </div>
         </div>
         <div className="ticker">
           <div className="ticker-row">
-            <div className="ticker-tag">AI · DESK</div>
+            <div className="ticker-tag">AI Â· DESK</div>
             <div className="ticker-track">
               <TickerStrip />
             </div>
@@ -423,12 +567,12 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       <div className="tabs-wrap">
         <div className="tabs">
           <div className="tabs-left">
-            <div className={`tab ${activeTab === 'oggi' ? 'active' : ''}`} onClick={() => setActiveTab('oggi')}><span className="day">Oggi</span><span className="date">18 mag</span></div>
-            <div className={`tab ${activeTab === 'domani' ? 'active' : ''}`} onClick={() => setActiveTab('domani')}><span className="day">Domani</span><span className="date">19 mag</span></div>
-            <div className={`tab ${activeTab === 'dopodomani' ? 'active' : ''}`} onClick={() => setActiveTab('dopodomani')}><span className="day">Dopodomani</span><span className="date">20 mag</span></div>
+            <div className={`tab ${activeTab === 'oggi' ? 'active' : ''}`} onClick={() => setActiveTab('oggi')}><span className="day">Oggi</span><span className="date">{fmtDateLabel(datesTabs.today)}</span></div>
+            <div className={`tab ${activeTab === 'domani' ? 'active' : ''}`} onClick={() => setActiveTab('domani')}><span className="day">Domani</span><span className="date">{fmtDateLabel(datesTabs.tomorrow)}</span></div>
+            <div className={`tab ${activeTab === 'dopodomani' ? 'active' : ''}`} onClick={() => setActiveTab('dopodomani')}><span className="day">Dopodomani</span><span className="date">{fmtDateLabel(datesTabs.after)}</span></div>
           </div>
           <div className="tabs-meta">
-            <span className="pill"><span className="dot" />Modello DEEP · T-6h</span>
+            <span className="pill"><span className="dot" />Modello DEEP Â· T-6h</span>
             <span className="count-pill">{countText}</span>
           </div>
         </div>
@@ -437,89 +581,84 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       {/* ============ MASTHEAD ============ */}
       <section className="masthead">
         <div className="mast-eyebrow">
-          <span>Edizione del giorno</span><span className="sep">·</span>
-          <span className="mono">18 · 05 · 2026</span><span className="sep">·</span>
-          <b>{mastCountText}</b><span className="sep">·</span>
+          <span>Edizione del giorno</span><span className="sep">Â·</span>
+          <span className="mono">{dateDots}</span><span className="sep">Â·</span>
+          <b>{mastCountText}</b><span className="sep">Â·</span>
           <span>generati da redazione AI</span>
         </div>
-        <h1 className="mast-title">Una redazione che <em>scrive sola</em>. Sette articoli per le partite di stasera, prima del kickoff.</h1>
+        <h1 className="mast-title">Una redazione che <em>scrive sola</em>. {shown} articol{shown === 1 ? 'o' : 'i'} per le partite di {activeTab === 'oggi' ? 'stasera' : activeTab === 'domani' ? 'domani' : 'dopodomani'}, prima del kickoff.</h1>
         <p className="mast-deck">
-          Ogni giorno il nostro motore di sintesi legge <b>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma — completo di <b>pronostico AI</b> con livello di confidenza. Nessun giornalista umano è coinvolto. È pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
+          Ogni giorno il nostro motore di sintesi legge <b>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma â€” completo di <b>pronostico AI</b> con livello di confidenza. Nessun giornalista umano Ã¨ coinvolto. Ãˆ pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
         </p>
       </section>
 
-      {/* ============ FILTRO ============ */}
+      {/* ============ FILTRO (dinamico, sui dati reali) ============ */}
       <div className="filter-wrap">
         <div className="filter-bar">
           <div className="filter-row countries">
             <span className="lbl">Notizie da</span>
             <button className={`f-link ${activeCountry === '' ? 'on' : ''}`} onClick={() => handleCountry('')}>Tutte</button>
-            <span className="sep">·</span>
-            <button className={`f-link ${activeCountry === 'inghilterra' ? 'on' : ''}`} onClick={() => handleCountry('inghilterra')}>Inghilterra</button>
-            <span className="sep">·</span>
-            <button className={`f-link ${activeCountry === 'svezia' ? 'on' : ''}`} onClick={() => handleCountry('svezia')}>Svezia</button>
-            <span className="sep">·</span>
-            <button className={`f-link ${activeCountry === 'brasile' ? 'on' : ''}`} onClick={() => handleCountry('brasile')}>Brasile</button>
-            <span className="sep">·</span>
-            <button className={`f-link ${activeCountry === 'finlandia' ? 'on' : ''}`} onClick={() => handleCountry('finlandia')}>Finlandia</button>
-          </div>
-          <div className={`filter-row leagues ${activeCountry ? 'show' : ''}`}>
-            <span className="lbl">Leghe</span>
-            <button className={`f-link ${activeLeague === '' ? 'on' : ''}`} onClick={() => setActiveLeague('')}>Tutte</button>
-            {currentLeagues && Object.entries(currentLeagues).map(([slug, label]) => (
-              <React.Fragment key={slug}>
-                <span className="sep">·</span>
-                <button className={`f-link ${activeLeague === slug ? 'on' : ''}`} onClick={() => handleLeague(slug)}>{label}</button>
+            {visibleCountries.map(c => (
+              <React.Fragment key={c}>
+                <span className="sep">Â·</span>
+                <button className={`f-link ${activeCountry === c ? 'on' : ''}`} onClick={() => handleCountry(c)}>{COUNTRY_LABEL[c] || c}</button>
               </React.Fragment>
             ))}
           </div>
+          {activeCountry && visibleLeaguesForCountry.length > 0 && (
+            <div className="filter-row leagues show">
+              <span className="lbl">Leghe</span>
+              <button className={`f-link ${activeLeague === '' ? 'on' : ''}`} onClick={() => setActiveLeague('')}>Tutte</button>
+              {visibleLeaguesForCountry.map(l => (
+                <React.Fragment key={l.slug}>
+                  <span className="sep">Â·</span>
+                  <button className={`f-link ${activeLeague === l.slug ? 'on' : ''}`} onClick={() => handleLeague(l.slug)}>{l.name}</button>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* breadcrumb */}
-      <div className={`breadcrumb ${activeCountry ? 'show' : ''}`}>
-        <div className="crumb-path">
-          <span>Notizie</span>
-          {activeCountry && (
-            <>
-              <span className="sep">/</span>
-              <span>{COUNTRIES[activeCountry].label}</span>
-            </>
-          )}
-          {activeCountry && activeLeague && (
-            <>
-              <span className="sep">/</span>
-              <b>{COUNTRIES[activeCountry].leagues[activeLeague]}</b>
-            </>
-          )}
+      {activeCountry && (
+        <div className="breadcrumb show">
+          <div className="crumb-path">
+            <span>Notizie</span>
+            <span className="sep">/</span>
+            <span>{COUNTRY_LABEL[activeCountry] || activeCountry}</span>
+            {activeLeague && (
+              <>
+                <span className="sep">/</span>
+                <b>{visibleLeaguesForCountry.find(l => l.slug === activeLeague)?.name || activeLeague}</b>
+              </>
+            )}
+          </div>
+          <button className="clear-filter" onClick={clearFilter}><span className="x">Ã—</span> Rimuovi filtro</button>
         </div>
-        <button className="clear-filter" onClick={clearFilter}><span className="x">×</span> Rimuovi filtro</button>
-      </div>
+      )}
 
-      {/* ============ LAYOUT ============ */}
+      {/* ============ LAYOUT (dinamico, dati reali dal backend) ============ */}
       <div className="layout">
         <aside className="index-rail">
-          <div className="ir-h">Indice · oggi <span className="ir-count">({shown})</span></div>
+          <div className="ir-h">Indice · {activeTab} <span className="ir-count">({shown})</span></div>
           <div className="ir-list">
-            {[
-              { id: 'a-1', country: 'inghilterra', league: 'premier-league', time: '15:00', label: 'Arsenal · Newcastle' },
-              { id: 'a-2', country: 'inghilterra', league: 'premier-league', time: '17:00', label: 'Liverpool · Crystal Palace' },
-              { id: 'a-3', country: 'svezia', league: 'allsvenskan', time: '17:30', label: 'AIK · Djurgården' },
-              { id: 'a-4', country: 'svezia', league: 'allsvenskan', time: '19:00', label: 'Malmö FF · Hammarby' },
-              { id: 'a-5', country: 'brasile', league: 'brasileirao', time: '20:00', label: 'Flamengo · Atl. Mineiro' },
-              { id: 'a-6', country: 'finlandia', league: 'veikkausliiga', time: '21:15', label: 'HJK · Inter Turku' },
-              { id: 'a-7', country: 'brasile', league: 'brasileirao', time: '22:30', label: 'Botafogo · Internacional' },
-            ].map(it => (
-              <a
-                key={it.id}
-                href={`#${it.id}`}
-                className={`ir-item ${activeRail === it.id ? 'active' : ''}`}
-                style={hideStyle(isVisible(it.country, it.league))}
-                onClick={() => setActiveRail(it.id)}
-              >
-                {it.time}<span className="lbl">{it.label}</span>
-              </a>
-            ))}
+            {filtered.map((m, i) => {
+              const id = `a-${i + 1}`;
+              return (
+                <a
+                  key={id}
+                  href={`#${id}`}
+                  className={`ir-item ${activeRail === id ? 'active' : ''}`}
+                  onClick={(e) => { setActiveRail(id); openArticle(e, m); }}
+                >
+                  {m.match_time || MISSING_PLAIN}<span className="lbl">{m.home} · {m.away}</span>
+                </a>
+              );
+            })}
+            {filtered.length === 0 && !loading && (
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--t-faint)', padding: '6px 0' }}>—</div>
+            )}
           </div>
           <div className="ir-foot">
             Pubblicazione automatica T-6h dal kickoff. Nessun intervento editoriale umano.
@@ -527,336 +666,100 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         </aside>
 
         <main className="stack">
-          <div className={`empty-state ${shown === 0 ? 'show' : ''}`}>
-            <div className="eye">Nessun articolo</div>
-            <p>Nessuna partita corrisponde al filtro selezionato per la giornata di oggi.</p>
-          </div>
-
-          {/* 1 — ARSENAL · NEWCASTLE (FEATURE) */}
-          <article className="article feature" id="a-1" style={hideStyle(isVisible('inghilterra', 'premier-league'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#a855f7' }} />Premier League · 38ª giornata</span>
-                <span className="ko">Kickoff 15:00 · Emirates</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-ars">A</div><div className="ml-name">Arsenal</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-new">N</div><div className="ml-name">Newcastle</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-1" onClick={(e) => openArticle(e, 'a-1')} style={{ cursor: 'pointer' }}>Arsenal cerca il sorpasso sul filo: Arteta conferma Saka dal 1', Howe risponde con un 4-3-3 più aggressivo</a></h2>
-              <p className="a-lede">
-                L'ultima giornata di Premier League vale la <b>qualificazione diretta in Champions</b> per entrambe le squadre, separate da otto punti in classifica ma con una differenza reti che pende dalla parte dei londinesi. Arteta recupera Saliba dopo il turno di squalifica e dovrebbe rilanciare Saka dal 1' nonostante l'affaticamento muscolare segnalato in conferenza giovedì. Newcastle arriva con Isak in forma — sei gol nelle ultime cinque trasferte — ma la difesa di Howe ha incassato gol in 6 delle ultime 7 fuori casa.
-              </p>
-              <ul className="a-bullets">
-                <li>Saka dovrebbe partire titolare nonostante un fastidio agli adduttori; in panchina pronto Trossard</li>
-                <li>Newcastle prova un 4-3-3 più aggressivo: dentro Anderson sulla mediana, Joelinton avanzato</li>
-                <li>Storico recente: 3 vittorie Arsenal nelle ultime 5 H2H, ma nessuna delle tre con più di un gol di scarto</li>
-              </ul>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span>
-                  <span>·</span>
-                  <span>pubblicato <b>09:14 CEST</b></span>
-                  <span>·</span>
-                  <span>1.840 parole · 6 min</span>
-                </div>
-                <a className="read-link" href="#a-1" onClick={(e) => openArticle(e, 'a-1')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
+          {loading && (
+            <div className="empty-state show">
+              <div className="eye">Caricamento</div>
+              <p>Caricamento articoli in corso…</p>
             </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">14 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Vittoria 1</b>esito home · spread +1.4</div>
-                <div className="pron-num">71<small>%</small></div>
-              </div>
-              <div className="pron-bar"><i style={{ width: '71%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>2.14 / 1.02</b></div>
-                <div className="r"><span>Form casa</span><b>W W D W W</b></div>
-                <div className="r"><span>Quota mercato</span><b>1.72</b></div>
-                <div className="r"><span>Linea vs market</span><b style={{ color: 'var(--green)' }}>+ value</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-1" onClick={(e) => openArticle(e, 'a-1')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
-
-          {/* 2 — LIVERPOOL · CRYSTAL PALACE */}
-          <article className="article" id="a-2" style={hideStyle(isVisible('inghilterra', 'premier-league'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#a855f7' }} />Premier League · 38ª giornata</span>
-                <span className="ko">Kickoff 17:00 · Anfield</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-liv">L</div><div className="ml-name">Liverpool</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-cry">C</div><div className="ml-name">Crystal Palace</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-2" onClick={(e) => openArticle(e, 'a-2')} style={{ cursor: 'pointer' }}>Festa Anfield, ma Slot blinda la formazione: Salah dalla panchina, Glasner cerca i tre punti europei</a></h2>
-              <p className="a-lede">
-                Liverpool ha vinto il titolo da due giornate e Slot ha promesso una rotazione "completa, ma non incosciente". Salah parte fuori — terzo turno consecutivo — e dovrebbe lasciare spazio a Chiesa esterno destro. <b>Crystal Palace gioca per la Conference</b>: Glasner conferma il 3-4-2-1 con Mateta punta. L'allenatore austriaco ha lamentato in conferenza la fatica accumulata dopo la finale di FA Cup.
-              </p>
-              <ul className="a-bullets">
-                <li>Possibile esordio dal 1' per il giovane Danns a centrocampo</li>
-                <li>Liverpool senza tiri in porta solo 2 volte ad Anfield in stagione</li>
-              </ul>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
-                  <span>pub. <b>10:02 CEST</b></span><span>·</span>
-                  <span>1.620 parole · 5 min</span>
-                </div>
-                <a className="read-link" href="#a-2" onClick={(e) => openArticle(e, 'a-2')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
+          )}
+          {!loading && error && (
+            <div className="empty-state show">
+              <div className="eye">Errore</div>
+              <p>{error}</p>
             </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">12 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
-                <div className="pron-num">78<small>%</small></div>
-              </div>
-              <div className="pron-bar"><i style={{ width: '78%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>2.38 / 0.92</b></div>
-                <div className="r"><span>Form casa</span><b>W W W L W</b></div>
-                <div className="r"><span>Quota mercato</span><b>1.42</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-2" onClick={(e) => openArticle(e, 'a-2')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
-
-          {/* 3 — AIK · DJURGÅRDEN */}
-          <article className="article" id="a-3" style={hideStyle(isVisible('svezia', 'allsvenskan'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#facc15' }} />Allsvenskan · 9ª giornata</span>
-                <span className="ko">Kickoff 17:30 · Strawberry Arena</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-aik">A</div><div className="ml-name">AIK</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-dju">D</div><div className="ml-name">Djurgården</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-3" onClick={(e) => openArticle(e, 'a-3')} style={{ cursor: 'pointer' }}>Tvillingderbyt sotto la pioggia: AIK punta sull'asse Otieno-Guidetti, Djurgården perde Kåhre per squalifica</a></h2>
-              <p className="a-lede">
-                Il derby di Stoccolma arriva al penultimo posto delle giornate "facili" per AIK — quattro partite contro top-6 nelle prossime sei. Norling sceglie il 4-2-3-1 con <b>Otieno e Guidetti</b> sull'asse offensivo destro; la mossa è coerente con un xG creato superiore del 18% quando giocano insieme. Djurgården perde Kåhre per squalifica e Lundgren è in dubbio: dentro Berg dal 1', sistema invariato.
-              </p>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
-                  <span>pub. <b>11:30 CEST</b></span><span>·</span>
-                  <span>1.480 parole</span>
-                </div>
-                <a className="read-link" href="#a-3" onClick={(e) => openArticle(e, 'a-3')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <div className="empty-state show">
+              <div className="eye">Nessun articolo</div>
+              <p>{activeCountry || activeLeague
+                ? 'Nessuna partita corrisponde al filtro selezionato per questa giornata.'
+                : 'Nessun articolo disponibile per questa giornata. Gli articoli vengono pubblicati a partire da T-6h dal kickoff.'}</p>
             </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">11 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Pareggio X</b>derby equilibrato</div>
-                <div className="pron-num med">42<small>%</small></div>
-              </div>
-              <div className="pron-bar med"><i style={{ width: '42%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>1.34 / 1.16</b></div>
-                <div className="r"><span>H2H ultimi 10</span><b>3 - 4 - 3</b></div>
-                <div className="r"><span>Quota mercato</span><b>3.60</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-3" onClick={(e) => openArticle(e, 'a-3')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
-
-          {/* 4 — MALMÖ FF · HAMMARBY */}
-          <article className="article" id="a-4" style={hideStyle(isVisible('svezia', 'allsvenskan'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#facc15' }} />Allsvenskan · 9ª giornata</span>
-                <span className="ko">Kickoff 19:00 · Eleda Stadion</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-mff">M</div><div className="ml-name">Malmö FF</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-ham">H</div><div className="ml-name">Hammarby</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-4" onClick={(e) => openArticle(e, 'a-4')} style={{ cursor: 'pointer' }}>Eleda sold-out: Tomasson testa la nuova punta centrale, Hammarby con un 5-3-2 di emergenza</a></h2>
-              <p className="a-lede">
-                Malmö in striscia positiva da quattro partite, capolista provvisorio in attesa dell'AIK. Tomasson <b>cambia struttura</b>: 4-3-3 con Nanasi a sinistra e Hakšabanović dietro Larsson — assetto inedito ma testato nelle amichevoli di marzo. Hammarby vive una crisi parallela in difesa: tre titolari out, costruzione bassa con il 5-3-2.
-              </p>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
-                  <span>pub. <b>12:18 CEST</b></span><span>·</span>
-                  <span>1.720 parole</span>
+          )}
+          {!loading && !error && filtered.map((m, idx) => {
+            const id = `a-${idx + 1}`;
+            const isFeature = idx === 0;
+            const effort: 'DEEP' | 'LITE' = m.scout_deep?.scout_text ? 'DEEP' : 'LITE';
+            const scoutText = (effort === 'DEEP' ? m.scout_deep?.scout_text : m.scout_lite?.scout_text) || '';
+            const lede = extractLede(scoutText);
+            const tip = getTopTip(m);
+            const conf = tip?.confidence || 0;
+            const confMed = conf < 60;
+            const dotColor = leagueDotColor(m.league || '');
+            const title = `${m.home}–${m.away}: ${tip?.pronostico ? `pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : 'analisi pre-partita'}`;
+            return (
+              <article key={id} className={`article ${isFeature ? 'feature' : ''}`} id={id}>
+                <div>
+                  <div className="a-eyebrow">
+                    <span className="league">
+                      <span className="ld" style={{ background: dotColor }} />
+                      {m.league || m.lega || <>{TODO_INLINE}</>}
+                    </span>
+                    <span className="ko">Kickoff {m.match_time || <>{MISSING_INLINE}</>}{' '}· <span title="Da sistemare: stadio non popolato dal backend" className="missing">stadio: da sistemare</span></span>
+                    <span className={effort === 'DEEP' ? 'deep' : 'lite'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
+                  </div>
+                  <div className="match-line">
+                    <div className="ml-team">
+                      <div className="ml-crest" style={{ background: crestGradient(m.home) }}>{crestInitial(m.home)}</div>
+                      <div className="ml-name">{m.home}</div>
+                    </div>
+                    <div className="ml-vs">vs</div>
+                    <div className="ml-team">
+                      <div className="ml-crest" style={{ background: crestGradient(m.away) }}>{crestInitial(m.away)}</div>
+                      <div className="ml-name">{m.away}</div>
+                    </div>
+                  </div>
+                  <h2 className="a-title">
+                    <a href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>{title}</a>
+                  </h2>
+                  {lede && <p className="a-lede">{lede}</p>}
+                  <div className="a-foot">
+                    <div className="by-line">
+                      <span><b>La Redazione di AI Simulator</b></span>
+                    </div>
+                    <a className="read-link" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
+                  </div>
                 </div>
-                <a className="read-link" href="#a-4" onClick={(e) => openArticle(e, 'a-4')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
-            </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">13 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
-                <div className="pron-num">61<small>%</small></div>
-              </div>
-              <div className="pron-bar"><i style={{ width: '61%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>1.86 / 1.12</b></div>
-                <div className="r"><span>Form casa</span><b>W W D W W</b></div>
-                <div className="r"><span>Quota mercato</span><b>1.95</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-4" onClick={(e) => openArticle(e, 'a-4')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
-
-          {/* 5 — FLAMENGO · ATL. MINEIRO */}
-          <article className="article" id="a-5" style={hideStyle(isVisible('brasile', 'brasileirao'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#4ade80' }} />Brasileirão · 8ª giornata</span>
-                <span className="ko">Kickoff 20:00 · Maracanã</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-fla">F</div><div className="ml-name">Flamengo</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-atm">A</div><div className="ml-name">Atlético Mineiro</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-5" onClick={(e) => openArticle(e, 'a-5')} style={{ cursor: 'pointer' }}>Maracanã pieno: Filipe Luís rilancia Pedro al centro dell'attacco, problemi a centrocampo per il Galo</a></h2>
-              <p className="a-lede">
-                Flamengo seconda dietro al Botafogo per soli due punti, ma con una partita in meno. Filipe Luís — al primo mese sulla panchina — recupera Pedro dopo l'infortunio di aprile e lo rimette al centro del 4-3-3 al posto di Bruno Henrique. <b>Atlético Mineiro</b> arriva senza Hulk (squalificato) e con Otávio in dubbio: Milito potrebbe schierare un 4-1-4-1 di copertura.
-              </p>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
-                  <span>pub. <b>13:04 CEST</b></span><span>·</span>
-                  <span>1.910 parole</span>
-                </div>
-                <a className="read-link" href="#a-5" onClick={(e) => openArticle(e, 'a-5')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
-            </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">15 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
-                <div className="pron-num">63<small>%</small></div>
-              </div>
-              <div className="pron-bar"><i style={{ width: '63%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>1.74 / 1.13</b></div>
-                <div className="r"><span>Form casa</span><b>W D W W L</b></div>
-                <div className="r"><span>Quota mercato</span><b>1.88</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-5" onClick={(e) => openArticle(e, 'a-5')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
-
-          {/* 6 — HJK · INTER TURKU */}
-          <article className="article" id="a-6" style={hideStyle(isVisible('finlandia', 'veikkausliiga'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#22d3ee' }} />Veikkausliiga · 10ª giornata</span>
-                <span className="ko">Kickoff 21:15 · Bolt Arena</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-hjk">H</div><div className="ml-name">HJK</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-itu">I</div><div className="ml-name">Inter Turku</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-6" onClick={(e) => openArticle(e, 'a-6')} style={{ cursor: 'pointer' }}>Bolt Arena: Koskinen prova il 3-4-3, Inter Turku con la coppia Anier-Ngueukam in attacco</a></h2>
-              <p className="a-lede">
-                HJK capolista, ma con una difesa che ha concesso gol in cinque delle ultime sei: Koskinen cambia disegno e passa al <b>3-4-3</b> con Hostikka braccetto sinistro. Inter Turku terzo in classifica, gioca il match più importante della stagione fin qui: Källman ha confermato in conferenza che Anier e Ngueukam partono insieme dal 1' per la prima volta.
-              </p>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
-                  <span>pub. <b>13:42 CEST</b></span><span>·</span>
-                  <span>1.380 parole</span>
-                </div>
-                <a className="read-link" href="#a-6" onClick={(e) => openArticle(e, 'a-6')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
-            </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">9 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
-                <div className="pron-num">58<small>%</small></div>
-              </div>
-              <div className="pron-bar"><i style={{ width: '58%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>1.58 / 1.16</b></div>
-                <div className="r"><span>Form casa</span><b>W W L W D</b></div>
-                <div className="r"><span>Quota mercato</span><b>2.10</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-6" onClick={(e) => openArticle(e, 'a-6')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
-
-          {/* 7 — BOTAFOGO · INTERNACIONAL */}
-          <article className="article" id="a-7" style={hideStyle(isVisible('brasile', 'brasileirao'))}>
-            <div>
-              <div className="a-eyebrow">
-                <span className="league"><span className="ld" style={{ background: '#4ade80' }} />Brasileirão · 8ª giornata</span>
-                <span className="ko">Kickoff 22:30 · Nilton Santos</span>
-                <span className="deep">DEEP</span>
-              </div>
-              <div className="match-line">
-                <div className="ml-team"><div className="ml-crest c-bot">B</div><div className="ml-name">Botafogo</div></div>
-                <div className="ml-vs">vs</div>
-                <div className="ml-team"><div className="ml-crest c-int">I</div><div className="ml-name">Internacional</div></div>
-              </div>
-              <h2 className="a-title"><a href="#a-7" onClick={(e) => openArticle(e, 'a-7')} style={{ cursor: 'pointer' }}>Nilton Santos: Almada falso nove, Roger Machado conferma il 4-2-3-1 nonostante l'assenza di Borré</a></h2>
-              <p className="a-lede">
-                Botafogo capolista con percentuale-vittoria 67% in stagione, ma stanco — terza partita in sette giorni. Cavalieri rinuncia a Tiquinho e <b>schiera Almada falso nove</b> per liberare gli inserimenti di Savarino. Internacional senza Borré (infortunato) e senza Wanderson (squalificato): Wesley unica punta, Aguirre conferma il modulo.
-              </p>
-              <div className="a-foot">
-                <div className="by-line">
-                  <span><b>La Redazione di AI Simulator</b></span><span>·</span>
-                  <span>pub. <b>14:00 CEST</b></span><span>·</span>
-                  <span>1.560 parole</span>
-                </div>
-                <a className="read-link" href="#a-7" onClick={(e) => openArticle(e, 'a-7')} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
-              </div>
-            </div>
-            <aside className="pron-card">
-              <div className="pron-h"><span>Pronostico AI</span><span className="src-count">12 fonti</span></div>
-              <div className="pron-main">
-                <div className="pron-pick"><b>Vittoria 1</b>esito home</div>
-                <div className="pron-num">54<small>%</small></div>
-              </div>
-              <div className="pron-bar"><i style={{ width: '54%' }} /></div>
-              <div className="pron-stats">
-                <div className="r"><span>xG attesi</span><b>1.42 / 1.11</b></div>
-                <div className="r"><span>Form casa</span><b>W W W D W</b></div>
-                <div className="r"><span>Quota mercato</span><b>2.05</b></div>
-              </div>
-              <div className="pron-foot">
-                <a className="open-btn" href="#a-7" onClick={(e) => openArticle(e, 'a-7')} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
-              </div>
-            </aside>
-          </article>
+                <aside className="pron-card">
+                  <div className="pron-h"><span>Pronostico AI</span><span className="src-count">{effort === 'DEEP' ? 'Scout Deep' : 'Scout Lite'}</span></div>
+                  <div className="pron-main">
+                    <div className="pron-pick">
+                      <b>{tip?.pronostico || '—'}</b>
+                      {tip?.tipo ? tip.tipo : 'esito principale'}
+                    </div>
+                    <div className={`pron-num${confMed ? ' med' : ''}`}>
+                      {tip ? conf.toFixed(0) : '—'}<small>%</small>
+                    </div>
+                  </div>
+                  <div className={`pron-bar${confMed ? ' med' : ''}`}><i style={{ width: `${conf}%` }} /></div>
+                  <div className="pron-stats">
+                    <div className="r"><span>xG attesi</span><b><span className="missing" title="Da sistemare: xG separati casa/trasferta non ancora calcolati dal backend">da sistemare</span></b></div>
+                    <div className="r"><span>Form casa</span><b><span className="missing" title="Da sistemare: stringa forma WWDWW non ancora calcolata dal backend">da sistemare</span></b></div>
+                    <div className="r"><span>Quota mercato</span><b>{tip?.quota ? tip.quota.toFixed(2) : <span className="missing" title="Dato non disponibile per questa partita">?</span>}</b></div>
+                  </div>
+                  <div className="pron-foot">
+                    <a className="open-btn" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+                  </div>
+                </aside>
+              </article>
+            );
+          })}
         </main>
       </div>
 
       <footer className="site-foot">
         <div>Tutti i contenuti sono generati da modelli linguistici. <b>Le previsioni non costituiscono consigli di scommessa.</b></div>
-        <div>build · 2026.05.18 · pipeline #11471 · /v1/research</div>
+        <div>build Â· 2026.05.18 Â· pipeline #11471 Â· /v1/research</div>
       </footer>
     </div>
   );

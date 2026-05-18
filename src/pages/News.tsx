@@ -242,7 +242,7 @@ const STYLES = `
   }
   .news-root *{box-sizing:border-box}
   .news-root{background:var(--bg);color:var(--t);font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
-  .news-root .mono{font-family:'JetBrains Mono','Consolas',ui-monospace,monospace;font-feature-settings:"ss01","cv11"}
+  .news-root .mono{font-family:'JetBrains Mono','Consolas',ui-monospace,monospace;font-feature-settings:"cv11"}
   .news-root a{color:inherit;text-decoration:none}
 
   .news-root .chyron{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line)}

@@ -75,6 +75,11 @@ interface MatchA {
   scout_deep?: { scout_text?: string; computed_at?: string };
   expected_total_goals?: number | null;
   news_meta?: NewsMetaA;
+  // mongo_id squadre per costruire l'URL stemma Firebase Storage
+  home_mongo_id?: string | null;
+  away_mongo_id?: string | null;
+  home_logo_url?: string | null;
+  away_logo_url?: string | null;
   // Stato partita: live e finale (propagati da daemon_live_scores via unified).
   real_score?: string | null;       // "H:A" stringa, es. "2:1" - presente quando finita
   live_score?: string | null;       // "H:A" durante la partita
@@ -88,6 +93,38 @@ interface ApiRespA {
 }
 
 const MESI_A = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+
+// Stemmi Firebase Storage: stesso schema usato da DailyPredictions.tsx.
+const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
+const LEAGUE_TO_FOLDER_A: Record<string, string> = {
+  'Serie A': 'serie_a', 'Serie B': 'serie_b',
+  'Serie C - Girone A': 'serie_c_a', 'Serie C - Girone B': 'serie_c_b', 'Serie C - Girone C': 'serie_c_c', 'Serie C': 'serie_c_c',
+  'Premier League': 'premier_league', 'Championship': 'championship',
+  'League One': 'league_one', 'League Two': 'league_two',
+  'La Liga': 'la_liga', 'LaLiga 2': 'la_liga_2',
+  'Bundesliga': 'bundesliga', '2. Bundesliga': 'bundesliga_2', '3. Liga': '3_liga',
+  'Ligue 1': 'ligue_1', 'Ligue 2': 'ligue_2',
+  'Eredivisie': 'eredivisie', 'Eerste Divisie': 'eerste_divisie',
+  'Liga Portugal': 'primeira_liga', 'Primeira Liga': 'primeira_liga', 'Liga Portugal 2': 'liga_portugal_2',
+  'Scottish Premiership': 'scottish_premiership', 'Scottish Championship': 'scottish_championship',
+  'Allsvenskan': 'allsvenskan', 'Eliteserien': 'eliteserien', 'Superligaen': 'superligaen',
+  'Veikkausliiga': 'veikkausliiga',
+  'Jupiler Pro League': 'jupiler_pro_league',
+  'Süper Lig': 'super_lig', '1. Lig': '1_lig',
+  'League of Ireland Premier Division': 'league_of_ireland',
+  'Saudi Pro League': 'saudi_pro_league',
+  'Brasileirão Serie A': 'brasileirao', 'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao', 'Brasileirao Serie A': 'brasileirao',
+  'Primera División': 'primera_division_arg',
+  'MLS': 'mls', 'Major League Soccer': 'mls',
+  'Liga MX': 'liga_mx',
+  'J1 League': 'j1_league',
+  'Champions League': 'coppe', 'Europa League': 'coppe',
+};
+const getStemmaUrl = (mongoId: string | null | undefined, league: string | null | undefined): string => {
+  if (!mongoId) return '';
+  const folder = (league && LEAGUE_TO_FOLDER_A[league]) || 'Altro';
+  return `${STEMMI_BASE}squadre%2F${folder}%2F${mongoId}.png?alt=media`;
+};
 
 // Mappa lega -> nazione (slug) per il breadcrumb.
 const LEAGUE_TO_COUNTRY_A: Record<string, string> = {
@@ -825,7 +862,24 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           <section className="poster">
             <div className="poster-inner">
               <div className="poster-team">
-                <div className="poster-crest" style={{ background: crestGradientA(home), color: '#fff' }}>{crestInitialA(home)}</div>
+                {matchData?.home_mongo_id ? (
+                  <img
+                    className="poster-crest"
+                    src={matchData.home_logo_url || getStemmaUrl(matchData.home_mongo_id, league)}
+                    alt={home}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      const fallback = target.nextElementSibling as HTMLElement | null;
+                      target.style.display = 'none';
+                      if (fallback) fallback.style.display = 'grid';
+                    }}
+                    style={{ objectFit: 'contain', background: 'transparent' }}
+                  />
+                ) : null}
+                <div className="poster-crest" style={{
+                  background: crestGradientA(home), color: '#fff',
+                  display: matchData?.home_mongo_id ? 'none' : 'grid',
+                }}>{crestInitialA(home)}</div>
                 <div>
                   <div className="poster-name">{home}</div>
                   <div className="poster-meta">
@@ -864,7 +918,24 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 )}
               </div>
               <div className="poster-team away">
-                <div className="poster-crest" style={{ background: crestGradientA(away), color: '#fff' }}>{crestInitialA(away)}</div>
+                {matchData?.away_mongo_id ? (
+                  <img
+                    className="poster-crest"
+                    src={matchData.away_logo_url || getStemmaUrl(matchData.away_mongo_id, league)}
+                    alt={away}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      const fallback = target.nextElementSibling as HTMLElement | null;
+                      target.style.display = 'none';
+                      if (fallback) fallback.style.display = 'grid';
+                    }}
+                    style={{ objectFit: 'contain', background: 'transparent' }}
+                  />
+                ) : null}
+                <div className="poster-crest" style={{
+                  background: crestGradientA(away), color: '#fff',
+                  display: matchData?.away_mongo_id ? 'none' : 'grid',
+                }}>{crestInitialA(away)}</div>
                 <div>
                   <div className="poster-name">{away}</div>
                   <div className="poster-meta">

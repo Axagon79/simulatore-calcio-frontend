@@ -94,31 +94,35 @@ interface ApiRespA {
 
 const MESI_A = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
-// Stemmi Firebase Storage: stesso schema usato da DailyPredictions.tsx.
+// Stemmi Firebase Storage. Schema: stemmi/squadre/{Country_Folder}/{mongo_id}.png
+// Folder = NAZIONE (es. "Italy", "England"), non slug lega.
+// Allineato a src/UnifiedPredictions.tsx LEAGUE_TO_FOLDER (autorita').
 const STEMMI_BASE = 'https://firebasestorage.googleapis.com/v0/b/puppals-456c7.firebasestorage.app/o/stemmi%2F';
 const LEAGUE_TO_FOLDER_A: Record<string, string> = {
-  'Serie A': 'serie_a', 'Serie B': 'serie_b',
-  'Serie C - Girone A': 'serie_c_a', 'Serie C - Girone B': 'serie_c_b', 'Serie C - Girone C': 'serie_c_c', 'Serie C': 'serie_c_c',
-  'Premier League': 'premier_league', 'Championship': 'championship',
-  'League One': 'league_one', 'League Two': 'league_two',
-  'La Liga': 'la_liga', 'LaLiga 2': 'la_liga_2',
-  'Bundesliga': 'bundesliga', '2. Bundesliga': 'bundesliga_2', '3. Liga': '3_liga',
-  'Ligue 1': 'ligue_1', 'Ligue 2': 'ligue_2',
-  'Eredivisie': 'eredivisie', 'Eerste Divisie': 'eerste_divisie',
-  'Liga Portugal': 'primeira_liga', 'Primeira Liga': 'primeira_liga', 'Liga Portugal 2': 'liga_portugal_2',
-  'Scottish Premiership': 'scottish_premiership', 'Scottish Championship': 'scottish_championship',
-  'Allsvenskan': 'allsvenskan', 'Eliteserien': 'eliteserien', 'Superligaen': 'superligaen',
-  'Veikkausliiga': 'veikkausliiga',
-  'Jupiler Pro League': 'jupiler_pro_league',
-  'Süper Lig': 'super_lig', '1. Lig': '1_lig',
-  'League of Ireland Premier Division': 'league_of_ireland',
-  'Saudi Pro League': 'saudi_pro_league',
-  'Brasileirão Serie A': 'brasileirao', 'Brasileirão': 'brasileirao', 'Brasileirao': 'brasileirao', 'Brasileirao Serie A': 'brasileirao',
-  'Primera División': 'primera_division_arg',
-  'MLS': 'mls', 'Major League Soccer': 'mls',
-  'Liga MX': 'liga_mx',
-  'J1 League': 'j1_league',
-  'Champions League': 'coppe', 'Europa League': 'coppe',
+  'Serie A': 'Italy', 'Serie B': 'Italy',
+  'Serie C - Girone A': 'Italy', 'Serie C - Girone B': 'Italy', 'Serie C - Girone C': 'Italy', 'Serie C': 'Italy',
+  'Premier League': 'England', 'Championship': 'England', 'League One': 'England', 'League Two': 'England',
+  'La Liga': 'Spain', 'LaLiga 2': 'Spain',
+  'Bundesliga': 'Germany', '2. Bundesliga': 'Germany', '3. Liga': 'Germany',
+  'Ligue 1': 'France', 'Ligue 2': 'France',
+  'Liga Portugal': 'Portugal', 'Primeira Liga': 'Portugal', 'Liga Portugal 2': 'Portugal',
+  'Eredivisie': 'Netherlands', 'Eerste Divisie': 'Netherlands',
+  'Scottish Prem.': 'Scotland', 'Scottish Premiership': 'Scotland', 'Scottish Championship': 'Scotland',
+  'Allsvenskan': 'Sweden',
+  'Eliteserien': 'Norway',
+  'Superligaen': 'Denmark',
+  'Veikkausliiga': 'Finland',
+  'Jupiler Pro': 'Belgium', 'Jupiler Pro League': 'Belgium',
+  'Süper Lig': 'Turkey', 'Super Lig': 'Turkey', '1. Lig': 'Turkey',
+  'League of Ireland': 'Ireland', 'League of Ireland Premier Division': 'Ireland',
+  'Saudi Pro League': 'Saudi_Arabia',
+  'Brasileirão': 'Brazil', 'Brasileirao': 'Brazil', 'Brasileirão Serie A': 'Brazil', 'Brasileirao Serie A': 'Brazil',
+  'Primera División': 'Argentina',
+  'MLS': 'USA', 'Major League Soccer': 'USA',
+  'Liga MX': 'Mexico',
+  'J1 League': 'Japan',
+  'Champions League': 'Champions_League',
+  'Europa League': 'Europa_League',
 };
 const getStemmaUrl = (mongoId: string | null | undefined, league: string | null | undefined): string => {
   if (!mongoId) return '';

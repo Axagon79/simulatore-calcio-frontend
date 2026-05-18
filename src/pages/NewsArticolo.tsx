@@ -383,7 +383,7 @@ const STYLES = `
   .article-root .poster-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t-faint);letter-spacing:0.14em;text-transform:uppercase;margin-top:6px}
   .article-root .poster-meta b{color:var(--t-dim);font-weight:500}
   .article-root .poster-center{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 20px;border-left:1px solid var(--line);border-right:1px solid var(--line);min-width:160px}
-  .article-root .poster-ko{font-family:'JetBrains Mono',monospace;font-size:54px;font-weight:600;color:var(--t);letter-spacing:-0.04em;line-height:1}
+  .article-root .poster-ko{font-family:'JetBrains Mono',monospace;font-size:54px;font-weight:600;color:var(--t);letter-spacing:-0.04em;line-height:1;font-feature-settings:"zero" 0,"ss01" 0}
   .article-root .poster-when{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t-faint);letter-spacing:0.14em;text-transform:uppercase;margin-top:8px;text-align:center}
   .article-root .poster-when b{color:var(--t-dim);font-weight:500}
   .article-root .poster-where{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:0.14em;text-transform:uppercase;margin-top:4px}
@@ -720,6 +720,41 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
     () => selezionaTopPronostici(matchData?.pronostici, matchData?.odds, 3),
     [matchData?.pronostici, matchData?.odds]
   );
+
+  // Mini crest per le card nav prev/next: img stemma con fallback gradient.
+  const NavCrest: React.FC<{ m: MatchA; side: 'home' | 'away' }> = ({ m, side }) => {
+    const teamName = side === 'home' ? m.home : m.away;
+    const mongoId = side === 'home' ? m.home_mongo_id : m.away_mongo_id;
+    const logoUrl = side === 'home' ? m.home_logo_url : m.away_logo_url;
+    const lg = m.league || m.lega || '';
+    if (mongoId) {
+      return (
+        <>
+          <img
+            className="nav-crest"
+            src={logoUrl || getStemmaUrl(mongoId, lg)}
+            alt={teamName}
+            onError={(e) => {
+              const target = e.currentTarget;
+              const fallback = target.nextElementSibling as HTMLElement | null;
+              target.style.display = 'none';
+              if (fallback) fallback.style.display = 'grid';
+            }}
+            style={{ objectFit: 'contain', background: 'transparent', borderRadius: 0, boxShadow: 'none' }}
+          />
+          <div className="nav-crest" style={{
+            background: crestGradientA(teamName), color: '#fff',
+            display: 'none',
+          }}>{crestInitialA(teamName)}</div>
+        </>
+      );
+    }
+    return (
+      <div className="nav-crest" style={{ background: crestGradientA(teamName), color: '#fff' }}>
+        {crestInitialA(teamName)}
+      </div>
+    );
+  };
   const dotColor = leagueDotColorA(league);
   const kickoff = matchData?.match_time || '';
   const expectedTotalGoals = matchData?.expected_total_goals ?? null;
@@ -1221,9 +1256,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <a className="nav-card prev" onClick={(e) => goToSibling(e, prevMatch)} href="#">
                   <div className="nav-dir"><span>← Articolo precedente</span><span className="ko">{prevMatch.match_time || ''}</span></div>
                   <div className="nav-row-team">
-                    <div className="nav-crest" style={{ background: crestGradientA(prevMatch.home), color: '#fff' }}>{crestInitialA(prevMatch.home)}</div>
+                    <NavCrest m={prevMatch} side="home" />
                     <span>vs</span>
-                    <div className="nav-crest" style={{ background: crestGradientA(prevMatch.away), color: '#fff' }}>{crestInitialA(prevMatch.away)}</div>
+                    <NavCrest m={prevMatch} side="away" />
                   </div>
                   <p className="nav-title">{prevMatch.home} – {prevMatch.away}</p>
                 </a>
@@ -1237,9 +1272,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <a className="nav-card next" onClick={(e) => goToSibling(e, nextMatch)} href="#">
                   <div className="nav-dir"><span>Articolo successivo →</span><span className="ko">{nextMatch.match_time || ''}</span></div>
                   <div className="nav-row-team">
-                    <div className="nav-crest" style={{ background: crestGradientA(nextMatch.home), color: '#fff' }}>{crestInitialA(nextMatch.home)}</div>
+                    <NavCrest m={nextMatch} side="home" />
                     <span>vs</span>
-                    <div className="nav-crest" style={{ background: crestGradientA(nextMatch.away), color: '#fff' }}>{crestInitialA(nextMatch.away)}</div>
+                    <NavCrest m={nextMatch} side="away" />
                   </div>
                   <p className="nav-title">{nextMatch.home} – {nextMatch.away}</p>
                 </a>

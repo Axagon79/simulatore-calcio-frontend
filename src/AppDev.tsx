@@ -585,19 +585,23 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   // cerca la partita, setta selectedMatch + viewState='pre-match', pulisce URL.
   // NON dipende da todayData (che ha solo oggi): supporta domani, dopodomani,
   // qualsiasi data futura.
+  // Stato dell'auto-open: 'idle' = nessun param, 'loading' = fetch in corso,
+  // 'done' = finito (riuscito o fallito). Quando 'loading' AppDev rende uno
+  // splash invece di DashboardHome, evita il flash visivo.
+  const [autoOpenStatus, setAutoOpenStatus] = useState<'idle' | 'loading' | 'done'>(() => {
+    return new URLSearchParams(window.location.search).get('openMatch') ? 'loading' : 'idle';
+  });
   const autoOpenAttempted = useRef(false);
   useEffect(() => {
     if (autoOpenAttempted.current) return;
     const sp = new URLSearchParams(window.location.search);
     const raw = sp.get('openMatch');
-    console.log('[auto-open] search=', window.location.search, 'raw=', raw);
     if (!raw) return;
     autoOpenAttempted.current = true;
 
     const [home, away, date] = raw.split('|');
-    console.log('[auto-open] parsed:', { home, away, date });
     if (!home || !away || !date) {
-      console.warn('[auto-open] parametri incompleti, abort');
+      setAutoOpenStatus('done');
       return;
     }
     const norm = (s: string) => (s || '').toLowerCase().trim();
@@ -606,20 +610,12 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
 
     (async () => {
       try {
-        const url = `${API_BASE}/matches-today?date=${date}`;
-        console.log('[auto-open] fetch', url);
-        const response = await fetch(url);
+        const response = await fetch(`${API_BASE}/matches-today?date=${date}`);
         const data = await response.json();
-        console.log('[auto-open] response', { success: data.success, leagues: (data.leagues || []).length });
-        if (!data.success) {
-          console.warn('[auto-open] backend non success', data);
-          return;
-        }
+        if (!data.success) return;
         let found: Match | null = null;
-        const allTeams: string[] = [];
         for (const grp of (data.leagues || [])) {
           for (const m of (grp.matches || [])) {
-            allTeams.push(`${m.home} vs ${m.away}`);
             if (norm(m.home) === norm(home) && norm(m.away) === norm(away)) {
               found = m;
               break;
@@ -628,27 +624,20 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
           if (found) break;
         }
         if (found) {
-          console.log('[auto-open] MATCH TROVATO', found.home, 'vs', found.away);
           setTodayData(data.leagues);
           // ATTENZIONE: activeLeague NON deve essere null, altrimenti AppDev
           // renderizza <DashboardHome> e NON il blocco MAIN ARENA col pre-match
-          // (vedi riga 2058: `if (!activeLeague) return <DashboardHome>`).
-          // Usiamo 'TODAY' come fa onGoToToday della dashboard.
+          // (vedi `if (!activeLeague) return <DashboardHome>`).
           setActiveLeague('TODAY');
-          // Reset league (id lega selezionata) per evitare reset useEffect[league].
           setLeague('');
           setSelectedMatch(found);
           setViewState('pre-match');
-        } else {
-          console.warn('[auto-open] match NON trovato. Cercavo:', { home, away }, 'tra:', allTeams);
         }
       } catch (err) {
         console.error('[auto-open] errore fetch', err);
+      } finally {
+        setAutoOpenStatus('done');
       }
-      // NON puliamo l'URL: un altro listener (savedNav/popstate) reagisce e
-      // ripristina la vista 'list' resettando la nostra impostazione pre-match.
-      // Il param resta nell'URL, la guardia autoOpenAttempted impedisce comunque
-      // il doppio trigger durante la sessione.
     })();
   }, []);
 
@@ -688,12 +677,10 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   // Se l'utente seleziona un campionato dalla sidebar, torna a Calendario/lista
   useEffect(() => {
     if (isRestoringState.current) return;
-    console.log('[league-effect] league=', league, 'viewMode=', viewMode, 'viewState=', viewState);
     if (league && viewMode === 'today') {
       setViewMode('calendar');
     }
     if (league && viewState === 'pre-match') {
-      console.warn('[league-effect] RESETTING viewState to list because league=', league);
       setViewState('list');
       setSelectedMatch(null);
     }
@@ -2058,6 +2045,29 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
     // --- BLOCCO 1: LOGICA DASHBOARD (Versione Corretta e Pulita) ---
   if (!activeLeague) {
+    // Se stiamo aprendo una partita via ?openMatch=... mostra splash di caricamento
+    // invece della dashboard, cosi' evita il flash visivo nei ~200ms del fetch.
+    if (autoOpenStatus === 'loading') {
+      return (
+        <div style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: theme.bg, color: theme.text,
+          fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", fontSize: 15,
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              border: `3px solid ${theme.surface15}`, borderTopColor: theme.cyan,
+              animation: 'spin 0.9s linear infinite',
+            }} />
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textDim }}>
+              Apertura scheda partita...
+            </div>
+          </div>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      );
+    }
     return (
       <>
       <DashboardHome
@@ -2599,7 +2609,6 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
         {/* MAIN ARENA */}
         <div style={styles.arena}>
-          {(() => { console.log('[render arena] viewState=', viewState, 'viewMode=', viewMode, 'selectedMatch=', selectedMatch?.home, 'vs', selectedMatch?.away, 'activeLeague=', activeLeague); return null; })()}
           {viewState === 'list' && viewMode === 'today' && renderTodayMatches()}
           {viewState === 'list' && viewMode === 'calendar' && renderMatchList()}
           {viewState === 'pre-match' && (

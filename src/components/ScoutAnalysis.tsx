@@ -33,6 +33,17 @@ const stripJsonBlock = (raw: string): string => {
   return cleaned.trimEnd();
 };
 
+// Lo Scout (LITE e DEEP) mette nei pronostici testuali la coppia
+// "confidenza X%, peso Y" per fornire all'utente entrambe le metriche.
+// Il peso pero' e' telemetria interna (convinzione AI), non e' un dato
+// che l'utente capisce. Strippato dal render lasciando solo la confidenza.
+// Esempi gestiti:
+//   "Over 2.5 (confidenza 60%, peso 6)"  ->  "Over 2.5 (confidenza 60%)"
+//   "Over 2.5 (confidenza 60% , peso 6)" ->  "Over 2.5 (confidenza 60%)"
+//   "Over 2.5 (confidenza 60% peso 6)"   ->  "Over 2.5 (confidenza 60%)"
+const stripPeso = (raw: string): string =>
+  raw.replace(/(\d{1,3}\s*%)\s*[,;]?\s*peso\s*\d+/gi, '$1');
+
 const splitSections = (text: string): string[] => {
   const re = /(\*\*(?:Formazioni|Tattica|Notizie|Contesto|Ipotizza)[^*]*\*\*)/i;
   const parts = text.split(re).filter((s) => s && s.trim());
@@ -187,7 +198,7 @@ const buildComponents = (isLastSection: boolean) => ({
 });
 
 export default function ScoutAnalysis({ text }: Props) {
-  const clean = stripJsonBlock(stripCitations(text || ''));
+  const clean = stripPeso(stripJsonBlock(stripCitations(text || '')));
   const sections = splitSections(clean);
   useEffect(() => {
     const id = 'scout-font-link';

@@ -44,6 +44,50 @@ const stripJsonBlock = (raw: string): string => {
 const stripPeso = (raw: string): string =>
   raw.replace(/(\d{1,3}\s*%)\s*[,;]?\s*peso\s*\d+/gi, '$1');
 
+// Il modello LITE a volte ignora la regola "due pronostici su due righe"
+// e li scrive sulla stessa riga (anche dopo strip peso). Riformattiamo
+// uniformemente sia LITE che DEEP: estraiamo i pronostici dalla riga
+// finale dell'articolo (pattern "Nome (confidenza N%)") e li riscriviamo
+// come lista bullet, con titolo "Pronostico:" / "Pronostici:" in base al
+// conteggio.
+const formatPronostici = (raw: string): string => {
+  // STEP 1: rimuovi le etichette "Pronostico:" / "Pronostici:" / "Prediction:"
+  // ovunque siano nel testo (anche dentro markdown bold **Pronostico:**),
+  // cosi' non finiscono dentro al "Nome" del tip quando estraiamo col regex.
+  // Caso bug reale visto in screenshot:
+  //   "Pronostico: Over 2.5 (...) Pronostico: Doppia Chance 1X (...)"
+  const stripped = raw.replace(/\*{0,2}\s*\b(pronostici|pronostico|prediction)s?\s*:\*{0,2}\s*/gi, '');
+
+  // Pattern: "Tip Name (confidenza N%)" — Tip Name puo' contenere lettere/numeri/spazi/punti.
+  const tipRe = /([A-Za-zÀ-ÿ0-9 .]+?)\s*\(\s*confidenza\s+(\d{1,3})\s*%\s*\)/gi;
+
+  // STEP 2: estrai TUTTI i tip da tutto il testo (non riga per riga).
+  // Cosi' tip su righe consecutive vengono trattati come una sola lista.
+  const allMatches = Array.from(stripped.matchAll(tipRe));
+  if (allMatches.length === 0) return stripped;
+
+  // STEP 3: prendi il prefisso del testo PRIMA del primo tip e tronca al
+  // termine "logico" della frase introduttiva. Se non c'e' chiaro separatore
+  // (es. punto), prendo tutto il testo prima del primo match.
+  const firstMatchIdx = stripped.indexOf(allMatches[0][0]);
+  let prefix = stripped.slice(0, firstMatchIdx);
+  // Rimuovi eventuali trattini orfani o "- " lasciati a fine prefisso
+  prefix = prefix.replace(/\s*[-*•]\s*$/, '').trimEnd();
+  // Rimuovi ":" o "," di chiusura del prefisso se erano connettori al tip
+  prefix = prefix.replace(/[:,]\s*$/, '').trimEnd();
+
+  // STEP 4: costruisci la lista dei tip e il blocco finale.
+  const tips = allMatches.map(m => {
+    const name = m[1].trim().replace(/^[-*•]\s*/, '');
+    const conf = m[2];
+    return `- ${name} (confidenza ${conf}%)`;
+  });
+  const title = tips.length === 1 ? 'Pronostico:' : 'Pronostici:';
+  const block = `${title}\n\n${tips.join('\n')}`;
+
+  return prefix ? `${prefix}\n\n${block}` : block;
+};
+
 const splitSections = (text: string): string[] => {
   const re = /(\*\*(?:Formazioni|Tattica|Notizie|Contesto|Ipotizza)[^*]*\*\*)/i;
   const parts = text.split(re).filter((s) => s && s.trim());
@@ -198,7 +242,7 @@ const buildComponents = (isLastSection: boolean) => ({
 });
 
 export default function ScoutAnalysis({ text }: Props) {
-  const clean = stripPeso(stripJsonBlock(stripCitations(text || '')));
+  const clean = formatPronostici(stripPeso(stripJsonBlock(stripCitations(text || ''))));
   const sections = splitSections(clean);
   useEffect(() => {
     const id = 'scout-font-link';

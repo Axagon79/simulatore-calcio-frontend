@@ -548,7 +548,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             <span>{dateLabelChyron}</span>
             <span className="mono">{clockMono}</span>
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Cambia tema">
-              <span className="icn">{isLight ? 'â˜¾' : 'â˜€'}</span>
+              <span className="icn">{isLight ? '☾' : '☀'}</span>
               <span>{isLight ? 'Scuro' : 'Chiaro'}</span>
             </button>
           </div>

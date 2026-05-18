@@ -686,10 +686,12 @@ const getStemmaLeagueUrl = (mongoId?: string) => {
   // Se l'utente seleziona un campionato dalla sidebar, torna a Calendario/lista
   useEffect(() => {
     if (isRestoringState.current) return;
+    console.log('[league-effect] league=', league, 'viewMode=', viewMode, 'viewState=', viewState);
     if (league && viewMode === 'today') {
       setViewMode('calendar');
     }
     if (league && viewState === 'pre-match') {
+      console.warn('[league-effect] RESETTING viewState to list because league=', league);
       setViewState('list');
       setSelectedMatch(null);
     }

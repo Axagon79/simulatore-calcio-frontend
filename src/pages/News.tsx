@@ -28,6 +28,7 @@ interface NewsMetaSide {
   draws?: number | null;
   losses?: number | null;
   formation?: string | null;
+  transfermarkt_id?: number | string | null;
 }
 interface NewsMeta {
   giornata?: number | null;
@@ -518,7 +519,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const [redattoreModal, setRedattoreModal] = useState<Redattore | null>(null);
   // Popup 'Sguardo veloce' con 3 tab (Classifica / Testa a testa / Radar).
   // Tiene i dati della partita corrente; null = chiuso.
-  const [sguardoModal, setSguardoModal] = useState<{ home: string; away: string; league: string; date: string } | null>(null);
+  const [sguardoModal, setSguardoModal] = useState<{ home: string; away: string; league: string; date: string; homeTmId: number | string | null; awayTmId: number | string | null } | null>(null);
 
   const openTeamModal = async (nome: string) => {
     setTeamModal({ open: true, nome, loading: true, data: null, error: null });
@@ -1039,7 +1040,17 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                     })()}</b></div>
                   </div>
                   <div className="pron-foot">
-                    <a className="open-btn" href={`#${id}`} onClick={(e) => { e.preventDefault(); setSguardoModal({ home: m.home, away: m.away, league: m.league || m.lega || '', date: m.date }); }} style={{ cursor: 'pointer' }}>Sguardo veloce <span className="arrow">→</span></a>
+                    <a className="open-btn" href={`#${id}`} onClick={(e) => {
+                      e.preventDefault();
+                      setSguardoModal({
+                        home: m.home,
+                        away: m.away,
+                        league: m.league || m.lega || '',
+                        date: m.date,
+                        homeTmId: m.news_meta?.home?.transfermarkt_id ?? null,
+                        awayTmId: m.news_meta?.away?.transfermarkt_id ?? null,
+                      });
+                    }} style={{ cursor: 'pointer' }}>Sguardo veloce <span className="arrow">→</span></a>
                   </div>
                 </aside>
               </article>
@@ -1071,6 +1082,8 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           away={sguardoModal.away}
           league={sguardoModal.league}
           date={sguardoModal.date}
+          homeTmId={sguardoModal.homeTmId}
+          awayTmId={sguardoModal.awayTmId}
           onClose={() => setSguardoModal(null)}
         />
       )}

@@ -444,12 +444,32 @@ const STYLES = `
     .news-root .article{grid-template-columns:1fr}
   }
   @media (max-width:760px){
-    .news-root .chyron-row{padding:10px 16px;gap:10px;grid-template-columns:auto 1fr auto}
+    /* Mobile: tutto in 1 riga: logo + Live news + clock + tema.
+       Per recuperare spazio: nascondo testo 'Chiaro/Scuro' (resta solo icona ☀/☾).
+       Bottone tema mantenuto cliccabile (~36px). */
+    .news-root .chyron-row{padding:8px 12px;gap:8px;grid-template-columns:auto 1fr auto;align-items:center}
     .news-root .brand-sub{display:none}
-    .news-root .live{font-size:10px;padding:3px 8px}
-    .news-root .clock span:first-child{display:none}
+    .news-root .live{font-size:9.5px;padding:0;letter-spacing:0.08em;border:none;background:transparent;gap:5px;justify-self:center}
+    .news-root .clock{gap:8px}
+    .news-root .clock .mono{font-size:10px;margin-right:10px}
+    /* Bottone tema con contrasto vero per essere riconoscibile come azione:
+       - dark mode: sfondo chiaro, sole giallo
+       - light mode: sfondo scuro, luna gialla */
+    .news-root .theme-toggle{padding:6px 10px;gap:0;min-width:36px;justify-content:center;line-height:1;background:#f4f4f5;border-color:#f4f4f5;color:#facc15}
+    .news-root .theme-toggle .icn{font-size:18px;line-height:1;display:inline-block;color:#facc15}
+    /* Nascondo solo il testo 'Chiaro/Scuro' (e' il secondo span del bottone) */
+    .news-root .theme-toggle > span:not(.icn){display:none}
+    /* In light mode invertito: sfondo scuro, luna gialla */
+    :root[data-theme="light"] .news-root .theme-toggle{background:#1e293b;border-color:#1e293b}
+    :root[data-theme="light"] .news-root .theme-toggle .icn{color:#facc15}
+    .news-root .clock > span:first-child{display:none}
     .news-root .tabs{padding:0 16px}
-    .news-root .tab{padding:14px 12px 12px}
+    .news-root .tab{padding:14px 8px 12px;justify-content:center;flex:1}
+    /* 3 tab Oggi/Domani/Dopodomani con larghezza identica (1/3 ciascuno) */
+    .news-root .tabs-left{display:flex;flex:1;width:100%}
+    /* '2 articoli · 1 lega' e' gia' nel sottotitolo: nascondo il blocco
+       sulla destra dei tab per non averlo schiacciato a fianco delle date. */
+    .news-root .tabs-meta{display:none}
     .news-root .masthead, .news-root .filter-wrap, .news-root .breadcrumb, .news-root .layout, .news-root .site-foot{padding-left:16px;padding-right:16px}
     .news-root .mast-title{font-size:30px}
     .news-root .mast-deck{font-size:14.5px}
@@ -775,11 +795,11 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             <div className="brand-mark">A</div>
             <div>
               <div className="brand-name">AI<span>·</span>Simulator</div>
-              <div className="brand-sub">Newsroom synth · v2.4</div>
+              <div className="brand-sub">Redazione AI</div>
             </div>
           </div>
           <div style={{ justifySelf: 'center' }}>
-            <span className="live"><span className="live-dot" />News feed live</span>
+            <span className="live"><span className="live-dot" />Live news</span>
           </div>
           <div className="clock">
             <span>{dateLabelChyron}</span>
@@ -1010,7 +1030,17 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   <h2 className="a-title">
                     <a href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>{title}</a>
                   </h2>
-                  {lede && <p className="a-lede">{lede}</p>}
+                  {lede && (
+                    <p className="a-lede">
+                      {lede}
+                      {' '}
+                      <a
+                        href={`#${id}`}
+                        onClick={(e) => openArticle(e, m)}
+                        style={{ color: 'var(--cyan)', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}
+                      >continua →</a>
+                    </p>
+                  )}
                   <div className="a-foot">
                     <div className="by-line">
                       <span>Articolo a cura di <b onClick={(e) => { e.stopPropagation(); setRedattoreModal(redattore); }} style={{ cursor: 'pointer' }}>{redattore.nome}</b></span>

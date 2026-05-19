@@ -589,6 +589,21 @@ const STYLES = `
   .article-root .a-head-main{min-width:0}
   .article-root .backlink{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--t);margin-bottom:24px;transition:background .15s, border-color .15s, color .15s;cursor:pointer;background:transparent;border:1px solid var(--cyan);padding:9px 16px 9px 12px;border-radius:999px}
   .article-root .backlink:hover{background:var(--cyan);color:var(--cyan-ink);border-color:var(--cyan)}
+
+  /* Quick-nav prev/next sopra il titolo. Stile redazione:
+     eyebrow uppercase "Articolo precedente/successivo" + nomi squadra grossi + kickoff. */
+  .article-root .quick-nav{display:flex;justify-content:space-between;align-items:stretch;gap:14px;margin-bottom:24px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .article-root .quick-nav-link{display:flex;align-items:center;gap:14px;text-decoration:none;cursor:pointer;flex:1;min-width:0;transition:color .15s}
+  .article-root .quick-nav-link.next{justify-content:flex-end;text-align:right}
+  .article-root .quick-nav-link .arrow{font-size:22px;line-height:1;color:var(--t-faint);transition:color .15s, transform .2s}
+  .article-root .quick-nav-link:hover .arrow{color:var(--cyan)}
+  .article-root .quick-nav-link.prev:hover .arrow{transform:translateX(-3px)}
+  .article-root .quick-nav-link.next:hover .arrow{transform:translateX(3px)}
+  .article-root .quick-nav-link .qn-body{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+  .article-root .quick-nav-link .qn-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);font-weight:500}
+  .article-root .quick-nav-link .qn-teams{font-family:'Inter',sans-serif;font-size:15px;font-weight:600;color:var(--t);line-height:1.25;letter-spacing:-0.005em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .article-root .quick-nav-link:hover .qn-teams{color:var(--cyan)}
+  .article-root .quick-nav-link .qn-time{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t-dim);letter-spacing:0.06em}
   .article-root .a-eyebrow{display:flex;gap:12px;align-items:center;margin-bottom:18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);flex-wrap:wrap}
   .article-root .a-eyebrow .league{color:var(--t-dim)}
   .article-root .a-eyebrow .league .ld{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
@@ -651,6 +666,22 @@ const STYLES = `
   .article-root .player-link{cursor:pointer;transition:color .15s}
   .article-root .player-link:hover{color:var(--cyan)}
 
+  /* Pill "edizione precedente": chiaramente cliccabile.
+     - Desktop: hover cambia background a ciano
+     - Mobile (no hover): icona ⇄ inline + outline sempre visibile */
+  .article-root .pill-switch{
+    cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .article-root .pill-switch::before{
+    content:"⇄";font-size:13px;line-height:1;
+  }
+  @media (hover:hover){
+    .article-root .pill-switch:hover{
+      background:var(--cyan)!important;color:var(--cyan-ink)!important;border-color:var(--cyan)!important;
+    }
+  }
+
   .article-root blockquote{margin:32px 0 32px;padding:8px 0 8px 28px;border-left:3px solid var(--cyan);position:relative}
   .article-root blockquote p.q{font-size:23px;line-height:1.4;color:var(--t);font-weight:500;letter-spacing:-0.01em;margin:0 0 14px;text-wrap:pretty;font-family:'Inter',sans-serif}
   .article-root blockquote .attrib{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--t-faint)}
@@ -711,7 +742,7 @@ const STYLES = `
   .article-root .source-item .when{color:var(--t-faint);font-size:11px}
 
   .article-root .disclaimer-wrap{max-width:1280px;margin:0 auto;padding:24px 28px 0}
-  .article-root .disclaimer{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:22px 26px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center}
+  .article-root .disclaimer{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:22px 26px}
   .article-root .disclaimer p{margin:0;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-dim);line-height:1.6;letter-spacing:0.04em}
   .article-root .disclaimer p b{color:var(--t);font-weight:500}
   .article-root .matchday-btn{display:inline-flex;align-items:center;gap:10px;background:var(--cyan);color:var(--cyan-ink);padding:12px 18px;border-radius:999px;font-weight:600;font-size:13.5px;border:1px solid var(--cyan);white-space:nowrap;text-decoration:none}
@@ -768,16 +799,75 @@ const STYLES = `
     .article-root blockquote{padding-left:18px}
     .article-root blockquote p.q{font-size:19px}
     .article-root .dropcap::first-letter{font-size:48px;padding:4px 8px 0 0}
-    .article-root .schema-grid{grid-template-columns:1fr;gap:14px}
+    /* Formazioni su mobile: stack verticale + separatore tra home e away.
+       Nome squadra + modulo + allenatore centrati; titolari e assenti a sx.
+       Ogni comparto (portiere, difensori, ecc.) e' separato da una linea
+       sottile in basso che non arriva fino ai bordi. */
+    .article-root .schema-grid{grid-template-columns:1fr;gap:0}
+    .article-root .schema-side{padding:18px 0;gap:10px}
+    .article-root .schema-side + .schema-side{border-top:1px solid var(--line);margin-top:6px;padding-top:24px}
+    /* Center: nome squadra, modulo, allenatore */
+    .article-root .schema-side .team-h{text-align:center;font-size:16px;letter-spacing:0.04em;text-transform:none;font-family:'Inter',sans-serif;font-weight:600;color:var(--t);margin-bottom:2px}
+    .article-root .schema-side .formation{text-align:center}
+    .article-root .schema-side .formation::before{content:"Modulo: ";color:var(--t-faint);font-weight:400}
+    .article-root .schema-side [data-coach]{text-align:center}
+    /* Linea sottile sotto ogni comparto ruolo (portiere/dif/cen/att/assenti).
+       Non arriva ai bordi: margine laterale 10%. L'ultimo non ha linea. */
+    .article-root .schema-side [data-role-group]{
+      padding-bottom:14px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:14px;
+      margin-left:10%;margin-right:10%;
+    }
+    .article-root .schema-side [data-role-group]:last-child{
+      border-bottom:none;padding-bottom:0;margin-bottom:0;
+    }
     .article-root .sources-grid{grid-template-columns:1fr}
     .article-root .source-item:nth-child(odd){border-right:none;padding-right:0}
     .article-root .source-item:nth-child(even){padding-left:0}
-    .article-root .disclaimer{grid-template-columns:1fr;gap:14px}
+    /* Disclaimer mobile: padding ridotto + testo piu' compatto */
+    .article-root .disclaimer{padding:18px 16px}
+    .article-root .disclaimer p{font-size:11px;line-height:1.55}
+
+    /* TOC mobile: griglia 2x2 invece di scroll orizzontale. Sono sempre 4
+       sezioni (Formazioni / Tattica / Notizie / Contesto). */
+    .article-root .toc-inner{display:grid;grid-template-columns:1fr 1fr;overflow:visible;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+    .article-root .toc-link{padding:12px 14px;border-bottom:1px solid var(--line);justify-content:flex-start;white-space:normal;font-size:10.5px}
+    .article-root .toc-link:nth-child(2n){border-right:none}
+    .article-root .toc-link:nth-last-child(-n+2){border-bottom:none}
+
+    /* Quick-nav mobile: nasconde label, mostra solo freccia + nomi */
+    .article-root .quick-nav-link .lbl{display:none}
+    .article-root .quick-nav-link .teams{font-size:12px;max-width:140px}
     .article-root .nav-grid{grid-template-columns:1fr}
     .article-root .nav-card.next{text-align:left}
     .article-root .nav-card.next .nav-dir{flex-direction:row}
     .article-root .nav-card.next .nav-row-team{justify-content:flex-start;flex-direction:row}
   }
+  /* Mobile stretto: il layout 3 colonne (home | centro | away) si schiaccia.
+     Sopra <480px le 2 squadre + il blocco centrale vanno uno sotto l'altro. */
+  @media (max-width:480px){
+    /* Contorno poster piu' marcato in mobile: bordo doppio e leggero sfondo
+       cosi' si distingue dal resto della pagina. */
+    .article-root .poster-inner{
+      grid-template-columns:1fr;gap:14px;padding:18px 14px;text-align:center;
+      border:1.5px solid var(--line-strong, var(--line));
+      box-shadow:0 1px 0 var(--line) inset;
+    }
+    .article-root .poster-team{justify-content:flex-start;text-align:left}
+    .article-root .poster-team.away{flex-direction:row;text-align:left}
+    /* Centro: contenitore vero (bordo + bg attenuato) invece di sole tratteggiate */
+    .article-root .poster-center{
+      padding:14px 12px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:rgba(255,255,255,0.025);
+    }
+    .article-root .poster-ko{font-size:34px}
+    .article-root .poster-when, .article-root .poster-where{font-size:10.5px}
+  }
+  /* In light mode il bg del centro deve essere scuro/grigino, non bianco */
+  :root[data-theme="light"] .article-root .poster-center{background:rgba(0,0,0,0.025) !important}
 `;
 
 // Calcola eta' in anni interi dal date_of_birth (formato YYYY-MM-DD).
@@ -1363,6 +1453,32 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           <section className="article-head">
             <div className="a-head-main">
               <button className="backlink" onClick={onBack ?? (() => navigate('/news'))}>← Torna alle notizie</button>
+              {/* Nav prev/next stile redazione: 'Articolo precedente / successivo'
+                  con orario kickoff e nomi squadra. Sopra il titolo per visibilita'. */}
+              {(prevMatch || nextMatch) && (
+                <div className="quick-nav">
+                  {prevMatch ? (
+                    <a className="quick-nav-link prev" href="#" onClick={(e) => goToSibling(e, prevMatch)}>
+                      <span className="arrow">←</span>
+                      <div className="qn-body">
+                        <div className="qn-eyebrow">Articolo precedente</div>
+                        <div className="qn-teams">{prevMatch.home} – {prevMatch.away}</div>
+                        {prevMatch.match_time && <div className="qn-time">Kickoff · {prevMatch.match_time}</div>}
+                      </div>
+                    </a>
+                  ) : <span />}
+                  {nextMatch ? (
+                    <a className="quick-nav-link next" href="#" onClick={(e) => goToSibling(e, nextMatch)}>
+                      <div className="qn-body">
+                        <div className="qn-eyebrow">Articolo successivo</div>
+                        <div className="qn-teams">{nextMatch.home} – {nextMatch.away}</div>
+                        {nextMatch.match_time && <div className="qn-time">Kickoff · {nextMatch.match_time}</div>}
+                      </div>
+                      <span className="arrow">→</span>
+                    </a>
+                  ) : <span />}
+                </div>
+              )}
               <div className="a-eyebrow">
                 <span className="league"><span className="ld" style={{ background: dotColor }} />{league || todoTag('lega')}</span>
                 <span className="sep">·</span>
@@ -1393,43 +1509,80 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <span><b>{wordCount}</b> parole</span>
               </div>
 
-              {/* Toggle versione articolo: visibile solo se l'utente ha entrambe le versioni */}
-              {hasDeep && hasLite && (
-                <div style={{
-                  display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-                  marginTop: 14, fontFamily: "'JetBrains Mono', monospace",
+              {/* Toggle versione articolo: 'Stai leggendo: <nome>' sopra,
+                  poi 2 pill sotto: EDIZIONE PRECEDENTE | EDIZIONE ATTUALE.
+                  La pill della versione corrente e' evidenziata; l'altra e'
+                  cliccabile per scambiare. */}
+              {hasDeep && hasLite && (() => {
+                const pillBase: React.CSSProperties = {
+                  borderRadius: 999, padding: '6px 12px',
+                  fontFamily: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit',
+                  textTransform: 'inherit', fontWeight: 600,
+                };
+                const pillActive: React.CSSProperties = {
+                  ...pillBase,
+                  background: 'var(--cyan)',
+                  color: 'var(--cyan-ink)',
+                  border: '1px solid var(--cyan)',
+                };
+                const pillInactive: React.CSSProperties = {
+                  ...pillBase,
+                  background: 'transparent',
+                  color: 'var(--t-dim)',
+                  border: '1px solid var(--line-strong)',
+                };
+                // T-6h = piu' recente (attuale), Lite = notturna (precedente)
+                const timeAttuale = deepComputedAt ? fmtTime(deepComputedAt) : '';
+                const timePrecedente = liteComputedAt ? fmtTime(liteComputedAt) : '';
+                const labelAttuale = `Edizione attuale${timeAttuale ? ` · ${timeAttuale}` : ''}`;
+                const labelPrecedente = `Edizione precedente${timePrecedente ? ` · ${timePrecedente}` : ''}`;
+                const isReadingDeep = effort === 'DEEP';
+                const currentLabel = isReadingDeep
+                  ? (timeAttuale ? `Edizione delle ${timeAttuale}` : 'Edizione attuale')
+                  : (timePrecedente ? `Edizione delle ${timePrecedente}` : 'Edizione precedente');
+                const microLabelStyle: React.CSSProperties = {
+                  fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
                   color: 'var(--t-faint)',
-                }}>
-                  <span>Versione:</span>
-                  <button
-                    onClick={() => setViewingVersion('DEEP')}
-                    style={{
-                      cursor: 'pointer',
-                      background: effort === 'DEEP' ? 'var(--cyan)' : 'transparent',
-                      color: effort === 'DEEP' ? 'var(--cyan-ink)' : 'var(--t-dim)',
-                      border: `1px solid ${effort === 'DEEP' ? 'var(--cyan)' : 'var(--line-strong)'}`,
-                      borderRadius: 999,
-                      padding: '6px 12px',
-                      fontFamily: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit',
-                      textTransform: 'inherit', fontWeight: 600,
-                    }}
-                  >Aggiornata T-6h{deepComputedAt ? ` · ${fmtTime(deepComputedAt)}` : ''}</button>
-                  <button
-                    onClick={() => setViewingVersion('LITE')}
-                    style={{
-                      cursor: 'pointer',
-                      background: effort === 'LITE' ? 'var(--cyan)' : 'transparent',
-                      color: effort === 'LITE' ? 'var(--cyan-ink)' : 'var(--t-dim)',
-                      border: `1px solid ${effort === 'LITE' ? 'var(--cyan)' : 'var(--line-strong)'}`,
-                      borderRadius: 999,
-                      padding: '6px 12px',
-                      fontFamily: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit',
-                      textTransform: 'inherit', fontWeight: 600,
-                    }}
-                  >Notturna{liteComputedAt ? ` · ${fmtTime(liteComputedAt)}` : ''}</button>
-                </div>
-              )}
+                };
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                    {/* Riga 1: dichiara la versione in lettura */}
+                    <div style={microLabelStyle}>
+                      Stai leggendo: <b style={{ color: 'var(--t)', fontWeight: 600 }}>{currentLabel}</b>
+                    </div>
+                    {/* Riga 2: micro-titolo */}
+                    <div style={{ ...microLabelStyle, marginTop: 4 }}>Seleziona edizione:</div>
+                    {/* Riga 3: 2 pill - ATTUALE prima, PRECEDENTE dopo */}
+                    <div style={{
+                      display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+                    }}>
+                      {/* Pill ATTUALE (deep/T-6h) — primo posto */}
+                      {isReadingDeep ? (
+                        <span style={pillActive}>{labelAttuale}</span>
+                      ) : (
+                        <button
+                          className="pill-switch"
+                          onClick={() => setViewingVersion('DEEP')}
+                          style={pillInactive}
+                        >{labelAttuale}</button>
+                      )}
+                      {/* Pill PRECEDENTE (lite/notturna) — secondo posto */}
+                      {isReadingDeep ? (
+                        <button
+                          className="pill-switch"
+                          onClick={() => setViewingVersion('LITE')}
+                          style={pillInactive}
+                        >{labelPrecedente}</button>
+                      ) : (
+                        <span style={pillActive}>{labelPrecedente}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </section>
 
@@ -1590,7 +1743,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                         <div className="team-h"><span className="player-link" onClick={() => openTeamModal(home)}>{home}</span></div>
                         <div className="formation">{lineupHome.formation || homeMeta.formation_default || '?'}</div>
                         {homeMeta.allenatore?.name && (
-                          <div style={{ marginTop: 12 }}>
+                          <div data-coach style={{ marginTop: 12 }}>
                             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
                             <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>
                               <span className="player-link" onClick={() => openTeamModal(home, 'manager')}>{homeMeta.allenatore.name}</span>
@@ -1603,7 +1756,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
                               {groupsHomeFilled.map((g, gi) => (
-                                <div key={`gh-${gi}`}>
+                                <div key={`gh-${gi}`} data-role-group>
                                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>
                                     {g.ruolo ? RUOLO_LABEL[g.ruolo] : 'Titolari'}
                                   </div>
@@ -1625,7 +1778,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                           );
                         })()}
                         {assentiHome.length > 0 && (
-                          <div style={{ marginTop: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
+                          <div data-role-group style={{ marginTop: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
                             <div style={{ textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10, fontSize: 10.5 }}>Assenti</div>
                             <ul data-plain style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'auto auto 1fr', columnGap: 12, rowGap: 6 }}>
                               {assentiHome.map((a, i) => (
@@ -1645,7 +1798,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                         <div className="team-h"><span className="player-link" onClick={() => openTeamModal(away)}>{away}</span></div>
                         <div className="formation">{lineupAway.formation || awayMeta.formation_default || '?'}</div>
                         {awayMeta.allenatore?.name && (
-                          <div style={{ marginTop: 12 }}>
+                          <div data-coach style={{ marginTop: 12 }}>
                             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
                             <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>
                               <span className="player-link" onClick={() => openTeamModal(away, 'manager')}>{awayMeta.allenatore.name}</span>
@@ -1658,7 +1811,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
                               {groupsAwayFilled.map((g, gi) => (
-                                <div key={`ga-${gi}`}>
+                                <div key={`ga-${gi}`} data-role-group>
                                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>
                                     {g.ruolo ? RUOLO_LABEL[g.ruolo] : 'Titolari'}
                                   </div>
@@ -1680,7 +1833,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                           );
                         })()}
                         {assentiAway.length > 0 && (
-                          <div style={{ marginTop: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
+                          <div data-role-group style={{ marginTop: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
                             <div style={{ textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10, fontSize: 10.5 }}>Assenti</div>
                             <ul data-plain style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'auto auto 1fr', columnGap: 12, rowGap: 6 }}>
                               {assentiAway.map((a, i) => (
@@ -1826,11 +1979,6 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               <p>
                 <b>Articolo generato automaticamente</b> dalla redazione AI di AI Simulator a partire da fonti pubbliche, conferenze stampa e dati statistici. Nessun intervento editoriale umano. Le previsioni non costituiscono consigli di scommessa.
               </p>
-              <a className="matchday-btn" href="/" onClick={(e) => {
-                e.preventDefault();
-                const params = new URLSearchParams({ openMatch: `${home}|${away}|${dateQ}` });
-                navigate(`/?${params.toString()}`);
-              }}>Apri scheda Match Day · {home}–{away} →</a>
             </div>
           </section>
 

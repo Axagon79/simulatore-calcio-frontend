@@ -59,7 +59,14 @@ const formatPronostici = (raw: string): string => {
   const stripped = raw.replace(/\*{0,2}\s*\b(pronostici|pronostico|prediction)s?\s*:\*{0,2}\s*/gi, '');
 
   // Pattern: "Tip Name (confidenza N%)" — Tip Name puo' contenere lettere/numeri/spazi/punti.
-  const tipRe = /([A-Za-zÀ-ÿ0-9 .]+?)\s*\(\s*confidenza\s+(\d{1,3})\s*%\s*\)/gi;
+  // IMPORTANTE: NON deve attraversare newline ne' includere il testo di paragrafi
+  // precedenti. Usiamo un lookbehind logico ancorato al newline o all'inizio: il
+  // tip name e' al massimo l'ultima riga prima di "(confidenza".
+  // Bug reale 19/05/2026 (Bournemouth-MC): senza vincolo, il regex agganciava
+  // ", e aspettarsi almeno due gol complessivi in un contesto così carico.Doppia
+  // Chance X2 (confidenza 68%)" come UN tip unico perche' non c'era newline tra
+  // fine paragrafo e inizio bullet.
+  const tipRe = /(?:^|\n)\s*[-*•]?\s*([^\n(]+?)\s*\(\s*confidenza\s+(\d{1,3})\s*%\s*[,)]/gi;
 
   // STEP 2: estrai TUTTI i tip da tutto il testo (non riga per riga).
   // Cosi' tip su righe consecutive vengono trattati come una sola lista.
@@ -67,9 +74,9 @@ const formatPronostici = (raw: string): string => {
   if (allMatches.length === 0) return stripped;
 
   // STEP 3: prendi il prefisso del testo PRIMA del primo tip e tronca al
-  // termine "logico" della frase introduttiva. Se non c'e' chiaro separatore
-  // (es. punto), prendo tutto il testo prima del primo match.
-  const firstMatchIdx = stripped.indexOf(allMatches[0][0]);
+  // termine "logico" della frase introduttiva. Uso allMatches[0].index per
+  // posizione sicura (con il nuovo regex il match inizia col newline iniziale).
+  const firstMatchIdx = allMatches[0].index ?? 0;
   let prefix = stripped.slice(0, firstMatchIdx);
   // Rimuovi eventuali trattini orfani o "- " lasciati a fine prefisso
   prefix = prefix.replace(/\s*[-*•]\s*$/, '').trimEnd();

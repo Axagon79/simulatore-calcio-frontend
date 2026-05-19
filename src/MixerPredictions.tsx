@@ -2920,10 +2920,33 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     ) : isDeepDiveLoaded ? (
                       <div>
                         {(() => {
+                          // Badge fase in alto: DEEP (F2) verde o LITE (F1) giallo.
+                          const effort = pred.analysis_deepdive_effort;
+                          if (effort !== 'deep' && effort !== 'lite') return null;
+                          const isDeep = effort === 'deep';
+                          const label = isDeep ? 'DEEP · F2' : 'LITE · F1';
+                          const bgCol = isDeep ? 'rgba(16,185,129,0.18)' : 'rgba(234,179,8,0.18)';
+                          const txtCol = isDeep ? (isLight ? '#047857' : '#6ee7b7') : (isLight ? '#a16207' : '#fde68a');
+                          const brdCol = isDeep ? 'rgba(16,185,129,0.45)' : 'rgba(234,179,8,0.45)';
+                          return (
+                            <div style={{
+                              display: 'flex', justifyContent: 'flex-end',
+                              marginBottom: 8,
+                            }}>
+                              <span style={{
+                                fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
+                                padding: '3px 10px', borderRadius: '999px',
+                                background: bgCol, color: txtCol,
+                                border: `1px solid ${brdCol}`,
+                                fontFamily: 'JetBrains Mono, monospace',
+                              }}>{label}</span>
+                            </div>
+                          );
+                        })()}
+                        {(() => {
                           const raw: any = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
                           const txt = typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
                           // Pronostici strutturati dal JSON Scout (deep prevale su lite).
-                          // Niente piu' parsing fragile del testo: usiamo direttamente l'output JSON.
                           const sd: any = (pred as any).scout_deep;
                           const sl: any = (pred as any).scout_lite;
                           const segno = sd?.segno || sl?.segno || null;

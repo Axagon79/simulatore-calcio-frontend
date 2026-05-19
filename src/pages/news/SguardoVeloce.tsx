@@ -198,8 +198,12 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                     {standingsExpanded ? '▲ Solo le due squadre' : '▼ Mostra tutta'}
                   </button>
                 </div>
-                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 8, maxHeight: 420 }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 8, maxHeight: 420, marginLeft: -16, marginRight: -16 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <colgroup>
+                      <col />
+                      <col style={{ width: 90 }} />     {/* Squadra (unica fissa) */}
+                    </colgroup>
                     <thead>
                       <tr style={{ color: 'var(--t-faint)', background: 'rgba(255,255,255,0.03)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         <th style={{ ...cellBase, textAlign: 'right', paddingRight: 10 }}>#</th>

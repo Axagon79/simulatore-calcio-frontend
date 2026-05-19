@@ -580,8 +580,8 @@ const STYLES = `
 
   .article-root .article-head{max-width:1280px;margin:0 auto;padding:36px 28px 0;display:grid;grid-template-columns:1fr 280px;gap:48px}
   .article-root .a-head-main{min-width:0}
-  .article-root .backlink{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-dim);margin-bottom:24px;transition:color .15s;cursor:pointer;background:none;border:none;padding:0}
-  .article-root .backlink:hover{color:var(--cyan)}
+  .article-root .backlink{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--t);margin-bottom:24px;transition:background .15s, border-color .15s, color .15s;cursor:pointer;background:transparent;border:1px solid var(--cyan);padding:9px 16px 9px 12px;border-radius:999px}
+  .article-root .backlink:hover{background:var(--cyan);color:var(--cyan-ink);border-color:var(--cyan)}
   .article-root .a-eyebrow{display:flex;gap:12px;align-items:center;margin-bottom:18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);flex-wrap:wrap}
   .article-root .a-eyebrow .league{color:var(--t-dim)}
   .article-root .a-eyebrow .league .ld{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
@@ -1583,7 +1583,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                         {homeMeta.allenatore?.name && (
                           <div style={{ marginTop: 12 }}>
                             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
-                            <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>{homeMeta.allenatore.name}</div>
+                            <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>
+                              <span className="player-link" onClick={() => openTeamModal(home)}>{homeMeta.allenatore.name}</span>
+                            </div>
                           </div>
                         )}
                         {(() => {
@@ -1636,7 +1638,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                         {awayMeta.allenatore?.name && (
                           <div style={{ marginTop: 12 }}>
                             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
-                            <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>{awayMeta.allenatore.name}</div>
+                            <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>
+                              <span className="player-link" onClick={() => openTeamModal(away)}>{awayMeta.allenatore.name}</span>
+                            </div>
                           </div>
                         )}
                         {(() => {

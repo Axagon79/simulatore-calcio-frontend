@@ -87,6 +87,30 @@ const matchTeam = (r: StandingsRow, name: string, tmId?: number | string | null)
 
 const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeTmId, awayTmId, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabKey>('classifica');
+  // Rileva il tema dal data-theme sul <html>. Il popup deve seguire il tema
+  // dell'app (light/dark). Refresh quando l'utente toggla il tema.
+  const [isLight, setIsLight] = useState<boolean>(() =>
+    typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light'
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const obs = new MutationObserver(() => {
+      setIsLight(document.documentElement.dataset.theme === 'light');
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  // Rileva mobile (< 760px, allineato al breakpoint usato in NewsArticolo).
+  // Su mobile i gauge restano affiancati ma ingranditi (~46% in piu' di SVG).
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 760
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setIsMobile(window.innerWidth < 760);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [standings, setStandings] = useState<StandingsRow[] | null>(null);
   const [standingsLoading, setStandingsLoading] = useState(false);
   const [standingsError, setStandingsError] = useState<string | null>(null);
@@ -194,7 +218,9 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1000,
+        position: 'fixed', inset: 0,
+        background: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(0,0,0,0.78)',
+        zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         backdropFilter: 'blur(4px)',
       }}
@@ -293,7 +319,7 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <colgroup>
                       <col />
-                      <col style={{ width: 90 }} />     {/* Squadra (unica fissa) */}
+                      <col style={{ width: 90 }} />
                     </colgroup>
                     <thead>
                       <tr style={{ color: 'var(--t-faint)', background: 'rgba(255,255,255,0.03)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -449,11 +475,18 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
             const golColor = golAttesi < 1.5 ? '#ff4444' : golAttesi > 2.5 ? themeSuccess : '#ffd000';
 
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr',
+                gap: isMobile ? 0 : 16, alignItems: 'start',
+                // Solo su mobile: esce dai padding del modale per guadagnare spazio
+                // ai gauge (resta dentro le tab degli altri popup).
+                marginLeft: isMobile ? -20 : 0,
+                marginRight: isMobile ? -20 : 0,
+              }}>
                 {/* GAUGE SEGNO */}
                 <div>
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--t-faint)', textAlign: 'center', marginBottom: 4 }}>Segno</div>
-                  <svg viewBox="0 0 300 160" style={{ width: '100%', maxWidth: 280, display: 'block', margin: '0 auto' }}>
+                  <svg viewBox={isMobile ? "25 0 250 160" : "0 0 300 160"} style={{ width: '100%', maxWidth: isMobile ? '100%' : 280, display: 'block', margin: '0 auto' }}>
                     <defs>
                       <filter id="glowSegnoTend">
                         <feGaussianBlur stdDeviation="2.5" result="blur" />
@@ -478,20 +511,20 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                         <line key={i}
                           x1={cx + inner * Math.cos(a)} y1={cy - inner * Math.sin(a)}
                           x2={cx + outer * Math.cos(a)} y2={cy - outer * Math.sin(a)}
-                          stroke="rgba(255,255,255,0.15)" strokeWidth="1"
+                          stroke={isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)'} strokeWidth="1"
                         />
                       );
                     })}
                     <line x1={cx} y1={cy} x2={needleXSegno} y2={needleYSegno}
-                      stroke="#fff" strokeWidth="2" strokeLinecap="round" filter="url(#glowSegnoTend)" />
+                      stroke={isLight ? '#333' : '#fff'} strokeWidth="2" strokeLinecap="round" filter="url(#glowSegnoTend)" />
                     <circle cx={needleXSegno} cy={needleYSegno} r="3.5" fill={dominantColor} filter="url(#glowSegnoTend)" />
-                    <circle cx={cx} cy={cy} r="6" fill="#1a1a24" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <circle cx={cx} cy={cy} r="6" fill={isLight ? '#fff' : '#1a1a24'} stroke={isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)'} strokeWidth="1" />
                     <text x="30" y="22" fontSize="9" fill={themeCyan} fontWeight="bold" textAnchor="start" style={{ fontFamily: 'Inter, sans-serif' }}>{home.substring(0, 14)}</text>
                     <text x="270" y="22" fontSize="9" fill={themePurple} fontWeight="bold" textAnchor="end" style={{ fontFamily: 'Inter, sans-serif' }}>{away.substring(0, 14)}</text>
-                    <text x={xTop.x} y={xTop.y - 14} fontSize="12" fill="#888" fontWeight="900" textAnchor="middle" style={{ fontFamily: 'Inter, sans-serif' }}>X</text>
+                    <text x={xTop.x} y={xTop.y - 14} fontSize="12" fill={isLight ? '#6b7280' : '#888'} fontWeight="900" textAnchor="middle" style={{ fontFamily: 'Inter, sans-serif' }}>X</text>
                     <text x={cx - R - 14} y={cy + 5} fontSize="14" fill={themeCyan} fontWeight="900" textAnchor="middle">1</text>
                     <text x={cx + R + 14} y={cy + 5} fontSize="14" fill={themePurple} fontWeight="900" textAnchor="middle">2</text>
-                    <text x={cx} y={cy - 25} fontSize="24" fill="#fff" fontWeight="900" textAnchor="middle" filter="url(#glowSegnoTend)" style={{ fontFamily: 'Inter, sans-serif' }}>{pctFavorito}%</text>
+                    <text x={cx} y={cy - 25} fontSize="24" fill={isLight ? '#1e293b' : '#fff'} fontWeight="900" textAnchor="middle" filter={isLight ? undefined : 'url(#glowSegnoTend)'} style={{ fontFamily: 'Inter, sans-serif' }}>{pctFavorito}%</text>
                     <text x={cx} y={cy - 8} fontSize="9" fill={dominantColor} fontWeight="bold" textAnchor="middle" letterSpacing="1" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {favoritoNome ? `${segnoLabel} ${favoritoNome.substring(0, 12)}` : 'EQUILIBRIO'}
                     </text>
@@ -501,7 +534,7 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                 {/* GAUGE GOL */}
                 <div>
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--t-faint)', textAlign: 'center', marginBottom: 4 }}>Gol</div>
-                  <svg viewBox="0 0 300 160" style={{ width: '100%', maxWidth: 280, display: 'block', margin: '0 auto' }}>
+                  <svg viewBox={isMobile ? "25 0 250 160" : "0 0 300 160"} style={{ width: '100%', maxWidth: isMobile ? '100%' : 280, display: 'block', margin: '0 auto' }}>
                     <defs>
                       <linearGradient id="gaugeGradGolTend" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor="#ff4444" />
@@ -527,11 +560,11 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                           <line
                             x1={cx + inner * Math.cos(a)} y1={cy - inner * Math.sin(a)}
                             x2={cx + outer * Math.cos(a)} y2={cy - outer * Math.sin(a)}
-                            stroke={isMajor ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)'} strokeWidth={isMajor ? 1.5 : 0.8}
+                            stroke={isMajor ? (isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.4)') : (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)')} strokeWidth={isMajor ? 1.5 : 0.8}
                           />
                           {isMajor && (
                             <text x={cx + (R + 18) * Math.cos(a)} y={cy - (R + 18) * Math.sin(a) + 3}
-                              fontSize="8" fill="rgba(255,255,255,0.5)" fontWeight="bold" textAnchor="middle" style={{ fontFamily: 'Inter, sans-serif' }}>
+                              fontSize="8" fill={isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)'} fontWeight="bold" textAnchor="middle" style={{ fontFamily: 'Inter, sans-serif' }}>
                               {golVal}
                             </text>
                           )}
@@ -539,16 +572,16 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                       );
                     })}
                     <line x1={cx} y1={cy} x2={needleXGol} y2={needleYGol}
-                      stroke="#fff" strokeWidth="2" strokeLinecap="round" filter="url(#glowGolTend)" />
+                      stroke={isLight ? '#333' : '#fff'} strokeWidth="2" strokeLinecap="round" filter="url(#glowGolTend)" />
                     <circle cx={needleXGol} cy={needleYGol} r="3.5" fill={golColor} filter="url(#glowGolTend)" />
-                    <circle cx={cx} cy={cy} r="6" fill="#1a1a24" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <text x={cx} y={cy - 25} fontSize="24" fill="#fff" fontWeight="900" textAnchor="middle" filter="url(#glowGolTend)" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    <circle cx={cx} cy={cy} r="6" fill={isLight ? '#fff' : '#1a1a24'} stroke={isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)'} strokeWidth="1" />
+                    <text x={cx} y={cy - 25} fontSize="24" fill={isLight ? '#1e293b' : '#fff'} fontWeight="900" textAnchor="middle" filter={isLight ? undefined : 'url(#glowGolTend)'} style={{ fontFamily: 'Inter, sans-serif' }}>
                       {golAttesi.toFixed(1)}
                     </text>
                     <text x={cx} y={cy - 8} fontSize="9" fill={golColor} fontWeight="bold" textAnchor="middle" letterSpacing="1" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {golAttesi < 1.5 ? 'UNDER' : golAttesi > 2.5 ? 'OVER' : 'EQUILIBRIO'}
                     </text>
-                    <text x={cx} y={cy + 18} fontSize="8" fill="rgba(255,255,255,0.4)" textAnchor="middle" letterSpacing="2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    <text x={cx} y={cy + 18} fontSize="8" fill={isLight ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)'} textAnchor="middle" letterSpacing="2" style={{ fontFamily: 'Inter, sans-serif' }}>
                       GOL ATTESI
                     </text>
                   </svg>
@@ -614,7 +647,7 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                   >
                     {/* Barra % media home */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 3, background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
                         <div style={{ width: `${homeAvg}%`, height: '100%', background: cyan, boxShadow: `0 0 5px ${cyan}` }} />
                       </div>
                       <span style={{ color: cyan, fontSize: 16, fontWeight: 700 }}>{homeAvg}%</span>
@@ -631,7 +664,7 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                     {/* Barra % media away */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <span style={{ color: magenta, fontSize: 16, fontWeight: 700 }}>{awayAvg}%</span>
-                      <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 3, background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
                         <div style={{ width: `${awayAvg}%`, height: '100%', background: magenta, boxShadow: `0 0 5px ${magenta}`, marginLeft: 'auto' }} />
                       </div>
                     </div>
@@ -644,7 +677,7 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
 
                 {/* Pentagono SVG */}
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 8px', position: 'relative' }}>
-                  <svg viewBox="0 0 200 220" width="280" height="308">
+                  <svg viewBox="0 0 200 220" width="260" height="286">
                     {[20, 40, 60, 80, 100].map(pct => (
                       <polygon
                         key={`ring-${pct}`}
@@ -707,8 +740,8 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
                     {/* Tooltip valore hover */}
                     {pointTip && (
                       <g transform={`translate(${pointTip.x}, ${pointTip.y - 10})`} style={{ pointerEvents: 'none' }}>
-                        <rect x="-14" y="-7" width="28" height="11" rx="3" fill="rgba(0,0,0,0.85)" stroke={pointTip.color} strokeWidth="0.7" />
-                        <text x="0" y="0" textAnchor="middle" dominantBaseline="middle" fontSize="7" fontFamily="'JetBrains Mono', monospace" fill="#fff" fontWeight="600">
+                        <rect x="-14" y="-7" width="28" height="11" rx="3" fill={isLight ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.85)'} stroke={pointTip.color} strokeWidth="0.7" />
+                        <text x="0" y="0" textAnchor="middle" dominantBaseline="middle" fontSize="7" fontFamily="'JetBrains Mono', monospace" fill={isLight ? '#1e293b' : '#fff'} fontWeight="600">
                           {pointTip.val.toFixed(1)}%
                         </text>
                       </g>

@@ -113,6 +113,13 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
       cacheRef.current[today] = data;
       setLoading(false);
 
+      // PRIORITA' ALTA: preload sistema-z di domani e dopodomani SUBITO in
+      // parallelo. La pagina News usa solo queste 3 date, quindi devono essere
+      // disponibili senza attendere i 14 daily-predictions-unified delle altre.
+      const tomorrowISO = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })();
+      const afterISO = (() => { const d = new Date(); d.setDate(d.getDate() + 2); return d.toISOString().split('T')[0]; })();
+      Promise.all([preloadSistemaZ(tomorrowISO), preloadSistemaZ(afterISO)]);
+
       // Poi carica le altre date in background con calma
       const others = getOtherDates();
       for (const date of others) {
@@ -120,8 +127,6 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
         if (cacheRef.current[date]) continue;
         await delay(500);
         await fetchWithDedup(date);
-        // Preload anche sistema-z per le altre date (utente potrebbe cambiare tab)
-        preloadSistemaZ(date);
       }
     };
 

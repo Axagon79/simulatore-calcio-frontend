@@ -701,7 +701,6 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const shown = filtered.length;
   const legheCount = visibleLeaguesAll.size;
   const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} · ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
-  const mastCountText = `${shown} ${shown === 1 ? 'articolo pubblicato' : 'articoli pubblicati'}`;
 
   const isLight = theme === 'light';
 
@@ -818,14 +817,17 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       {/* ============ MASTHEAD ============ */}
       <section className="masthead">
         <div className="mast-eyebrow">
-          <span>Edizione del giorno</span><span className="sep">·</span>
-          <span className="mono">{dateDots}</span><span className="sep">·</span>
-          <b>{mastCountText}</b><span className="sep">·</span>
-          <span>generati da redazione AI</span>
+          <span>AI Newsroom</span><span className="sep">·</span>
+          <span className="mono">{clockMono}</span><span className="sep">·</span>
+          <span>{dateLabelChyron}</span>
         </div>
-        <h1 className="mast-title">Una redazione che <em>scrive sola</em>. {shown} articol{shown === 1 ? 'o' : 'i'} per le partite di {activeTab === 'oggi' ? 'stasera' : activeTab === 'domani' ? 'domani' : 'dopodomani'}, prima del kickoff.</h1>
+        <h1 className="mast-title"><em>In programma</em> {activeTab === 'oggi' ? 'stasera' : activeTab === 'domani' ? 'domani' : 'dopodomani'}</h1>
         <p className="mast-deck">
-          Ogni giorno il nostro motore di sintesi legge <b>conferenze stampa, statistiche e copertura locale</b>, e produce un articolo per ciascun match in programma — completo di <b>pronostico AI</b> con livello di confidenza. Nessun giornalista umano è coinvolto. È pubblicato per trasparenza: vediamo gli stessi dati che usa l'algoritmo per la previsione.
+          <b>{shown} {shown === 1 ? 'articolo' : 'articoli'}</b>
+          <span style={{ opacity: .5, margin: '0 10px' }}>·</span>
+          <b>{legheCount} {legheCount === 1 ? 'lega' : 'leghe'}</b>
+          <span style={{ opacity: .5, margin: '0 10px' }}>·</span>
+          generati dalla redazione AI di AI Simulator
         </p>
       </section>
 

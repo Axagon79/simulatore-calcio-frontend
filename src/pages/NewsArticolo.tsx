@@ -91,11 +91,18 @@ interface CitazioneRecord {
   frase?: string | null;
   fonte?: string | null;
 }
+interface SourceRecord {
+  url?: string;
+  title?: string;
+  domain?: string;
+  snippet?: string;
+}
 interface NewsMetaA {
   giornata?: number | null;
   stadio?: StadioRecord | null;
   arbitro?: ArbitroRecord | null;
   citazioni?: CitazioneRecord[];
+  sources?: SourceRecord[];
   home: NewsMetaSideA;
   away: NewsMetaSideA;
 }
@@ -1266,6 +1273,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const stadioInfo = meta?.stadio || null;
   const arbitroInfo = meta?.arbitro || null;
   const citazioni = meta?.citazioni || [];
+  const sources = meta?.sources || [];
   const lineupHome = homeMeta.lineup || {};
   const lineupAway = awayMeta.lineup || {};
   const assentiHomeRaw = homeMeta.assenti || [];
@@ -1790,10 +1798,25 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           <section className="sources">
             <div className="sources-h">
               <h3>FONTI CONSULTATE</h3>
-              <span className="meta">Sintesi via you.com /v1/research{computedAt ? ` · ultimo retrieval ${pubLabel}` : ''}</span>
+              <span className="meta">Sintesi via you.com /v1/research{computedAt ? ` · ultimo retrieval ${pubLabel}` : ''}{sources.length ? ` · ${sources.length} fonti` : ''}</span>
             </div>
             <div className="sources-grid">
-              <div className="source-item"><span className="name">{todoTag('elenco fonti consultate')}</span><span className="kind">—</span><span className="when">—</span></div>
+              {sources.length > 0 ? (
+                sources.map((s, i) => {
+                  const url = s.url || '';
+                  const domain = s.domain || (url ? (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } })() : '');
+                  const title = s.title || domain || '—';
+                  return (
+                    <a key={`src-${i}`} className="source-item" href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                      <span className="name">{title}</span>
+                      <span className="kind">{domain}</span>
+                      <span className="when">↗</span>
+                    </a>
+                  );
+                })
+              ) : (
+                <div className="source-item"><span className="name" style={{ color: 'var(--t-faint)', fontStyle: 'italic' }}>Elenco fonti non disponibile per questo articolo</span><span className="kind">—</span><span className="when">—</span></div>
+              )}
             </div>
           </section>
 

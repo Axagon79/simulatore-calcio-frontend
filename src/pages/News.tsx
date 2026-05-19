@@ -61,22 +61,37 @@ interface ApiResp {
 
 // Mappa lega -> nazione (slug) per il filtro a cascata.
 const LEAGUE_TO_COUNTRY: Record<string, string> = {
-  'Premier League': 'inghilterra', 'Championship': 'inghilterra',
-  'Serie A': 'italia', 'Serie B': 'italia',
-  'LaLiga': 'spagna', 'La Liga': 'spagna',
-  'Bundesliga': 'germania', '2. Bundesliga': 'germania',
-  'Ligue 1': 'francia', 'Ligue 2': 'francia',
-  'Eredivisie': 'olanda', 'Primeira Liga': 'portogallo',
-  'Allsvenskan': 'svezia', 'Veikkausliiga': 'finlandia',
+  'Premier League': 'inghilterra', 'Championship': 'inghilterra', 'League One': 'inghilterra', 'League Two': 'inghilterra', 'FA Cup': 'inghilterra', 'Carabao Cup': 'inghilterra',
+  'Serie A': 'italia', 'Serie B': 'italia', 'Coppa Italia': 'italia',
+  'LaLiga': 'spagna', 'La Liga': 'spagna', 'LaLiga 2': 'spagna', 'Copa del Rey': 'spagna',
+  'Bundesliga': 'germania', '2. Bundesliga': 'germania', '3. Liga': 'germania', 'DFB Pokal': 'germania',
+  'Ligue 1': 'francia', 'Ligue 2': 'francia', 'Coupe de France': 'francia',
+  'Eredivisie': 'olanda', 'Eerste Divisie': 'olanda',
+  'Primeira Liga': 'portogallo', 'Liga Portugal': 'portogallo', 'Liga Portugal 2': 'portogallo',
+  'Allsvenskan': 'svezia',
+  'Veikkausliiga': 'finlandia',
+  'Eliteserien': 'norvegia',
+  'Superligaen': 'danimarca',
+  'Jupiler Pro League': 'belgio',
+  'Süper Lig': 'turchia', '1. Lig': 'turchia',
+  'Scottish Premiership': 'scozia',
   'Brasileirao': 'brasile', 'Brasileirão': 'brasile', 'Brasileirão Serie A': 'brasile',
   'Major League Soccer': 'usa', 'MLS': 'usa',
+  'Liga MX': 'messico',
+  'Primera División': 'argentina',
+  'Saudi Pro League': 'arabia_saudita',
+  'J1 League': 'giappone',
   'Champions League': 'europa', 'Europa League': 'europa',
 };
 const COUNTRY_LABEL: Record<string, string> = {
   inghilterra: 'Inghilterra', italia: 'Italia', spagna: 'Spagna',
   germania: 'Germania', francia: 'Francia', olanda: 'Olanda',
   portogallo: 'Portogallo', svezia: 'Svezia', finlandia: 'Finlandia',
-  brasile: 'Brasile', usa: 'USA', europa: 'Coppe europee',
+  norvegia: 'Norvegia', danimarca: 'Danimarca', belgio: 'Belgio',
+  turchia: 'Turchia', scozia: 'Scozia',
+  brasile: 'Brasile', usa: 'USA', messico: 'Messico', argentina: 'Argentina',
+  arabia_saudita: 'Arabia Saudita', giappone: 'Giappone',
+  europa: 'Coppe europee',
 };
 const leagueSlug = (lg: string): string =>
   (lg || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-');

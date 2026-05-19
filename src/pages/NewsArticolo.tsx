@@ -566,6 +566,12 @@ const STYLES = `
   .article-root .crumb-top a{color:var(--t-dim);cursor:pointer}
   .article-root .crumb-top a:hover{color:var(--t)}
 
+  /* Bottone "Torna alla lista" sopra il poster: ben visibile, sempre presente. */
+  .article-root .back-bar{max-width:1280px;margin:24px auto 0;padding:0 28px}
+  .article-root .back-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--t);font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:background .15s, border-color .15s, color .15s}
+  .article-root .back-btn:hover{background:var(--cyan);color:var(--cyan-ink);border-color:var(--cyan)}
+  .article-root .back-btn .arrow{font-size:14px;line-height:1}
+
   .article-root .topbar-right{display:flex;align-items:center;gap:12px;color:var(--t-dim);font-size:12px}
   .article-root .topbar-right .mono{color:var(--t)}
   .article-root .theme-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:transparent;color:var(--t-dim);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;font-family:inherit;cursor:pointer;transition:color .15s, border-color .15s}
@@ -635,8 +641,8 @@ const STYLES = `
   .article-root .body ul:not([data-plain]) li::before{content:"\\2192";position:absolute;left:0;top:0;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-weight:500}
   .article-root .body ul:not([data-plain]) li b{color:var(--t);font-weight:600}
 
-  .article-root .player-link{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--t-faint);text-underline-offset:3px;transition:color .15s, text-decoration-color .15s}
-  .article-root .player-link:hover{color:var(--cyan);text-decoration-color:var(--cyan)}
+  .article-root .player-link{cursor:pointer;transition:color .15s}
+  .article-root .player-link:hover{color:var(--cyan)}
 
   .article-root blockquote{margin:32px 0 32px;padding:8px 0 8px 28px;border-left:3px solid var(--cyan);position:relative}
   .article-root blockquote p.q{font-size:23px;line-height:1.4;color:var(--t);font-weight:500;letter-spacing:-0.01em;margin:0 0 14px;text-wrap:pretty;font-family:'Inter',sans-serif}
@@ -1366,7 +1372,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   <span
                     className="author"
                     onClick={() => setProfiloOpen(true)}
-                    style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                    style={{ cursor: 'pointer' }}
                     title="Apri scheda redattore"
                   >{redattore.nome}</span>
                 </span>
@@ -1417,6 +1423,13 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               )}
             </div>
           </section>
+
+          {/* ============ BOTTONE TORNA INDIETRO ============ */}
+          <div className="back-bar">
+            <a href="/news" onClick={handleBack} className="back-btn">
+              <span className="arrow">←</span> Tutte le news
+            </a>
+          </div>
 
           {/* ============ POSTER ============ */}
           <section className="poster">
@@ -1704,7 +1717,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                     a cura di{' '}
                     <span
                       onClick={() => setProfiloOpen(true)}
-                      style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                      style={{ cursor: 'pointer' }}
                       title="Apri scheda redattore"
                     >{redattore.nome}</span>
                   </b>

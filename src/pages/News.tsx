@@ -272,6 +272,9 @@ const STYLES = `
   .news-root .ticker-track::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
   .news-root .ticker-track::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
   .news-root .ticker-strip{display:flex;align-items:center;gap:36px;height:100%;animation:newsSlide 60s linear infinite;white-space:nowrap;padding-left:24px}
+  .news-root .ti-clickable{transition:color .15s}
+  .news-root .ti-clickable:hover{color:var(--cyan)}
+  .news-root .ti-clickable:hover b{color:var(--cyan)}
   @keyframes newsSlide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .news-root .ti{display:inline-flex;align-items:center;gap:10px;font-size:12.5px;color:var(--t-dim)}
   .news-root .ti b{color:var(--t);font-weight:500}
@@ -441,21 +444,37 @@ const STYLES = `
   }
 `;
 
-const TickerStrip: React.FC = () => (
-  <div className="ticker-strip">
-    {[0,1].map(loop => (
-      <React.Fragment key={loop}>
-        <span className="ti"><span className="mono">15:00</span><b>Premier · Arsenal–Newcastle</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">71%</span></span>
-        <span className="ti"><span className="mono">17:00</span><b>Premier · Liverpool–Crystal Palace</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">78%</span></span>
-        <span className="ti"><span className="mono">17:30</span><b>Allsvenskan · AIK–Djurgården</b> <span className="sep">·</span> pronostico <b>X</b> conf. <span className="mono">42%</span></span>
-        <span className="ti"><span className="mono">19:00</span><b>Allsvenskan · Malmö–Hammarby</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">61%</span></span>
-        <span className="ti"><span className="mono">20:00</span><b>Brasileirão · Flamengo–Atlético MG</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">63%</span></span>
-        <span className="ti"><span className="mono">21:15</span><b>Veikkausliiga · HJK–Inter Turku</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">58%</span></span>
-        <span className="ti"><span className="mono">22:30</span><b>Brasileirão · Botafogo–Internacional</b> <span className="sep">·</span> pronostico <b>1</b> conf. <span className="mono">54%</span></span>
-      </React.Fragment>
-    ))}
-  </div>
-);
+// Ticker dinamico: scorre fino a 8 partite reali (oggi + domani + dopodomani)
+// filtrate per quelle con articolo Scout disponibile. Ogni voce e' cliccabile e
+// apre l'articolo della partita corrispondente.
+const TickerStrip: React.FC<{
+  items: Array<{ time: string; league: string; home: string; away: string; date: string; pick: string; conf: number }>;
+  onItemClick: (home: string, away: string, date: string) => void;
+}> = ({ items, onItemClick }) => {
+  const list = items.length > 0 ? items : null;
+  return (
+    <div className="ticker-strip">
+      {[0,1].map(loop => (
+        <React.Fragment key={loop}>
+          {list ? list.map((it, i) => (
+            <span
+              className="ti ti-clickable"
+              key={`${loop}-${i}`}
+              onClick={() => onItemClick(it.home, it.away, it.date)}
+              style={{ cursor: 'pointer' }}
+            >
+              <span className="mono">{it.time}</span>
+              <b>{it.league} · {it.home}–{it.away}</b>
+              <span className="sep">·</span> pronostico <b>{it.pick}</b> conf. <span className="mono">{it.conf}%</span>
+            </span>
+          )) : (
+            <span className="ti"><span className="mono">--:--</span><b>Caricamento partite in corso...</b></span>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
 
 const News: React.FC<NewsProps> = ({ onBack }) => {
   const navigate = useNavigate();
@@ -553,14 +572,36 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+
+    // Helper: processa il payload (cache o rete) - logica condivisa.
+    const processPredictions = (preds: Match[]) => {
+      const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text));
+      withArticle.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
+      setMatches(withArticle);
+    };
+
+    // Provo prima la cache sessionStorage (popolata da PredictionsContext o
+    // da una precedente visita a News/NewsArticolo). TTL 5 min: oltre rifaccio
+    // fetch fresh per non mostrare dati stantii.
+    try {
+      const cached = sessionStorage.getItem(`sz-${activeDateISO}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const ageMs = Date.now() - (parsed.ts || 0);
+        if (ageMs < 5 * 60 * 1000 && Array.isArray(parsed.predictions)) {
+          processPredictions(parsed.predictions);
+          setLoading(false);
+          return () => { cancelled = true; };
+        }
+      }
+    } catch { /* cache corrotta: ignora e va su rete */ }
+
     fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${activeDateISO}`)
       .then(r => r.json())
       .then((data: ApiResp) => {
         if (cancelled) return;
         const preds = Array.isArray(data?.predictions) ? data.predictions : [];
-        const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text));
-        withArticle.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
-        setMatches(withArticle);
+        processPredictions(preds);
         // Cache in sessionStorage: NewsArticolo riusa il payload invece di
         // rifare la stessa fetch da 6s. TTL 5 min via timestamp.
         try {
@@ -646,6 +687,46 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     const after = new Date(today); after.setDate(today.getDate() + 2);
     return { today, tomorrow, after };
   }, []);
+
+  // Ticker dinamico: leggo le 3 date dalla cache sessionStorage (popolata da
+  // PredictionsContext o dal fetch corrente) e compongo fino a 8 partite con
+  // articolo + pronostico. Ordinate per data+orario crescente.
+  const [tickerItems, setTickerItems] = useState<Array<{ time: string; league: string; home: string; away: string; date: string; pick: string; conf: number }>>([]);
+  useEffect(() => {
+    const isoOf = (d: Date) => d.toISOString().split('T')[0];
+    const dates = [isoOf(datesTabs.today), isoOf(datesTabs.tomorrow), isoOf(datesTabs.after)];
+    const all: Match[] = [];
+    for (const d of dates) {
+      try {
+        const raw = sessionStorage.getItem(`sz-${d}`);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.predictions)) continue;
+        for (const m of parsed.predictions) {
+          if (m.scout_deep?.scout_text || m.scout_lite?.scout_text) all.push(m);
+        }
+      } catch { /* cache rotta, skip */ }
+    }
+    // Ordina per data + match_time
+    all.sort((a, b) => {
+      const da = (a.date || '') + (a.match_time || '');
+      const db = (b.date || '') + (b.match_time || '');
+      return da.localeCompare(db);
+    });
+    const items = all.slice(0, 8).map(m => {
+      const tip = getTopTip(m);
+      return {
+        time: m.match_time || '--:--',
+        league: (m.league || m.lega || '').replace('Premier League', 'Premier'),
+        home: m.home,
+        away: m.away,
+        date: m.date,
+        pick: tip?.pronostico || '?',
+        conf: tip?.confidence != null ? Math.round(tip.confidence) : 0,
+      };
+    });
+    setTickerItems(items);
+  }, [matches, datesTabs]);  // si aggiorna quando matches cambia (= nuova cache disponibile)
   const activeDateObj = activeTab === 'oggi' ? datesTabs.today : activeTab === 'domani' ? datesTabs.tomorrow : datesTabs.after;
   const dateDots = `${String(activeDateObj.getDate()).padStart(2, '0')} · ${String(activeDateObj.getMonth() + 1).padStart(2, '0')} · ${activeDateObj.getFullYear()}`;
   const GIORNI = ['dom','lun','mar','mer','gio','ven','sab'];
@@ -682,7 +763,13 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           <div className="ticker-row">
             <div className="ticker-tag">AI · DESK</div>
             <div className="ticker-track">
-              <TickerStrip />
+              <TickerStrip
+                items={tickerItems}
+                onItemClick={(home, away, date) => {
+                  const params = new URLSearchParams({ home, away, date });
+                  navigate(`/news/articolo?${params.toString()}`);
+                }}
+              />
             </div>
           </div>
         </div>
@@ -858,7 +945,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                         background: crestGradient(m.home),
                         display: m.home_mongo_id ? 'none' : 'grid',
                       }}>{crestInitial(m.home)}</div>
-                      <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.home); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{m.home}</span></div>
+                      <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.home); }} style={{ cursor: 'pointer' }}>{m.home}</span></div>
                     </div>
                     <div className="ml-vs">vs</div>
                     <div className="ml-team">
@@ -883,7 +970,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                         background: crestGradient(m.away),
                         display: m.away_mongo_id ? 'none' : 'grid',
                       }}>{crestInitial(m.away)}</div>
-                      <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.away); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{m.away}</span></div>
+                      <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.away); }} style={{ cursor: 'pointer' }}>{m.away}</span></div>
                     </div>
                   </div>
                   <h2 className="a-title">
@@ -892,7 +979,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   {lede && <p className="a-lede">{lede}</p>}
                   <div className="a-foot">
                     <div className="by-line">
-                      <span>Articolo a cura di <b onClick={(e) => { e.stopPropagation(); setRedattoreModal(redattore); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{redattore.nome}</b></span>
+                      <span>Articolo a cura di <b onClick={(e) => { e.stopPropagation(); setRedattoreModal(redattore); }} style={{ cursor: 'pointer' }}>{redattore.nome}</b></span>
                     </div>
                     <a className="read-link" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
                   </div>

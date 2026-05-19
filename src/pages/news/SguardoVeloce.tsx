@@ -27,6 +27,23 @@ interface StandingsRow {
   goal_diff?: number;
 }
 
+// Mappa nome lega esteso -> slug atteso dal backend /gauge-data (PATH 2).
+// Tutti i nomi qui sono quelli usati in daily_predictions_unified.lega.
+const LEAGUE_NAME_TO_SLUG: Record<string, string> = {
+  'Serie A': 'SERIE_A', 'Serie B': 'SERIE_B',
+  'Serie C - Girone A': 'SERIE_C_GIRONE_A', 'Serie C - Girone B': 'SERIE_C_GIRONE_B', 'Serie C - Girone C': 'SERIE_C_GIRONE_C',
+  'Premier League': 'PREMIER_LEAGUE', 'La Liga': 'LA_LIGA', 'Bundesliga': 'BUNDESLIGA',
+  'Ligue 1': 'LIGUE_1', 'Eredivisie': 'EREDIVISIE', 'Liga Portugal': 'LIGA_PORTUGAL',
+  'Championship': 'CHAMPIONSHIP', 'LaLiga 2': 'LA_LIGA_2', '2. Bundesliga': 'BUNDESLIGA_2', 'Ligue 2': 'LIGUE_2',
+  'Scottish Premiership': 'SCOTTISH_PREMIERSHIP', 'Allsvenskan': 'ALLSVENSKAN', 'Eliteserien': 'ELITESERIEN',
+  'Superligaen': 'SUPERLIGAEN', 'Jupiler Pro League': 'JUPILER_PRO_LEAGUE', 'Süper Lig': 'SUPER_LIG',
+  'League of Ireland Premier Division': 'LEAGUE_OF_IRELAND', 'League One': 'LEAGUE_ONE',
+  'Brasileirão Serie A': 'BRASILEIRAO', 'Primera División': 'PRIMERA_DIVISION_ARG', 'Major League Soccer': 'MLS',
+  'J1 League': 'J1_LEAGUE', 'League Two': 'LEAGUE_TWO', 'Veikkausliiga': 'VEIKKAUSLIIGA', '3. Liga': 'LIGA_3',
+  'Liga MX': 'LIGA_MX', 'Eerste Divisie': 'EERSTE_DIVISIE', 'Liga Portugal 2': 'LIGA_PORTUGAL_2',
+  '1. Lig': 'BIR_LIG', 'Saudi Pro League': 'SAUDI_PRO_LEAGUE', 'Scottish Championship': 'SCOTTISH_CHAMPIONSHIP',
+};
+
 type TabKey = 'classifica' | 'tendenze' | 'radar';
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -128,7 +145,11 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
     let cancelled = false;
     setTendenzeLoading(true);
     setTendenzeError(null);
-    const url = `${API_BASE}/gauge-data?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&league=${encodeURIComponent(league)}`;
+    // L'endpoint /gauge-data nel PATH 2 accetta uno slug (es. PREMIER_LEAGUE),
+    // non il nome esteso. Mappo qui; se la lega non e' nella mappa passo
+    // comunque il nome originale (PATH 1 cerca per home/away in daily_predictions).
+    const leagueSlug = LEAGUE_NAME_TO_SLUG[league] || league;
+    const url = `${API_BASE}/gauge-data?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&league=${encodeURIComponent(leagueSlug)}`;
     fetch(url)
       .then(r => r.json())
       .then((data: any) => {

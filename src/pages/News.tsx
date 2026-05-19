@@ -290,7 +290,7 @@ const STYLES = `
   .news-root .ticker-track::after,.news-root .ticker-track::before{content:"";position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none}
   .news-root .ticker-track::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
   .news-root .ticker-track::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
-  .news-root .ticker-strip{display:flex;align-items:center;gap:36px;height:100%;animation:newsSlide 60s linear infinite;white-space:nowrap;padding-left:24px}
+  .news-root .ticker-strip{display:flex;align-items:center;gap:36px;height:100%;white-space:nowrap;padding-left:24px;will-change:transform}
   .news-root .ti-clickable{transition:color .15s}
   .news-root .ti-clickable:hover{color:var(--cyan)}
   .news-root .ti-clickable:hover b{color:var(--cyan)}
@@ -361,6 +361,30 @@ const STYLES = `
   .news-root .ir-item.active{color:var(--cyan)}
   .news-root .ir-item.active::before{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 0 4px rgba(34,211,238,0.18)}
   :root[data-theme="light"] .news-root .ir-item.active::before{box-shadow:0 0 0 4px rgba(8,145,178,0.15)}
+
+  /* Cluster orari: header cliccabile (accordion). Default tutti chiusi:
+     l'utente vede solo le fasce, clicca per aprire la fascia di interesse. */
+  .news-root .ir-clusters{display:flex;flex-direction:column;gap:4px}
+  .news-root .ir-cluster{border-bottom:1px solid var(--line)}
+  .news-root .ir-cluster:last-child{border-bottom:none}
+  .news-root .ir-cluster-h{display:flex;align-items:center;gap:8px;width:100%;padding:10px 0;background:transparent;border:none;cursor:pointer;color:var(--t);font-family:'JetBrains Mono',monospace;font-size:12.5px;text-align:left;transition:color .15s}
+  .news-root .ir-cluster-h:hover{color:var(--cyan)}
+  .news-root .ir-cluster-arrow{font-size:11px;color:var(--t-faint);width:12px;display:inline-block}
+  .news-root .ir-cluster-time{flex:1;letter-spacing:0.04em}
+  .news-root .ir-cluster-count{font-family:'Inter',sans-serif;font-size:11px;color:var(--t-faint);font-weight:400;letter-spacing:0}
+  .news-root .ir-cluster.open .ir-cluster-arrow{color:var(--cyan)}
+  .news-root .ir-cluster-body{display:flex;flex-direction:column;gap:4px;padding:4px 0 10px 20px;border-left:1px solid var(--line);margin-left:5px}
+
+  /* Sotto-accordion per lega dentro un cluster aperto */
+  .news-root .ir-sub{display:flex;flex-direction:column}
+  .news-root .ir-sub-h{display:flex;align-items:center;gap:6px;width:100%;padding:6px 0;background:transparent;border:none;cursor:pointer;color:var(--t-dim);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.08em;text-align:left;transition:color .15s}
+  .news-root .ir-sub-h:hover{color:var(--cyan)}
+  .news-root .ir-sub-arrow{font-size:10px;color:var(--t-faint);width:10px;display:inline-block}
+  .news-root .ir-sub-name{flex:1}
+  .news-root .ir-sub-count{font-family:'Inter',sans-serif;font-size:10.5px;color:var(--t-faint);font-weight:400;letter-spacing:0}
+  .news-root .ir-sub.open .ir-sub-arrow,
+  .news-root .ir-sub:has(.ir-sub-h[aria-expanded="true"]) .ir-sub-arrow{color:var(--cyan)}
+  .news-root .ir-sub-body{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 14px}
   .news-root .ir-foot{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t-faint);line-height:1.5}
 
   .news-root .stack{display:flex;flex-direction:column;gap:0}
@@ -437,8 +461,14 @@ const STYLES = `
   @media (max-width:1080px){
     .news-root .layout{grid-template-columns:1fr;gap:24px}
     .news-root .index-rail{position:static;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:16px}
-    .news-root .ir-list{flex-direction:row;flex-wrap:wrap;border-left:none;padding-left:0;gap:12px}
-    .news-root .ir-item{padding:4px 12px 4px 14px;border:1px solid var(--line);border-radius:6px}
+    /* Ticker AI Desk: velocita' gestita dal loop JS (rAF) basato su
+       window.innerWidth. Niente animation CSS qui. */
+
+    /* Indice mobile: cluster e sub restano verticali (header lega leggibile),
+       ma gli articoli finali sono chip wrap dentro il sub-body. */
+    .news-root .ir-cluster-body{padding:4px 0 10px 12px;border-left:none;margin-left:0;gap:6px}
+    .news-root .ir-sub-body{flex-direction:row;flex-wrap:wrap;gap:8px;padding-left:0}
+    .news-root .ir-item{padding:6px 10px;border:1px solid var(--line);border-radius:6px}
     .news-root .ir-item::before{display:none}
     .news-root .ir-foot{display:none}
     .news-root .article{grid-template-columns:1fr}
@@ -491,8 +521,113 @@ const TickerStrip: React.FC<{
   onItemClick: (home: string, away: string, date: string) => void;
 }> = ({ items, onItemClick }) => {
   const list = items.length > 0 ? items : null;
+  const stripRef = React.useRef<HTMLDivElement | null>(null);
+  // Loop manuale: la posizione del ticker (translateX in px) e' uno state ref.
+  // Un rAF la decrementa di una quantita' proporzionale al delta-time
+  // (velocita' = halfWidth / durationS). Drag pausa il loop e sposta tx.
+  const state = React.useRef<{
+    tx: number;           // posizione corrente in px (sempre <= 0)
+    halfWidth: number;    // larghezza meta' strip (wrap point)
+    speed: number;        // px/s
+    lastFrame: number;    // timestamp ultimo frame
+    rafId: number | null;
+    dragging: boolean;
+    dragStartX: number;
+    dragStartTx: number;
+    dragMoved: boolean;
+  }>({
+    tx: 0, halfWidth: 0, speed: 0, lastFrame: 0, rafId: null,
+    dragging: false, dragStartX: 0, dragStartTx: 0, dragMoved: false,
+  });
+
+  // Anima un frame: avanza tx, applica wrap, aggiorna transform.
+  const animate = (now: number) => {
+    const el = stripRef.current;
+    const s = state.current;
+    if (!el) { s.rafId = null; return; }
+    if (s.dragging) { s.rafId = null; return; }
+    const dt = (now - s.lastFrame) / 1000;
+    s.lastFrame = now;
+    s.tx -= s.speed * dt;
+    if (s.tx <= -s.halfWidth) s.tx += s.halfWidth;
+    el.style.transform = `translateX(${s.tx}px)`;
+    s.rafId = requestAnimationFrame(animate);
+  };
+
+  // Avvio loop al mount (una volta che lo strip ha larghezza nota).
+  React.useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const s = state.current;
+    // Aspetta che lo strip abbia scrollWidth (dopo prima render)
+    const init = () => {
+      s.halfWidth = el.scrollWidth / 2;
+      if (s.halfWidth === 0) {
+        requestAnimationFrame(init);
+        return;
+      }
+      const durationS = window.innerWidth < 760 ? 120 : 90;
+      s.speed = s.halfWidth / durationS;
+      s.lastFrame = performance.now();
+      s.rafId = requestAnimationFrame(animate);
+    };
+    init();
+    return () => {
+      if (s.rafId != null) cancelAnimationFrame(s.rafId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list]);
+
+  // Soglia per distinguere tap da drag.
+  const DRAG_THRESHOLD = 8;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const s = state.current;
+    s.dragStartX = e.touches[0].clientX;
+    s.dragStartTx = s.tx;
+    s.dragMoved = false;
+    s.dragging = false; // attivo solo dopo soglia
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const el = stripRef.current;
+    const s = state.current;
+    if (!el) return;
+    const dx = e.touches[0].clientX - s.dragStartX;
+    if (!s.dragging && Math.abs(dx) >= DRAG_THRESHOLD) {
+      s.dragging = true;
+      s.dragMoved = true;
+      // Loop animate vede dragging=true e si ferma da solo
+      if (s.rafId != null) {
+        cancelAnimationFrame(s.rafId);
+        s.rafId = null;
+      }
+    }
+    if (!s.dragging) return;
+    s.tx = s.dragStartTx + dx;
+    el.style.transform = `translateX(${s.tx}px)`;
+  };
+
+  const onTouchEnd = () => {
+    const s = state.current;
+    if (!s.dragging) return;
+    s.dragging = false;
+    // Wrappo tx nel range [-halfWidth, 0]
+    while (s.tx > 0) s.tx -= s.halfWidth;
+    while (s.tx < -s.halfWidth) s.tx += s.halfWidth;
+    // Riavvio il loop dalla posizione corrente
+    s.lastFrame = performance.now();
+    s.rafId = requestAnimationFrame(animate);
+  };
+
   return (
-    <div className="ticker-strip">
+    <div
+      className="ticker-strip"
+      ref={stripRef}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       {[0,1].map(loop => (
         <React.Fragment key={loop}>
           {list ? list.map((it, i) => (
@@ -729,6 +864,78 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const legheCount = visibleLeaguesAll.size;
   const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} · ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
 
+  // Raggruppo le partite in cluster naturali: gap > 60 min tra una partita e
+  // la successiva apre un nuovo cluster. Le partite senza orario finiscono in
+  // un cluster speciale 'TBD' alla fine.
+  // Etichetta cluster: "15:00 - 16:30" (prima-ultima ora del cluster).
+  // Se cluster ha una sola ora distinta, scrivo solo quella.
+  type Cluster = { id: string; label: string; matches: Match[] };
+  const clusters: Cluster[] = useMemo(() => {
+    const withTime = filtered.filter(m => m.match_time && /^\d{1,2}:\d{2}/.test(m.match_time));
+    const noTime = filtered.filter(m => !m.match_time || !/^\d{1,2}:\d{2}/.test(m.match_time));
+    // Helper: stringa "HH:MM" -> minuti dall'inizio giornata
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    // Ordino per orario
+    const sorted = [...withTime].sort((a, b) => toMin(a.match_time!) - toMin(b.match_time!));
+    const groups: Cluster[] = [];
+    let cur: Match[] = [];
+    let prevMin = -Infinity;
+    for (const m of sorted) {
+      const t = toMin(m.match_time!);
+      if (cur.length > 0 && t - prevMin > 60) {
+        // Chiudo cluster corrente
+        const first = cur[0].match_time!;
+        const last = cur[cur.length - 1].match_time!;
+        groups.push({
+          id: `cl-${groups.length}`,
+          label: first === last ? first : `${first} – ${last}`,
+          matches: cur,
+        });
+        cur = [];
+      }
+      cur.push(m);
+      prevMin = t;
+    }
+    if (cur.length > 0) {
+      const first = cur[0].match_time!;
+      const last = cur[cur.length - 1].match_time!;
+      groups.push({
+        id: `cl-${groups.length}`,
+        label: first === last ? first : `${first} – ${last}`,
+        matches: cur,
+      });
+    }
+    if (noTime.length > 0) {
+      groups.push({ id: 'cl-tbd', label: 'Orario da definire', matches: noTime });
+    }
+    return groups;
+  }, [filtered]);
+
+  // Stato accordion: quali cluster sono aperti. Di default tutti chiusi.
+  const [openClusters, setOpenClusters] = useState<Set<string>>(new Set());
+  const toggleCluster = (id: string) => {
+    setOpenClusters(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  // Stato sotto-accordion per lega dentro ogni cluster aperto.
+  // Key: `${cluster.id}__${leagueName}`. Default chiusi.
+  const [openLeagueSubs, setOpenLeagueSubs] = useState<Set<string>>(new Set());
+  const toggleLeagueSub = (id: string) => {
+    setOpenLeagueSubs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const isLight = theme === 'light';
 
   // Date dei tab per l'eyebrow.
@@ -908,18 +1115,79 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       <div className="layout">
         <aside className="index-rail">
           <div className="ir-h">Indice · {activeTab} <span className="ir-count">({shown})</span></div>
-          <div className="ir-list">
-            {filtered.map((m, i) => {
-              const id = `a-${i + 1}`;
+          <div className="ir-clusters">
+            {/* Accordion per fasce orarie (cluster naturali con gap > 60 min) */}
+            {clusters.map(cluster => {
+              const open = openClusters.has(cluster.id);
               return (
-                <a
-                  key={id}
-                  href={`#${id}`}
-                  className={`ir-item ${activeRail === id ? 'active' : ''}`}
-                  onClick={(e) => { setActiveRail(id); openArticle(e, m); }}
-                >
-                  {m.match_time || MISSING_PLAIN}<span className="lbl">{m.home} · {m.away}</span>
-                </a>
+                <div key={cluster.id} className={`ir-cluster ${open ? 'open' : ''}`}>
+                  <button
+                    type="button"
+                    className="ir-cluster-h"
+                    onClick={() => toggleCluster(cluster.id)}
+                    aria-expanded={open}
+                  >
+                    <span className="ir-cluster-arrow">{open ? '▾' : '▸'}</span>
+                    <span className="ir-cluster-time">{cluster.label}</span>
+                    <span className="ir-cluster-count">{cluster.matches.length} {cluster.matches.length === 1 ? 'articolo' : 'articoli'}</span>
+                  </button>
+                  {open && (() => {
+                    // Sotto-raggruppamento per lega: dentro la fascia aperta,
+                    // mostro un header per ogni lega presente (cliccabile per
+                    // collassare). Se nel cluster c'e' una sola lega, salto il
+                    // header (mostro direttamente la lista).
+                    const byLeague = new Map<string, Match[]>();
+                    for (const m of cluster.matches) {
+                      const lg = m.league || m.lega || '— lega ignota —';
+                      if (!byLeague.has(lg)) byLeague.set(lg, []);
+                      byLeague.get(lg)!.push(m);
+                    }
+                    const leagueList = Array.from(byLeague.entries());
+                    const singleLeague = leagueList.length === 1;
+                    return (
+                      <div className="ir-cluster-body">
+                        {leagueList.map(([lg, partite]) => {
+                          const subId = `${cluster.id}__${lg}`;
+                          const subOpen = singleLeague || openLeagueSubs.has(subId);
+                          return (
+                            <div key={subId} className="ir-sub">
+                              {!singleLeague && (
+                                <button
+                                  type="button"
+                                  className="ir-sub-h"
+                                  onClick={() => toggleLeagueSub(subId)}
+                                  aria-expanded={subOpen}
+                                >
+                                  <span className="ir-sub-arrow">{subOpen ? '▾' : '▸'}</span>
+                                  <span className="ir-sub-name">{lg}</span>
+                                  <span className="ir-sub-count">{partite.length}</span>
+                                </button>
+                              )}
+                              {subOpen && (
+                                <div className="ir-sub-body">
+                                  {partite.map((m) => {
+                                    const origIdx = filtered.indexOf(m);
+                                    const id = `a-${origIdx + 1}`;
+                                    return (
+                                      <a
+                                        key={id}
+                                        href={`#${id}`}
+                                        className={`ir-item ${activeRail === id ? 'active' : ''}`}
+                                        onClick={(e) => { setActiveRail(id); openArticle(e, m); }}
+                                      >
+                                        {m.match_time || MISSING_PLAIN}<span className="lbl">{m.home} · {m.away}</span>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
               );
             })}
             {filtered.length === 0 && !loading && (

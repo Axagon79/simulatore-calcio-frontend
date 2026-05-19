@@ -79,10 +79,36 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
+    // Preload background di sistema-z-predictions per la pagina News.
+    // Lo carico in parallelo a daily-predictions-unified, cosi' quando l'utente
+    // clicca su "News" il payload e' gia' in sessionStorage e la pagina e'
+    // istantanea (oggi richiedeva 6s per quella prima fetch).
+    const preloadSistemaZ = async (date: string) => {
+      try {
+        const key = `sz-${date}`;
+        const existing = sessionStorage.getItem(key);
+        if (existing) {
+          // Se c'e' gia' qualcosa fresco (< 5 min) non rifaccio
+          try {
+            const parsed = JSON.parse(existing);
+            if (Date.now() - (parsed.ts || 0) < 5 * 60 * 1000) return;
+          } catch { /* cache corrotta, sovrascrivi */ }
+        }
+        const res = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const preds = Array.isArray(json?.predictions) ? json.predictions : [];
+        sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), predictions: preds }));
+      } catch { /* preload fallito: ignora, l'utente fara' la fetch normale */ }
+    };
+
     const prefetchAll = async () => {
-      // Carica solo oggi subito
+      // Carica oggi: daily-predictions-unified + sistema-z-predictions IN PARALLELO.
       const today = getToday();
-      const data = await fetchWithDedup(today);
+      const [data] = await Promise.all([
+        fetchWithDedup(today),
+        preloadSistemaZ(today),
+      ]);
       if (cancelled) return;
       cacheRef.current[today] = data;
       setLoading(false);
@@ -94,6 +120,8 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
         if (cacheRef.current[date]) continue;
         await delay(500);
         await fetchWithDedup(date);
+        // Preload anche sistema-z per le altre date (utente potrebbe cambiare tab)
+        preloadSistemaZ(date);
       }
     };
 

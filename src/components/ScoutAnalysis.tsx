@@ -94,6 +94,8 @@ interface Props {
   gol?: ScoutTip | null;
   /** Effort dello Scout: 'deep' (F2, T-6h) o 'lite' (F1, notturna). Mostra bollino per ogni sezione. */
   effort?: 'deep' | 'lite' | string | null;
+  /** 3 risultati esatti piu' probabili in formato "H-A" (es. ["1-1", "2-1", "0-1"]). */
+  risultatiEsattiTop3?: string[] | null;
 }
 
 // Converte un ScoutTip in label leggibile per bullet.
@@ -207,7 +209,7 @@ const buildComponents = (_isLastSection: boolean) => ({
   ),
 });
 
-export default function ScoutAnalysis({ text, segno, gol, effort }: Props) {
+export default function ScoutAnalysis({ text, segno, gol, effort, risultatiEsattiTop3 }: Props) {
   const clean = formatPronostici(stripPeso(stripJsonBlock(stripCitations(text || ''))));
   const sections = splitSections(clean);
   useEffect(() => {
@@ -282,6 +284,28 @@ export default function ScoutAnalysis({ text, segno, gol, effort }: Props) {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {isLast && Array.isArray(risultatiEsattiTop3) && risultatiEsattiTop3.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: bodyColor }}>
+                  Risultati esatti più probabili:
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {risultatiEsattiTop3.map((re, i) => (
+                    <span key={i} style={{
+                      display: 'inline-block',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      background: isLight ? 'rgba(16,185,129,0.10)' : 'rgba(16,185,129,0.14)',
+                      border: `1px solid ${isLight ? 'rgba(16,185,129,0.35)' : 'rgba(16,185,129,0.40)'}`,
+                      color: bodyColor,
+                      fontWeight: 700,
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '14px',
+                    }}>{re}</span>
+                  ))}
+                </div>
               </div>
             )}
             {faseBadge}

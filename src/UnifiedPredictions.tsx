@@ -2657,11 +2657,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           const sourceJson = sd || sl;
                           const segno = sourceJson?.segno || null;
                           const gol = sourceJson?.gol || null;
+                          const risultatiEsattiTop3 = Array.isArray(sourceJson?.risultati_esatti_top3) ? sourceJson.risultati_esatti_top3 : null;
                           // effort guida il bollino F1/F2 in basso a destra di ogni sezione.
                           const effort = (pred.analysis_deepdive_effort === 'deep' || pred.analysis_deepdive_effort === 'lite')
                             ? pred.analysis_deepdive_effort
                             : (sd ? 'deep' : (sl ? 'lite' : null));
-                          return <ScoutAnalysis text={txt} segno={segno} gol={gol} effort={effort} />;
+                          return <ScoutAnalysis text={txt} segno={segno} gol={gol} effort={effort} risultatiEsattiTop3={risultatiEsattiTop3} />;
                         })()}
                         {(() => {
                           // Footer firma Scout: data/ora + (F1) per lite notturna, (F2) per deep T-6h.

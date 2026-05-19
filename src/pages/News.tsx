@@ -561,6 +561,14 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text));
         withArticle.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
         setMatches(withArticle);
+        // Cache in sessionStorage: NewsArticolo riusa il payload invece di
+        // rifare la stessa fetch da 6s. TTL 5 min via timestamp.
+        try {
+          sessionStorage.setItem(`sz-${activeDateISO}`, JSON.stringify({
+            ts: Date.now(),
+            predictions: preds,
+          }));
+        } catch { /* quota piena o disabilitato: ignora */ }
       })
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
       .finally(() => { if (!cancelled) setLoading(false); });

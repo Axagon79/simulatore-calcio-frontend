@@ -1044,22 +1044,48 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+
+    // Helper: processa il payload (cache o rete) - logica condivisa.
+    const processPredictions = (preds: MatchA[]) => {
+      preds.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
+      const found = preds.find(p =>
+        p.home?.toLowerCase() === homeQ.toLowerCase() &&
+        p.away?.toLowerCase() === awayQ.toLowerCase()
+      );
+      if (!found) {
+        setError(`Partita ${homeQ}-${awayQ} non trovata per la data ${dateQ}.`);
+      } else {
+        setMatchData(found);
+        setSiblings(preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text)));
+      }
+    };
+
+    // Provo prima la cache sessionStorage (popolata da News.tsx). TTL 5 min:
+    // oltre i 300s rifaccio fetch fresh per non mostrare dati stantii.
+    try {
+      const cached = sessionStorage.getItem(`sz-${dateQ}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const ageMs = Date.now() - (parsed.ts || 0);
+        if (ageMs < 5 * 60 * 1000 && Array.isArray(parsed.predictions)) {
+          processPredictions(parsed.predictions);
+          setLoading(false);
+          return () => { cancelled = true; };
+        }
+      }
+    } catch { /* cache corrotta: ignora e va su rete */ }
+
     fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${dateQ}`)
       .then(r => r.json())
       .then((data: ApiRespA) => {
         if (cancelled) return;
         const preds = Array.isArray(data?.predictions) ? data.predictions : [];
-        preds.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
-        const found = preds.find(p =>
-          p.home?.toLowerCase() === homeQ.toLowerCase() &&
-          p.away?.toLowerCase() === awayQ.toLowerCase()
-        );
-        if (!found) {
-          setError(`Partita ${homeQ}-${awayQ} non trovata per la data ${dateQ}.`);
-        } else {
-          setMatchData(found);
-          setSiblings(preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text)));
-        }
+        // Salvo anche qui in cache (es. utente arriva direttamente all'articolo
+        // senza passare da News.tsx, e poi navigando vorra' la lista veloce).
+        try {
+          sessionStorage.setItem(`sz-${dateQ}`, JSON.stringify({ ts: Date.now(), predictions: preds }));
+        } catch { /* quota piena: ignora */ }
+        processPredictions(preds);
       })
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
       .finally(() => { if (!cancelled) setLoading(false); });

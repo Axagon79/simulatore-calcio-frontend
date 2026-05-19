@@ -219,6 +219,8 @@ const isoDate = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const MESI_LUNGHI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const GIORNI_LUNGHI = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
 const fmtDateLabel = (d: Date): string => `${d.getDate()} ${MESI[d.getMonth()]}`;
 
 const STYLES = `
@@ -821,7 +823,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           <span className="mono">{clockMono}</span><span className="sep">·</span>
           <span>{dateLabelChyron}</span>
         </div>
-        <h1 className="mast-title"><em>In programma</em> {activeTab === 'oggi' ? 'stasera' : activeTab === 'domani' ? 'domani' : 'dopodomani'}</h1>
+        <h1 className="mast-title"><em>In programma</em> {GIORNI_LUNGHI[activeDateObj.getDay()]} {activeDateObj.getDate()} {MESI_LUNGHI[activeDateObj.getMonth()]}</h1>
         <p className="mast-deck">
           <b>{shown} {shown === 1 ? 'articolo' : 'articoli'}</b>
           <span style={{ opacity: .5, margin: '0 10px' }}>·</span>

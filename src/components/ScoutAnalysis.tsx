@@ -125,35 +125,7 @@ const formatTipLabel = (tip: ScoutTip): string => {
   return esito || mercato;
 };
 
-const PronosticoPill = ({ children }: { children: any }) => (
-  <span
-    style={{
-      display: 'inline-block',
-      padding: '1px 18px',
-      marginLeft: '4px',
-      background: 'rgba(46,162,30,0.70)',
-      color: '#000000',
-      borderRadius: '999px',
-      border: '1px solid #6b7280',
-      fontWeight: 800,
-      letterSpacing: '0.5px',
-      fontSize: '15px',
-    }}
-  >
-    {children}
-  </span>
-);
-
-const splitLastColon = (s: string): { before: string; after: string } | null => {
-  const idx = s.lastIndexOf(':');
-  if (idx < 0 || idx === s.length - 1) return null;
-  const before = s.slice(0, idx + 1);
-  const after = s.slice(idx + 1).trim();
-  if (!after) return null;
-  return { before, after };
-};
-
-const buildComponents = (isLastSection: boolean) => ({
+const buildComponents = (_isLastSection: boolean) => ({
   p: ({ children }: any) => {
     const arr: any[] = Array.isArray(children) ? children : [children];
     const sentences: any[][] = [[]];
@@ -175,36 +147,15 @@ const buildComponents = (isLastSection: boolean) => ({
       }
     });
     const filtered = sentences.filter((s) => s.length > 0);
-    const lastSentenceIdx = filtered.length - 1;
     return (
       <p style={{ margin: '0 0 14px 0' }}>
-        {filtered.map((parts, i) => {
-          if (isLastSection && i === lastSentenceIdx) {
-            const lastPartIdx = parts.length - 1;
-            const lastPart = parts[lastPartIdx];
-            if (typeof lastPart === 'string') {
-              const split = splitLastColon(lastPart);
-              if (split) {
-                return (
-                  <span key={i} style={{ display: 'block', marginBottom: '6px' }}>
-                    {parts.slice(0, lastPartIdx).map((pp: any, j: number) => (
-                      <span key={j}>{pp}</span>
-                    ))}
-                    <span>{split.before}</span>
-                    <PronosticoPill>{split.after.replace(/[.!?]\s*$/, '')}</PronosticoPill>
-                  </span>
-                );
-              }
-            }
-          }
-          return (
-            <span key={i} style={{ display: 'block', marginBottom: '6px' }}>
-              {parts.map((pp: any, j: number) => (
-                <span key={j}>{pp}</span>
-              ))}
-            </span>
-          );
-        })}
+        {filtered.map((parts, i) => (
+          <span key={i} style={{ display: 'block', marginBottom: '6px' }}>
+            {parts.map((pp: any, j: number) => (
+              <span key={j}>{pp}</span>
+            ))}
+          </span>
+        ))}
       </p>
     );
   },

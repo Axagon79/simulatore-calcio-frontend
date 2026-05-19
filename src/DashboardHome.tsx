@@ -421,6 +421,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               const aft = new Date(t); aft.setDate(t.getDate() + 2);
               return [
                 { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
+                { label: '__SEPARATOR__', onClick: () => {} },  // divider visivo tra Match Day e i giorni
                 { label: fmt(t), onClick: () => { window.location.href = '/news?tab=today'; } },
                 { label: fmt(tom), onClick: () => { window.location.href = '/news?tab=tomorrow'; } },
                 { label: fmt(aft), onClick: () => { window.location.href = '/news?tab=after'; } },
@@ -507,24 +508,36 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                         padding: '10px 10px', borderRadius: '6px',
                         borderBottom: `2px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
                       }}>{menu.label}</div>
-                      {menu.items.map((item, itemIdx) => (
-                        <div
-                          key={item.label}
-                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'mob-ticket-ai' } : (menu.label === 'Competizioni' && itemIdx === 0) ? { 'data-tour': 'mob-first-league' } : {})}
-                          onClick={() => { item.onClick(); setMenuOpen(false); }}
-                          style={{
-                            padding: '10px 8px',
-                            fontSize: '15px', fontWeight: '400',
-                            color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
-                            cursor: 'pointer',
-                            background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(255,255,255,0.03)',
-                            borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
-                            borderRadius: '4px',
-                          }}
-                        >
-                          {item.label}
-                        </div>
-                      ))}
+                      {menu.items.map((item, itemIdx) => {
+                        // Marker speciale: linea sottile divisoria, non cliccabile.
+                        if (item.label === '__SEPARATOR__') {
+                          return (
+                            <div key={`sep-${itemIdx}`} style={{
+                              height: 1,
+                              background: isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)',
+                              margin: '6px 4px',
+                            }} />
+                          );
+                        }
+                        return (
+                          <div
+                            key={item.label}
+                            {...(item.label === 'Altri Campionati' ? { 'data-tour': 'step-1a' } : item.label === 'Best Picks' ? { 'data-tour': 'mob-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'mob-ticket-ai' } : (menu.label === 'Competizioni' && itemIdx === 0) ? { 'data-tour': 'mob-first-league' } : {})}
+                            onClick={() => { item.onClick(); setMenuOpen(false); }}
+                            style={{
+                              padding: '10px 8px',
+                              fontSize: '15px', fontWeight: '400',
+                              color: isLight ? '#374151' : 'rgba(255,255,255,0.95)',
+                              cursor: 'pointer',
+                              background: isLight ? 'rgba(225,230,245,0.6)' : 'rgba(255,255,255,0.03)',
+                              borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
+                              borderRadius: '4px',
+                            }}
+                          >
+                            {item.label}
+                          </div>
+                        );
+                      })}
                     </div>
                     ) : (
                     <div
@@ -641,29 +654,40 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
                     boxShadow: isLight ? '0 8px 30px rgba(0,0,0,0.12)' : '0 8px 30px rgba(0,0,0,0.5)',
                     zIndex: 200,
                   }}>
-                    {menu.items.map((item, itemIdx) => (
-                      <div
-                        key={item.label}
-                        {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'dd-ticket-ai' } : (menu.label === 'Competizioni' && itemIdx === 0) ? { 'data-tour': 'dd-first-league' } : {})}
-                        onClick={item.onClick}
-                        style={{
-                          padding: '8px 14px',
-                          fontSize: '13px', fontWeight: '400',
-                          color: isLight ? '#374151' : 'rgba(255,255,255,0.75)',
-                          cursor: 'pointer',
-                          transition: 'background 0.1s',
-                          fontFamily: 'inherit',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'none';
-                        }}
-                      >
-                        {item.label}
-                      </div>
-                    ))}
+                    {menu.items.map((item, itemIdx) => {
+                      if (item.label === '__SEPARATOR__') {
+                        return (
+                          <div key={`sep-${itemIdx}`} style={{
+                            height: 1,
+                            background: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)',
+                            margin: '4px 10px',
+                          }} />
+                        );
+                      }
+                      return (
+                        <div
+                          key={item.label}
+                          {...(item.label === 'Altri Campionati' ? { 'data-tour': 'dd-altri-campionati' } : item.label === 'Best Picks' ? { 'data-tour': 'dd-best-picks' } : item.label === 'Ticket AI' ? { 'data-tour': 'dd-ticket-ai' } : (menu.label === 'Competizioni' && itemIdx === 0) ? { 'data-tour': 'dd-first-league' } : {})}
+                          onClick={item.onClick}
+                          style={{
+                            padding: '8px 14px',
+                            fontSize: '13px', fontWeight: '400',
+                            color: isLight ? '#374151' : 'rgba(255,255,255,0.75)',
+                            cursor: 'pointer',
+                            transition: 'background 0.1s',
+                            fontFamily: 'inherit',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = 'none';
+                          }}
+                        >
+                          {item.label}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 ) : (

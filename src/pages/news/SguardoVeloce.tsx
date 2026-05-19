@@ -77,6 +77,12 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
   // espande la tabella completa della lega.
   const [standingsExpanded, setStandingsExpanded] = useState(false);
 
+  // Stato tab Radar: 5 valori per home + away (att, tec, dif, val, frm)
+  type RadarSide = { att: number | null; tec: number | null; dif: number | null; val: number | null; frm: number | null };
+  const [radar, setRadar] = useState<{ home: RadarSide; away: RadarSide } | null>(null);
+  const [radarLoading, setRadarLoading] = useState(false);
+  const [radarError, setRadarError] = useState<string | null>(null);
+
   // Fetch classifica solo quando il tab classifica diventa attivo (lazy load).
   // Cache locale: una volta caricata, non rifa fetch se cambi tab e torni.
   useEffect(() => {
@@ -98,6 +104,25 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
       .finally(() => { if (!cancelled) setStandingsLoading(false); });
     return () => { cancelled = true; };
   }, [activeTab, league, standings]);
+
+  // Fetch radar (h2h-dna) solo quando il tab radar diventa attivo.
+  useEffect(() => {
+    if (activeTab !== 'radar' || radar !== null || !home || !away || !league) return;
+    let cancelled = false;
+    setRadarLoading(true);
+    setRadarError(null);
+    const url = `${API_BASE}/simulation/h2h-dna?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&league=${encodeURIComponent(league)}`;
+    fetch(url)
+      .then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error || `Errore ${r.status}`); }))
+      .then(data => {
+        if (cancelled) return;
+        if (data.home && data.away) setRadar({ home: data.home, away: data.away });
+        else setRadarError('Dati radar non disponibili');
+      })
+      .catch(err => { if (!cancelled) setRadarError(err?.message || 'Errore caricamento radar'); })
+      .finally(() => { if (!cancelled) setRadarLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, home, away, league, radar]);
 
   return (
     <div
@@ -257,11 +282,114 @@ const SguardoVeloce: React.FC<SguardoVeloceProps> = ({ home, away, league, homeT
               Contenuto Testa a testa — da definire
             </div>
           )}
-          {activeTab === 'radar' && (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--t-faint)', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
-              Contenuto Radar — da definire
-            </div>
-          )}
+          {activeTab === 'radar' && (() => {
+            if (radarLoading) return (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--t-faint)', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>Caricamento…</div>
+            );
+            if (radarError) return (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--t-dim)', fontSize: 13 }}>{radarError}</div>
+            );
+            if (!radar) return (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--t-faint)', fontSize: 12 }}>Nessun dato</div>
+            );
+
+            // Calcolo coordinate pentagramma SVG. center 100, radius 75.
+            // Ordine assi: ATT (alto), TEC (dx), DIF (basso-dx), VAL (basso-sx), FRM (sx).
+            const center = 100;
+            const radius = 75;
+            const labels = ['ATT', 'TEC', 'DIF', 'VAL', 'FRM'];
+            const homeVals = [radar.home.att ?? 0, radar.home.tec ?? 0, radar.home.dif ?? 0, radar.home.val ?? 0, radar.home.frm ?? 0];
+            const awayVals = [radar.away.att ?? 0, radar.away.tec ?? 0, radar.away.dif ?? 0, radar.away.val ?? 0, radar.away.frm ?? 0];
+            const cyan = 'rgba(34, 211, 238, 1)';
+            const magenta = 'rgba(236, 72, 153, 1)';
+
+            const pointsFor = (vals: number[]) => vals.map((v, i) => {
+              const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+              const x = center + (Math.min(Math.max(v, 0), 100) / 100) * radius * Math.cos(angle);
+              const y = center + (Math.min(Math.max(v, 0), 100) / 100) * radius * Math.sin(angle);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+
+            // Anelli concentrici di sfondo (20, 40, 60, 80, 100)
+            const ringPoints = (pct: number) => Array.from({ length: 5 }, (_, i) => {
+              const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+              const x = center + (pct / 100) * radius * Math.cos(angle);
+              const y = center + (pct / 100) * radius * Math.sin(angle);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+
+            return (
+              <div>
+                {/* Legenda squadre */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 14, fontSize: 12.5 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 10, height: 10, background: cyan, borderRadius: 2, display: 'inline-block' }} />
+                    <b style={{ color: 'var(--t)' }}>{home}</b>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 10, height: 10, background: magenta, borderRadius: 2, display: 'inline-block' }} />
+                    <b style={{ color: 'var(--t)' }}>{away}</b>
+                  </div>
+                </div>
+
+                {/* Pentagono SVG */}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 8px' }}>
+                  <svg viewBox="0 0 200 220" width="280" height="308">
+                    {/* Anelli di sfondo */}
+                    {[20, 40, 60, 80, 100].map(pct => (
+                      <polygon key={`ring-${pct}`} points={ringPoints(pct)} fill="none" stroke="var(--line)" strokeWidth="0.5" opacity={pct === 100 ? 0.5 : 0.25} />
+                    ))}
+                    {/* Linee dal centro agli assi */}
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                      const x = center + radius * Math.cos(angle);
+                      const y = center + radius * Math.sin(angle);
+                      return <line key={`axis-${i}`} x1={center} y1={center} x2={x.toFixed(1)} y2={y.toFixed(1)} stroke="var(--line)" strokeWidth="0.5" opacity="0.3" />;
+                    })}
+                    {/* Pentagono home (ciano) */}
+                    <polygon points={pointsFor(homeVals)} fill={cyan} fillOpacity="0.25" stroke={cyan} strokeWidth="2" />
+                    {/* Pentagono away (magenta) */}
+                    <polygon points={pointsFor(awayVals)} fill={magenta} fillOpacity="0.25" stroke={magenta} strokeWidth="2" />
+                    {/* Pallini agli angoli home */}
+                    {pointsFor(homeVals).split(' ').map((pt, i) => {
+                      const [x, y] = pt.split(',');
+                      return <circle key={`h-${i}`} cx={x} cy={y} r="2.5" fill={cyan} />;
+                    })}
+                    {/* Pallini away */}
+                    {pointsFor(awayVals).split(' ').map((pt, i) => {
+                      const [x, y] = pt.split(',');
+                      return <circle key={`a-${i}`} cx={x} cy={y} r="2.5" fill={magenta} />;
+                    })}
+                    {/* Label assi */}
+                    {labels.map((lbl, i) => {
+                      const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                      const lx = center + (radius + 18) * Math.cos(angle);
+                      const ly = center + (radius + 18) * Math.sin(angle);
+                      return (
+                        <text key={`lbl-${i}`} x={lx.toFixed(1)} y={ly.toFixed(1)} textAnchor="middle" dominantBaseline="middle" fontSize="11" fontFamily="'JetBrains Mono', monospace" fill="var(--t-dim)" letterSpacing="0.1em">
+                          {lbl}
+                        </text>
+                      );
+                    })}
+                  </svg>
+                </div>
+
+                {/* Tabella valori sotto al pentagono */}
+                <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', gap: '6px 16px', maxWidth: 360, margin: '8px auto 0', fontSize: 12.5, fontFamily: "'JetBrains Mono', monospace" }}>
+                  <div></div>
+                  <div style={{ textAlign: 'center', color: cyan, fontWeight: 600 }}>{home}</div>
+                  <div style={{ textAlign: 'center', color: magenta, fontWeight: 600 }}>{away}</div>
+                  {labels.map((lbl, i) => (
+                    <React.Fragment key={`row-${lbl}`}>
+                      <div style={{ color: 'var(--t-faint)', letterSpacing: '0.08em' }}>{lbl}</div>
+                      <div style={{ textAlign: 'center', color: 'var(--t)' }}>{homeVals[i].toFixed(1)}</div>
+                      <div style={{ textAlign: 'center', color: 'var(--t)' }}>{awayVals[i].toFixed(1)}</div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

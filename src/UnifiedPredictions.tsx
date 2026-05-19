@@ -2648,8 +2648,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           // Niente piu' parsing fragile del testo: usiamo direttamente l'output JSON.
                           const sd: any = (pred as any).scout_deep;
                           const sl: any = (pred as any).scout_lite;
-                          const segno = sd?.segno || sl?.segno || null;
-                          const gol = sd?.gol || sl?.gol || null;
+                          // Se scout_deep esiste, prendiamo TUTTO da li' (anche segno=null
+                          // che significa NO BET intenzionale). Solo se scout_deep non
+                          // esiste affatto cadiamo su scout_lite. Bug precedente:
+                          // "sd?.segno || sl?.segno" cadeva su lite quando deep aveva
+                          // segno=null (NO BET) -> il frontend mostrava il vecchio
+                          // pronostico LITE invece del NO BET DEEP.
+                          const sourceJson = sd || sl;
+                          const segno = sourceJson?.segno || null;
+                          const gol = sourceJson?.gol || null;
                           // effort guida il bollino F1/F2 in basso a destra di ogni sezione.
                           const effort = (pred.analysis_deepdive_effort === 'deep' || pred.analysis_deepdive_effort === 'lite')
                             ? pred.analysis_deepdive_effort

@@ -2955,8 +2955,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           // Pronostici strutturati dal JSON Scout (deep prevale su lite).
                           const sd: any = (pred as any).scout_deep;
                           const sl: any = (pred as any).scout_lite;
-                          const segno = sd?.segno || sl?.segno || null;
-                          const gol = sd?.gol || sl?.gol || null;
+                          // Se scout_deep esiste, prendiamo TUTTO da li' (anche segno=null
+                          // che significa NO BET intenzionale). Solo se scout_deep non
+                          // esiste affatto cadiamo su scout_lite.
+                          const sourceJson = sd || sl;
+                          const segno = sourceJson?.segno || null;
+                          const gol = sourceJson?.gol || null;
                           // effort guida il bollino F1/F2 in basso a destra di ogni sezione.
                           const effort = (pred.analysis_deepdive_effort === 'deep' || pred.analysis_deepdive_effort === 'lite')
                             ? pred.analysis_deepdive_effort

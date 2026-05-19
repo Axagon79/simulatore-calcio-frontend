@@ -421,9 +421,8 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Altri Campionati', onClick: () => setShowOtherLeagues(true) },
               { label: 'Coppe Europee', onClick: () => setShowCups(true) },
             ]},
-            { label: 'Odds', items: [
-              { label: 'Odds Monitor', onClick: () => { window.location.href = '/quote-anomale'; } },
-            ]},
+            // Odds Monitor: voce diretta. Niente dropdown, dentro c'era una sola cosa.
+            { label: 'Odds Monitor', onClick: () => { window.location.href = '/quote-anomale'; } },
             { label: 'Strumenti', items: [
               { label: 'Simulazione Rapida', onClick: () => { window.location.href = '/simulate'; } },
               { label: 'Step System', onClick: () => { window.location.href = '/step-system'; } },

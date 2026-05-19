@@ -2614,7 +2614,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           // Badge fase in alto: DEEP (F2) verde o LITE (F1) giallo.
                           // Permette di riconoscere a colpo d'occhio quale versione si sta leggendo
                           // (analoga al badge effort nella pagina News articolo).
-                          const effort = pred.analysis_deepdive_effort;
+                          // Fallback: se effort non e' settato, deduce dalla presenza di scout_deep/lite.
+                          const sdTop: any = (pred as any).scout_deep;
+                          const slTop: any = (pred as any).scout_lite;
+                          const effort = (pred.analysis_deepdive_effort === 'deep' || pred.analysis_deepdive_effort === 'lite')
+                            ? pred.analysis_deepdive_effort
+                            : (sdTop ? 'deep' : (slTop ? 'lite' : null));
                           if (effort !== 'deep' && effort !== 'lite') return null;
                           const isDeep = effort === 'deep';
                           const label = isDeep ? 'DEEP · F2' : 'LITE · F1';
@@ -2645,7 +2650,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           const sl: any = (pred as any).scout_lite;
                           const segno = sd?.segno || sl?.segno || null;
                           const gol = sd?.gol || sl?.gol || null;
-                          return <ScoutAnalysis text={txt} segno={segno} gol={gol} />;
+                          // effort guida il bollino F1/F2 in basso a destra di ogni sezione.
+                          const effort = (pred.analysis_deepdive_effort === 'deep' || pred.analysis_deepdive_effort === 'lite')
+                            ? pred.analysis_deepdive_effort
+                            : (sd ? 'deep' : (sl ? 'lite' : null));
+                          return <ScoutAnalysis text={txt} segno={segno} gol={gol} effort={effort} />;
                         })()}
                         {(() => {
                           // Footer firma Scout: data/ora + (F1) per lite notturna, (F2) per deep T-6h.

@@ -92,6 +92,8 @@ interface Props {
   text: string;
   segno?: ScoutTip | null;
   gol?: ScoutTip | null;
+  /** Effort dello Scout: 'deep' (F2, T-6h) o 'lite' (F1, notturna). Mostra bollino per ogni sezione. */
+  effort?: 'deep' | 'lite' | string | null;
 }
 
 // Converte un ScoutTip in label leggibile per bullet.
@@ -254,7 +256,7 @@ const buildComponents = (isLastSection: boolean) => ({
   ),
 });
 
-export default function ScoutAnalysis({ text, segno, gol }: Props) {
+export default function ScoutAnalysis({ text, segno, gol, effort }: Props) {
   const clean = formatPronostici(stripPeso(stripJsonBlock(stripCitations(text || ''))));
   const sections = splitSections(clean);
   useEffect(() => {
@@ -274,6 +276,23 @@ export default function ScoutAnalysis({ text, segno, gol }: Props) {
     .filter((t): t is ScoutTip => !!t && t.emit !== false && (!!t.esito || !!t.pronostico || !!t.mercato))
     .map(t => ({ label: formatTipLabel(t), conf: t.confidence }));
 
+  // Bollino fase per ogni sezione: F2 verde (deep) o F1 giallo (lite).
+  const isDeep = effort === 'deep';
+  const isLite = effort === 'lite';
+  const showFaseBadge = isDeep || isLite;
+  const faseBadge = showFaseBadge ? (
+    <span style={{
+      position: 'absolute' as const, right: 10, bottom: 8,
+      fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.08em',
+      padding: '2px 7px', borderRadius: '999px',
+      background: isDeep ? 'rgba(16,185,129,0.18)' : 'rgba(234,179,8,0.18)',
+      color: isDeep ? (isLight ? '#047857' : '#6ee7b7') : (isLight ? '#a16207' : '#fde68a'),
+      border: `1px solid ${isDeep ? 'rgba(16,185,129,0.45)' : 'rgba(234,179,8,0.45)'}`,
+      fontFamily: 'JetBrains Mono, monospace',
+      pointerEvents: 'none' as const,
+    }}>{isDeep ? 'F2' : 'F1'}</span>
+  ) : null;
+
   return (
     <div
       style={{
@@ -291,10 +310,11 @@ export default function ScoutAnalysis({ text, segno, gol }: Props) {
             key={idx}
             style={{
               background: idx % 2 === 0 ? bgA : bgB,
-              padding: '12px 14px',
+              padding: '12px 14px 22px 14px',
               borderRadius: '6px',
               marginBottom: '10px',
               border: `2px solid ${isLight ? 'rgba(46,162,30,0.30)' : 'rgba(46,162,30,0.35)'}`,
+              position: 'relative' as const,
             }}
           >
             <ReactMarkdown components={buildComponents(isLast)}>{sec}</ReactMarkdown>
@@ -313,6 +333,7 @@ export default function ScoutAnalysis({ text, segno, gol }: Props) {
                 </ul>
               </div>
             )}
+            {faseBadge}
           </div>
         );
       })}

@@ -2,6 +2,9 @@
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '../AppDev/costanti';
 import { assegnaRedattore } from './news/assegnazione';
+import TeamScheda from './news/TeamScheda';
+import RedattoreProfilo from './news/RedattoreProfilo';
+import type { Redattore } from './news/redattori';
 
 interface NewsProps {
   onBack?: () => void;
@@ -463,6 +466,28 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const [activeLeague, setActiveLeague] = useState<string>('');
   const [activeRail, setActiveRail] = useState<string>('');
 
+  // Modali: scheda squadra + scheda redattore.
+  const [teamModal, setTeamModal] = useState<{ open: boolean; nome: string; loading: boolean; data: any | null; error: string | null }>({ open: false, nome: '', loading: false, data: null, error: null });
+  const [redattoreModal, setRedattoreModal] = useState<Redattore | null>(null);
+
+  const openTeamModal = async (nome: string) => {
+    setTeamModal({ open: true, nome, loading: true, data: null, error: null });
+    try {
+      const url = `${API_BASE}/simulation/teams/by-name?name=${encodeURIComponent(nome)}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setTeamModal(prev => ({ ...prev, loading: false, error: errJson.error || `Errore ${res.status}` }));
+        return;
+      }
+      const json = await res.json();
+      setTeamModal(prev => ({ ...prev, loading: false, data: json }));
+    } catch (e: any) {
+      setTeamModal(prev => ({ ...prev, loading: false, error: e?.message || 'Errore rete' }));
+    }
+  };
+  const closeTeamModal = () => setTeamModal({ open: false, nome: '', loading: false, data: null, error: null });
+
   // Dati reali dal backend.
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -825,7 +850,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                         background: crestGradient(m.home),
                         display: m.home_mongo_id ? 'none' : 'grid',
                       }}>{crestInitial(m.home)}</div>
-                      <div className="ml-name">{m.home}</div>
+                      <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.home); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{m.home}</span></div>
                     </div>
                     <div className="ml-vs">vs</div>
                     <div className="ml-team">
@@ -850,7 +875,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                         background: crestGradient(m.away),
                         display: m.away_mongo_id ? 'none' : 'grid',
                       }}>{crestInitial(m.away)}</div>
-                      <div className="ml-name">{m.away}</div>
+                      <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.away); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{m.away}</span></div>
                     </div>
                   </div>
                   <h2 className="a-title">
@@ -859,7 +884,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   {lede && <p className="a-lede">{lede}</p>}
                   <div className="a-foot">
                     <div className="by-line">
-                      <span>Articolo a cura di <b>{redattore.nome}</b></span>
+                      <span>Articolo a cura di <b onClick={(e) => { e.stopPropagation(); setRedattoreModal(redattore); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{redattore.nome}</b></span>
                     </div>
                     <a className="read-link" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Leggi l'articolo completo →</a>
                   </div>
@@ -899,6 +924,19 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         <div>Tutti i contenuti sono generati da modelli linguistici. <b>Le previsioni non costituiscono consigli di scommessa.</b></div>
         <div>build · 2026.05.18 · pipeline #11471 · /v1/research</div>
       </footer>
+
+      {teamModal.open && (
+        <TeamScheda
+          nome={teamModal.nome}
+          loading={teamModal.loading}
+          data={teamModal.data}
+          error={teamModal.error}
+          onClose={closeTeamModal}
+        />
+      )}
+      {redattoreModal && (
+        <RedattoreProfilo redattore={redattoreModal} onClose={() => setRedattoreModal(null)} />
+      )}
     </div>
   );
 };

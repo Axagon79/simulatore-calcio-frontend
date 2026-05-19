@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../AppDev/costanti';
 import { assegnaRedattore, selezionaTopPronostici } from './news/assegnazione';
+import TeamScheda from './news/TeamScheda';
 import RedattoreProfilo from './news/RedattoreProfilo';
 
 interface NewsArticoloProps {
@@ -16,9 +17,14 @@ interface PronosticoTip {
   quota?: number | null;
   source?: string;
 }
+interface TitolareRecord {
+  nome: string;
+  ruolo?: 'P' | 'D' | 'C' | 'A' | null;
+  numero?: number | null;
+}
 interface LineupSide {
   formation?: string | null;
-  titolari?: string[];
+  titolari?: Array<string | TitolareRecord>;  // retrocompat: vecchi dati erano string[]
   source?: string | null;
 }
 interface AssenteRecord {
@@ -26,6 +32,13 @@ interface AssenteRecord {
   motivo?: string | null;
   status?: string | null;
   source?: string | null;
+  numero?: number | null;
+}
+interface AllenatoreRecord {
+  name?: string | null;
+  short_name?: string | null;
+  preferred_formation?: string | null;
+  tactical_profile?: string | null;
 }
 interface NewsMetaSideA {
   xg_avg?: number | null;
@@ -39,6 +52,27 @@ interface NewsMetaSideA {
   formation_default?: string | null;
   lineup?: LineupSide;
   assenti?: AssenteRecord[];
+  bzzoiro_team_id?: number | null;
+  allenatore?: AllenatoreRecord | null;
+}
+
+interface BzzoiroPlayer {
+  bzzoiro_id?: number;
+  name?: string;
+  short_name?: string;
+  position?: string;
+  specific_position?: string;
+  jersey_number?: number | null;
+  date_of_birth?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  preferred_foot?: string | null;
+  nationality?: string | null;
+  current_team_id?: number | null;
+  national_team_id?: number | null;
+  market_value_eur?: number | null;
+  contract_until?: string | null;
+  availability?: string | null;
 }
 interface StadioRecord {
   name?: string | null;
@@ -291,6 +325,219 @@ const fmtDateLong = (iso: string): string => {
   return `${G[d.getDay()]} ${d.getDate()} ${MESI_A[d.getMonth()]} ${d.getFullYear()}`;
 };
 
+// Traduzione motivi assenza da bzzoiro (lingua/case grezzi) a italiano leggibile.
+// Lista chiusa: tutto cio' che non matcha viene mostrato as-is in lowercase.
+const MOTIVO_MAP: Record<string, string> = {
+  'hamstring injury': 'infortunio coscia',
+  'head injury': 'infortunio testa',
+  'ankle injury': 'infortunio caviglia',
+  'knee injury': 'infortunio ginocchio',
+  'cruciate ligament injury': 'rottura legamento crociato',
+  'muscle injury': 'infortunio muscolare',
+  'thigh injury': 'infortunio coscia',
+  'calf injury': 'infortunio polpaccio',
+  'foot injury': 'infortunio piede',
+  'shoulder injury': 'infortunio spalla',
+  'back injury': 'infortunio schiena',
+  'groin injury': 'infortunio inguine',
+  'doping_violation': 'squalifica doping',
+  'red_card': 'squalifica espulsione',
+  'yellow_cards': 'squalifica diffida',
+  'national_duty': 'impegno nazionale',
+  'personal_reasons': 'motivi personali',
+  'illness': 'malattia',
+  'suspended': 'squalificato',
+};
+const formatMotivoAssente = (motivo: string): string => {
+  if (!motivo) return '';
+  const key = motivo.toLowerCase().trim();
+  return MOTIVO_MAP[key] || key;
+};
+
+// Raggruppa i titolari per ruolo (P/D/C/A). Accetta sia stringhe sole (vecchio
+// formato Scout) sia oggetti {nome, ruolo}. Se mancano ruoli, fallback a unico
+// gruppo "Tutti" cosi' non si rompe la pagina.
+type RuoloKey = 'P' | 'D' | 'C' | 'A';
+const RUOLO_LABEL: Record<RuoloKey, string> = {
+  P: 'Portiere',
+  D: 'Difensori',
+  C: 'Centrocampisti',
+  A: 'Attaccanti',
+};
+const RUOLO_ORDER: RuoloKey[] = ['P', 'D', 'C', 'A'];
+// Item interno: tiene insieme nome + numero (numero puo' essere null se manca).
+type GiocItem = { nome: string; numero: number | null };
+
+const groupTitolariByRuolo = (titolari: Array<string | TitolareRecord> | undefined): { ruolo: RuoloKey | null; giocatori: GiocItem[] }[] => {
+  if (!titolari || !titolari.length) return [];
+  const groups: Record<string, GiocItem[]> = { P: [], D: [], C: [], A: [], _: [] };
+  for (const t of titolari) {
+    if (typeof t === 'string') {
+      groups._.push({ nome: t, numero: null });
+    } else if (t && t.nome) {
+      const item: GiocItem = { nome: t.nome, numero: t.numero ?? null };
+      const r = t.ruolo;
+      if (r === 'P' || r === 'D' || r === 'C' || r === 'A') groups[r].push(item);
+      else groups._.push(item);
+    }
+  }
+  const out: { ruolo: RuoloKey | null; giocatori: GiocItem[] }[] = [];
+  for (const r of RUOLO_ORDER) {
+    if (groups[r].length) out.push({ ruolo: r, giocatori: groups[r] });
+  }
+  if (groups._.length) out.push({ ruolo: null, giocatori: groups._ });
+  return out;
+};
+
+// Hash FNV-1a deterministico da stringa (per seed pseudo-random). Stesso input
+// produce sempre stesso output: cosi' il numero "inventato" non cambia ad ogni
+// reload della pagina.
+const fnv1a = (s: string): number => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+};
+
+// Riempie i numeri di maglia mancanti scegliendo da 2-99 in modo deterministico
+// e senza ripetizioni nella squadra. Convenzione: il portiere senza numero
+// prende il 1. Gli altri pescano da un pool 2-99 ordinato per hash del nome.
+const fillNumeriMancanti = (
+  giocatoriPerRuolo: { ruolo: RuoloKey | null; giocatori: GiocItem[] }[],
+  teamSeed: string
+): { ruolo: RuoloKey | null; giocatori: GiocItem[] }[] => {
+  // Raccolgo tutti i numeri gia' usati.
+  const usati = new Set<number>();
+  for (const g of giocatoriPerRuolo) {
+    for (const p of g.giocatori) {
+      if (p.numero != null) usati.add(p.numero);
+    }
+  }
+  // Costruisco il pool 2-99 dei disponibili, ordinato in modo deterministico.
+  // L'ordinamento usa l'hash del seed-squadra cosi' squadre diverse non
+  // tendono a ricevere lo stesso numero per lo stesso slot.
+  const seedBase = fnv1a(teamSeed);
+  const pool: number[] = [];
+  for (let n = 2; n <= 99; n++) {
+    if (!usati.has(n)) pool.push(n);
+  }
+  pool.sort((a, b) => {
+    return ((fnv1a(`${teamSeed}__${a}`) ^ seedBase) >>> 0) - ((fnv1a(`${teamSeed}__${b}`) ^ seedBase) >>> 0);
+  });
+  let cursor = 0;
+  // Out con copie: non muto i giocatori originali.
+  const out = giocatoriPerRuolo.map(g => ({ ruolo: g.ruolo, giocatori: g.giocatori.map(p => ({ ...p })) }));
+  for (const g of out) {
+    for (const p of g.giocatori) {
+      if (p.numero != null) continue;
+      // Portiere prende 1 se libero
+      if (g.ruolo === 'P' && !usati.has(1)) {
+        p.numero = 1;
+        usati.add(1);
+        continue;
+      }
+      if (cursor < pool.length) {
+        p.numero = pool[cursor++];
+        usati.add(p.numero);
+      }
+    }
+  }
+  return out;
+};
+
+// Riempie i numeri degli assenti evitando i numeri gia' usati dai titolari.
+// Stessa convenzione: deterministico per teamSeed, pool 2-99.
+const fillNumeriAssenti = (
+  assenti: AssenteRecord[],
+  numeriTitolari: Set<number>,
+  teamSeed: string
+): AssenteRecord[] => {
+  if (!assenti.length) return assenti;
+  const usati = new Set<number>(numeriTitolari);
+  for (const a of assenti) {
+    if (a.numero != null) usati.add(a.numero);
+  }
+  const seedBase = fnv1a(teamSeed);
+  const pool: number[] = [];
+  for (let n = 2; n <= 99; n++) {
+    if (!usati.has(n)) pool.push(n);
+  }
+  pool.sort((a, b) => {
+    return ((fnv1a(`${teamSeed}__assenti__${a}`) ^ seedBase) >>> 0) - ((fnv1a(`${teamSeed}__assenti__${b}`) ^ seedBase) >>> 0);
+  });
+  let cursor = 0;
+  return assenti.map(a => {
+    if (a.numero != null) return a;
+    if (cursor < pool.length) {
+      const n = pool[cursor++];
+      usati.add(n);
+      return { ...a, numero: n };
+    }
+    return a;
+  });
+};
+
+// Parse modulo (es. "3-5-2", "4-2-3-1", "3-4-2-1") -> counts per ruolo.
+// Il portiere e' sempre 1. Gli ultimi gruppi (3-1 in 4-2-3-1) sono attaccanti
+// solo se almeno 2; altrimenti tutto cio' che non sta in difesa/centrocampo
+// finisce in attacco sommato. Convenzione: D=primo numero, A=ultimo numero,
+// C=somma dei numeri intermedi.
+const parseModulo = (m: string | null | undefined): { P: number; D: number; C: number; A: number } | null => {
+  if (!m) return null;
+  const parts = m.split(/[-\s]/).map(s => parseInt(s, 10)).filter(n => Number.isInteger(n) && n > 0);
+  if (parts.length < 3 || parts.length > 5) return null;
+  const tot = parts.reduce((a, b) => a + b, 0);
+  if (tot !== 10) return null;  // 10 outfield + 1 portiere = 11
+  const D = parts[0];
+  const A = parts[parts.length - 1];
+  const C = parts.slice(1, -1).reduce((a, b) => a + b, 0);
+  return { P: 1, D, C, A };
+};
+
+// Riconcilia i titolari col modulo: se il count dei ruoli ricevuti non
+// coincide con quello del modulo, ridistribuisce i giocatori nell'ordine
+// originale rispettando i count del modulo. Privilegia il ruolo dichiarato
+// (assegna prima i P confermati alla quota P, poi D ai D, ecc.); residui
+// vanno a riempire i ruoli rimasti scoperti nell'ordine P->D->C->A.
+const riconciliaConModulo = (
+  titolari: Array<string | TitolareRecord> | undefined,
+  modulo: string | null | undefined
+): { ruolo: RuoloKey | null; giocatori: GiocItem[] }[] => {
+  const counts = parseModulo(modulo);
+  if (!counts || !titolari || !titolari.length) return groupTitolariByRuolo(titolari);
+  // Normalizza in oggetti {nome, ruolo, numero}
+  const norm = titolari.map(t => {
+    if (typeof t === 'string') return { nome: t, ruolo: null as RuoloKey | null, numero: null as number | null };
+    return { nome: t.nome, ruolo: (t.ruolo || null) as RuoloKey | null, numero: (t.numero ?? null) as number | null };
+  });
+  const slots: Record<RuoloKey, GiocItem[]> = { P: [], D: [], C: [], A: [] };
+  const remaining: typeof norm = [];
+  // Prima passata: piazza chi ha un ruolo dichiarato finche' ci sono slot
+  for (const p of norm) {
+    if (p.ruolo && slots[p.ruolo].length < counts[p.ruolo]) {
+      slots[p.ruolo].push({ nome: p.nome, numero: p.numero });
+    } else {
+      remaining.push(p);
+    }
+  }
+  // Seconda passata: residui riempiono slot scoperti nell'ordine P->D->C->A
+  for (const r of RUOLO_ORDER) {
+    while (slots[r].length < counts[r] && remaining.length) {
+      const p = remaining.shift()!;
+      slots[r].push({ nome: p.nome, numero: p.numero });
+    }
+  }
+  // Eventuali ulteriori avanzi (lista > 11): li metto come gruppo "Altri" finale
+  const out: { ruolo: RuoloKey | null; giocatori: GiocItem[] }[] = [];
+  for (const r of RUOLO_ORDER) {
+    if (slots[r].length) out.push({ ruolo: r, giocatori: slots[r] });
+  }
+  if (remaining.length) out.push({ ruolo: null, giocatori: remaining.map(p => ({ nome: p.nome, numero: p.numero })) });
+  return out;
+};
+
 const STYLES = `
   :root{
     --bg:#0a0b0f;
@@ -412,10 +659,13 @@ const STYLES = `
 
   .article-root .dropcap::first-letter{float:left;font-family:'Inter',sans-serif;font-weight:600;font-size:64px;line-height:0.9;padding:6px 12px 0 0;color:var(--cyan);letter-spacing:-0.04em}
 
-  .article-root .body ul{list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:10px}
-  .article-root .body ul li{padding-left:22px;position:relative;font-size:16px;line-height:1.65;color:var(--t-dim)}
-  .article-root .body ul li::before{content:"â†’";position:absolute;left:0;top:0;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-weight:500}
-  .article-root .body ul li b{color:var(--t);font-weight:600}
+  .article-root .body ul:not([data-plain]){list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:10px}
+  .article-root .body ul:not([data-plain]) li{padding-left:22px;position:relative;font-size:16px;line-height:1.65;color:var(--t-dim)}
+  .article-root .body ul:not([data-plain]) li::before{content:"\\2192";position:absolute;left:0;top:0;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-weight:500}
+  .article-root .body ul:not([data-plain]) li b{color:var(--t);font-weight:600}
+
+  .article-root .player-link{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--t-faint);text-underline-offset:3px;transition:color .15s, text-decoration-color .15s}
+  .article-root .player-link:hover{color:var(--cyan);text-decoration-color:var(--cyan)}
 
   .article-root blockquote{margin:32px 0 32px;padding:8px 0 8px 28px;border-left:3px solid var(--cyan);position:relative}
   .article-root blockquote p.q{font-size:23px;line-height:1.4;color:var(--t);font-weight:500;letter-spacing:-0.01em;margin:0 0 14px;text-wrap:pretty;font-family:'Inter',sans-serif}
@@ -438,7 +688,7 @@ const STYLES = `
   .article-root .pron-main{display:flex;justify-content:space-between;align-items:flex-end;gap:14px}
   .article-root .pron-pick{font-size:13px;color:var(--t-dim)}
   .article-root .pron-pick b{display:block;font-size:22px;color:var(--t);font-weight:600;margin-bottom:2px;letter-spacing:-0.01em}
-  .article-root .pron-num{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:600;color:var(--cyan);line-height:1;letter-spacing:-0.03em}
+  .article-root .pron-num{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:42px;font-weight:600;color:var(--cyan);line-height:1;letter-spacing:-0.03em}
   .article-root .pron-num small{font-size:16px;color:var(--t-dim);margin-left:1px;font-weight:400}
   .article-root .pron-bar{height:6px;background:var(--pron-bar-bg);border-radius:3px;overflow:hidden}
   .article-root .pron-bar i{display:block;height:100%;background:var(--cyan)}
@@ -546,6 +796,160 @@ const STYLES = `
   }
 `;
 
+// Calcola eta' in anni interi dal date_of_birth (formato YYYY-MM-DD).
+const calcolaEta = (dob: string | null | undefined): number | null => {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return null;
+  const oggi = new Date();
+  let eta = oggi.getFullYear() - d.getFullYear();
+  const m = oggi.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && oggi.getDate() < d.getDate())) eta--;
+  return eta;
+};
+
+// Formatta valore di mercato in formato leggibile (es. 21000000 -> "21.0M €").
+const formatValore = (eur: number | null | undefined): string => {
+  if (eur == null) return '—';
+  if (eur >= 1_000_000) return `${(eur / 1_000_000).toFixed(1)}M €`;
+  if (eur >= 1_000) return `${(eur / 1_000).toFixed(0)}K €`;
+  return `${eur} €`;
+};
+
+// Mappa codice piede preferito (R/L/B) a etichetta italiana.
+const formatPiede = (f: string | null | undefined): string => {
+  if (!f) return '—';
+  const k = f.toUpperCase();
+  if (k === 'R') return 'destro';
+  if (k === 'L') return 'sinistro';
+  if (k === 'B') return 'ambidestro';
+  return f;
+};
+
+// Mappa position (es. 'D', 'M', 'F', 'G') + specific_position (es. 'cb', 'cm')
+// a etichetta leggibile italiana.
+const formatRuolo = (pos: string | null | undefined, spec: string | null | undefined): string => {
+  const p = (pos || '').toUpperCase();
+  const s = (spec || '').toLowerCase();
+  const macro = p === 'G' ? 'Portiere' : p === 'D' ? 'Difensore' : p === 'M' ? 'Centrocampista' : p === 'F' ? 'Attaccante' : '—';
+  if (!s) return macro;
+  const specMap: Record<string, string> = {
+    cb: 'centrale', lb: 'terzino sx', rb: 'terzino dx', lwb: 'esterno sx', rwb: 'esterno dx',
+    cm: 'mediano', cdm: 'mediano difensivo', cam: 'trequartista', lm: 'esterno sx', rm: 'esterno dx',
+    lw: 'ala sx', rw: 'ala dx', cf: 'punta', st: 'attaccante', ss: 'seconda punta',
+    gk: '',
+  };
+  const specLabel = specMap[s];
+  return specLabel ? `${macro} (${specLabel})` : macro;
+};
+
+// TeamScheda estratto in ./news/TeamScheda.tsx per riuso da News.tsx.
+
+const PlayerScheda: React.FC<{
+  nome: string;
+  loading: boolean;
+  data: BzzoiroPlayer | null;
+  error: string | null;
+  onClose: () => void;
+}> = ({ nome, loading, data, error, onClose }) => {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10,
+          maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto',
+          padding: '28px 28px 24px', color: 'var(--t)',
+          fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Scheda giocatore</div>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em' }}>{data?.name || nome}</h2>
+            {data?.short_name && data.short_name !== data.name && (
+              <div style={{ fontSize: 12, color: 'var(--t-dim)', marginTop: 4 }}>{data.short_name}</div>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'transparent', border: 'none', color: 'var(--t-faint)', fontSize: 22, cursor: 'pointer', padding: 4, lineHeight: 1 }}
+            aria-label="Chiudi"
+          >×</button>
+        </div>
+
+        {loading && (
+          <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--t-faint)', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
+            Caricamento…
+          </div>
+        )}
+
+        {error && !loading && (
+          <div style={{ padding: '20px 0', color: 'var(--t-dim)', fontSize: 13 }}>
+            <div style={{ marginBottom: 8 }}>Dati non disponibili per <b>{nome}</b>.</div>
+            <div style={{ color: 'var(--t-faint)', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}>{error}</div>
+          </div>
+        )}
+
+        {data && !loading && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px 16px', fontSize: 13.5, marginTop: 4 }}>
+              <div style={{ color: 'var(--t-faint)' }}>Numero</div>
+              <div>{data.jersey_number != null ? `#${data.jersey_number}` : '—'}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Ruolo</div>
+              <div>{formatRuolo(data.position, data.specific_position)}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Età</div>
+              <div>{(() => { const e = calcolaEta(data.date_of_birth); return e != null ? `${e} anni` : '—'; })()}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Nascita</div>
+              <div>{data.date_of_birth || '—'}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Nazionalità</div>
+              <div>{data.nationality || '—'}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Altezza</div>
+              <div>{data.height_cm ? `${data.height_cm} cm` : '—'}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Peso</div>
+              <div>{data.weight_kg ? `${data.weight_kg} kg` : '—'}</div>
+
+              <div style={{ color: 'var(--t-faint)' }}>Piede</div>
+              <div>{formatPiede(data.preferred_foot)}</div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--line)', marginTop: 20, paddingTop: 16 }}>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 12 }}>Contratto e valore</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px 16px', fontSize: 13.5 }}>
+                <div style={{ color: 'var(--t-faint)' }}>Valore mercato</div>
+                <div style={{ color: 'var(--cyan)', fontWeight: 500 }}>{formatValore(data.market_value_eur)}</div>
+
+                <div style={{ color: 'var(--t-faint)' }}>Contratto fino</div>
+                <div>{data.contract_until || '—'}</div>
+
+                <div style={{ color: 'var(--t-faint)' }}>Disponibile</div>
+                <div style={{ textTransform: 'lowercase' }}>{data.availability || '—'}</div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--line)', fontSize: 10.5, color: 'var(--t-faint)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em' }}>
+              fonte · bzzoiro · id {data.bzzoiro_id || '?'}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -555,8 +959,63 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const [viewingVersion, setViewingVersion] = useState<'AUTO' | 'LITE' | 'DEEP'>('AUTO');
   // Modale profilo redattore aperto/chiuso.
   const [profiloOpen, setProfiloOpen] = useState(false);
+  // Modale scheda giocatore: stato richiesta (loading/ok/error) + dati.
+  const [playerModal, setPlayerModal] = useState<{
+    open: boolean;
+    nome: string;
+    teamId: number | null;
+    loading: boolean;
+    data: BzzoiroPlayer | null;
+    error: string | null;
+  }>({ open: false, nome: '', teamId: null, loading: false, data: null, error: null });
   const [clockMono, setClockMono] = useState('00:00');
   const [activeToc, setActiveToc] = useState(0);
+
+  // Modale scheda squadra.
+  const [teamModal, setTeamModal] = useState<{
+    open: boolean;
+    nome: string;
+    loading: boolean;
+    data: any | null;
+    error: string | null;
+  }>({ open: false, nome: '', loading: false, data: null, error: null });
+
+  const openTeamModal = async (nome: string) => {
+    setTeamModal({ open: true, nome, loading: true, data: null, error: null });
+    try {
+      const url = `${API_BASE}/simulation/teams/by-name?name=${encodeURIComponent(nome)}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setTeamModal(prev => ({ ...prev, loading: false, error: errJson.error || `Errore ${res.status}` }));
+        return;
+      }
+      const json = await res.json();
+      setTeamModal(prev => ({ ...prev, loading: false, data: json }));
+    } catch (e: any) {
+      setTeamModal(prev => ({ ...prev, loading: false, error: e?.message || 'Errore rete' }));
+    }
+  };
+  const closeTeamModal = () => setTeamModal({ open: false, nome: '', loading: false, data: null, error: null });
+
+  // Apre il modale e fa fetch dei dati giocatore da /players/by-name.
+  const openPlayerModal = async (nome: string, teamId: number | null) => {
+    setPlayerModal({ open: true, nome, teamId, loading: true, data: null, error: null });
+    try {
+      const url = `${API_BASE}/simulation/players/by-name?name=${encodeURIComponent(nome)}${teamId ? `&team_id=${teamId}` : ''}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setPlayerModal(prev => ({ ...prev, loading: false, error: errJson.error || `Errore ${res.status}` }));
+        return;
+      }
+      const json = await res.json();
+      setPlayerModal(prev => ({ ...prev, loading: false, data: json.player || null }));
+    } catch (e: any) {
+      setPlayerModal(prev => ({ ...prev, loading: false, error: e?.message || 'Errore rete' }));
+    }
+  };
+  const closePlayerModal = () => setPlayerModal({ open: false, nome: '', teamId: null, loading: false, data: null, error: null });
 
   const homeQ = searchParams.get('home') || '';
   const awayQ = searchParams.get('away') || '';
@@ -806,8 +1265,23 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const citazioni = meta?.citazioni || [];
   const lineupHome = homeMeta.lineup || {};
   const lineupAway = awayMeta.lineup || {};
-  const assentiHome = homeMeta.assenti || [];
-  const assentiAway = awayMeta.assenti || [];
+  const assentiHomeRaw = homeMeta.assenti || [];
+  const assentiAwayRaw = awayMeta.assenti || [];
+
+  // Pre-computo gruppi titolari + numeri di maglia (riempiti per i mancanti).
+  // Estraggo poi i numeri usati per evitare collisioni con gli assenti.
+  const moduloHome = lineupHome.formation || homeMeta.formation_default || null;
+  const moduloAway = lineupAway.formation || awayMeta.formation_default || null;
+  const groupsHomeRaw = riconciliaConModulo(lineupHome.titolari, moduloHome);
+  const groupsAwayRaw = riconciliaConModulo(lineupAway.titolari, moduloAway);
+  const groupsHomeFilled = fillNumeriMancanti(groupsHomeRaw, `${home}__home`);
+  const groupsAwayFilled = fillNumeriMancanti(groupsAwayRaw, `${away}__away`);
+  const numeriUsatiHome = new Set<number>();
+  for (const g of groupsHomeFilled) for (const p of g.giocatori) if (p.numero != null) numeriUsatiHome.add(p.numero);
+  const numeriUsatiAway = new Set<number>();
+  for (const g of groupsAwayFilled) for (const p of g.giocatori) if (p.numero != null) numeriUsatiAway.add(p.numero);
+  const assentiHome = fillNumeriAssenti(assentiHomeRaw, numeriUsatiHome, `${home}__home`);
+  const assentiAway = fillNumeriAssenti(assentiAwayRaw, numeriUsatiAway, `${away}__away`);
 
   const fmtRank = (side: NewsMetaSideA) => {
     if (side.rank == null) return null;
@@ -886,7 +1360,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <span className={effort === 'DEEP' ? 'deep' : 'deep'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
               </div>
               <h1 className="a-title">
-                {home} – {away}{tip?.pronostico ? `: pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : ''}
+                <span className="player-link" onClick={() => openTeamModal(home)}>{home}</span> – <span className="player-link" onClick={() => openTeamModal(away)}>{away}</span>{tip?.pronostico ? `: pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : ''}
               </h1>
               <p className="a-subtitle">
                 Articolo generato dalla redazione AI di AI Simulator a partire da fonti pubbliche, conferenze stampa e dati statistici. Tipo: <b>{effort === 'DEEP' ? 'Scout Deep' : 'Scout Lite'}</b>.
@@ -971,7 +1445,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   display: matchData?.home_mongo_id ? 'none' : 'grid',
                 }}>{crestInitialA(home)}</div>
                 <div>
-                  <div className="poster-name">{home}</div>
+                  <div className="poster-name"><span className="player-link" onClick={() => openTeamModal(home)}>{home}</span></div>
                   <div className="poster-meta">
                     {fmtRank(homeMeta) || missingTag('classifica casa')}
                     {' · '}{fmtRecord(homeMeta) || missingTag('record casa')}
@@ -1027,7 +1501,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   display: matchData?.away_mongo_id ? 'none' : 'grid',
                 }}>{crestInitialA(away)}</div>
                 <div>
-                  <div className="poster-name">{away}</div>
+                  <div className="poster-name"><span className="player-link" onClick={() => openTeamModal(away)}>{away}</span></div>
                   <div className="poster-meta">
                     {fmtRank(awayMeta) || missingTag('classifica trasferta')}
                     {' · '}{fmtRecord(awayMeta) || missingTag('record trasferta')}
@@ -1095,40 +1569,106 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                     </div>
                     <div className="schema-grid">
                       <div className="schema-side">
-                        <div className="team-h">{home}</div>
+                        <div className="team-h"><span className="player-link" onClick={() => openTeamModal(home)}>{home}</span></div>
                         <div className="formation">{lineupHome.formation || homeMeta.formation_default || '?'}</div>
-                        <div className="players">
-                          {(lineupHome.titolari || []).join(' · ') || todoTag('titolari casa')}
-                        </div>
+                        {homeMeta.allenatore?.name && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
+                            <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>{homeMeta.allenatore.name}</div>
+                          </div>
+                        )}
+                        {(() => {
+                          const teamIdH = homeMeta.bzzoiro_team_id || null;
+                          if (!groupsHomeFilled.length) return <div className="players">{todoTag('titolari casa')}</div>;
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
+                              {groupsHomeFilled.map((g, gi) => (
+                                <div key={`gh-${gi}`}>
+                                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>
+                                    {g.ruolo ? RUOLO_LABEL[g.ruolo] : 'Titolari'}
+                                  </div>
+                                  <ul data-plain style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 12, rowGap: 4 }}>
+                                    {g.giocatori.map((p, ni) => (
+                                      <React.Fragment key={`nh-${gi}-${ni}`}>
+                                        <li style={{ padding: 0, position: 'static', fontSize: 13, lineHeight: 1.45, color: 'var(--t-faint)', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>
+                                          {p.numero != null ? p.numero : '·'}
+                                        </li>
+                                        <li style={{ padding: 0, position: 'static', fontSize: 14.5, lineHeight: 1.45, color: 'var(--t)', fontWeight: 500 }}>
+                                          <span className="player-link" onClick={() => openPlayerModal(p.nome, teamIdH)}>{p.nome}</span>
+                                        </li>
+                                      </React.Fragment>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         {assentiHome.length > 0 && (
-                          <div style={{ marginTop: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
-                            <span style={{ textTransform: 'uppercase', letterSpacing: '0.12em' }}>Assenti:</span>
-                            <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ marginTop: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
+                            <div style={{ textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10, fontSize: 10.5 }}>Assenti</div>
+                            <ul data-plain style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'auto auto 1fr', columnGap: 12, rowGap: 6 }}>
                               {assentiHome.map((a, i) => (
-                                <li key={`ah-${i}`} style={{ color: 'var(--t-dim)' }}>
-                                  <b style={{ color: 'var(--t)', fontWeight: 500 }}>{a.nome}</b>
-                                  {a.motivo ? <span style={{ marginLeft: 6 }}>— {a.motivo}</span> : null}
-                                </li>
+                                <React.Fragment key={`ah-${i}`}>
+                                  <li style={{ color: 'var(--t-faint)', padding: 0, position: 'static', textAlign: 'right' }}>{a.numero != null ? a.numero : '·'}</li>
+                                  <li style={{ color: 'var(--t-dim)', padding: 0, position: 'static' }}>
+                                    <span className="player-link" onClick={() => openPlayerModal(a.nome, homeMeta.bzzoiro_team_id || null)}>{a.nome}</span>
+                                  </li>
+                                  <li style={{ color: 'var(--t-dim)', padding: 0, position: 'static', textTransform: 'lowercase' }}>{a.motivo ? formatMotivoAssente(a.motivo) : '—'}</li>
+                                </React.Fragment>
                               ))}
                             </ul>
                           </div>
                         )}
                       </div>
                       <div className="schema-side">
-                        <div className="team-h">{away}</div>
+                        <div className="team-h"><span className="player-link" onClick={() => openTeamModal(away)}>{away}</span></div>
                         <div className="formation">{lineupAway.formation || awayMeta.formation_default || '?'}</div>
-                        <div className="players">
-                          {(lineupAway.titolari || []).join(' · ') || todoTag('titolari trasferta')}
-                        </div>
+                        {awayMeta.allenatore?.name && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
+                            <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>{awayMeta.allenatore.name}</div>
+                          </div>
+                        )}
+                        {(() => {
+                          const teamIdA = awayMeta.bzzoiro_team_id || null;
+                          if (!groupsAwayFilled.length) return <div className="players">{todoTag('titolari trasferta')}</div>;
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
+                              {groupsAwayFilled.map((g, gi) => (
+                                <div key={`ga-${gi}`}>
+                                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>
+                                    {g.ruolo ? RUOLO_LABEL[g.ruolo] : 'Titolari'}
+                                  </div>
+                                  <ul data-plain style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 12, rowGap: 4 }}>
+                                    {g.giocatori.map((p, ni) => (
+                                      <React.Fragment key={`na-${gi}-${ni}`}>
+                                        <li style={{ padding: 0, position: 'static', fontSize: 13, lineHeight: 1.45, color: 'var(--t-faint)', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>
+                                          {p.numero != null ? p.numero : '·'}
+                                        </li>
+                                        <li style={{ padding: 0, position: 'static', fontSize: 14.5, lineHeight: 1.45, color: 'var(--t)', fontWeight: 500 }}>
+                                          <span className="player-link" onClick={() => openPlayerModal(p.nome, teamIdA)}>{p.nome}</span>
+                                        </li>
+                                      </React.Fragment>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         {assentiAway.length > 0 && (
-                          <div style={{ marginTop: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
-                            <span style={{ textTransform: 'uppercase', letterSpacing: '0.12em' }}>Assenti:</span>
-                            <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ marginTop: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--t-faint)' }}>
+                            <div style={{ textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10, fontSize: 10.5 }}>Assenti</div>
+                            <ul data-plain style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'auto auto 1fr', columnGap: 12, rowGap: 6 }}>
                               {assentiAway.map((a, i) => (
-                                <li key={`aa-${i}`} style={{ color: 'var(--t-dim)' }}>
-                                  <b style={{ color: 'var(--t)', fontWeight: 500 }}>{a.nome}</b>
-                                  {a.motivo ? <span style={{ marginLeft: 6 }}>— {a.motivo}</span> : null}
-                                </li>
+                                <React.Fragment key={`aa-${i}`}>
+                                  <li style={{ color: 'var(--t-faint)', padding: 0, position: 'static', textAlign: 'right' }}>{a.numero != null ? a.numero : '·'}</li>
+                                  <li style={{ color: 'var(--t-dim)', padding: 0, position: 'static' }}>
+                                    <span className="player-link" onClick={() => openPlayerModal(a.nome, awayMeta.bzzoiro_team_id || null)}>{a.nome}</span>
+                                  </li>
+                                  <li style={{ color: 'var(--t-dim)', padding: 0, position: 'static', textTransform: 'lowercase' }}>{a.motivo ? formatMotivoAssente(a.motivo) : '—'}</li>
+                                </React.Fragment>
                               ))}
                             </ul>
                           </div>
@@ -1304,6 +1844,24 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
 
       {/* Modale profilo redattore (apre/chiude via stato profiloOpen) */}
       {profiloOpen && <RedattoreProfilo redattore={redattore} onClose={() => setProfiloOpen(false)} />}
+      {playerModal.open && (
+        <PlayerScheda
+          nome={playerModal.nome}
+          loading={playerModal.loading}
+          data={playerModal.data}
+          error={playerModal.error}
+          onClose={closePlayerModal}
+        />
+      )}
+      {teamModal.open && (
+        <TeamScheda
+          nome={teamModal.nome}
+          loading={teamModal.loading}
+          data={teamModal.data}
+          error={teamModal.error}
+          onClose={closeTeamModal}
+        />
+      )}
     </div>
   );
 };

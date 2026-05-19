@@ -1077,7 +1077,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
     // Provo prima la cache sessionStorage (popolata da News.tsx). TTL 5 min:
     // oltre i 300s rifaccio fetch fresh per non mostrare dati stantii.
     try {
-      const cached = sessionStorage.getItem(`sz-${dateQ}`);
+      const cached = sessionStorage.getItem(`sz-v2-${dateQ}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         const ageMs = Date.now() - (parsed.ts || 0);
@@ -1097,7 +1097,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
         // Salvo anche qui in cache (es. utente arriva direttamente all'articolo
         // senza passare da News.tsx, e poi navigando vorra' la lista veloce).
         try {
-          sessionStorage.setItem(`sz-${dateQ}`, JSON.stringify({ ts: Date.now(), predictions: preds }));
+          sessionStorage.setItem(`sz-v2-${dateQ}`, JSON.stringify({ ts: Date.now(), predictions: preds }));
         } catch { /* quota piena: ignora */ }
         processPredictions(preds);
       })

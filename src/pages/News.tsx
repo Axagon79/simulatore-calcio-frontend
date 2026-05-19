@@ -599,7 +599,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     // da una precedente visita a News/NewsArticolo). TTL 5 min: oltre rifaccio
     // fetch fresh per non mostrare dati stantii.
     try {
-      const cached = sessionStorage.getItem(`sz-${activeDateISO}`);
+      const cached = sessionStorage.getItem(`sz-v2-${activeDateISO}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         const ageMs = Date.now() - (parsed.ts || 0);
@@ -620,7 +620,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         // Cache in sessionStorage: NewsArticolo riusa il payload invece di
         // rifare la stessa fetch da 6s. TTL 5 min via timestamp.
         try {
-          sessionStorage.setItem(`sz-${activeDateISO}`, JSON.stringify({
+          sessionStorage.setItem(`sz-v2-${activeDateISO}`, JSON.stringify({
             ts: Date.now(),
             predictions: preds,
           }));
@@ -713,7 +713,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     const all: Match[] = [];
     for (const d of dates) {
       try {
-        const raw = sessionStorage.getItem(`sz-${d}`);
+        const raw = sessionStorage.getItem(`sz-v2-${d}`);
         if (!raw) continue;
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed.predictions)) continue;

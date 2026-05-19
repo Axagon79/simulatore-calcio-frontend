@@ -85,7 +85,7 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
     // istantanea (oggi richiedeva 6s per quella prima fetch).
     const preloadSistemaZ = async (date: string) => {
       try {
-        const key = `sz-${date}`;
+        const key = `sz-v2-${date}`;
         const existing = sessionStorage.getItem(key);
         if (existing) {
           // Se c'e' gia' qualcosa fresco (< 5 min) non rifaccio

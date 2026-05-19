@@ -6,15 +6,27 @@ interface TeamSchedaProps {
   data: any | null;
   error: string | null;
   onClose: () => void;
+  // 'team' (default): titolo = nome squadra, mostra stadio + allenatore + classifica + coppe.
+  // 'manager': titolo = nome allenatore, mostra solo allenatore + classifica + coppe (NO stadio).
+  mode?: 'team' | 'manager';
 }
 
-const TeamScheda: React.FC<TeamSchedaProps> = ({ nome, loading, data, error, onClose }) => {
+const TeamScheda: React.FC<TeamSchedaProps> = ({ nome, loading, data, error, onClose, mode = 'team' }) => {
   const team = data?.team;
   const venue = data?.venue;
   const manager = data?.manager;
   const rank = data?.rank;
   const seasonal = data?.seasonal_stats;
-  const displayName = team?.name || nome;
+  const isManagerMode = mode === 'manager';
+  // In modalita' manager mostro come titolo il nome dell'allenatore (dal payload
+  // backend) e come sottotitolo la squadra. In modalita' team il viceversa.
+  const displayName = isManagerMode
+    ? (manager?.name || nome)
+    : (team?.name || nome);
+  const headerLabel = isManagerMode ? 'Scheda allenatore' : 'Scheda squadra';
+  const subtitle = isManagerMode
+    ? (team?.name ? `${team.name}${team.country ? ' · ' + team.country : ''}` : '')
+    : (team?.country ? `${team.country} · ${team.league_name || '—'}` : '');
   return (
     <div
       onClick={onClose}
@@ -34,9 +46,9 @@ const TeamScheda: React.FC<TeamSchedaProps> = ({ nome, loading, data, error, onC
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Scheda squadra</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>{headerLabel}</div>
             <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em' }}>{displayName}</h2>
-            {team?.country && <div style={{ fontSize: 12, color: 'var(--t-dim)', marginTop: 4 }}>{team.country} · {team.league_name || '—'}</div>}
+            {subtitle && <div style={{ fontSize: 12, color: 'var(--t-dim)', marginTop: 4 }}>{subtitle}</div>}
           </div>
           <button
             onClick={onClose}
@@ -60,7 +72,7 @@ const TeamScheda: React.FC<TeamSchedaProps> = ({ nome, loading, data, error, onC
 
         {data && !loading && (
           <>
-            {venue && (
+            {!isManagerMode && venue && (
               <>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 10, marginTop: 4 }}>Stadio</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '8px 16px', fontSize: 13.5, marginBottom: 18 }}>
@@ -79,10 +91,23 @@ const TeamScheda: React.FC<TeamSchedaProps> = ({ nome, loading, data, error, onC
 
             {manager && (
               <>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 10, borderTop: '1px solid var(--line)', paddingTop: 16 }}>Allenatore</div>
+                {/* In modalita' manager (titolo gia' = nome allenatore) saltiamo
+                    l'header "Allenatore" e i campi Nome/Nazionalita' duplicati. */}
+                {!isManagerMode && (
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 10, borderTop: '1px solid var(--line)', paddingTop: 16 }}>Allenatore</div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '8px 16px', fontSize: 13.5, marginBottom: 18 }}>
-                  <div style={{ color: 'var(--t-faint)' }}>Nome</div><div style={{ fontWeight: 500 }}>{manager.name || '—'}</div>
-                  <div style={{ color: 'var(--t-faint)' }}>Nazionalità</div><div>{manager.country || '—'}</div>
+                  {!isManagerMode && (
+                    <>
+                      <div style={{ color: 'var(--t-faint)' }}>Nome</div><div style={{ fontWeight: 500 }}>{manager.name || '—'}</div>
+                      <div style={{ color: 'var(--t-faint)' }}>Nazionalità</div><div>{manager.country || '—'}</div>
+                    </>
+                  )}
+                  {isManagerMode && manager.country && (
+                    <>
+                      <div style={{ color: 'var(--t-faint)' }}>Nazionalità</div><div>{manager.country}</div>
+                    </>
+                  )}
                   <div style={{ color: 'var(--t-faint)' }}>Modulo</div><div>{manager.preferred_formation || '—'}</div>
                   <div style={{ color: 'var(--t-faint)' }}>Profilo</div><div style={{ textTransform: 'capitalize' }}>{manager.tactical_profile || '—'}</div>
                   {manager.matches_total != null && (

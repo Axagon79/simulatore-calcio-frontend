@@ -948,17 +948,18 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const [clockMono, setClockMono] = useState('00:00');
   const [activeToc, setActiveToc] = useState(0);
 
-  // Modale scheda squadra.
+  // Modale scheda squadra/allenatore: stesso payload bzzoiro, due viste diverse.
   const [teamModal, setTeamModal] = useState<{
     open: boolean;
     nome: string;
     loading: boolean;
     data: any | null;
     error: string | null;
-  }>({ open: false, nome: '', loading: false, data: null, error: null });
+    mode: 'team' | 'manager';
+  }>({ open: false, nome: '', loading: false, data: null, error: null, mode: 'team' });
 
-  const openTeamModal = async (nome: string) => {
-    setTeamModal({ open: true, nome, loading: true, data: null, error: null });
+  const openTeamModal = async (nome: string, mode: 'team' | 'manager' = 'team') => {
+    setTeamModal({ open: true, nome, loading: true, data: null, error: null, mode });
     try {
       const url = `${API_BASE}/simulation/teams/by-name?name=${encodeURIComponent(nome)}`;
       const res = await fetch(url);
@@ -973,7 +974,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
       setTeamModal(prev => ({ ...prev, loading: false, error: e?.message || 'Errore rete' }));
     }
   };
-  const closeTeamModal = () => setTeamModal({ open: false, nome: '', loading: false, data: null, error: null });
+  const closeTeamModal = () => setTeamModal({ open: false, nome: '', loading: false, data: null, error: null, mode: 'team' });
 
   // Apre il modale e fa fetch dei dati giocatore da /players/by-name.
   const openPlayerModal = async (nome: string, teamId: number | null) => {
@@ -1584,7 +1585,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                           <div style={{ marginTop: 12 }}>
                             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
                             <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>
-                              <span className="player-link" onClick={() => openTeamModal(home)}>{homeMeta.allenatore.name}</span>
+                              <span className="player-link" onClick={() => openTeamModal(home, 'manager')}>{homeMeta.allenatore.name}</span>
                             </div>
                           </div>
                         )}
@@ -1639,7 +1640,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                           <div style={{ marginTop: 12 }}>
                             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--t-faint)', marginBottom: 6 }}>Allenatore</div>
                             <div style={{ fontSize: 14.5, color: 'var(--t)', fontWeight: 500 }}>
-                              <span className="player-link" onClick={() => openTeamModal(away)}>{awayMeta.allenatore.name}</span>
+                              <span className="player-link" onClick={() => openTeamModal(away, 'manager')}>{awayMeta.allenatore.name}</span>
                             </div>
                           </div>
                         )}
@@ -1872,6 +1873,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           loading={teamModal.loading}
           data={teamModal.data}
           error={teamModal.error}
+          mode={teamModal.mode}
           onClose={closeTeamModal}
         />
       )}

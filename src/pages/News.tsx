@@ -4,6 +4,7 @@ import { API_BASE } from '../AppDev/costanti';
 import { assegnaRedattore } from './news/assegnazione';
 import TeamScheda from './news/TeamScheda';
 import RedattoreProfilo from './news/RedattoreProfilo';
+import SguardoVeloce from './news/SguardoVeloce';
 import type { Redattore } from './news/redattori';
 
 interface NewsProps {
@@ -515,6 +516,9 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   // Modali: scheda squadra + scheda redattore.
   const [teamModal, setTeamModal] = useState<{ open: boolean; nome: string; loading: boolean; data: any | null; error: string | null }>({ open: false, nome: '', loading: false, data: null, error: null });
   const [redattoreModal, setRedattoreModal] = useState<Redattore | null>(null);
+  // Popup 'Sguardo veloce' con 3 tab (Classifica / Testa a testa / Radar).
+  // Tiene i dati della partita corrente; null = chiuso.
+  const [sguardoModal, setSguardoModal] = useState<{ home: string; away: string; league: string; date: string } | null>(null);
 
   const openTeamModal = async (nome: string) => {
     setTeamModal({ open: true, nome, loading: true, data: null, error: null });
@@ -1035,7 +1039,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                     })()}</b></div>
                   </div>
                   <div className="pron-foot">
-                    <a className="open-btn" href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>Apri articolo completo <span className="arrow">→</span></a>
+                    <a className="open-btn" href={`#${id}`} onClick={(e) => { e.preventDefault(); setSguardoModal({ home: m.home, away: m.away, league: m.league || m.lega || '', date: m.date }); }} style={{ cursor: 'pointer' }}>Sguardo veloce <span className="arrow">→</span></a>
                   </div>
                 </aside>
               </article>
@@ -1060,6 +1064,15 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       )}
       {redattoreModal && (
         <RedattoreProfilo redattore={redattoreModal} onClose={() => setRedattoreModal(null)} />
+      )}
+      {sguardoModal && (
+        <SguardoVeloce
+          home={sguardoModal.home}
+          away={sguardoModal.away}
+          league={sguardoModal.league}
+          date={sguardoModal.date}
+          onClose={() => setSguardoModal(null)}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE } from '../AppDev/costanti';
 import { assegnaRedattore } from './news/assegnazione';
 import TeamScheda from './news/TeamScheda';
@@ -493,9 +493,19 @@ const TickerStrip: React.FC<{
 
 const News: React.FC<NewsProps> = ({ onBack }) => {
   const navigate = useNavigate();
+  // Legge ?tab= dall'URL: 'today'/'tomorrow'/'after' o 'oggi'/'domani'/'dopodomani'
+  // Default 'oggi'. Permette al menu nav della Dashboard di aprire News su un
+  // tab specifico (es. /news?tab=tomorrow).
+  const [searchParams] = useSearchParams();
+  const initialTab: 'oggi' | 'domani' | 'dopodomani' = (() => {
+    const t = (searchParams.get('tab') || '').toLowerCase();
+    if (t === 'tomorrow' || t === 'domani') return 'domani';
+    if (t === 'after' || t === 'dopodomani') return 'dopodomani';
+    return 'oggi';
+  })();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [clockMono, setClockMono] = useState('14:32:07 CEST');
-  const [activeTab, setActiveTab] = useState<'oggi' | 'domani' | 'dopodomani'>('oggi');
+  const [activeTab, setActiveTab] = useState<'oggi' | 'domani' | 'dopodomani'>(initialTab);
   const [activeCountry, setActiveCountry] = useState<string>('');
   const [activeLeague, setActiveLeague] = useState<string>('');
   const [activeRail, setActiveRail] = useState<string>('');

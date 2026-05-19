@@ -411,12 +411,21 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Best Picks', onClick: () => { window.location.href = '/best-picks'; } },
               { label: 'Ticket AI', onClick: () => { window.location.href = '/ticket-ai'; } },
             ]},
-            { label: 'News', items: [
-              { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
-              { label: 'Oggi', onClick: () => { window.location.href = '/news?tab=today'; } },
-              { label: 'Domani', onClick: () => { window.location.href = '/news?tab=tomorrow'; } },
-              { label: 'Dopodomani', onClick: () => { window.location.href = '/news?tab=after'; } },
-            ]},
+            { label: 'News', items: (() => {
+              // Etichette dinamiche con la data: 'News · 19 mag', 'News · 20 mag', ecc.
+              // Piu' leggibile di Oggi/Domani/Dopodomani statici.
+              const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+              const fmt = (d: Date) => `News · ${d.getDate()} ${MESI[d.getMonth()]}`;
+              const t = new Date(); t.setHours(0,0,0,0);
+              const tom = new Date(t); tom.setDate(t.getDate() + 1);
+              const aft = new Date(t); aft.setDate(t.getDate() + 2);
+              return [
+                { label: 'Match Day', onClick: () => { if (onGoToToday) onGoToToday(); } },
+                { label: fmt(t), onClick: () => { window.location.href = '/news?tab=today'; } },
+                { label: fmt(tom), onClick: () => { window.location.href = '/news?tab=tomorrow'; } },
+                { label: fmt(aft), onClick: () => { window.location.href = '/news?tab=after'; } },
+              ];
+            })() },
             { label: 'Competizioni', items: [
               ...leagues.map(l => ({ label: l.name, onClick: () => onSelectLeague(l.id) })),
               { label: 'Altri Campionati', onClick: () => setShowOtherLeagues(true) },

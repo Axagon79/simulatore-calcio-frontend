@@ -284,35 +284,6 @@ const crestInitialA = (name: string): string => {
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
-// Estrae la quota dal blocco odds di una partita data l'etichetta del pronostico.
-// Le DC (1X/X2/12) si calcolano combinando 1, X, 2: 1/(1/a + 1/b).
-const getQuoteFromOddsA = (odds: Record<string, any> | undefined | null, pronostico: string | null | undefined): number | null => {
-  if (!odds || !pronostico) return null;
-  const p = String(pronostico).trim();
-  const num = (v: any) => (typeof v === 'number' && isFinite(v) && v > 0 ? v : null);
-  const o1 = num(odds['1']), oX = num(odds['X']), o2 = num(odds['2']);
-  const dcCombine = (a: number | null, b: number | null) => {
-    if (a == null || b == null) return null;
-    return 1 / (1 / a + 1 / b);
-  };
-  if (p === '1') return o1;
-  if (p === 'X') return oX;
-  if (p === '2') return o2;
-  if (p === 'Doppia Chance 1X' || p === '1X') return dcCombine(o1, oX);
-  if (p === 'Doppia Chance X2' || p === 'X2') return dcCombine(oX, o2);
-  if (p === 'Doppia Chance 12' || p === '12') return dcCombine(o1, o2);
-  const norm = p.toLowerCase().replace(/\s+/g, '');
-  if (norm === 'over1.5' || norm === 'over15') return num(odds.over_15);
-  if (norm === 'under1.5' || norm === 'under15') return num(odds.under_15);
-  if (norm === 'over2.5' || norm === 'over25') return num(odds.over_25);
-  if (norm === 'under2.5' || norm === 'under25') return num(odds.under_25);
-  if (norm === 'over3.5' || norm === 'over35') return num(odds.over_35);
-  if (norm === 'under3.5' || norm === 'under35') return num(odds.under_35);
-  if (norm === 'gol' || norm === 'goal' || norm === 'gg') return num(odds.gg);
-  if (norm === 'nogol' || norm === 'nogoal' || norm === 'ng') return num(odds.ng);
-  return null;
-};
-
 const getTopTipA = (m: MatchA): PronosticoTip | null => {
   if (!m.pronostici || m.pronostici.length === 0) return null;
   const sorted = [...m.pronostici].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
@@ -1151,7 +1122,6 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const sections = useMemo(() => splitSections(cleanText).filter(s => s.kind !== 'ipotizza'), [cleanText]);
   const tip = matchData ? getTopTipA(matchData) : null;
   const conf = tip?.confidence || 0;
-  const confMed = conf < 60;
   const computedAt = (effort === 'DEEP' ? matchData?.scout_deep?.computed_at : matchData?.scout_lite?.computed_at) || '';
   const pubLabel = computedAt ? new Date(computedAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 

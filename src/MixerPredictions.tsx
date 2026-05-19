@@ -2922,7 +2922,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {(() => {
                           const raw: any = deepdiveAnalysis[matchId] || pred.analysis_deepdive;
                           const txt = typeof raw === 'string' ? raw : raw?.text || raw?.content || '';
-                          return <ScoutAnalysis text={txt} />;
+                          // Pronostici strutturati dal JSON Scout (deep prevale su lite).
+                          // Niente piu' parsing fragile del testo: usiamo direttamente l'output JSON.
+                          const sd: any = (pred as any).scout_deep;
+                          const sl: any = (pred as any).scout_lite;
+                          const segno = sd?.segno || sl?.segno || null;
+                          const gol = sd?.gol || sl?.gol || null;
+                          return <ScoutAnalysis text={txt} segno={segno} gol={gol} />;
                         })()}
                         {(() => {
                           // Footer firma Scout: data/ora + (F1) per lite notturna, (F2) per deep T-6h.

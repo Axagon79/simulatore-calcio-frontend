@@ -51,48 +51,15 @@ const stripPeso = (raw: string): string =>
 // come lista bullet, con titolo "Pronostico:" / "Pronostici:" in base al
 // conteggio.
 const formatPronostici = (raw: string): string => {
-  // STEP 1: rimuovi le etichette "Pronostico:" / "Pronostici:" / "Prediction:"
-  // ovunque siano nel testo (anche dentro markdown bold **Pronostico:**),
-  // cosi' non finiscono dentro al "Nome" del tip quando estraiamo col regex.
-  // Caso bug reale visto in screenshot:
-  //   "Pronostico: Over 2.5 (...) Pronostico: Doppia Chance 1X (...)"
-  const stripped = raw.replace(/\*{0,2}\s*\b(pronostici|pronostico|prediction)s?\s*:\*{0,2}\s*/gi, '');
-
-  // Pattern: "Tip Name (confidenza N%)" — Tip Name puo' contenere lettere/numeri/spazi/punti.
-  // IMPORTANTE: NON deve attraversare newline ne' includere il testo di paragrafi
-  // precedenti. Usiamo un lookbehind logico ancorato al newline o all'inizio: il
-  // tip name e' al massimo l'ultima riga prima di "(confidenza".
-  // Bug reale 19/05/2026 (Bournemouth-MC): senza vincolo, il regex agganciava
-  // ", e aspettarsi almeno due gol complessivi in un contesto così carico.Doppia
-  // Chance X2 (confidenza 68%)" come UN tip unico perche' non c'era newline tra
-  // fine paragrafo e inizio bullet.
-  const tipRe = /(?:^|\n)\s*[-*•]?\s*([^\n(]+?)\s*\(\s*confidenza\s+(\d{1,3})\s*%\s*[,)]/gi;
-
-  // STEP 2: estrai TUTTI i tip da tutto il testo (non riga per riga).
-  // Cosi' tip su righe consecutive vengono trattati come una sola lista.
-  const allMatches = Array.from(stripped.matchAll(tipRe));
-  if (allMatches.length === 0) return stripped;
-
-  // STEP 3: prendi il prefisso del testo PRIMA del primo tip e tronca al
-  // termine "logico" della frase introduttiva. Uso allMatches[0].index per
-  // posizione sicura (con il nuovo regex il match inizia col newline iniziale).
-  const firstMatchIdx = allMatches[0].index ?? 0;
-  let prefix = stripped.slice(0, firstMatchIdx);
-  // Rimuovi eventuali trattini orfani o "- " lasciati a fine prefisso
-  prefix = prefix.replace(/\s*[-*•]\s*$/, '').trimEnd();
-  // Rimuovi ":" o "," di chiusura del prefisso se erano connettori al tip
-  prefix = prefix.replace(/[:,]\s*$/, '').trimEnd();
-
-  // STEP 4: costruisci la lista dei tip e il blocco finale.
-  const tips = allMatches.map(m => {
-    const name = m[1].trim().replace(/^[-*•]\s*/, '');
-    const conf = m[2];
-    return `- ${name} (confidenza ${conf}%)`;
-  });
-  const title = tips.length === 1 ? 'Pronostico:' : 'Pronostici:';
-  const block = `${title}\n\n${tips.join('\n')}`;
-
-  return prefix ? `${prefix}\n\n${block}` : block;
+  // STEP 1: rimuovi tutto da "Pronostici:" (o "Pronostico:") in poi.
+  // I tip strutturati arrivano dal JSON scout_lite/scout_deep e vengono passati
+  // come Props (segno/gol). Qui dobbiamo solo lasciare la prosa pulita.
+  // Bug reale 19/05/2026 (Bournemouth-MC): il regex precedente provava a
+  // estrarre i tip dal testo libero e finiva per inglobare frasi intere
+  // ("e aspettarsi almeno due gol complessivi...Doppia Chance X2...").
+  // Soluzione: niente piu' parsing del testo, usiamo il JSON strutturato.
+  const labelRe = /\n+\s*\*{0,2}\s*\b(pronostici|pronostico|prediction)s?\s*:\*{0,2}[\s\S]*$/i;
+  return raw.replace(labelRe, '').trimEnd();
 };
 
 const splitSections = (text: string): string[] => {
@@ -113,9 +80,48 @@ const splitSections = (text: string): string[] => {
   return sections.length ? sections : [text];
 };
 
+interface ScoutTip {
+  emit?: boolean;
+  mercato?: string;
+  esito?: string;
+  pronostico?: string;  // alternativa: alcuni doc usano "pronostico" invece di esito+mercato
+  confidence?: number;
+}
+
 interface Props {
   text: string;
+  segno?: ScoutTip | null;
+  gol?: ScoutTip | null;
 }
+
+// Converte un ScoutTip in label leggibile per bullet.
+// Esempi:
+//   {mercato:'DC', esito:'X2'} -> "Doppia Chance X2"
+//   {mercato:'OVER_UNDER_2_5', esito:'Over'} -> "Over 2.5"
+//   {mercato:'OVER_UNDER_1_5', esito:'Under'} -> "Under 1.5"
+//   {mercato:'GG_NG', esito:'Goal'} -> "Goal"
+//   {pronostico:'1X'} -> "Doppia Chance 1X"
+const formatTipLabel = (tip: ScoutTip): string => {
+  if (tip.pronostico) {
+    const p = tip.pronostico.trim();
+    if (/^(1X|X2|12)$/i.test(p)) return `Doppia Chance ${p.toUpperCase()}`;
+    return p;
+  }
+  const mercato = (tip.mercato || '').toUpperCase();
+  const esito = tip.esito || '';
+  if (mercato === 'DC' || mercato === 'DOPPIA_CHANCE') return `Doppia Chance ${esito}`;
+  if (mercato.startsWith('OVER_UNDER_')) {
+    const soglia = mercato.replace('OVER_UNDER_', '').replace('_', '.');
+    return `${esito} ${soglia}`;
+  }
+  if (mercato === 'GG_NG' || mercato === 'GG' || mercato === 'NG') return esito || mercato;
+  if (mercato === '1X2' || mercato === 'SEGNO') return esito;
+  if (mercato === 'MULTIGOL' || mercato.startsWith('MG_')) {
+    const range = mercato.replace('MG_', '').replace('_', '-');
+    return `Multigol ${esito || range}`;
+  }
+  return esito || mercato;
+};
 
 const PronosticoPill = ({ children }: { children: any }) => (
   <span
@@ -248,7 +254,7 @@ const buildComponents = (isLastSection: boolean) => ({
   ),
 });
 
-export default function ScoutAnalysis({ text }: Props) {
+export default function ScoutAnalysis({ text, segno, gol }: Props) {
   const clean = formatPronostici(stripPeso(stripJsonBlock(stripCitations(text || ''))));
   const sections = splitSections(clean);
   useEffect(() => {
@@ -260,6 +266,13 @@ export default function ScoutAnalysis({ text }: Props) {
     link.href = FONT_HREF;
     document.head.appendChild(link);
   }, []);
+
+  // Bullet pronostici dal JSON strutturato (scout_lite/scout_deep).
+  // Mostrati nell'ultima sezione (sotto "Ipotizza un pronostico").
+  // Niente piu' parsing fragile del testo: prendiamo solo emit=true.
+  const tipsFromJson = [segno, gol]
+    .filter((t): t is ScoutTip => !!t && t.emit !== false && (!!t.esito || !!t.pronostico || !!t.mercato))
+    .map(t => ({ label: formatTipLabel(t), conf: t.confidence }));
 
   return (
     <div
@@ -285,6 +298,21 @@ export default function ScoutAnalysis({ text }: Props) {
             }}
           >
             <ReactMarkdown components={buildComponents(isLast)}>{sec}</ReactMarkdown>
+            {isLast && tipsFromJson.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: bodyColor }}>
+                  {tipsFromJson.length === 1 ? 'Pronostico:' : 'Pronostici:'}
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                  {tipsFromJson.map((t, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>
+                      <strong>{t.label}</strong>
+                      {typeof t.conf === 'number' && ` (confidenza ${t.conf}%)`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         );
       })}

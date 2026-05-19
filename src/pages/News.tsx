@@ -986,7 +986,6 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     setTickerItems(items);
   }, [matches, datesTabs]);  // si aggiorna quando matches cambia (= nuova cache disponibile)
   const activeDateObj = activeTab === 'oggi' ? datesTabs.today : activeTab === 'domani' ? datesTabs.tomorrow : datesTabs.after;
-  const dateDots = `${String(activeDateObj.getDate()).padStart(2, '0')} · ${String(activeDateObj.getMonth() + 1).padStart(2, '0')} · ${activeDateObj.getFullYear()}`;
   const GIORNI = ['dom','lun','mar','mer','gio','ven','sab'];
   const now = new Date();
   const dateLabelChyron = `${GIORNI[now.getDay()]} ${now.getDate()} ${MESI[now.getMonth()]} ${now.getFullYear()}`;

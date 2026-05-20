@@ -745,11 +745,13 @@ function PredictionRow({ preds, m, compact }: { preds?: PredEntry[]; m: MatchDoc
   );
 }
 
-function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact, phase }: {
-  matchKey: string; analysis?: string; loading?: boolean; canSee: boolean; onFetch: (mk: string) => void; compact?: boolean; phase?: string;
+function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact, phase, isAdmin }: {
+  matchKey: string; analysis?: string; loading?: boolean; canSee: boolean; onFetch: (mk: string, forceRefresh?: boolean) => void; compact?: boolean; phase?: string; isAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const hasAnalysis = !!analysis;
+  const isNoCache = analysis === '__NO_CACHE__';
+  const hasAnalysis = !!analysis && !isNoCache;
+  const hasAttempt = !!analysis; // include anche __NO_CACHE__ → ci abbiamo provato
 
   return (
     <div style={{ padding: compact ? '4px 8px' : '6px 12px' }}>
@@ -758,7 +760,7 @@ function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact
           onClick={(e) => {
             e.stopPropagation();
             if (!canSee) return;
-            if (hasAnalysis) { setOpen(!open); return; }
+            if (hasAttempt) { setOpen(!open); return; }
             onFetch(matchKey);
             setOpen(true);
           }}
@@ -777,6 +779,30 @@ function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact
           <span>{loading ? 'Analisi in corso...' : hasAnalysis ? (open ? 'Chiudi analisi AI' : 'Analisi AI') : (canSee ? 'Analisi AI Premium' : 'Analisi AI (Premium)')}</span>
           {loading && <span style={{ display: 'inline-block', width: 10, height: 10, border: '2px solid transparent', borderTop: `2px solid ${theme.cyan}`, borderRadius: '50%', animation: 'qaSpinAi 0.8s linear infinite' }} />}
         </button>
+        {isAdmin && canSee && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFetch(matchKey, true);
+              setOpen(true);
+            }}
+            disabled={loading}
+            title="Rigenera commento Quote (admin only)"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: compact ? 18 : 20, height: compact ? 18 : 20,
+              padding: 0, borderRadius: 4,
+              border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
+              background: isLight ? '#f8fafc' : '#1e293b',
+              cursor: loading ? 'wait' : 'pointer',
+              fontSize: compact ? 9 : 10,
+              color: isLight ? '#64748b' : '#94a3b8',
+              opacity: loading ? 0.5 : 1,
+            }}
+          >
+            ↻
+          </button>
+        )}
       </div>
       {open && hasAnalysis && (
         <div style={{
@@ -798,6 +824,18 @@ function AiAnalysisBlock({ matchKey, analysis, loading, canSee, onFetch, compact
               {phase === 'nightly' ? '(F1)' : phase === 'pre_match' ? '(F2)' : `(${phase})`}
             </div>
           )}
+        </div>
+      )}
+      {open && isNoCache && (
+        <div style={{
+          marginTop: 6, padding: compact ? '8px 10px' : '10px 14px',
+          background: isLight ? '#fef9c3' : '#1c1917',
+          border: `1px solid ${isLight ? '#fde047' : '#78716c'}`,
+          borderRadius: 6, fontSize: compact ? 11 : 12,
+          color: isLight ? '#854d0e' : '#fbbf24',
+          fontStyle: 'italic' as const,
+        }}>
+          Analisi non ancora disponibile
         </div>
       )}
     </div>
@@ -855,9 +893,10 @@ const CHART_TABS = [
 function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }
 
 // --- CARD MOBILE ---
-function MobileCard({ m, date, preds, aiAnalysis, aiLoading, aiPhase, canSeeAi, onFetchAi }: {
+function MobileCard({ m, date, preds, aiAnalysis, aiLoading, aiPhase, canSeeAi, onFetchAi, isAdmin }: {
   m: MatchDoc; date: string; preds?: PredEntry[];
-  aiAnalysis?: string; aiLoading?: boolean; aiPhase?: string; canSeeAi: boolean; onFetchAi: (mk: string) => void;
+  aiAnalysis?: string; aiLoading?: boolean; aiPhase?: string; canSeeAi: boolean; onFetchAi: (mk: string, forceRefresh?: boolean) => void;
+  isAdmin?: boolean;
 }) {
   const rend = m.rendimento_chiusura || m.rendimento_apertura;
   const [showIndicators, setShowIndicators] = useState(false);
@@ -909,7 +948,7 @@ function MobileCard({ m, date, preds, aiAnalysis, aiLoading, aiPhase, canSeeAi, 
         <>
           {/* Pronostici SEGNO */}
           {<PredictionRow preds={preds} m={m} compact />}
-          <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis} loading={aiLoading} canSee={canSeeAi} onFetch={onFetchAi} compact phase={aiPhase} />
+          <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis} loading={aiLoading} canSee={canSeeAi} onFetch={onFetchAi} compact phase={aiPhase} isAdmin={isAdmin} />
           {/* Tabella unica: quote + indicatori */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: 'monospace' }}>
             <thead>
@@ -1047,23 +1086,36 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   // Metadati firma: phase ("nightly" | "pre_match" | "legacy") salvata accanto al testo.
   const [aiPhase, setAiPhase] = useState<Record<string, string>>({});
-  const fetchAiAnalysis = async (matchKey: string) => {
-    if (aiAnalysis[matchKey] || aiLoading[matchKey]) return;
+  const fetchAiAnalysis = async (matchKey: string, forceRefresh: boolean = false) => {
+    if (!forceRefresh && (aiAnalysis[matchKey] || aiLoading[matchKey])) return;
     setAiLoading(prev => ({ ...prev, [matchKey]: true }));
-    // Strategia: passa preferPhase=pre_match. Il backend ritorna il commento
-    // pre_match se gia' presente in cache, altrimenti ritorna il nightly senza
-    // chiamare Mistral al volo (evitiamo generazione user-triggered prima del
-    // T-2h, che e' compito dello scheduler Sistema Z Fase 2).
+    // Strategia standard: preferPhase=pre_match. Il backend ritorna il commento
+    // pre_match se gia' presente in cache, altrimenti il nightly. SENZA chiamare
+    // Mistral al volo (la rigenerazione e' compito della pipeline notturna +
+    // scheduler Sistema Z Fase 2).
+    //
+    // Strategia forceRefresh (solo admin, bottone "Refresh"): passa force=true +
+    // phase=nightly per chiamare Mistral e sovrascrivere il commento notturno.
     try {
+      const body: Record<string, unknown> = { match_key: matchKey, date, isAdmin };
+      if (forceRefresh) {
+        body.force = true;
+        body.phase = 'nightly';
+      } else {
+        body.preferPhase = 'pre_match';
+      }
       const resp = await fetch(`${API_BASE}/quote-anomale/analysis-premium`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ match_key: matchKey, date, isAdmin, preferPhase: 'pre_match' }),
+        body: JSON.stringify(body),
       });
       const data = await resp.json();
       if (data.success) {
         setAiAnalysis(prev => ({ ...prev, [matchKey]: data.analysis }));
         if (data.phase) setAiPhase(prev => ({ ...prev, [matchKey]: data.phase }));
+      } else {
+        // Cache vuota: mostra placeholder "Analisi non ancora disponibile"
+        setAiAnalysis(prev => ({ ...prev, [matchKey]: '__NO_CACHE__' }));
       }
     } catch { /* silenzioso */ }
     setAiLoading(prev => ({ ...prev, [matchKey]: false }));
@@ -1461,7 +1513,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                               <tr style={{ background: isLight ? '#f0f7ff' : '#0c1929' }}>
                                 <td colSpan={14} style={{ padding: 0, borderBottom: `1px solid ${theme.textDim}22` }}>
                                   <PredictionRow preds={predictions[m.match_key]} m={m} />
-                                  <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis[m.match_key]} loading={aiLoading[m.match_key]} canSee={canSeeAi} onFetch={fetchAiAnalysis} phase={aiPhase[m.match_key]} />
+                                  <AiAnalysisBlock matchKey={m.match_key} analysis={aiAnalysis[m.match_key]} loading={aiLoading[m.match_key]} canSee={canSeeAi} onFetch={fetchAiAnalysis} phase={aiPhase[m.match_key]} isAdmin={isAdmin} />
                                 </td>
                               </tr>
                             )}
@@ -1529,6 +1581,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
                     aiPhase={aiPhase[m.match_key]}
                     canSeeAi={canSeeAi}
                     onFetchAi={fetchAiAnalysis}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>

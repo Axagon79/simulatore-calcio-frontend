@@ -2757,21 +2757,35 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         )}
                       </div>
                     ) : deepdiveInfo[matchId] ? (
-                      <div style={{
-                        textAlign: 'center',
-                        padding: '14px 12px',
-                        color: theme.text,
-                        fontSize: '12px',
-                        lineHeight: 1.6,
-                        background: isLight ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.08)',
-                        border: `1px dashed ${isLight ? 'rgba(16,185,129,0.30)' : 'rgba(110,231,183,0.30)'}`,
-                        borderRadius: '6px',
-                      }}>
-                        🔎 {deepdiveInfo[matchId]}
+                      <div>
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '14px 12px',
+                          color: theme.text,
+                          fontSize: '12px',
+                          lineHeight: 1.6,
+                          background: isLight ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.08)',
+                          border: `1px dashed ${isLight ? 'rgba(16,185,129,0.30)' : 'rgba(110,231,183,0.30)'}`,
+                          borderRadius: '6px',
+                        }}>
+                          🔎 {deepdiveInfo[matchId]}
+                        </div>
+                        {isAdmin && (
+                          <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}
+                              style={{
+                                cursor: 'pointer', fontSize: '10px', color: theme.textDim,
+                                padding: '2px 8px', borderRadius: '8px',
+                                border: `1px solid ${theme.surface15}`,
+                              }}
+                            >🔄 Aggiorna</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
-                        🔎 Avvio ricerca web...
+                        🔎 Scout non ancora disponibile
                       </div>
                     )}
                   </div>

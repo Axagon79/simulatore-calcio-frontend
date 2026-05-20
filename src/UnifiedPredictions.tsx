@@ -1484,18 +1484,31 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     const analysisScore = pred.analysis_score ?? 0;
     const analysisScoreColor = analysisScore >= 70 ? theme.success : analysisScore >= 40 ? '#facc15' : theme.danger;
 
-    const fetchPremium = async () => {
-      if (isPremiumLoaded || isPremiumBusy) return;
+    // Lettura cache-only (default). Dal 20/05/2026 l'endpoint Premium non genera
+    // piu' al volo: il commento e' prodotto dalla pipeline notturna (step 33.7,
+    // generate_premium_comments.py) e qui viene solo letto. 404 -> placeholder
+    // "Analisi non ancora disponibile".
+    const fetchPremium = async (forceRefresh = false) => {
+      if (!forceRefresh && (isPremiumLoaded || isPremiumBusy)) return;
       setPremiumLoading(prev => ({ ...prev, [matchId]: true }));
       try {
+        const body: Record<string, unknown> = {
+          home: pred.home, away: pred.away, date: pred.date,
+          isAdmin: 'true',
+          section: activeTab === 'alto_rendimento' ? 'Alto Rendimento' : 'Pronostici',
+        };
+        if (forceRefresh) body.force = true;
         const resp = await fetch(`${API_BASE}/chat/match-analysis-premium`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, isAdmin: 'true', section: activeTab === 'alto_rendimento' ? 'Alto Rendimento' : 'Pronostici' }),
+          body: JSON.stringify(body),
         });
         const data = await resp.json();
         if (data.success) {
           setPremiumAnalysis(prev => ({ ...prev, [matchId]: data.analysis }));
+        } else {
+          // Cache vuota o 404: sentinella per placeholder
+          setPremiumAnalysis(prev => ({ ...prev, [matchId]: '__NO_CACHE__' }));
         }
       } catch (err) {
         console.error('Premium analysis error:', err);
@@ -2565,6 +2578,29 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.purple }}>
                         🤖 Analisi in corso...
                       </div>
+                    ) : premiumAnalysis[matchId] === '__NO_CACHE__' ? (
+                      <div>
+                        <div style={{ textAlign: 'center', padding: '12px', color: isLight ? '#854d0e' : '#fbbf24', fontSize: '11px', fontStyle: 'italic' as const }}>
+                          Analisi non ancora disponibile
+                        </div>
+                        {isAdmin && (
+                          <div style={{ textAlign: 'center', marginTop: 6 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); fetchPremium(true); }}
+                              title="Rigenera commento Premium (admin only)"
+                              style={{
+                                padding: '3px 10px', borderRadius: 4,
+                                border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
+                                background: isLight ? '#f8fafc' : '#1e293b',
+                                cursor: 'pointer', fontSize: 10,
+                                color: isLight ? '#64748b' : '#94a3b8',
+                              }}
+                            >
+                              ↻ Refresh
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     ) : isPremiumLoaded ? (
                       <div>
                         <div style={{ whiteSpace: 'pre-wrap' }}>{premiumAnalysis[matchId] || getPremiumText(pred)}</div>
@@ -2580,10 +2616,27 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             }}>{firma}</div>
                           );
                         })()}
+                        {isAdmin && (
+                          <div style={{ textAlign: 'right' as const, marginTop: 6 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); fetchPremium(true); }}
+                              title="Rigenera commento Premium (admin only)"
+                              style={{
+                                padding: '3px 10px', borderRadius: 4,
+                                border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
+                                background: isLight ? '#f8fafc' : '#1e293b',
+                                cursor: 'pointer', fontSize: 10,
+                                color: isLight ? '#64748b' : '#94a3b8',
+                              }}
+                            >
+                              ↻ Refresh
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '12px', color: theme.textDim, fontSize: '11px' }}>
-                        Premi il tab Premium per generare l'analisi
+                        Premi il tab Premium per caricare l'analisi
                       </div>
                     )}
                   </div>

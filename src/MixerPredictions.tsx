@@ -1612,16 +1612,18 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }
     };
 
-    const fetchDeepDive = async (forceRefresh = false) => {
+    const fetchDeepDive = async (forceRefresh = false, effort?: 'lite' | 'deep') => {
       if (isDeepDiveBusy) return;
       if (isDeepDiveLoaded && !forceRefresh) return;
       setDeepdiveLoading(prev => ({ ...prev, [matchId]: true }));
       setDeepdiveInfo(prev => ({ ...prev, [matchId]: '' }));
       try {
+        const body: any = { home: pred.home, away: pred.away, date: pred.date, league: pred.league || '', isAdmin: isAdmin ? 'true' : 'false', forceRefresh };
+        if (effort) body.effort = effort;
         const resp = await fetch(`${API_BASE}/chat/match-deepdive`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ home: pred.home, away: pred.away, date: pred.date, league: pred.league || '', isAdmin: isAdmin ? 'true' : 'false', forceRefresh }),
+          body: JSON.stringify(body),
         });
         const data = await resp.json().catch(() => ({ success: false, error: 'Scout non disponibile al momento. Riprova piu tardi.' }));
         if (data.success) {
@@ -3046,15 +3048,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           }
                         })()}
                         {isAdmin && (
-                          <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
+                          <div style={{ textAlign: 'right' as const, marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                             <span
-                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'lite'); }}
                               style={{
                                 cursor: 'pointer', fontSize: '10px', color: theme.textDim,
                                 padding: '2px 8px', borderRadius: '8px',
                                 border: `1px solid ${theme.surface15}`,
                               }}
-                            >🔄 Aggiorna</span>
+                            >🔄 LITE</span>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'deep'); }}
+                              style={{
+                                cursor: 'pointer', fontSize: '10px', color: theme.textDim,
+                                padding: '2px 8px', borderRadius: '8px',
+                                border: `1px solid ${theme.surface15}`,
+                              }}
+                            >🔄 DEEP</span>
                           </div>
                         )}
                       </div>
@@ -3073,15 +3083,23 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           🔎 {deepdiveInfo[matchId]}
                         </div>
                         {isAdmin && (
-                          <div style={{ textAlign: 'right' as const, marginTop: '8px' }}>
+                          <div style={{ textAlign: 'right' as const, marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                             <span
-                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true); }}
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'lite'); }}
                               style={{
                                 cursor: 'pointer', fontSize: '10px', color: theme.textDim,
                                 padding: '2px 8px', borderRadius: '8px',
                                 border: `1px solid ${theme.surface15}`,
                               }}
-                            >🔄 Aggiorna</span>
+                            >🔄 LITE</span>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'deep'); }}
+                              style={{
+                                cursor: 'pointer', fontSize: '10px', color: theme.textDim,
+                                padding: '2px 8px', borderRadius: '8px',
+                                border: `1px solid ${theme.surface15}`,
+                              }}
+                            >🔄 DEEP</span>
                           </div>
                         )}
                       </div>

@@ -2546,9 +2546,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   const m2 = /^(?:OVER|UNDER)_(\d)_(\d)$/.exec(mercato);
                   const isOuMarket = !!(m1 || m2);
                   const m = m1 || m2;
-                  if (isOuMarket && m && (esito === 'OVER' || esito === 'UNDER' || esito === 'Over' || esito === 'Under')) {
-                    const cap = esito.charAt(0).toUpperCase() + esito.slice(1).toLowerCase();
-                    market = `${cap} ${m[1]}.${m[2]}`;
+                  // esito puo' essere: "OVER", "Over", "UNDER", "Under" (solo direzione)
+                  // oppure gia' completo: "Over 2.5", "OVER 2.5", "UNDER 3.5", ecc.
+                  // Estraggo solo il "verso" iniziale per normalizzare in modo robusto.
+                  const esitoVerso = esito.toUpperCase().startsWith('OVER') ? 'Over'
+                    : esito.toUpperCase().startsWith('UNDER') ? 'Under' : null;
+                  if (isOuMarket && m && esitoVerso) {
+                    market = `${esitoVerso} ${m[1]}.${m[2]}`;
                   } else if (mercato === 'GG_NG' && (esito === 'GG' || esito === 'NG')) {
                     market = esito === 'GG' ? 'Gol' : 'No Gol';
                   } else if (mercato === 'DC') {

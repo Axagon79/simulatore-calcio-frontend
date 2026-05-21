@@ -2531,45 +2531,112 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               ) => {
                 const isOpen = expandedSections.has(capsuleKey);
                 const re: string[] = Array.isArray(mot?.risultati_esatti_top3) ? mot.risultati_esatti_top3 : [];
-                // Helper: costruisce stringa "<mercato> <esito> @ <quota>" dai dati strutturati
-                // ai2_output.segno / ai2_output.gol esposti dal backend come segno_struct / gol_struct.
-                // Esempio segno: { mercato: "DC", esito: "1X", quota: 1.50 } -> "DC 1X @ 1.50"
-                // Esempio segno 1X2: { mercato: "1X2", esito: "1", quota: 2.10 } -> "1 @ 2.10"
-                // Esempio gol: { mercato: "OVER_UNDER_2_5", esito: "UNDER", quota: 1.72 } -> "Under 2.5 @ 1.72"
-                // Esempio GG/NG: { mercato: "GG_NG", esito: "GG", quota: 1.80 } -> "Gol @ 1.80"
-                const formatStruct = (s: any): string | null => {
+                // Helper: estrae mercato+esito ("market") e quota separatamente
+                // dai dati strutturati ai2_output.segno / ai2_output.gol esposti
+                // come segno_struct / gol_struct. Permette di evidenziare la variazione
+                // F1 -> F2 solo sulla parte realmente cambiata (mercato/esito o quota).
+                // Esempio: { mercato: "DC", esito: "1X", quota: 1.50 } -> { market: "DC 1X", quota: "1.50" }
+                const splitStruct = (s: any): { market: string; quota: string | null } | null => {
                   if (!s || !s.emit) return null;
                   const mercato = s.mercato || '';
                   const esito = s.esito || '';
                   const quota = (typeof s.quota === 'number') ? s.quota.toFixed(2) : null;
-                  let label = `${mercato} ${esito}`.trim();
-                  const m = /^OVER_UNDER_(\d)_(\d)$/.exec(mercato);
-                  if (m && (esito === 'OVER' || esito === 'UNDER' || esito === 'Over' || esito === 'Under')) {
+                  let market = `${mercato} ${esito}`.trim();
+                  const m1 = /^OVER_UNDER_(\d)_(\d)$/.exec(mercato);
+                  const m2 = /^(?:OVER|UNDER)_(\d)_(\d)$/.exec(mercato);
+                  const isOuMarket = !!(m1 || m2);
+                  const m = m1 || m2;
+                  if (isOuMarket && m && (esito === 'OVER' || esito === 'UNDER' || esito === 'Over' || esito === 'Under')) {
                     const cap = esito.charAt(0).toUpperCase() + esito.slice(1).toLowerCase();
-                    label = `${cap} ${m[1]}.${m[2]}`;
+                    market = `${cap} ${m[1]}.${m[2]}`;
                   } else if (mercato === 'GG_NG' && (esito === 'GG' || esito === 'NG')) {
-                    label = esito === 'GG' ? 'Gol' : 'No Gol';
+                    market = esito === 'GG' ? 'Gol' : 'No Gol';
                   } else if (mercato === 'DC') {
-                    label = `DC ${esito}`;
+                    market = `DC ${esito}`;
                   } else if (mercato === '1X2') {
-                    label = esito;
+                    market = esito;
                   }
-                  return quota ? `${label} @ ${quota}` : label;
+                  return { market, quota };
                 };
-                const segnoLabel = formatStruct(mot?.segno_struct);
-                const golLabel = formatStruct(mot?.gol_struct);
+                const segnoSplit = splitStruct(mot?.segno_struct);
+                const golSplit = splitStruct(mot?.gol_struct);
+                // Per la capsula pre-match (isFase2=true), confronta col verdetto notturno.
+                const motNott = (pred as any).motivazione_notturna || {};
+                const segnoSplitF1 = isFase2 ? splitStruct(motNott.segno_struct) : null;
+                const golSplitF1 = isFase2 ? splitStruct(motNott.gol_struct) : null;
+                // Strikethrough granulare:
+                // - marketChanged: cambia il pronostico (mercato o esito) -> barrato sull'intera label
+                // - quotaChanged (solo se market invariato): barrato solo sulla quota
+                const computeTitle = (
+                  labelPrefix: string,
+                  cur: { market: string; quota: string | null } | null,
+                  f1: { market: string; quota: string | null } | null,
+                ): any => {
+                  if (!cur) return labelPrefix;
+                  const curStr = cur.quota ? `${cur.market} @ ${cur.quota}` : cur.market;
+                  if (!f1) return `${labelPrefix}: ${curStr}`;
+                  const marketChanged = cur.market !== f1.market;
+                  const quotaChanged = cur.quota !== f1.quota;
+                  if (!marketChanged && !quotaChanged) {
+                    return `${labelPrefix}: ${curStr}`;
+                  }
+                  // OPZIONE O v2: pronostico corrente in sfondo verde (mercato + esito + quota uniti),
+                  // bollino colorato discreto, "era X" piccolo grigio.
+                  const f1QuotaNum = f1.quota ? parseFloat(f1.quota) : null;
+                  const curQuotaNum = cur.quota ? parseFloat(cur.quota) : null;
+                  const isUp = (curQuotaNum != null && f1QuotaNum != null && curQuotaNum > f1QuotaNum);
+                  const dotColor = marketChanged
+                    ? (isLight ? '#ea580c' : '#fb923c')
+                    : (isUp ? (isLight ? '#16a34a' : '#4ade80')
+                            : (isLight ? '#dc2626' : '#f87171'));
+                  const bgGreen = {
+                    background: isLight ? 'rgba(22,163,74,0.16)' : 'rgba(74,222,128,0.20)',
+                    color: isLight ? '#14532d' : '#bbf7d0',
+                    padding: '0 6px',
+                    borderRadius: '3px',
+                    fontWeight: 700,
+                  };
+                  const dotStyle = {
+                    display: 'inline-block',
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: dotColor,
+                    margin: '0 7px 0 8px',
+                    verticalAlign: 'middle' as const,
+                    boxShadow: `0 0 4px ${dotColor}55`,
+                  };
+                  const eraStyle = {
+                    fontSize: '10px',
+                    fontWeight: 400,
+                    color: theme.textDim,
+                    textTransform: 'none' as const,
+                    letterSpacing: 0,
+                    opacity: 0.85,
+                  };
+                  const eraStr = marketChanged
+                    ? `era ${f1.quota ? `${f1.market} @ ${f1.quota}` : f1.market}`
+                    : `era @ ${f1.quota}`;
+                  return (
+                    <>
+                      {labelPrefix}: <span style={bgGreen}>{curStr}</span>
+                      <span style={dotStyle}></span>
+                      <span style={eraStyle}>{eraStr}</span>
+                    </>
+                  );
+                };
                 // Blocchi accoppiati: motivazione mercato + motivazione peso del mercato.
-                const blocks: Array<{ title: string; text: string; subtext?: string }> = [];
+                const blocks: Array<{ title: any; text: string; subtext?: string }> = [];
                 if (mot?.segno) {
                   blocks.push({
-                    title: segnoLabel ? `Pronostico Segno: ${segnoLabel}` : 'Pronostico Segno',
+                    title: computeTitle('Pronostico Segno', segnoSplit, segnoSplitF1),
                     text: mot.segno,
                     subtext: mot?.peso_segno || undefined,
                   });
                 }
                 if (mot?.gol) {
                   blocks.push({
-                    title: golLabel ? `Pronostico Gol: ${golLabel}` : 'Pronostico Gol',
+                    title: computeTitle('Pronostico Gol', golSplit, golSplitF1),
                     text: mot.gol,
                     subtext: mot?.peso_gol || undefined,
                   });

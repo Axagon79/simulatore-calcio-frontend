@@ -2531,18 +2531,45 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               ) => {
                 const isOpen = expandedSections.has(capsuleKey);
                 const re: string[] = Array.isArray(mot?.risultati_esatti_top3) ? mot.risultati_esatti_top3 : [];
+                // Helper: costruisce stringa "<mercato> <esito> @ <quota>" dai dati strutturati
+                // ai2_output.segno / ai2_output.gol esposti dal backend come segno_struct / gol_struct.
+                // Esempio segno: { mercato: "DC", esito: "1X", quota: 1.50 } -> "DC 1X @ 1.50"
+                // Esempio segno 1X2: { mercato: "1X2", esito: "1", quota: 2.10 } -> "1 @ 2.10"
+                // Esempio gol: { mercato: "OVER_UNDER_2_5", esito: "UNDER", quota: 1.72 } -> "Under 2.5 @ 1.72"
+                // Esempio GG/NG: { mercato: "GG_NG", esito: "GG", quota: 1.80 } -> "Gol @ 1.80"
+                const formatStruct = (s: any): string | null => {
+                  if (!s || !s.emit) return null;
+                  const mercato = s.mercato || '';
+                  const esito = s.esito || '';
+                  const quota = (typeof s.quota === 'number') ? s.quota.toFixed(2) : null;
+                  let label = `${mercato} ${esito}`.trim();
+                  const m = /^OVER_UNDER_(\d)_(\d)$/.exec(mercato);
+                  if (m && (esito === 'OVER' || esito === 'UNDER' || esito === 'Over' || esito === 'Under')) {
+                    const cap = esito.charAt(0).toUpperCase() + esito.slice(1).toLowerCase();
+                    label = `${cap} ${m[1]}.${m[2]}`;
+                  } else if (mercato === 'GG_NG' && (esito === 'GG' || esito === 'NG')) {
+                    label = esito === 'GG' ? 'Gol' : 'No Gol';
+                  } else if (mercato === 'DC') {
+                    label = `DC ${esito}`;
+                  } else if (mercato === '1X2') {
+                    label = esito;
+                  }
+                  return quota ? `${label} @ ${quota}` : label;
+                };
+                const segnoLabel = formatStruct(mot?.segno_struct);
+                const golLabel = formatStruct(mot?.gol_struct);
                 // Blocchi accoppiati: motivazione mercato + motivazione peso del mercato.
                 const blocks: Array<{ title: string; text: string; subtext?: string }> = [];
                 if (mot?.segno) {
                   blocks.push({
-                    title: 'Pronostico Segno',
+                    title: segnoLabel ? `Pronostico Segno: ${segnoLabel}` : 'Pronostico Segno',
                     text: mot.segno,
                     subtext: mot?.peso_segno || undefined,
                   });
                 }
                 if (mot?.gol) {
                   blocks.push({
-                    title: 'Pronostico Gol',
+                    title: golLabel ? `Pronostico Gol: ${golLabel}` : 'Pronostico Gol',
                     text: mot.gol,
                     subtext: mot?.peso_gol || undefined,
                   });

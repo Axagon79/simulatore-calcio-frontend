@@ -1612,7 +1612,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       }
     };
 
-    const fetchDeepDive = async (forceRefresh = false, effort?: 'lite' | 'deep') => {
+    const fetchDeepDive = async (forceRefresh = false, effort?: 'lite' | 'standard' | 'deep') => {
       if (isDeepDiveBusy) return;
       if (isDeepDiveLoaded && !forceRefresh) return;
       setDeepdiveLoading(prev => ({ ...prev, [matchId]: true }));
@@ -3050,7 +3050,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {isAdmin && (
                           <div style={{ textAlign: 'right' as const, marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                             <span
-                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'lite'); }}
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'standard'); }}
                               style={{
                                 cursor: 'pointer', fontSize: '10px', color: theme.textDim,
                                 padding: '2px 8px', borderRadius: '8px',
@@ -3085,7 +3085,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         {isAdmin && (
                           <div style={{ textAlign: 'right' as const, marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                             <span
-                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'lite'); }}
+                              onClick={(e) => { e.stopPropagation(); fetchDeepDive(true, 'standard'); }}
                               style={{
                                 cursor: 'pointer', fontSize: '10px', color: theme.textDim,
                                 padding: '2px 8px', borderRadius: '8px',

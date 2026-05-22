@@ -430,6 +430,7 @@ export default function DashboardHome({ onSelectLeague, onGoToToday }: Dashboard
               { label: 'Track Record', onClick: () => { window.location.href = '/track-record'; } },
               { label: 'Coach AI', onClick: () => setCoachOpen(true) },
               ...(checkAdmin() ? [{ label: 'Analisi Storica', onClick: () => { window.location.href = '/analisi-storica'; } }] : []),
+              ...(checkAdmin() ? [{ label: 'Stats RE Multifonte', onClick: () => { window.location.href = '/admin/stats-re-multifonte'; } }] : []),
             ]},
             { label: 'Prezzi', onClick: () => { window.location.href = '/prezzi'; } },
             { label: 'Contatti', onClick: () => { window.location.href = '/contatti'; } },

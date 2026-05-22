@@ -3810,6 +3810,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   onChange={(e) => { if (e.target.value) setDate(e.target.value); }}
                   style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
                 />
+                <button
+                  onClick={() => window.location.href = '/admin/stats-re-multifonte'}
+                  style={{
+                    background: theme.surface05, border: `1px solid ${theme.borderSubtle}`,
+                    padding: '8px 12px', borderRadius: '8px', fontSize: '16px',
+                    cursor: 'pointer', transition: 'all 0.2s', color: theme.text
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = theme.cyan}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = theme.borderSubtle}
+                  title="Statistiche risultati esatti multifonte (admin)"
+                >📊</button>
               </>
             );
           })()}

@@ -62,3 +62,6 @@ public/test-*.html
 # Report locali (LibreOffice/Word)
 *.odt
 *.docx
+
+# Graphify output (knowledge graph build artifacts, locali)
+graphify-out/

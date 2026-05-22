@@ -1,0 +1,49 @@
+# === Build output ===
+dist/
+build/
+
+# === Dipendenze ===
+node_modules/
+
+# === Backup ===
+src/AppDev.tsx.backup
+*.backup
+
+# === Mockup HTML una-tantum ===
+mockup-A-betting.html
+mockup-B-finance.html
+mockup-C-minimal.html
+mockup-D-smart.html
+mockup-dashboard.html
+preview-logo.html
+
+# === Script standalone in root ===
+scarica_tutto.js
+report_puppals.cjs
+
+# === Asset statici ===
+public/
+squadre/
+src/assets/
+scraper_reports/
+
+# === Documentazione markdown ===
+*.md
+
+# === Configurazione e tooling ===
+package-lock.json
+tsconfig*.json
+eslint.config.js
+postcss.config.js
+tailwind.config.js
+vite.config.ts
+firestore.indexes.json
+cors.json
+
+# === Meta IDE/VCS ===
+.git/
+.claude/
+.vscode/
+
+# === Graphify stesso ===
+graphify-out/

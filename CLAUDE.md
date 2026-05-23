@@ -131,3 +131,21 @@ da contraddire.
 
 Le scuse e l'ammissione di errore sono inutili se l'errore si ripete. 
 Cambiare comportamento è l'unica cosa che conta.
+
+## Regola — uso di BUSINESS_CORE.md
+
+Esiste in radice del progetto un file `BUSINESS_CORE.md` che documenta:
+- Le 8 voci cuore del prodotto (pagine + sistemi + integrazione AI)
+- Le 2 qualità trasversali (coerenza grafica + AI specializzata)
+- I file chiave di ogni voce
+- Le trappole specifiche (rinominazioni, doppioni, flussi che il grafo non vede)
+
+CONSULTARE BUSINESS_CORE.md prima di:
+1. Definire qualcosa come "centrale/importante/cuore" basandosi sul grafo Graphify
+2. Rispondere a domande di priorità o roadmap dell'utente
+3. Proporre refactor di parti che potrebbero essere nel cuore
+4. Concludere che un sistema "non esiste" — verifica prima nel BUSINESS_CORE
+
+La classifica god-node del grafo NON corrisponde all'importanza business.
+Esempio: PME è in cima al grafo per densità di connessioni, ma è admin-only
+e in shadow mode. Il BUSINESS_CORE riflette la realtà di prodotto.

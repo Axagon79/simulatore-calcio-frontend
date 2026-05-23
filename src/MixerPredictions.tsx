@@ -897,9 +897,27 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
 
   // --- FETCH count tip Sistema Z / AI OST (per il numerino del bottone) ---
   // Effettuato anche quando activeView != 'pme', cosi' il bottone mostra sempre il count.
+  // Quando activeView === 'pme' il dato e' gia' in `predictions` (popolato dalla
+  // fetch principale), quindi calcola il count da li' evitando una fetch duplicata
+  // dell'endpoint /sistema-z-predictions (1.3 MB).
   // Nome interno della variabile resta pmeCount per non riscrivere tutto il file.
   useEffect(() => {
     let cancelled = false;
+    const computeCount = (preds: any[]) =>
+      preds.reduce(
+        (s: number, p: any) =>
+          s + (p?.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0),
+        0
+      );
+
+    // Caso 1: siamo gia' sul tab OST -> predictions contiene i dati sistema-z,
+    // riusa senza nuova fetch.
+    if (activeView === 'pme') {
+      setPmeCount(computeCount(predictions));
+      return;
+    }
+
+    // Caso 2: siamo su altri tab -> serve comunque il count, fetch dedicata.
     const loadPmeCount = async () => {
       try {
         const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
@@ -911,12 +929,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         // UnifiedPredictions (filter pronostico && != 'NO BET'). L'endpoint
         // /sistema-z-predictions popola gia' pronostici[] con i soli tip emit=true.
         const preds = Array.isArray(j?.predictions) ? j.predictions : [];
-        const total = preds.reduce(
-          (s: number, p: any) =>
-            s + (p?.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0),
-          0
-        );
-        setPmeCount(total);
+        setPmeCount(computeCount(preds));
       } catch {
         if (!cancelled) setPmeCount(null);
       }
@@ -924,7 +937,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     loadPmeCount();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, [date, activeView, predictions]);
 
   // --- FETCH dataset MoE (sempre, anche quando activeView='pme') ---
   // Necessario per mantenere i conteggi dei tab Pronostici/Elite/AR/Mixer/SuperSel

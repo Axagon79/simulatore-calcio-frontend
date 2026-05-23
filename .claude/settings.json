@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f graphify-out/graph.json ] && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"graphify: knowledge graph disponibile in graphify-out/. Prima di cercare con grep, prova: graphify query \\\"<la tua domanda>\\\" per un subgraph mirato. Usa graphify path \\\"A\\\" \\\"B\\\" per relazioni tra nodi. Leggi GRAPH_REPORT.md solo per overview architetturale ampia.\"}}' || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f graphify-out/graph.json ] && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"graphify: knowledge graph disponibile in graphify-out/. Se stai cercando file per capire la struttura del progetto, prova: graphify query \\\"<domanda>\\\" o consulta graphify-out/wiki/index.md per navigazione.\"}}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}

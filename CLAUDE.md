@@ -69,3 +69,39 @@ Divieti:
 Contesto: sessione 20/04/2026, dopo aver inventato dati, ho tentato di
 spostare il dubbio sulla data dello screenshot dell'utente quando non
 riuscivo a spiegare +74u di P/L.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Regola vincolante — uso obbligatorio di Graphify
+
+Quando in un progetto esiste il file `graphify-out/graph.json`, valgono questi obblighi non negoziabili:
+
+**Prima di qualunque Grep, Glob, o ricerca esplorativa nel codice**, è OBBLIGATORIO eseguire almeno una di queste interrogazioni del grafo, con argomenti pertinenti alla domanda:
+- `graphify query "..."` per esplorare relazioni semantiche
+- `graphify path "A" "B"` per trovare percorsi tra entità
+- `graphify explain "X"` per capire un singolo nodo
+
+Solo dopo aver ricevuto e letto il risultato del grafo, è permesso usare Grep/Glob se il grafo non ha risposto in modo sufficiente.
+
+**Vietato:**
+- Eseguire Grep/Glob senza prima interrogare il grafo
+- Ignorare il suggerimento dell'hook PreToolUse "graphify: knowledge graph disponibile" e procedere comunque con grep
+- Giustificare il salto del grafo con "andavo più veloce a grepare"
+
+**Procedura corretta:**
+1. Ricevuta una domanda sul codice → interroga il grafo
+2. Il grafo restituisce risultati → li leggi e li usi
+3. Se i risultati del grafo sono insufficienti → spieghi all'utente perché, e propone esplicitamente di passare a Grep come fallback
+4. L'utente conferma → solo allora esegui Grep
+
+Se ti accorgi di stare per eseguire Grep senza aver consultato il grafo, FERMATI e fai prima l'interrogazione.
+
+Contesto: sessione 22/05/2026, hai eseguito 8 Grep consecutivi su una domanda dove `graphify query "tab AI OST"` avrebbe dato risposta diretta. Hai dichiarato di aver visto il suggerimento dell'hook e averlo ignorato. Questa regola esiste perché quel comportamento è inaccettabile.

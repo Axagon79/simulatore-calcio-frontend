@@ -105,3 +105,29 @@ Solo dopo aver ricevuto e letto il risultato del grafo, è permesso usare Grep/G
 Se ti accorgi di stare per eseguire Grep senza aver consultato il grafo, FERMATI e fai prima l'interrogazione.
 
 Contesto: sessione 22/05/2026, hai eseguito 8 Grep consecutivi su una domanda dove `graphify query "tab AI OST"` avrebbe dato risposta diretta. Hai dichiarato di aver visto il suggerimento dell'hook e averlo ignorato. Questa regola esiste perché quel comportamento è inaccettabile.
+
+## Regola — divieto di concludere "non esiste" senza verifica multipla
+
+Prima di dichiarare che un file/feature/sistema "non esiste" o "non c'è" 
+nel progetto AI Simulator, è OBBLIGATORIO:
+
+1. Cercare in almeno 4 modi diversi: glob su nome, glob su pattern correlati, 
+   grep su parole chiave del dominio, grep su nomi di funzioni/variabili 
+   correlate
+2. Cercare in TUTTE le cartelle pertinenti, non solo quella che sembra ovvia 
+   (es. Mistral può vivere in functions/routes/ Node, non solo in 
+   ai_engine/Aggiornamenti/ Python)
+3. Cercare nei log e nei file di test (es. log/test_*.txt sono prove 
+   dell'esistenza di un sistema)
+4. Se anche dopo le 4 strategie non emerge nulla, NON dichiarare "non esiste" 
+   con sicurezza. Formulare invece: "non ho trovato evidenza dopo X 
+   ricerche, ma potrebbe esistere in posizione non standard. Vuoi che 
+   verifichi ancora?"
+
+Quando Lorenzo afferma di ricordare l'esistenza di una funzionalità, 
+la sua memoria del progetto (§1.2) ha priorità su un singolo grep negativo. 
+Trattare la sua affermazione come fonte autorevole, non come ipotesi 
+da contraddire.
+
+Le scuse e l'ammissione di errore sono inutili se l'errore si ripete. 
+Cambiare comportamento è l'unica cosa che conta.

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../costanti';
+import { usePredictionsCache } from '../../contexts/PredictionsContext';
 import type { League, RoundInfo, Match } from '../../types';
 
 export function useDatiCampionato() {
@@ -14,6 +15,7 @@ export function useDatiCampionato() {
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [sidebarPredictions, setSidebarPredictions] = useState<any[]>([]);
   const countrySetByUser = useRef(false);
+  const { fetchPredictions } = usePredictionsCache();
 
   const initFromDashboard = (dashCountry: string, dashLeague: string) => {
     countrySetByUser.current = true;
@@ -101,13 +103,13 @@ export function useDatiCampionato() {
   }, [league, selectedRound]);
 
   // --- CARICA PRONOSTICI PER SIDEBAR ---
+  // Riusa la cache globale di PredictionsContext (deduplica con TopbarPronostici e Provider).
   useEffect(() => {
     const fetchSidebarPredictions = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${today}`);
-        const data = await response.json();
-        if (data.success && data.predictions && data.predictions.length > 0) {
+        const data = await fetchPredictions(today);
+        if (data.predictions && data.predictions.length > 0) {
           const shuffled = [...data.predictions].sort(() => 0.5 - Math.random());
           setSidebarPredictions(shuffled.slice(0, 3));
         }
@@ -116,7 +118,7 @@ export function useDatiCampionato() {
       }
     };
     fetchSidebarPredictions();
-  }, []);
+  }, [fetchPredictions]);
 
   return {
     country, setCountry,

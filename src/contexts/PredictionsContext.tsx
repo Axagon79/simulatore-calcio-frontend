@@ -103,24 +103,32 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
     };
 
     const prefetchAll = async () => {
-      // Carica oggi: daily-predictions-unified + sistema-z-predictions IN PARALLELO.
+      // PRIORITA' ASSOLUTA: solo daily-predictions-unified di oggi.
+      // E' il dato che alimenta la Topbar (pronostici con effetto pixel)
+      // e la sidebar. Tutto il resto (sistema-z News, altre date) attende.
       const today = getToday();
-      const [data] = await Promise.all([
-        fetchWithDedup(today),
-        preloadSistemaZ(today),
-      ]);
+      const data = await fetchWithDedup(today);
       if (cancelled) return;
       cacheRef.current[today] = data;
       setLoading(false);
 
-      // PRIORITA' ALTA: preload sistema-z di domani e dopodomani SUBITO in
-      // parallelo. La pagina News usa solo queste 3 date, quindi devono essere
-      // disponibili senza attendere i 14 daily-predictions-unified delle altre.
+      // Pausa per dare al browser il tempo di renderizzare la Topbar
+      // prima di occupare la banda con i preload background.
+      await delay(300);
+      if (cancelled) return;
+
+      // Background: sistema-z di oggi/domani/dopodomani (pagina News).
       const tomorrowISO = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })();
       const afterISO = (() => { const d = new Date(); d.setDate(d.getDate() + 2); return d.toISOString().split('T')[0]; })();
-      Promise.all([preloadSistemaZ(tomorrowISO), preloadSistemaZ(afterISO)]);
+      preloadSistemaZ(today);
+      await delay(500);
+      if (cancelled) return;
+      preloadSistemaZ(tomorrowISO);
+      await delay(500);
+      if (cancelled) return;
+      preloadSistemaZ(afterISO);
 
-      // Poi carica le altre date in background con calma
+      // Poi carica le altre date di daily-predictions-unified in background.
       const others = getOtherDates();
       for (const date of others) {
         if (cancelled) return;

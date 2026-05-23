@@ -87,30 +87,21 @@ export default function TopbarPronostici({ isMobile }: TopbarPronosticiProps) {
   const offscreenRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch pronostici del giorno
+  // Fetch pronostici del giorno: endpoint ultraleggero dedicato alla Topbar
+  // (~5-10 kB invece dei 456 kB di /daily-predictions-unified).
   useEffect(() => {
+    let cancelled = false;
     const today = new Date().toISOString().slice(0, 10);
-    fetch(`${API_BASE}/simulation/daily-predictions-unified?date=${today}`)
+    fetch(`${API_BASE}/simulation/daily-predictions-topbar?date=${today}`)
       .then(r => r.json())
       .then(data => {
-        if (!data.success || !data.predictions) return;
-        const allPicks: Pick[] = [];
-        for (const pred of data.predictions) {
-          for (const p of pred.pronostici || []) {
-            if (p.stars >= 2.5) {
-              allPicks.push({
-                home: pred.home, away: pred.away,
-                home_mongo_id: pred.home_mongo_id, away_mongo_id: pred.away_mongo_id,
-                league: pred.league, pronostico: p.pronostico, stars: p.stars,
-              });
-            }
-          }
-        }
-        allPicks.sort((a, b) => b.stars - a.stars);
-        setPicks(allPicks.slice(0, 20));
+        if (cancelled) return;
+        if (!data.success || !Array.isArray(data.picks)) { setLoaded(true); return; }
+        setPicks(data.picks);
         setLoaded(true);
       })
-      .catch(() => { setLoaded(true); });
+      .catch(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
   }, []);
 
   // Calcolo intelligente: quanti pick entrano nella larghezza disponibile

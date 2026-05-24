@@ -839,10 +839,10 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   }, [datePickerOpen]);
 
   // --- FETCH DATA (Unified + prediction_versions per partite ritirate) ---
-  // `silent=true` evita di mostrare lo spinner durante il polling (refresh in background).
-  // [24/05/2026] Disattivato dal flusso lazy: il primo paint usa /lazy/pronostici-tab-summary
-  // e le partite arrivano on-demand. Mantenuto per ripristino rapido se serve rollback.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // [24/05/2026] DISATTIVATO dal flusso lazy: il primo paint usa /lazy/pronostici-tab-summary
+  // e le partite arrivano on-demand. Funzione interamente commentata.
+  // Per rollback: ripristina dal git log pre-commit "feat: tab Pronostici/Mixer lazy".
+  /*
   const _fetchData = useCallback(async (silent = false) => {
       if (!silent) {
         setLoading(true);
@@ -945,6 +945,7 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
+  */
 
   // [DISATTIVATO 24/05/2026] Trigger iniziale di fetchData disabilitato.
   // Filosofia "lazy + minimo": al primo caricamento del tab Pronostici la pagina

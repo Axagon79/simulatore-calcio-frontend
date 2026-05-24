@@ -415,6 +415,34 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   const isAdmin = checkAdmin();
   // Count tip PME (per il bottone admin "🧬 PME (N)" che linka a /best-picks-v2?tab=pme)
   const [pmeCount, setPmeCount] = useState<number | null>(null);
+
+  // [24/05/2026] Payload riassuntivo del tab Pronostici (endpoint /lazy/pronostici-tab-summary).
+  // Contiene: conteggi per i 6 tab, aggregati globali del giorno, lista campionati con aggregati.
+  // Sostituisce il vecchio meccanismo "scarica tutto e calcola in locale".
+  const [tabSummary, setTabSummary] = useState<{
+    tabs: { pronostici: number; elite: number; alto_rendimento: number; mixer: number; super_selection: number; ai_ost: number };
+    summary: { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number };
+    sub_summary?: Record<string, { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number }>;
+    leagues: Array<{ league: string; partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number; per_tab?: Record<string, number>; per_tab_counts?: Record<string, { partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number }> }>;
+  } | null>(null);
+  // [24/05/2026] Partite caricate on-demand per lega quando l'utente espande la riga.
+  // Chiave = nome lega, valore = array partite ricevute da /lazy/predictions-by-league.
+  const [leagueMatches, setLeagueMatches] = useState<Record<string, any[]>>({});
+  const [leagueMatchesLoading, setLeagueMatchesLoading] = useState<Record<string, boolean>>({});
+
+  // [24/05/2026] Filtri Algoritmo (source) e Mercati (market) spostati qui in cima
+  // perché vengono letti negli useEffect (loadTabSummary, invalidamento cache lega)
+  // che vengono dichiarati prima delle altre useState dei filtri.
+  const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
+  const [sourceFilter, setSourceFilter] = useState<string>('tutti');
+
+  // [24/05/2026] Aggregati Filtra per Algoritmo, caricati on-demand quando si espande la capsula.
+  const [algoStats, setAlgoStats] = useState<any | null>(null);
+  const [algoStatsLoading, setAlgoStatsLoading] = useState(false);
+  // [24/05/2026] Aggregati Mercati, caricati on-demand quando si espande la capsula.
+  const [marketStats, setMarketStats] = useState<any | null>(null);
+  const [marketStatsLoading, setMarketStatsLoading] = useState(false);
+
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
@@ -515,9 +543,12 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     loadPurchases();
   }, [user, date]);
 
-  // Count tip Sistema Z per il bottone "🎯 AI OST (N)" — visibile a tutti gli
-  // utenti dal 16/05/2026 (prima il fetch era gated da isAdmin, quindi i non-admin
-  // vedevano sempre '...' come conteggio).
+  // Count tip Sistema Z per il bottone "🎯 AI OST (N)".
+  // [MODIFICATO 24/05/2026] Sostituita fetch pesante `sistema-z-predictions` (~3.6 MB)
+  // con il nuovo endpoint leggero `/lazy/pronostici-tab-summary` (~10 kB) che ritorna
+  // direttamente il conteggio AI OST tra gli aggregati tab.
+  // Codice originale tenuto come commento per rollback rapido se serve.
+  /*
   useEffect(() => {
     let cancelled = false;
     const loadPmeCount = async () => {
@@ -527,8 +558,6 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
         });
         const j = await r.json();
         if (!cancelled) {
-          // Conteggio tip emessi, allineato esattamente al tab Pronostici
-          // (filter pronostico && != 'NO BET').
           const preds = Array.isArray(j?.predictions) ? j.predictions : [];
           const total = preds.reduce(
             (s: number, p: any) =>
@@ -544,6 +573,48 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     loadPmeCount();
     return () => { cancelled = true; };
   }, [isAdmin, date]);
+  */
+  useEffect(() => {
+    let cancelled = false;
+    const loadTabSummary = async () => {
+      try {
+        const qs = new URLSearchParams({ date });
+        if (sourceFilter && sourceFilter !== 'tutti') qs.set('source', sourceFilter);
+        if (marketFilter && marketFilter !== 'tutti') qs.set('market', marketFilter);
+        const r = await fetch(`${API_BASE}/lazy/pronostici-tab-summary?${qs.toString()}`, {
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+        });
+        const j = await r.json();
+        if (!cancelled && j?.success) {
+          setPmeCount(j.tabs?.ai_ost ?? null);
+          setTabSummary({
+            tabs: j.tabs,
+            summary: j.summary,
+            sub_summary: j.sub_summary,
+            leagues: j.leagues || [],
+          });
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setPmeCount(null);
+          setTabSummary(null);
+          setLoading(false);
+        }
+      }
+    };
+    loadTabSummary();
+    return () => { cancelled = true; };
+  }, [isAdmin, date, sourceFilter, marketFilter]);
+
+  // [24/05/2026] Al cambio filtri Algoritmo/Mercati invalido la cache partite per lega:
+  // alla prossima espansione (o ri-espansione) verranno rifetchate con i nuovi parametri,
+  // così il backend applica il filtro sui dati grezzi senza che il frontend debba avere
+  // tutti i pronostici in RAM.
+  useEffect(() => {
+    setLeagueMatches({});
+    setLeagueMatchesLoading({});
+  }, [sourceFilter, marketFilter]);
 
   useEffect(() => {
     if (!user) return;
@@ -673,8 +744,6 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
   };
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tutte');
-  const [marketFilter, setMarketFilter] = useState<MarketFilter>('tutti');
-  const [sourceFilter, setSourceFilter] = useState<string>('tutti');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [addBetPopup, setAddBetPopup] = useState<{isOpen: boolean, home: string, away: string, market: string, prediction: string, odds: number, confidence?: number, probabilitaStimata?: number, systemStake?: number}>({isOpen: false, home: '', away: '', market: '', prediction: '', odds: 0});
   const [financeOpen, setFinanceOpen] = useState(false);
@@ -874,20 +943,21 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
-  // Trigger iniziale + ad ogni cambio date (spinner visibile)
-  useEffect(() => {
-    fetchData(false);
-  }, [date, fetchData]);
+  // [DISATTIVATO 24/05/2026] Trigger iniziale di fetchData disabilitato.
+  // Filosofia "lazy + minimo": al primo caricamento del tab Pronostici la pagina
+  // mostra solo l'header + i tab + i conteggi + la lista campionati collassati.
+  // Le partite di un campionato si caricano solo quando l'utente lo espande.
+  // useEffect(() => {
+  //   fetchData(false);
+  // }, [date, fetchData]);
 
-  // Polling silenzioso ogni 60s per intercettare aggiornamenti Fase 2 + Scout
-  // senza richiedere F5 all'utente. Non tocca lo spinner ne' lo state di errore.
-  // Indipendente dal polling live-scores (15s) che resta invariato.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  // [DISATTIVATO 24/05/2026] Polling silenzioso disabilitato (dipende da fetchData).
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     fetchData(true);
+  //   }, 60000);
+  //   return () => clearInterval(interval);
+  // }, [fetchData]);
 
   // --- RESET accordion su cambio data: nessuna lega/card resta aperta cambiando giorno.
   // Il reset su cambio tab invece è gestito nell'onClick del tab switcher (per non
@@ -1468,6 +1538,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
       if (detail.streak_away && !pred.streak_away) pred.streak_away = detail.streak_away;
       if (detail.streak_home_context && !pred.streak_home_context) pred.streak_home_context = detail.streak_home_context;
       if (detail.streak_away_context && !pred.streak_away_context) pred.streak_away_context = detail.streak_away_context;
+      // [24/05/2026] Aggiunti per popolare la sezione Commento + Analisi Match.
+      if (detail.comment && !pred.comment) pred.comment = detail.comment;
+      if (detail.analysis_score !== undefined && pred.analysis_score === undefined) pred.analysis_score = detail.analysis_score;
+      if (detail.analysis_alerts && !pred.analysis_alerts) pred.analysis_alerts = detail.analysis_alerts;
+      if (detail.expected_total_goals !== undefined && (pred as any).expected_total_goals === undefined) (pred as any).expected_total_goals = detail.expected_total_goals;
+      if (detail.gol_directions && !(pred as any).gol_directions) (pred as any).gol_directions = detail.gol_directions;
+      if (detail.confidence_segno !== undefined && pred.confidence_segno === undefined) pred.confidence_segno = detail.confidence_segno;
+      if (detail.confidence_gol !== undefined && pred.confidence_gol === undefined) pred.confidence_gol = detail.confidence_gol;
+      if (detail.stars_segno !== undefined && (pred as any).stars_segno === undefined) (pred as any).stars_segno = detail.stars_segno;
+      if (detail.stars_gol !== undefined && (pred as any).stars_gol === undefined) (pred as any).stars_gol = detail.stars_gol;
     }
     const tipsKey = `${cardKey}-tips`;
     const isTipsOpen = expandedSections.has(tipsKey);
@@ -3892,9 +3972,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           flexWrap: isMobile ? ('wrap' as const) : ('nowrap' as const),
         }}>
           {[
-            { id: 'pronostici' as const, name: 'Pronostici', count: normalPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0), icon: '🏆', color: theme.cyan },
-            { id: 'elite' as const, name: 'Elite', count: elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0), icon: '👑', color: '#f59e0b' },
-            { id: 'alto_rendimento' as const, name: 'Alto Rendimento', count: altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0), icon: '💎', color: theme.gold }
+            // [24/05/2026] Conteggi presi dall'endpoint /lazy/pronostici-tab-summary
+            // (in `tabSummary.tabs`). Fallback al calcolo locale per compatibilità durante
+            // il rollout (quando l'utente espanderà i campionati e i dati arriveranno).
+            { id: 'pronostici' as const, name: 'Pronostici', count: tabSummary?.tabs?.pronostici ?? normalPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0), icon: '🏆', color: theme.cyan },
+            { id: 'elite' as const, name: 'Elite', count: tabSummary?.tabs?.elite ?? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0), icon: '👑', color: '#f59e0b' },
+            { id: 'alto_rendimento' as const, name: 'Alto Rendimento', count: tabSummary?.tabs?.alto_rendimento ?? altoRendimentoPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0), icon: '💎', color: theme.gold }
           ].map(tab => (
             <button
               key={tab.id}
@@ -3903,6 +3986,12 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 setMarketFilter('tutti');
                 setCollapsedLeagues(new Set());
                 setExpandedCards(new Set());
+                // [24/05/2026] Reset cache partite lega: dipende dal tab attivo,
+                // cambiando tab le partite filtrate cambiano e vanno re-caricate.
+                setLeagueMatches({});
+                setLeagueMatchesLoading({});
+                setAlgoStats(null);
+                setMarketStats(null);
               }}
               onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.12)'; }}
               onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.background = theme.surfaceSubtle; }}
@@ -3952,7 +4041,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}
             >
               {(() => {
-                const c = allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0);
+                const c = (tabSummary && predictions.length === 0)
+                  ? (tabSummary.tabs.mixer ?? 0)
+                  : allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0);
                 return isMobile ? <>🧪 Mixer<br/>({c})</> : <>🧪 Mixer ({c})</>;
               })()}
             </button>
@@ -3979,7 +4070,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               }}
             >
               {(() => {
-                const c = allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0);
+                const c = (tabSummary && predictions.length === 0)
+                  ? (tabSummary.tabs.super_selection ?? 0)
+                  : allNormalPreds.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0);
                 return isMobile ? <>⭐ Super Selection<br/>({c})</> : <>⭐ Super Selection ({c})</>;
               })()}
             </button>
@@ -4058,7 +4151,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           );
           // Calcolo per gruppo capsula (total + finished + hits + HR)
           const capsuleData = (def: typeof MARKET_DEFS[0]) => {
-            const tips = allTips.filter(def.filter);
+            // Conta solo tip "reali" (non NO BET): coerente con il filtro applicato cliccando
+            // la capsula. Un tip SEGNO=NO BET non deve gonfiare il totale 1X2.
+            const tips = allTips.filter(t => isRealTip(t) && def.filter(t));
             const total = tips.length;
             const verified = tips.filter(t => t._effHit === true || t._effHit === false);
             const hits = tips.filter(t => t._effHit === true).length;
@@ -4067,13 +4162,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
             return { ...def, total, finished: verified.length, hits, hr, threshold: avgTh };
           };
-          const capsules = MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
-          // NO BET: conta prediction escluse, non tips
-          const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
-          if (noBetPreds.length > 0) {
-            capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+          let capsules: Array<any>;
+          if (marketStats && predictions.length === 0) {
+            // [24/05/2026] Override dal backend quando predictions vuote.
+            capsules = (marketStats.capsules || []).map((c: any) => {
+              const def = MARKET_DEFS.find(d => d.id === c.id);
+              return { ...def, ...c, threshold: 55 };
+            });
+          } else {
+            capsules = MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
+            // NO BET: conta prediction escluse, non tips
+            const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
+            if (noBetPreds.length > 0) {
+              capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+            }
           }
-          const totalAllTips = allTips.length;
+          const totalAllTips = (marketStats && predictions.length === 0) ? (marketStats.totalAll || 0) : allTips.length;
           const reHitsTotal = sourceFilteredPreds.filter(p => {
             const es = getEffectiveScore(p);
             if (!es) return false;
@@ -4087,17 +4191,32 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           })();
           // Calcolo metriche finanziarie (stake REALI dal pronostico)
           const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
-          const totalBets = verifiedWithQuota.length;
-          const totalProfit = verifiedWithQuota.reduce((sum, t) => {
-            const stake = t.stake || 1;
-            return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
-          }, 0);
-          const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
-          const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
-          const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
-          const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          let totalBets = verifiedWithQuota.length;
+          let plUnits: number | null;
+          let avgQuota: number | null;
+          let avgEdge: number | null;
+          if (tabSummary && predictions.length === 0) {
+            // [24/05/2026] Metriche finanziarie dal sub_summary backend quando predictions vuote.
+            const sub: any = tabSummary.sub_summary?.[activeTab] || tabSummary.summary;
+            totalBets = sub.total_bets || 0;
+            plUnits = totalBets > 0 ? Math.round((sub.total_profit || 0) * 100) / 100 : null;
+            avgQuota = totalBets > 0 ? Math.round((sub.sum_quota || 0) / totalBets * 100) / 100 : null;
+            avgEdge = (sub.tips_with_prob || 0) > 0 ? Math.round((sub.sum_edge || 0) / sub.tips_with_prob * 10) / 10 : null;
+          } else {
+            const totalProfit = verifiedWithQuota.reduce((sum, t) => {
+              const stake = t.stake || 1;
+              return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
+            }, 0);
+            plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
+            avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
+            const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
+            avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          }
 
-          if (totalAllTips === 0) return null;
+          // [24/05/2026] Bypass condizione "no tips" quando il payload pesante è disattivato
+          // ma il summary endpoint ha dati. Permette di mostrare capsula Rendimento +
+          // Filtri & Statistiche anche con `predictions` vuoto.
+          if (totalAllTips === 0 && !(tabSummary && predictions.length === 0)) return null;
           return (
             <>
             {/* Box RE MC admin-only rimosso — RE ora è pronostico ufficiale in Alto Rendimento */}
@@ -4127,30 +4246,43 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                       {(() => {
-                        // HR: centrate/mancate calcolati inline (come Partite) per caricamento veloce
-                        const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-                        const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                        // [24/05/2026] HR/Partite presi da tabSummary.sub_summary se predictions vuote.
                         let centrate = 0, mancate = 0;
-                        hrFiltered.forEach(item => {
-                          item.pronostici?.forEach(p => {
-                            const h = getEffectiveHit(item, p);
-                            if (h === true) centrate++;
-                            else if (h === false) mancate++;
+                        if (tabSummary && predictions.length === 0) {
+                          const sub = tabSummary.sub_summary?.[activeTab] || tabSummary.summary;
+                          centrate = sub.centrati;
+                          mancate = sub.mancati;
+                        } else {
+                          const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+                          const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                          hrFiltered.forEach(item => {
+                            item.pronostici?.forEach(p => {
+                              const h = getEffectiveHit(item, p);
+                              if (h === true) centrate++;
+                              else if (h === false) mancate++;
+                            });
                           });
-                        });
+                        }
                         const verified = centrate + mancate;
                         const hr = verified > 0 ? Math.round((centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        // Source delle "Partite finite" deve essere lo stesso del HR
-                        // (hrSource), altrimenti su Alto Rendimento il count restava a 0
-                        // perche' veniva pescato exactScorePredictions invece di altoRendimentoPreds.
-                        const matchesFinished = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
-                        const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
-                          const score = p.real_score || p.live_score;
-                          return score ? calculateHitFromScore(score, pr.pronostico, pr.tipo) === true : false;
-                        })).length;
-                        const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
+                        // Source delle "Partite finite" allineato al HR (hrSource), o sub_summary se predictions vuote.
+                        let matchesFinishedLen = 0, matchHits = 0;
+                        if (tabSummary && predictions.length === 0) {
+                          const sub: any = tabSummary.sub_summary?.[activeTab] || tabSummary.summary;
+                          matchesFinishedLen = sub.finite;
+                          matchHits = sub.partite_con_centrato ?? Math.min(sub.centrati, sub.finite);
+                        } else {
+                          const hrSource2 = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+                          const matchesFinished = hrSource2.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
+                          matchesFinishedLen = matchesFinished.length;
+                          matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
+                            const score = p.real_score || p.live_score;
+                            return score ? calculateHitFromScore(score, pr.pronostico, pr.tipo) === true : false;
+                          })).length;
+                        }
+                        const matchHR = matchesFinishedLen > 0 ? Math.round((matchHits / matchesFinishedLen) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;
                         return (
                           <>
@@ -4173,7 +4305,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                               }}>
                                 <span style={{ fontSize: '9px', color: isLight ? '#1a1a1a' : matchHRColor, fontWeight: '700', lineHeight: '14px' }}>Partite</span>
                                 <span style={{ fontSize: '9px', fontWeight: '900', color: matchHRColor, lineHeight: '14px' }}>{matchHR}%</span>
-                                <span style={{ fontSize: '8px', opacity: 0.6, color: matchHRColor, lineHeight: '14px' }}>{matchHits}/{matchesFinished.length}</span>
+                                <span style={{ fontSize: '8px', opacity: 0.6, color: matchHRColor, lineHeight: '14px' }}>{matchHits}/{matchesFinishedLen}</span>
                               </div>
                             )}
                           </>
@@ -4279,28 +4411,39 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const basePreds = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds)
                 .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
                 .filter(predMatchesMarket);
-              const sourceCounts = SOURCE_DEFS.map(g => {
-                const matchingPreds = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || '')));
-                const total = matchingPreds.length;
-                let hits = 0, finished = 0;
-                matchingPreds.forEach(p => {
-                  p.pronostici?.filter((t: any) => g.match(t.source || '')).forEach((t: any) => {
+              // [24/05/2026] Se predictions vuote ma algoStats caricato → usa quelli dal backend.
+              let sourceCounts: Array<any>; let totalAll: number; let allHr: number | null;
+              if (algoStats && predictions.length === 0) {
+                sourceCounts = (algoStats.sourceCounts || []).map((s: any) => {
+                  const g = SOURCE_DEFS.find(d => d.id === s.id);
+                  return { ...g, ...s };
+                });
+                totalAll = algoStats.totalAll;
+                allHr = algoStats.allHr;
+              } else {
+                sourceCounts = SOURCE_DEFS.map(g => {
+                  const matchingPreds = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || '')));
+                  const total = matchingPreds.length;
+                  let hits = 0, finished = 0;
+                  matchingPreds.forEach(p => {
+                    p.pronostici?.filter((t: any) => g.match(t.source || '')).forEach((t: any) => {
+                      const h = getEffectiveHit(p, t);
+                      if (h !== null) { finished++; if (h) hits++; }
+                    });
+                  });
+                  const hr = finished > 0 ? Math.round((hits / finished) * 100) : null;
+                  return { ...g, total, hits, finished, hr };
+                }).filter(g => g.total > 0);
+                totalAll = basePreds.length;
+                let allHits = 0, allFinished = 0;
+                basePreds.forEach(p => {
+                  p.pronostici?.forEach((t: any) => {
                     const h = getEffectiveHit(p, t);
-                    if (h !== null) { finished++; if (h) hits++; }
+                    if (h !== null) { allFinished++; if (h) allHits++; }
                   });
                 });
-                const hr = finished > 0 ? Math.round((hits / finished) * 100) : null;
-                return { ...g, total, hits, finished, hr };
-              }).filter(g => g.total > 0);
-              const totalAll = basePreds.length;
-              let allHits = 0, allFinished = 0;
-              basePreds.forEach(p => {
-                p.pronostici?.forEach((t: any) => {
-                  const h = getEffectiveHit(p, t);
-                  if (h !== null) { allFinished++; if (h) allHits++; }
-                });
-              });
-              const allHr = allFinished > 0 ? Math.round((allHits / allFinished) * 100) : null;
+                allHr = allFinished > 0 ? Math.round((allHits / allFinished) * 100) : null;
+              }
               return (
                 <div
                   style={{
@@ -4313,7 +4456,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
                 >
                   <div
-                    onClick={() => setSourceOpen(!sourceOpen)}
+                    onClick={() => {
+                      const willOpen = !sourceOpen;
+                      setSourceOpen(willOpen);
+                      // [24/05/2026] Lazy load: fetcha gli aggregati algoritmo solo al primo click apertura.
+                      if (willOpen && !algoStats && !algoStatsLoading && predictions.length === 0) {
+                        setAlgoStatsLoading(true);
+                        fetch(`${API_BASE}/lazy/algorithm-stats?date=${date}&tab=${activeTab}`, {
+                          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                        })
+                          .then(r => r.ok ? r.json() : null)
+                          .then(d => { if (d?.success) setAlgoStats(d); })
+                          .catch(() => {})
+                          .finally(() => setAlgoStatsLoading(false));
+                      }
+                    }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                   >
                     <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Filtra per Algoritmo</span>
@@ -4512,7 +4669,21 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               onMouseLeave={isLight && !isMobile ? e => { e.currentTarget.style.background = '#eeeeee'; } : undefined}
             >
               <div
-                onClick={() => setMarketsOpen(!marketsOpen)}
+                onClick={() => {
+                  const willOpen = !marketsOpen;
+                  setMarketsOpen(willOpen);
+                  // [24/05/2026] Lazy load: fetcha gli aggregati mercati solo al primo click apertura.
+                  if (willOpen && !marketStats && !marketStatsLoading && predictions.length === 0) {
+                    setMarketStatsLoading(true);
+                    fetch(`${API_BASE}/lazy/market-stats?date=${date}&tab=${activeTab}`, {
+                      headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                    })
+                      .then(r => r.ok ? r.json() : null)
+                      .then(d => { if (d?.success) setMarketStats(d); })
+                      .catch(() => {})
+                      .finally(() => setMarketStatsLoading(false));
+                  }
+                }}
                 style={{ display: 'flex', alignItems: 'center' }}
               >
                 <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Mercati</span>
@@ -4653,11 +4824,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               {(() => {
                 const tabColor = activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold;
                 const tabLabel = activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento';
-                const tabCount = activeTab === 'pronostici'
-                  ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
-                  : activeTab === 'elite'
-                  ? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)
-                  : filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0);
+                // [24/05/2026] Conteggio "totale pronostici del tab" preso da tabSummary.tabs
+                // quando disponibile (predictions ancora vuote al primo paint).
+                const tabCount = (tabSummary && predictions.length === 0)
+                  ? (tabSummary.tabs[activeTab as keyof typeof tabSummary.tabs] ?? 0)
+                  : (activeTab === 'pronostici'
+                      ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
+                      : activeTab === 'elite'
+                      ? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)
+                      : filteredAltoRendimento.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0));
                 return (
                 <>
                   <span style={{
@@ -4685,24 +4860,36 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
 
           {/* Contenuto filtri — collassabile */}
           {filtersOpen && (() => {
-            // Conteggi inline (come HR/Partite) per caricamento veloce senza useMemo
+            // [24/05/2026] Conteggi sotto-tab presi da tabSummary.summary se disponibile,
+            // altrimenti calcolati in locale dal vecchio meccanismo (fallback).
             const fcCounts: Record<string, number> = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-            const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-            const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
-            fcFiltered.forEach(item => {
-              fcCounts.tutte++;
-              const s = getMatchStatus(item);
-              if (s === 'live') fcCounts.live++;
-              else if (s === 'to_play') fcCounts.da_giocare++;
-              else {
-                fcCounts.finite++;
-                item.pronostici?.forEach(p => {
-                  const h = getEffectiveHit(item, p);
-                  if (h === true) fcCounts.centrate++;
-                  if (h === false) fcCounts.mancate++;
-                });
-              }
-            });
+            if (tabSummary && predictions.length === 0) {
+              // Sotto-conteggi del tab attivo (Pronostici/Elite/Alto Rendimento/Mixer/Super Selection/AI OST)
+              const sub = tabSummary.sub_summary?.[activeTab] || tabSummary.summary;
+              fcCounts.tutte = sub.partite;
+              fcCounts.live = sub.live;
+              fcCounts.da_giocare = sub.da_giocare;
+              fcCounts.finite = sub.finite;
+              fcCounts.centrate = sub.centrati;
+              fcCounts.mancate = sub.mancati;
+            } else {
+              const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+              const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+              fcFiltered.forEach(item => {
+                fcCounts.tutte++;
+                const s = getMatchStatus(item);
+                if (s === 'live') fcCounts.live++;
+                else if (s === 'to_play') fcCounts.da_giocare++;
+                else {
+                  fcCounts.finite++;
+                  item.pronostici?.forEach(p => {
+                    const h = getEffectiveHit(item, p);
+                    if (h === true) fcCounts.centrate++;
+                    if (h === false) fcCounts.mancate++;
+                  });
+                }
+              });
+            }
             return (
             <div style={{
               display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: '10px',
@@ -4815,8 +5002,228 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
-        {/* NESSUN DATO */}
-        {!loading && !error && predictions.length === 0 && (
+        {/* [24/05/2026] LISTA CAMPIONATI dal summary endpoint — primo paint senza payload pesante.
+            Sostituisce il vecchio blocco "Nessun pronostico disponibile" + il rendering ricco
+            basato su `predictions`. Mostra aggregati per ogni lega presi da /lazy/pronostici-tab-summary.
+            Quando l'utente cliccherà su una lega, una fetch mirata caricherà le partite di quella lega
+            (prossimo step). */}
+        {!loading && !error && tabSummary && tabSummary.leagues.length > 0 && predictions.length === 0 && (
+          <div style={{ animation: 'fadeIn 0.4s ease' }}>
+            {/* [24/05/2026] Banner filtri attivi: appare se almeno un filtro è !== 'tutte/tutti'.
+                Aiuta l'utente a capire perché certe partite/leghe non sono visibili,
+                e gli dà un modo veloce per disattivare i singoli filtri o tutti insieme. */}
+            {(() => {
+              const marketActive = marketFilter !== 'tutti';
+              const sourceActive = sourceFilter !== 'tutti';
+              const statusActive = statusFilter !== 'tutte';
+              if (!marketActive && !sourceActive && !statusActive) return null;
+              const marketLabel = marketFilter === 'nobet' ? 'NO BET' : (MARKET_DEFS.find(m => m.id === marketFilter)?.label || marketFilter);
+              const sourceLabel = SOURCE_DEFS.find(s => s.id === sourceFilter)?.id || sourceFilter;
+              const statusLabel = statusFilter === 'live' ? 'LIVE'
+                : statusFilter === 'da_giocare' ? 'Da giocare'
+                : statusFilter === 'finite' ? 'Finite'
+                : statusFilter === 'centrate' ? 'Centrati'
+                : statusFilter === 'mancate' ? 'Mancati'
+                : statusFilter;
+              const chipStyle: React.CSSProperties = {
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '10px', fontWeight: 700,
+                padding: '3px 8px', borderRadius: '12px',
+                background: isLight ? '#dbeafe' : `${theme.cyan}25`,
+                border: `1px solid ${theme.cyan}`,
+                color: theme.cyan,
+                cursor: 'pointer',
+              };
+              return (
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px',
+                  padding: '8px 12px', marginBottom: '10px',
+                  background: isLight ? '#f1f5f9' : theme.surfaceSubtle,
+                  border: `1px solid ${theme.surface08}`,
+                  borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: theme.textDim }}>🔵 Filtri attivi:</span>
+                  {marketActive && (
+                    <span style={chipStyle} onClick={() => setMarketFilter('tutti')} title="Rimuovi filtro Mercato">
+                      Mercato: {marketLabel} <span style={{ fontWeight: 900 }}>✕</span>
+                    </span>
+                  )}
+                  {sourceActive && (
+                    <span style={chipStyle} onClick={() => setSourceFilter('tutti')} title="Rimuovi filtro Algoritmo">
+                      Algoritmo: {sourceLabel} <span style={{ fontWeight: 900 }}>✕</span>
+                    </span>
+                  )}
+                  {statusActive && (
+                    <span style={chipStyle} onClick={() => setStatusFilter('tutte')} title="Rimuovi filtro Stato">
+                      Stato: {statusLabel} <span style={{ fontWeight: 900 }}>✕</span>
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: '10px', fontWeight: 800,
+                      padding: '3px 10px', borderRadius: '12px',
+                      background: theme.danger,
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => { setMarketFilter('tutti'); setSourceFilter('tutti'); setStatusFilter('tutte'); }}
+                    title="Reset filtri"
+                  >
+                    Reset filtri
+                  </span>
+                </div>
+              );
+            })()}
+            {tabSummary.leagues.map((L, leagueIdx) => {
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
+              // [24/05/2026] Numero partite mostrato è quello filtrato per il tab attivo.
+              const partiteTabRaw = L.per_tab?.[activeTab as string] ?? L.partite;
+              if (partiteTabRaw === 0) return null;
+              const liveTab = (L as any).per_tab_live?.[activeTab as string] ?? L.live;
+              // [24/05/2026] Conteggi per riga campionato: presi dal sotto-aggregato del tab attivo
+              // (per_tab_counts) così finite/centrati/mancati sono coerenti col tab e con produzione.
+              // Fallback ai conteggi globali della lega per retrocompatibilità.
+              const tabCounts = L.per_tab_counts?.[activeTab as string];
+              const Lpartite = tabCounts?.partite ?? L.partite;
+              const Lfinite = tabCounts?.finite ?? L.finite;
+              const LdaGiocare = tabCounts?.daGiocare ?? L.daGiocare;
+              const Llive = tabCounts?.live ?? L.live;
+              const Lcentrati = tabCounts?.centrati ?? L.centrati;
+              const Lmancati = tabCounts?.mancati ?? L.mancati;
+              // [24/05/2026] Quando un filtro stato è attivo, il "totale partite" della riga
+              // mostra solo le partite di quello stato (es. filtro Da giocare → conta LdaGiocare).
+              const partiteTab = statusFilter === 'live' ? Llive
+                : statusFilter === 'da_giocare' ? LdaGiocare
+                : statusFilter === 'finite' ? Lfinite
+                : statusFilter === 'centrate' ? Lcentrati
+                : statusFilter === 'mancate' ? Lmancati
+                : partiteTabRaw;
+              // [24/05/2026] Nascondi la riga campionato se il filtro stato è attivo
+              // e la lega non ha partite che matchano (es. clicco LIVE e la lega ha 0 live).
+              if (statusFilter === 'live' && Llive === 0) return null;
+              if (statusFilter === 'da_giocare' && LdaGiocare === 0) return null;
+              if (statusFilter === 'finite' && Lfinite === 0) return null;
+              if (statusFilter === 'centrate' && Lcentrati === 0) return null;
+              if (statusFilter === 'mancate' && Lmancati === 0) return null;
+              const verified = Lcentrati + Lmancati;
+              const hitRateVal = verified > 0 ? Math.round((Lcentrati / verified) * 1000) / 10 : null;
+              const statusBg = Lfinite === 0 ? theme.surface05 : Lfinite === Lpartite ? `${theme.success}30` : `${theme.warning}30`;
+              const statusColor = Lfinite === 0 ? theme.textDim : Lfinite === Lpartite ? theme.success : theme.warning;
+              const missRate = verified > 0 ? Lmancati / verified : 0;
+              const hitColor = Lcentrati === 0 ? theme.textDim : theme.success;
+              const missColor = Lmancati === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+              const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+              const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+              const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+              const isLeagueExpanded = collapsedLeagues.has(L.league);
+              return (
+                <div key={L.league} style={{ marginBottom: '16px' }}>
+                  <div
+                    {...(leagueIdx === 0 ? { 'data-tour': 'bp-first-league' } : {})}
+                    style={{
+                      padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
+                      background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
+                    }}
+                    onClick={async () => {
+                      toggleLeague(L.league);
+                      // Lazy load: fetcho le partite della lega solo la prima volta che si espande.
+                      if (!leagueMatches[L.league] && !leagueMatchesLoading[L.league]) {
+                        setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: true }));
+                        try {
+                          const qs = new URLSearchParams({ date, league: L.league, tab: activeTab });
+                          if (sourceFilter && sourceFilter !== 'tutti') qs.set('source', sourceFilter);
+                          if (marketFilter && marketFilter !== 'tutti') qs.set('market', marketFilter);
+                          const r = await fetch(`${API_BASE}/lazy/predictions-by-league?${qs.toString()}`, {
+                            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                          });
+                          const j = await r.json();
+                          if (j?.success) {
+                            setLeagueMatches(prev => ({ ...prev, [L.league]: j.predictions || [] }));
+                          }
+                        } catch (e) {
+                          console.warn('[predictions-by-league] fetch fallito:', e);
+                        } finally {
+                          setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: false }));
+                        }
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                          <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[L.league] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <StemmaImg src={getLeagueLogoUrl(L.league)} size={18} />
+                          <span
+                            onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(L.league); } : undefined}
+                            style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.gold : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                          >{L.league}</span>
+                          {isMobile && liveTab > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {liveTab} LIVE</span>}
+                        </div>
+                        {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{liveTab > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {liveTab} LIVE</span>}</div>}
+                        {!isMobile && (
+                          <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '3px' }}>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                            <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {partiteTab}</span>
+                            {Lfinite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {Lfinite} {Lfinite === 1 ? 'finita' : 'finite'}</span></>}
+                            {LdaGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {LdaGiocare} da giocare</span></>}
+                            {sep}
+                            <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {Lcentrati}{!isMobile && ` ${Lcentrati === 1 ? 'centrato' : 'centrati'}`}</span>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {Lmancati}{!isMobile && ` ${Lmancati === 1 ? 'mancato' : 'mancati'}`}</span>
+                            {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                            {(L as any).reCount > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.warning }}>💎 {(L as any).reCount}</span></>}
+                            {(L as any).reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {(L as any).reHits}</span></>}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isLeagueExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                    </div>
+                    {isMobile && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {Lpartite}</span>
+                        {Lfinite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {Lfinite}</span></>}
+                        {LdaGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {LdaGiocare}</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {Lcentrati}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {Lmancati}</span>
+                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      </div>
+                    )}
+                  </div>
+                  {/* [24/05/2026] Lista partite della lega — visibile quando espansa, caricata on-demand. */}
+                  {collapsedLeagues.has(L.league) && leagueMatchesLoading[L.league] && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>
+                      ⏳ Caricamento partite di {L.league}…
+                    </div>
+                  )}
+                  {collapsedLeagues.has(L.league) && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length > 0 && (
+                    leagueMatches[L.league]
+                      .filter((m: any) => statusFilter === 'tutte' || predMatchesFilter(m as Prediction, statusFilter))
+                      .map((m: any, predIdx: number) => (
+                        <div key={`${m.home}-${m.away}-${predIdx}`} {...(leagueIdx === 0 && predIdx === 0 ? { 'data-tour': 'bp-first-card' } : {})}>
+                          {renderPredictionCard(m as Prediction)}
+                        </div>
+                      ))
+                  )}
+                  {collapsedLeagues.has(L.league) && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>
+                      Nessuna partita trovata.
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* NESSUN DATO (fallback se l'endpoint summary non risponde / ritorna 0 leghe) */}
+        {!loading && !error && (!tabSummary || tabSummary.leagues.length === 0) && predictions.length === 0 && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -5032,7 +5439,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </div>
             )}
 
-            {activeTab === 'elite' && filteredElite.length === 0 && !loading && (
+            {activeTab === 'elite' && filteredElite.length === 0 && !loading && !(tabSummary && (tabSummary.tabs?.elite ?? 0) > 0) && (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>👑</div>
                 <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico Elite per oggi</div>
@@ -5040,7 +5447,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </div>
             )}
 
-            {activeTab === 'alto_rendimento' && filteredAltoRendimento.length === 0 && !loading && (
+            {activeTab === 'alto_rendimento' && filteredAltoRendimento.length === 0 && !loading && !(tabSummary && (tabSummary.tabs?.alto_rendimento ?? 0) > 0) && (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>💎</div>
                 <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico Alto Rendimento per oggi</div>

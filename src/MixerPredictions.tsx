@@ -434,6 +434,18 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   const isAdmin = checkAdmin();
   // Count tip PME (caricato sempre, anche fuori dalla view PME, per il numerino del bottone)
   const [pmeCount, setPmeCount] = useState<number | null>(null);
+
+  // [24/05/2026] Lazy loading per view mixer e super_selection:
+  // stesse strutture usate da UnifiedPredictions.tsx. Vengono usate solo quando
+  // activeView !== 'pme' (per pme/AI OST resta il caricamento da /sistema-z-predictions).
+  const [tabSummary, setTabSummary] = useState<{
+    tabs: { pronostici: number; elite: number; alto_rendimento: number; mixer: number; super_selection: number; ai_ost: number };
+    summary: { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number };
+    sub_summary?: Record<string, { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number }>;
+    leagues: Array<{ league: string; partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number; per_tab?: Record<string, number>; per_tab_counts?: Record<string, { partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number }> }>;
+  } | null>(null);
+  const [leagueMatches, setLeagueMatches] = useState<Record<string, any[]>>({});
+  const [leagueMatchesLoading, setLeagueMatchesLoading] = useState<Record<string, boolean>>({});
   // Dataset MoE caricato sempre (anche quando activeView='pme'), per i conteggi dei tab
   // Pronostici/Elite/AR/Mixer/SuperSel: devono restare fissi indipendentemente dal tab attivo.
   const [moePredictions, setMoePredictions] = useState<Prediction[]>([]);
@@ -771,6 +783,14 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         setLoading(true);
         setError(null);
       }
+      // [24/05/2026] Lazy: per view mixer/super_selection non carichiamo più
+      // daily-predictions-unified (456 kB) al primo accesso. Il primo paint usa
+      // /lazy/pronostici-tab-summary (~10 kB), il dettaglio lega arriva on-demand.
+      // Solo la view pme/AI OST continua a usare /sistema-z-predictions per ora.
+      if (activeView !== 'pme') {
+        setLoading(false);
+        return;
+      }
       try {
         // Quando activeView e' 'pme' (alias frontend: tab "AI OST" = Odds + Stats =
         // Sistema Z) carica da /sistema-z-predictions (collezione predictions_sistema_z).
@@ -884,6 +904,43 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   useEffect(() => {
     fetchData(false);
   }, [date, activeView, fetchData]);
+
+  // [24/05/2026] Al cambio filtri Algoritmo/Mercati/Stato invalido la cache partite per lega.
+  useEffect(() => {
+    setLeagueMatches({});
+    setLeagueMatchesLoading({});
+  }, [sourceFilter, marketFilter]);
+
+  // [24/05/2026] Carica /lazy/pronostici-tab-summary per le view mixer/super_selection.
+  // Sostituisce il preload pesante di daily-predictions-unified per il primo paint.
+  useEffect(() => {
+    if (activeView === 'pme') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = new URLSearchParams({ date });
+        // Nota: il summary calcola conteggi per tutti i tab in un solo passaggio
+        // (tabs.mixer, tabs.super_selection, ecc.). Il filtro per la view attiva si applica
+        // poi sul frontend selezionando per_tab_counts[activeView] nella riga campionato.
+        const r = await fetch(`${API_BASE}/lazy/pronostici-tab-summary?${qs.toString()}`, {
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+        });
+        const j = await r.json();
+        if (!cancelled && j?.success) {
+          setTabSummary({
+            tabs: j.tabs,
+            summary: j.summary,
+            sub_summary: j.sub_summary,
+            leagues: j.leagues || [],
+          });
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [date, activeView, isAdmin]);
 
   // Polling silenzioso ogni 60s per intercettare aggiornamenti Fase 2 + Scout
   // senza richiedere F5 all'utente. Non tocca lo spinner ne' lo state di errore.
@@ -5050,9 +5107,17 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           >
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {(() => {
-                const tabColor = activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold;
-                const tabLabel = activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento';
-                const tabCount = activeTab === 'pronostici'
+                // [24/05/2026] In Mixer/Super Selection (no sotto-tab visibili — vedi wiki riga 152
+                // "activeTab interno c'è ma non si usa"), il titolo e il count vengono dalla view
+                // attiva. In modalità lazy il count arriva da tabSummary.tabs[activeView].
+                const inMixerView = activeView === 'mixer' || activeView === 'super_selection';
+                const viewColor = activeView === 'mixer' ? '#10b981' : activeView === 'super_selection' ? '#f59e0b' : theme.cyan;
+                const viewLabel = activeView === 'mixer' ? 'Mixer' : activeView === 'super_selection' ? 'Super Selection' : 'Pronostici';
+                const tabColor = inMixerView ? viewColor : (activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold);
+                const tabLabel = inMixerView ? viewLabel : (activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento');
+                const tabCount = inMixerView
+                  ? (tabSummary?.tabs?.[activeView] ?? 0)
+                  : activeTab === 'pronostici'
                   ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
                   : activeTab === 'elite'
                   ? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)
@@ -5214,8 +5279,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
-        {/* NESSUN DATO */}
-        {!loading && !error && predictions.length === 0 && (
+        {/* NESSUN DATO — nasconde l'empty state se il blocco lazy ha leghe da mostrare. */}
+        {!loading && !error && predictions.length === 0 && !(activeView !== 'pme' && tabSummary && tabSummary.leagues.length > 0) && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -5272,6 +5337,189 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             >
               Mostra tutte
             </button>
+          </div>
+        )}
+
+        {/* [24/05/2026] BLOCCO LAZY: lista campionati da /lazy/pronostici-tab-summary.
+            Attivo per view mixer/super_selection (pme/AI OST gestito a parte) quando
+            predictions è ancora vuoto. Click su una lega → fetch /lazy/predictions-by-league. */}
+        {!loading && !error && activeView !== 'pme' && tabSummary && tabSummary.leagues.length > 0 && predictions.length === 0 && (
+          <div style={{ animation: 'fadeIn 0.4s ease' }}>
+            {/* Banner filtri attivi + Reset */}
+            {(() => {
+              const marketActive = marketFilter !== 'tutti';
+              const sourceActive = sourceFilter !== 'tutti';
+              const statusActive = statusFilter !== 'tutte';
+              if (!marketActive && !sourceActive && !statusActive) return null;
+              const marketLabel = marketFilter === 'nobet' ? 'NO BET' : (MARKET_DEFS.find(m => m.id === marketFilter)?.label || marketFilter);
+              const sourceLabel = SOURCE_DEFS.find(s => s.id === sourceFilter)?.id || sourceFilter;
+              const statusLabel = statusFilter === 'live' ? 'LIVE'
+                : statusFilter === 'da_giocare' ? 'Da giocare'
+                : statusFilter === 'finite' ? 'Finite'
+                : statusFilter === 'centrate' ? 'Centrati'
+                : statusFilter === 'mancate' ? 'Mancati'
+                : statusFilter;
+              const chipStyle: React.CSSProperties = {
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '10px', fontWeight: 700,
+                padding: '3px 8px', borderRadius: '12px',
+                background: isLight ? '#dbeafe' : `${theme.cyan}25`,
+                border: `1px solid ${theme.cyan}`,
+                color: theme.cyan,
+                cursor: 'pointer',
+              };
+              return (
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px',
+                  padding: '8px 12px', marginBottom: '10px',
+                  background: isLight ? '#f1f5f9' : theme.surfaceSubtle,
+                  border: `1px solid ${theme.surface08}`,
+                  borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: theme.textDim }}>🔵 Filtri attivi:</span>
+                  {marketActive && <span style={chipStyle} onClick={() => setMarketFilter('tutti')}>Mercato: {marketLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {sourceActive && <span style={chipStyle} onClick={() => setSourceFilter('tutti')}>Algoritmo: {sourceLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {statusActive && <span style={chipStyle} onClick={() => setStatusFilter('tutte')}>Stato: {statusLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: '10px', fontWeight: 800,
+                      padding: '3px 10px', borderRadius: '12px',
+                      background: theme.danger, color: '#fff', cursor: 'pointer',
+                    }}
+                    onClick={() => { setMarketFilter('tutti'); setSourceFilter('tutti'); setStatusFilter('tutte'); }}
+                  >Reset filtri</span>
+                </div>
+              );
+            })()}
+            {tabSummary.leagues.map((L, leagueIdx) => {
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
+              const tabKey = activeView as string; // 'mixer' o 'super_selection'
+              const partiteTabRaw = L.per_tab?.[tabKey] ?? 0;
+              if (partiteTabRaw === 0) return null;
+              const liveTab = (L as any).per_tab_live?.[tabKey] ?? L.live;
+              const tabCounts = L.per_tab_counts?.[tabKey];
+              const Lpartite = tabCounts?.partite ?? L.partite;
+              const Lfinite = tabCounts?.finite ?? L.finite;
+              const LdaGiocare = tabCounts?.daGiocare ?? L.daGiocare;
+              const Llive = tabCounts?.live ?? L.live;
+              const Lcentrati = tabCounts?.centrati ?? L.centrati;
+              const Lmancati = tabCounts?.mancati ?? L.mancati;
+              const partiteTab = statusFilter === 'live' ? Llive
+                : statusFilter === 'da_giocare' ? LdaGiocare
+                : statusFilter === 'finite' ? Lfinite
+                : statusFilter === 'centrate' ? Lcentrati
+                : statusFilter === 'mancate' ? Lmancati
+                : partiteTabRaw;
+              if (statusFilter === 'live' && Llive === 0) return null;
+              if (statusFilter === 'da_giocare' && LdaGiocare === 0) return null;
+              if (statusFilter === 'finite' && Lfinite === 0) return null;
+              if (statusFilter === 'centrate' && Lcentrati === 0) return null;
+              if (statusFilter === 'mancate' && Lmancati === 0) return null;
+              const verified = Lcentrati + Lmancati;
+              const hitRateVal = verified > 0 ? Math.round((Lcentrati / verified) * 1000) / 10 : null;
+              const statusBg = Lfinite === 0 ? theme.surface05 : Lfinite === Lpartite ? `${theme.success}30` : `${theme.warning}30`;
+              const statusColor = Lfinite === 0 ? theme.textDim : Lfinite === Lpartite ? theme.success : theme.warning;
+              const missRate = verified > 0 ? Lmancati / verified : 0;
+              const hitColor = Lcentrati === 0 ? theme.textDim : theme.success;
+              const missColor = Lmancati === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+              const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+              const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+              const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+              const isLeagueExpanded = collapsedLeagues.has(L.league);
+              return (
+                <div key={L.league} style={{ marginBottom: '16px' }}>
+                  <div
+                    style={{
+                      padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
+                      background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
+                    }}
+                    onClick={async () => {
+                      toggleLeague(L.league);
+                      if (!leagueMatches[L.league] && !leagueMatchesLoading[L.league]) {
+                        setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: true }));
+                        try {
+                          const qs = new URLSearchParams({ date, league: L.league, tab: tabKey });
+                          if (sourceFilter && sourceFilter !== 'tutti') qs.set('source', sourceFilter);
+                          if (marketFilter && marketFilter !== 'tutti') qs.set('market', marketFilter);
+                          const r = await fetch(`${API_BASE}/lazy/predictions-by-league?${qs.toString()}`, {
+                            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                          });
+                          const j = await r.json();
+                          if (j?.success) setLeagueMatches(prev => ({ ...prev, [L.league]: j.predictions || [] }));
+                        } catch (e) {
+                          console.warn('[mixer predictions-by-league] fetch fallito:', e);
+                        } finally {
+                          setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: false }));
+                        }
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                          <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[L.league] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <StemmaImg src={getLeagueLogoUrl(L.league)} size={18} />
+                          <span
+                            onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(L.league); } : undefined}
+                            style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.gold : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                          >{L.league}</span>
+                          {isMobile && liveTab > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {liveTab} LIVE</span>}
+                        </div>
+                        {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{liveTab > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {liveTab} LIVE</span>}</div>}
+                        {!isMobile && (
+                          <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '3px' }}>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                            <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {partiteTab}</span>
+                            {Lfinite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {Lfinite} {Lfinite === 1 ? 'finita' : 'finite'}</span></>}
+                            {LdaGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {LdaGiocare} da giocare</span></>}
+                            {sep}
+                            <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {Lcentrati}{!isMobile && ` ${Lcentrati === 1 ? 'centrato' : 'centrati'}`}</span>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {Lmancati}{!isMobile && ` ${Lmancati === 1 ? 'mancato' : 'mancati'}`}</span>
+                            {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                            {(L as any).reCount > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.warning }}>💎 {(L as any).reCount}</span></>}
+                            {(L as any).reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {(L as any).reHits}</span></>}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isLeagueExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                    </div>
+                    {isMobile && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {Lpartite}</span>
+                        {Lfinite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {Lfinite}</span></>}
+                        {LdaGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {LdaGiocare}</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {Lcentrati}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {Lmancati}</span>
+                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      </div>
+                    )}
+                  </div>
+                  {isLeagueExpanded && leagueMatchesLoading[L.league] && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>⏳ Caricamento partite di {L.league}…</div>
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length > 0 && (
+                    leagueMatches[L.league]
+                      .filter((m: any) => statusFilter === 'tutte' || predMatchesFilter(m as Prediction, statusFilter))
+                      .map((m: any, predIdx: number) => (
+                        <div key={`${m.home}-${m.away}-${predIdx}`}>
+                          {renderPredictionCard(m as Prediction)}
+                        </div>
+                      ))
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>Nessuna partita trovata.</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

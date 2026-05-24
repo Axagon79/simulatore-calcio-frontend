@@ -840,7 +840,10 @@ export default function UnifiedPredictions({ onBack, onNavigateToLeague }: Unifi
 
   // --- FETCH DATA (Unified + prediction_versions per partite ritirate) ---
   // `silent=true` evita di mostrare lo spinner durante il polling (refresh in background).
-  const fetchData = useCallback(async (silent = false) => {
+  // [24/05/2026] Disattivato dal flusso lazy: il primo paint usa /lazy/pronostici-tab-summary
+  // e le partite arrivano on-demand. Mantenuto per ripristino rapido se serve rollback.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _fetchData = useCallback(async (silent = false) => {
       if (!silent) {
         setLoading(true);
         setError(null);
@@ -4153,7 +4156,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           const capsuleData = (def: typeof MARKET_DEFS[0]) => {
             // Conta solo tip "reali" (non NO BET): coerente con il filtro applicato cliccando
             // la capsula. Un tip SEGNO=NO BET non deve gonfiare il totale 1X2.
-            const tips = allTips.filter(t => isRealTip(t) && def.filter(t));
+            // hasRealTip lavora a livello partita; per i singoli tip qui basta filtrare
+            // pronostico !== 'NO BET' (stessa semantica di isRealTip nel backend).
+            const tips = allTips.filter(t => t && t.pronostico && t.pronostico !== 'NO BET' && def.filter(t));
             const total = tips.length;
             const verified = tips.filter(t => t._effHit === true || t._effHit === false);
             const hits = tips.filter(t => t._effHit === true).length;

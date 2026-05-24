@@ -84,8 +84,6 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
     // [DISATTIVATO 24/05/2026] Preload aggressivo di sistema-z-predictions disabilitato.
     // Motivo: il preload scaricava ~3.3 MB × 3 giorni = ~10 MB anche se l'utente
     // non andava mai sulla pagina News. Nuova filosofia "lazy + minimo": ogni pagina
@@ -123,8 +121,6 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
     // bisogno. Per recuperare il codice originale del prefetchAll vedi git log
     // pre-commit di questa modifica.
     setLoading(false);
-
-    return () => { cancelled = true; };
   }, [fetchWithDedup]);
 
   const getPredictions = useCallback((date: string): PredictionData | null => {

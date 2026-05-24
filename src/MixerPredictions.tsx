@@ -5392,7 +5392,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 </div>
               );
             })()}
-            {tabSummary.leagues.map((L, leagueIdx) => {
+            {tabSummary.leagues.map((L) => {
               const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
               const tabKey = activeView as string; // 'mixer' o 'super_selection'
               const partiteTabRaw = L.per_tab?.[tabKey] ?? 0;

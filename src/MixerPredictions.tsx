@@ -450,12 +450,8 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // "Filtra per Algoritmo" e "Mercati". Caricati on-demand all'apertura del pannello.
   const [algoStats, setAlgoStats] = useState<any | null>(null);
   const [marketStats, setMarketStats] = useState<any | null>(null);
-  // [25/05/2026] moePredictions rimosso: i conteggi tab arrivano da tabSummary (gratis).
-  // Variabili tenute come placeholder vuoto per eventuali consumatori residui.
-  const moePredictions: Prediction[] = [];
-  // @ts-expect-error: setter dichiarato per simmetria, ma non piu' usato
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const setMoePredictions = (_v: Prediction[]) => {};
+  // [25/05/2026] moePredictions/setMoePredictions rimossi: i conteggi tab
+  // arrivano direttamente da tabSummary (gratis dal summary lazy).
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});

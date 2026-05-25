@@ -34,7 +34,6 @@ import AddBetPopup from './components/AddBetPopup';
 import { useAuth } from './contexts/AuthContext';
 import { usePLStorico } from './contexts/PLStoricoContext';
 import { usePredictionVersions } from './contexts/PredictionVersionsContext';
-import { usePredictionsCache } from './contexts/PredictionsContext';
 
 type StatusFilter = 'tutte' | 'live' | 'da_giocare' | 'finite' | 'centrate' | 'mancate';
 type MarketFilter = 'tutti' | 'segno' | 'dc' | 'ou15' | 'ou25' | 'ou35' | 'ggng' | 'mg' | 're' | 'nobet';

@@ -856,8 +856,6 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     return Array.from(seen.entries()).map(([slug, name]) => ({ slug, name }));
   }, [indexAll, activeCountry, escludiFinite]);
 
-  const visibleLeaguesAll = new Set(filtered.map(m => leagueSlug(m.league || m.lega || '')));
-
   const openArticle = (e: React.MouseEvent, m: Match) => {
     e.preventDefault();
     const params = new URLSearchParams({ home: m.home, away: m.away, date: m.date });
@@ -1255,7 +1253,6 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           )}
           {!loading && !error && filtered.map((m, idx) => {
             const id = `a-${idx + 1}`;
-            const isFeature = idx === 0;
             // [25/05/2026] Endpoint /lazy/news-list manda scout_text_preview (lede gia' tagliato
             // backend). Fallback su scout_text completo per compatibilita' con il vecchio payload.
             const sd: any = m.scout_deep || {};

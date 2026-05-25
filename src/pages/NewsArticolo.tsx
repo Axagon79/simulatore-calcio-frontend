@@ -131,12 +131,6 @@ interface MatchA {
   live_status?: string | null;      // es. "1H", "HT", "2H", "FT", "LIVE"
   live_minute?: number | string | null; // es. 67 o "67"
 }
-interface ApiRespA {
-  success?: boolean;
-  predictions?: MatchA[];
-  date?: string;
-}
-
 const MESI_A = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
 // Stemmi Firebase Storage. Schema: stemmi/squadre/{Country_Folder}/{mongo_id}.png
@@ -1149,21 +1143,6 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-
-    // Helper: processa il payload (cache o rete) - logica condivisa.
-    const processPredictions = (preds: MatchA[]) => {
-      preds.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
-      const found = preds.find(p =>
-        p.home?.toLowerCase() === homeQ.toLowerCase() &&
-        p.away?.toLowerCase() === awayQ.toLowerCase()
-      );
-      if (!found) {
-        setError(`Partita ${homeQ}-${awayQ} non trovata per la data ${dateQ}.`);
-      } else {
-        setMatchData(found);
-        setSiblings(preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text)));
-      }
-    };
 
     // [25/05/2026] 2 fetch parallele: una per l'articolo completo (/lazy/news-article)
     // con scout_text + motivazioni + news_meta arricchito, una per la lista light

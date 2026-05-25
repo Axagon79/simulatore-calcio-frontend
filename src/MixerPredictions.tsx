@@ -793,124 +793,16 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // --- FETCH DATA (Unified + prediction_versions per partite ritirate) ---
   // `silent=true` evita di mostrare lo spinner durante il polling (refresh in background).
   const fetchData = useCallback(async (silent = false) => {
-      if (!silent) {
-        setLoading(true);
-        setError(null);
-      }
-      // [24-25/05/2026] Lazy: nessun preload pesante.
-      //  - mixer/super_selection: primo paint via /lazy/pronostici-tab-summary
-      //  - pme (AI OST): primo paint via /lazy/ai-ost-summary
-      // Il dettaglio lega/partita arriva on-demand cliccando.
-      setLoading(false);
-      return;
-      try {
-        // Quando activeView e' 'pme' (alias frontend: tab "AI OST" = Odds + Stats =
-        // Sistema Z) carica da /sistema-z-predictions (collezione predictions_sistema_z).
-        // Il nome interno 'pme' e' rimasto storico, l'utente vede "AI OST".
-        // Altrimenti usa la cache predictions condivisa con /best-picks (daily_predictions_unified).
-        let predData: any;
-        if (activeView === 'pme') {
-          const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
-            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
-          });
-          predData = await r.json();
-        } else {
-          const cached = getCachedPredictions(date);
-          predData = cached ?? await fetchCachedPredictions(date);
-        }
-        const liveRes = await fetch(`${API_BASE}/live-scores?date=${date}`).catch(() => null);
-
-        const unified: Prediction[] = (predData.predictions || []) as Prediction[];
-
-        // Merge: aggiungi partite ritirate da prediction_versions (dal context o fetch on-demand)
-        // Usa l'endpoint dedicato se la view e' 'pme' (storico separato).
-        {
-          try {
-            const versionsSource = activeView === 'pme' ? 'sistema_z' : 'moe';
-            const versionsLight = getVersionsLight(date, versionsSource) ?? await fetchVersionsLight(date, versionsSource);
-            // Normalizza come fa il backend: lowercase + spazi → underscore
-            const normalizeKey = (d: string, h: string, a: string) =>
-              `${d}_${h.trim().toLowerCase().replace(/\s+/g, '_')}_${a.trim().toLowerCase().replace(/\s+/g, '_')}`;
-            const unifiedKeys = new Set(unified.map(p => normalizeKey(p.date, p.home, p.away)));
-
-            // Ogni elemento è già l'ultima versione di una partita (aggregato server-side)
-            for (const v of versionsLight) {
-              if (unifiedKeys.has(v.match_key)) continue;
-              // Double-check con normalizzazione per evitare duplicati
-              if (v.home && v.away) {
-                const altKey = normalizeKey(date, v.home, v.away);
-                if (unifiedKeys.has(altKey)) continue;
-              }
-
-              // Recupera i tipi di mercato dalle versioni precedenti
-              const allPrevTypes = new Set<string>();
-              for (const tipiArr of (v.pronostici_tipi || [])) {
-                for (const tipo of (tipiArr || [])) {
-                  if (tipo === 'SEGNO' || tipo === 'DOPPIA_CHANCE') allPrevTypes.add('SEGNO');
-                  else if (tipo === 'GOL' || tipo === 'RISULTATO_ESATTO') allPrevTypes.add('GOL');
-                }
-              }
-              if (allPrevTypes.size === 0) allPrevTypes.add('SEGNO');
-
-              const ghostPronostici: any[] = [];
-              if (allPrevTypes.has('SEGNO')) ghostPronostici.push({ tipo: 'SEGNO', pronostico: 'NO BET', confidence: 0, stars: 0 });
-              if (allPrevTypes.has('GOL')) ghostPronostici.push({ tipo: 'GOL', pronostico: 'NO BET', confidence: 0, stars: 0 });
-
-              const ghostPred: Prediction = {
-                date: date,
-                home: v.home || v.match_key.split('_')[1] || '?',
-                away: v.away || v.match_key.split('_')[2] || '?',
-                league: v.league || '',
-                match_time: v.match_time || '',
-                home_mongo_id: v.home_mongo_id,
-                away_mongo_id: v.away_mongo_id,
-                decision: 'NO_BET',
-                pronostici: ghostPronostici,
-                confidence_segno: 0,
-                confidence_gol: 0,
-                stars_segno: 0,
-                stars_gol: 0,
-                comment: 'Pronostico ritirato',
-                odds: (v.odds as any) || { '1': 0, '2': 0, 'X': 0 },
-                segno_dettaglio: {},
-                gol_dettaglio: {},
-              };
-              unified.push(ghostPred);
-            }
-          } catch {
-            // Errore parsing versioni — ignora silenziosamente
-          }
-        }
-
-        // Merge live scores (già caricati in parallelo)
-        try {
-          if (liveRes && liveRes.ok) {
-            const liveData = await liveRes.json();
-            if (liveData.success && liveData.scores?.length > 0) {
-              const scores = liveData.scores;
-              for (const pred of unified) {
-                const live = scores.find((s: any) => s.home === pred.home && s.away === pred.away);
-                if (live) {
-                  pred.live_score = live.live_score;
-                  pred.live_status = live.live_status;
-                  pred.live_minute = live.live_minute;
-                }
-              }
-            }
-          }
-        } catch { /* live scores non disponibili, prosegui */ }
-
-        setPredictions(unified);
-        setLastUpdate(new Date());
-
-      } catch (err: any) {
-        console.error('Errore fetch pronostici unified:', err);
-        if (!silent) setError(err.message || 'Errore di connessione');
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, activeView]);
+    // [25/05/2026] Lazy completo: nessun preload pesante.
+    //  - mixer/super_selection: primo paint via /lazy/pronostici-tab-summary
+    //  - pme (AI OST): primo paint via /lazy/ai-ost-summary
+    // Il dettaglio lega/partita arriva on-demand cliccando.
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
+    setLoading(false);
+  }, []);
 
   // Trigger iniziale + ad ogni cambio date/activeView (spinner visibile)
   useEffect(() => {

@@ -446,6 +446,10 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   } | null>(null);
   const [leagueMatches, setLeagueMatches] = useState<Record<string, any[]>>({});
   const [leagueMatchesLoading, setLeagueMatchesLoading] = useState<Record<string, boolean>>({});
+  // [25/05/2026] Aggregati Algoritmo (gruppi A/C/S/...) e Mercati per le capsule
+  // "Filtra per Algoritmo" e "Mercati". Caricati on-demand all'apertura del pannello.
+  const [algoStats, setAlgoStats] = useState<any | null>(null);
+  const [marketStats, setMarketStats] = useState<any | null>(null);
   // Dataset MoE caricato sempre (anche quando activeView='pme'), per i conteggi dei tab
   // Pronostici/Elite/AR/Mixer/SuperSel: devono restare fissi indipendentemente dal tab attivo.
   const [moePredictions, setMoePredictions] = useState<Prediction[]>([]);
@@ -911,6 +915,32 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     setLeagueMatchesLoading({});
   }, [sourceFilter, marketFilter]);
 
+  // [25/05/2026] Fetch algoStats e marketStats per le capsule "Filtra per Algoritmo" e
+  // "Mercati" del tab Mixer/Super Selection. Il backend ha gia' gli endpoint /lazy/algorithm-stats
+  // e /lazy/market-stats parametrici sul tab. Carico al primo mount + al cambio activeView.
+  useEffect(() => {
+    if (activeView === 'pme') return;
+    let cancelled = false;
+    const tabKey = activeView === 'mixer' ? 'mixer' : 'super_selection';
+    (async () => {
+      try {
+        const [aRes, mRes] = await Promise.all([
+          fetch(`${API_BASE}/lazy/algorithm-stats?date=${date}&tab=${tabKey}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} }),
+          fetch(`${API_BASE}/lazy/market-stats?date=${date}&tab=${tabKey}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} }),
+        ]);
+        const aJ = await aRes.json();
+        const mJ = await mRes.json();
+        if (!cancelled) {
+          if (aJ?.success) setAlgoStats(aJ);
+          if (mJ?.success) setMarketStats(mJ);
+        }
+      } catch {
+        if (!cancelled) { setAlgoStats(null); setMarketStats(null); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [date, activeView, isAdmin]);
+
   // [24/05/2026] Carica /lazy/pronostici-tab-summary per le view mixer/super_selection.
   // Sostituisce il preload pesante di daily-predictions-unified per il primo paint.
   useEffect(() => {
@@ -934,6 +964,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
             leagues: j.leagues || [],
           });
           setLoading(false);
+          setLastUpdate(new Date());
         }
       } catch {
         if (!cancelled) setLoading(false);
@@ -971,51 +1002,27 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     // riusa senza nuova fetch.
     if (activeView === 'pme') {
       setPmeCount(computeCount(predictions));
-      return;
+      return () => { cancelled = true; };
     }
 
-    // Caso 2: siamo su altri tab -> serve comunque il count, fetch dedicata.
-    const loadPmeCount = async () => {
-      try {
-        const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
-          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
-        });
-        const j = await r.json();
-        if (cancelled) return;
-        // Conteggio tip emessi, allineato esattamente al tab Pronostici di
-        // UnifiedPredictions (filter pronostico && != 'NO BET'). L'endpoint
-        // /sistema-z-predictions popola gia' pronostici[] con i soli tip emit=true.
-        const preds = Array.isArray(j?.predictions) ? j.predictions : [];
-        setPmeCount(computeCount(preds));
-      } catch {
-        if (!cancelled) setPmeCount(null);
-      }
-    };
-    loadPmeCount();
+    // [25/05/2026] Caso 2: siamo su altri tab. Prima il count veniva calcolato facendo
+    // una fetch a /sistema-z-predictions (543 kB) — pesantissimo e duplicato 4 volte
+    // perche' attivava il polling. Adesso lo leggo da tabSummary.tabs.ai_ost (gia'
+    // calcolato dal summary, gratis).
+    if (tabSummary?.tabs?.ai_ost != null) {
+      setPmeCount(tabSummary.tabs.ai_ost);
+    }
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, activeView, predictions]);
+  }, [date, activeView, predictions, tabSummary]);
 
   // --- FETCH dataset MoE (sempre, anche quando activeView='pme') ---
   // Necessario per mantenere i conteggi dei tab Pronostici/Elite/AR/Mixer/SuperSel
   // fissi indipendentemente dal tab attivo (regola: i numerini tra parentesi non
   // devono cambiare quando si switcha tra tab).
-  useEffect(() => {
-    let cancelled = false;
-    const loadMoe = async () => {
-      try {
-        const cached = getCachedPredictions(date);
-        const data = cached ?? await fetchCachedPredictions(date);
-        if (cancelled) return;
-        setMoePredictions((data?.predictions || []) as Prediction[]);
-      } catch {
-        if (!cancelled) setMoePredictions([]);
-      }
-    };
-    loadMoe();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  // [25/05/2026] loadMoe rimosso: i conteggi tab arrivano da tabSummary (gratis).
+  // moePredictions resta in state come [] (non piu' alimentato) per retrocompatibilita'
+  // con eventuali consumatori residui — rimuovere quando si verifica che nessuno la legge.
 
   // --- RESET accordion su cambio data: nessuna lega/card resta aperta ---
   useEffect(() => {
@@ -1458,40 +1465,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
 
-  // --- CONTEGGI per tab link (calcolati su predictions originali, stessa logica di UnifiedPredictions) ---
-  // Conteggi dei tab Pronostici/Elite/Alto Rendimento: sempre calcolati sul dataset MoE
-  // fisso (moePredictions), così i numeri non cambiano quando l'utente switcha tra tab
-  // (es. tab PME) — i tab MoE devono mostrare sempre lo stesso conteggio.
-  const tabCounts = useMemo(() => {
-    const all = moePredictions.filter(p => !p.is_exact_score && p.pronostici?.length);
-    let pronostici = 0, elite = 0, alto = 0;
-    for (const p of all) {
-      for (const pr of (p.pronostici || [])) {
-        if (pr.tipo === 'RISULTATO_ESATTO') continue;
-        if (!pr.pronostico || pr.pronostico === 'NO BET') {
-          if (pr.elite) elite++;
-          continue;
-        }
-        const q = pr.quota || (pr.tipo === 'SEGNO' && p.odds ? (p.odds as any)[pr.pronostico] : null)
-          || (pr.tipo === 'DOPPIA_CHANCE' && p.odds ? (p.odds as any)[pr.pronostico] : null)
-          || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
-        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
-        if (!q || q < soglia) pronostici++;
-        if (q != null && q >= soglia) alto++;
-        if (pr.elite) elite++;
-      }
-    }
-    return { pronostici, elite, alto };
-  }, [moePredictions]);
-
-  // Conteggi tab Mixer e Super Selection: stesso pattern, calcolati sul dataset MoE fisso
-  // (i flag mixer/super_selection vivono nei tip MoE).
-  const mixerCount = useMemo(() =>
-    moePredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)
-  , [moePredictions]);
-  const superSelectionCount = useMemo(() =>
-    moePredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)
-  , [moePredictions]);
+  // [25/05/2026] CONTEGGI tab link: presi da tabSummary.tabs (gratis dal summary lazy).
+  // Prima erano calcolati su moePredictions (158 kB di daily-predictions-unified caricato
+  // in background), ora arrivano dal summary che pesa ~5 kB.
+  const tabCounts = useMemo(() => ({
+    pronostici: tabSummary?.tabs?.pronostici ?? 0,
+    elite: tabSummary?.tabs?.elite ?? 0,
+    alto: tabSummary?.tabs?.alto_rendimento ?? 0,
+  }), [tabSummary]);
+  const mixerCount = tabSummary?.tabs?.mixer ?? 0;
+  const superSelectionCount = tabSummary?.tabs?.super_selection ?? 0;
 
   // --- PRE-FILTRO: solo pronostici con flag attivo (mixer / super_selection / pme) ---
   // Il flag usato dipende da activeView. Per PME il caricamento e' gia' filtrato
@@ -4515,9 +4498,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               _effHit: getEffectiveHit(p, t)
             }))
           );
-          // Calcolo per gruppo capsula (total + finished + hits + HR)
+          // Calcolo per gruppo capsula (total + finished + hits + HR) — solo tip reali (non NO BET).
           const capsuleData = (def: typeof MARKET_DEFS[0]) => {
-            const tips = allTips.filter(def.filter);
+            const tips = allTips.filter(t => t && t.pronostico && t.pronostico !== 'NO BET' && def.filter(t));
             const total = tips.length;
             const verified = tips.filter(t => t._effHit === true || t._effHit === false);
             const hits = tips.filter(t => t._effHit === true).length;
@@ -4526,13 +4509,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
             return { ...def, total, finished: verified.length, hits, hr, threshold: avgTh };
           };
-          const capsules = MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
-          // NO BET: conta prediction escluse, non tips
-          const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
-          if (noBetPreds.length > 0) {
-            capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+          // [25/05/2026] Override capsule da marketStats quando in modalita' lazy
+          const useLazyMkt = predictions.length === 0 && marketStats;
+          const capsules = useLazyMkt
+            ? (marketStats.capsules || []).map((c: any) => {
+                const def = MARKET_DEFS.find(d => d.id === c.id);
+                return { ...def, ...c, threshold: 55 };
+              })
+            : MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
+          // NO BET: conta prediction escluse, non tips (solo modalita' non-lazy)
+          if (!useLazyMkt) {
+            const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
+            if (noBetPreds.length > 0) {
+              capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+            }
           }
-          const totalAllTips = allTips.length;
+          const totalAllTips = useLazyMkt ? (marketStats.totalAll || 0) : allTips.length;
           const reHitsTotal = sourceFilteredPreds.filter(p => {
             const es = getEffectiveScore(p);
             if (!es) return false;
@@ -4544,19 +4536,41 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const mf = MARKET_DEFS.find(m => m.id === marketFilter);
             return mf ? allTips.filter(mf.filter) : allTips;
           })();
-          // Calcolo metriche finanziarie (stake REALI dal pronostico)
+          // [25/05/2026] Metriche finanziarie: in modalita' lazy lette da sub_summary
+          // (total_profit / total_bets / sum_quota / tips_with_prob / sum_edge dal backend).
+          // Altrimenti calcolate inline da marketFilteredTips.
+          const finSubKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
+          const finSub = tabSummary?.sub_summary?.[finSubKey] as any;
+          const useFinLazy = predictions.length === 0 && finSub;
           const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
-          const totalBets = verifiedWithQuota.length;
-          const totalProfit = verifiedWithQuota.reduce((sum, t) => {
-            const stake = t.stake || 1;
-            return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
-          }, 0);
-          const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
-          const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
-          const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
-          const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          let totalBets: number, plUnits: number | null, avgQuota: number | null, avgEdge: number | null;
+          if (useFinLazy) {
+            totalBets = finSub.total_bets || 0;
+            plUnits = totalBets > 0 ? Math.round((finSub.total_profit || 0) * 100) / 100 : null;
+            avgQuota = totalBets > 0 ? Math.round((finSub.sum_quota || 0) / totalBets * 100) / 100 : null;
+            const twp = finSub.tips_with_prob || 0;
+            avgEdge = twp > 0 ? Math.round((finSub.sum_edge || 0) / twp * 10) / 10 : null;
+          } else {
+            totalBets = verifiedWithQuota.length;
+            const totalProfit = verifiedWithQuota.reduce((sum, t) => {
+              const stake = t.stake || 1;
+              return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
+            }, 0);
+            plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
+            avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
+            const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
+            avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          }
 
-          if (totalAllTips === 0) return null;
+          // [25/05/2026] Bypass del return null quando siamo in modalita' lazy
+          // (predictions vuoto ma tabSummary popolato). Senza questo bypass,
+          // Rendimento/Filtri/header tab interno non apparivano mai su Mixer locale.
+          const lazyHasData = tabSummary && predictions.length === 0 && (
+            activeView === 'mixer' ? (tabSummary.tabs?.mixer ?? 0) > 0
+            : activeView === 'super_selection' ? (tabSummary.tabs?.super_selection ?? 0) > 0
+            : false
+          );
+          if (totalAllTips === 0 && !lazyHasData) return null;
           return (
             <>
             {/* Box RE MC admin-only rimosso — RE ora è pronostico ufficiale in Alto Rendimento */}
@@ -4586,28 +4600,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                       {(() => {
-                        // HR: centrate/mancate calcolati inline (come Partite) per caricamento veloce
-                        const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-                        const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                        // [25/05/2026] HR e Partite: presi da tabSummary.sub_summary[activeView]
+                        // quando predictions e' vuoto (modalita' lazy). Altrimenti calcolati inline.
+                        const subKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
+                        const sub = tabSummary?.sub_summary?.[subKey];
+                        const useLazy = predictions.length === 0 && sub;
                         let centrate = 0, mancate = 0;
-                        hrFiltered.forEach(item => {
-                          item.pronostici?.forEach(p => {
-                            const h = getEffectiveHit(item, p);
-                            if (h === true) centrate++;
-                            else if (h === false) mancate++;
+                        if (useLazy) {
+                          centrate = (sub as any).centrati || 0;
+                          mancate = (sub as any).mancati || 0;
+                        } else {
+                          const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+                          const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                          hrFiltered.forEach(item => {
+                            item.pronostici?.forEach(p => {
+                              const h = getEffectiveHit(item, p);
+                              if (h === true) centrate++;
+                              else if (h === false) mancate++;
+                            });
                           });
-                        });
+                        }
                         const verified = centrate + mancate;
                         const hr = verified > 0 ? Math.round((centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        const matchesFinished = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
-                        const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
+                        const matchesFinishedCount = useLazy ? ((sub as any).finite || 0) : (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p)).length;
+                        const matchHits = useLazy ? ((sub as any).partite_con_centrato || 0) : (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p)).filter(p => p.pronostici?.some(pr => {
                           const score = p.real_score || p.live_score;
                           return score ? calculateHitFromScore(score, pr.pronostico, pr.tipo) === true : false;
                         })).length;
-                        const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
+                        const matchHR = matchesFinishedCount > 0 ? Math.round((matchHits / matchesFinishedCount) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;
+                        const matchesFinished = { length: matchesFinishedCount };
                         return (
                           <>
                             {hr !== null && (
@@ -4735,7 +4759,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const basePreds = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds)
                 .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
                 .filter(predMatchesMarket);
-              const sourceCounts = SOURCE_DEFS.map(g => {
+              const liveSourceCounts = SOURCE_DEFS.map(g => {
                 const matchingPreds = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || '')));
                 const total = matchingPreds.length;
                 let hits = 0, finished = 0;
@@ -4748,15 +4772,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const hr = finished > 0 ? Math.round((hits / finished) * 100) : null;
                 return { ...g, total, hits, finished, hr };
               }).filter(g => g.total > 0);
-              const totalAll = basePreds.length;
-              let allHits = 0, allFinished = 0;
+              const liveTotalAll = basePreds.length;
+              let liveAllHits = 0, liveAllFinished = 0;
               basePreds.forEach(p => {
                 p.pronostici?.forEach((t: any) => {
                   const h = getEffectiveHit(p, t);
-                  if (h !== null) { allFinished++; if (h) allHits++; }
+                  if (h !== null) { liveAllFinished++; if (h) liveAllHits++; }
                 });
               });
-              const allHr = allFinished > 0 ? Math.round((allHits / allFinished) * 100) : null;
+              const liveAllHr = liveAllFinished > 0 ? Math.round((liveAllHits / liveAllFinished) * 100) : null;
+              // [25/05/2026] Override dal backend in modalita' lazy
+              const useLazyAlgo = predictions.length === 0 && algoStats;
+              const sourceCounts = useLazyAlgo
+                ? (algoStats.sourceCounts || []).map((sc: any) => ({ ...SOURCE_DEFS.find(s => s.id === sc.id), ...sc }))
+                : liveSourceCounts;
+              const totalAll = useLazyAlgo ? (algoStats.totalAll || 0) : liveTotalAll;
+              const allHr = useLazyAlgo ? algoStats.allHr : liveAllHr;
               return (
                 <div
                   style={{
@@ -5151,22 +5182,34 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {filtersOpen && (() => {
             // Conteggi inline (come HR/Partite) per caricamento veloce senza useMemo
             const fcCounts: Record<string, number> = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-            const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-            const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
-            fcFiltered.forEach(item => {
-              fcCounts.tutte++;
-              const s = getMatchStatus(item);
-              if (s === 'live') fcCounts.live++;
-              else if (s === 'to_play') fcCounts.da_giocare++;
-              else {
-                fcCounts.finite++;
-                item.pronostici?.forEach(p => {
-                  const h = getEffectiveHit(item, p);
-                  if (h === true) fcCounts.centrate++;
-                  if (h === false) fcCounts.mancate++;
-                });
-              }
-            });
+            // [25/05/2026] In modalita' lazy: prendi da sub_summary[activeView]
+            const fcSubKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
+            const fcSub = tabSummary?.sub_summary?.[fcSubKey] as any;
+            if (predictions.length === 0 && fcSub) {
+              fcCounts.tutte = fcSub.partite || 0;
+              fcCounts.live = fcSub.live || 0;
+              fcCounts.da_giocare = fcSub.da_giocare || 0;
+              fcCounts.finite = fcSub.finite || 0;
+              fcCounts.centrate = fcSub.centrati || 0;
+              fcCounts.mancate = fcSub.mancati || 0;
+            } else {
+              const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+              const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+              fcFiltered.forEach(item => {
+                fcCounts.tutte++;
+                const s = getMatchStatus(item);
+                if (s === 'live') fcCounts.live++;
+                else if (s === 'to_play') fcCounts.da_giocare++;
+                else {
+                  fcCounts.finite++;
+                  item.pronostici?.forEach(p => {
+                    const h = getEffectiveHit(item, p);
+                    if (h === true) fcCounts.centrate++;
+                    if (h === false) fcCounts.mancate++;
+                  });
+                }
+              });
+            }
             return (
             <div style={{
               display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: '10px',

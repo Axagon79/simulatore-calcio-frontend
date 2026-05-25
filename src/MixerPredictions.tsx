@@ -425,8 +425,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
 
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set());
   const { calcola: calcolaPL } = usePLStorico();
-  const { getVersionsLight, fetchVersionsLight, fetchVersionsFull } = usePredictionVersions();
-  const { getPredictions: getCachedPredictions, fetchPredictions: fetchCachedPredictions } = usePredictionsCache();
+  const { fetchVersionsFull } = usePredictionVersions();
   const plCalcolato = useMemo(() => calcolaPL(date), [calcolaPL, date]);
   const dailyPLData = plCalcolato.giorno;
   const monthlyPLData = plCalcolato.mese;

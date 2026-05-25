@@ -450,9 +450,12 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // "Filtra per Algoritmo" e "Mercati". Caricati on-demand all'apertura del pannello.
   const [algoStats, setAlgoStats] = useState<any | null>(null);
   const [marketStats, setMarketStats] = useState<any | null>(null);
-  // Dataset MoE caricato sempre (anche quando activeView='pme'), per i conteggi dei tab
-  // Pronostici/Elite/AR/Mixer/SuperSel: devono restare fissi indipendentemente dal tab attivo.
-  const [moePredictions, setMoePredictions] = useState<Prediction[]>([]);
+  // [25/05/2026] moePredictions rimosso: i conteggi tab arrivano da tabSummary (gratis).
+  // Variabili tenute come placeholder vuoto per eventuali consumatori residui.
+  const moePredictions: Prediction[] = [];
+  // @ts-expect-error: setter dichiarato per simmetria, ma non piu' usato
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const setMoePredictions = (_v: Prediction[]) => {};
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
@@ -990,7 +993,6 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // dell'endpoint /sistema-z-predictions (1.3 MB).
   // Nome interno della variabile resta pmeCount per non riscrivere tutto il file.
   useEffect(() => {
-    let cancelled = false;
     const computeCount = (preds: any[]) =>
       preds.reduce(
         (s: number, p: any) =>
@@ -1002,7 +1004,7 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     // riusa senza nuova fetch.
     if (activeView === 'pme') {
       setPmeCount(computeCount(predictions));
-      return () => { cancelled = true; };
+      return;
     }
 
     // [25/05/2026] Caso 2: siamo su altri tab. Prima il count veniva calcolato facendo
@@ -1012,7 +1014,6 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     if (tabSummary?.tabs?.ai_ost != null) {
       setPmeCount(tabSummary.tabs.ai_ost);
     }
-    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, activeView, predictions, tabSummary]);
 
@@ -4834,7 +4835,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalAll}</span>
                         {allHr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: allHr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{allHr}%</span>}
                       </button>
-                      {sourceCounts.map(g => {
+                      {sourceCounts.map((g: any) => {
                         const isActive = sourceFilter === g.id;
                         return (
                           <button
@@ -5005,10 +5006,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Mercati</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                   {(() => {
-                    const segno = capsules.find(c => c.id === 'segno');
-                    const ouCaps = capsules.filter(c => c.id === 'ou15' || c.id === 'ou25' || c.id === 'ou35');
-                    const ouFinished = ouCaps.reduce((a, c) => a + c.finished, 0);
-                    const ouHits = ouCaps.reduce((a, c) => a + c.hits, 0);
+                    const segno = capsules.find((c: any) => c.id === 'segno');
+                    const ouCaps = capsules.filter((c: any) => c.id === 'ou15' || c.id === 'ou25' || c.id === 'ou35');
+                    const ouFinished = ouCaps.reduce((a: number, c: any) => a + c.finished, 0);
+                    const ouHits = ouCaps.reduce((a: number, c: any) => a + c.hits, 0);
                     const ouHr = ouFinished > 0 ? Math.round((ouHits / ouFinished) * 1000) / 10 : null;
                     const pills: { label: string; hr: number | null; hits: number; finished: number; color: string }[] = [];
                     if (segno && segno.finished > 0) pills.push({ label: '1X2', hr: segno.hr, hits: segno.hits, finished: segno.finished, color: segno.color });
@@ -5054,7 +5055,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   >
                     <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalAllTips}</span>
                   </button>
-                  {capsules.map(c => {
+                  {capsules.map((c: any) => {
                     if (c.total === 0) return null;
                     const isActive = marketFilter === c.id;
                     const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : null;

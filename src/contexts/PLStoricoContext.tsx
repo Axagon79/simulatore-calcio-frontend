@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { API_BASE } from '../AppDev/costanti';
 
 // --- Tipi ---
@@ -87,9 +88,17 @@ export function PLStoricoProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // [25/05/2026] News/NewsArticolo non usano pl-storico (~67 kB, ~1.6s).
+  // Skip fetch su quelle route: il Provider esiste a livello root, ma il dato
+  // pesante non viene richiesto. Su navigazione successiva verso una route
+  // che lo usa, l'useEffect rilancia (dipendenza pathname).
+  const { pathname } = useLocation();
+  const skip = pathname.startsWith('/news');
+
   useEffect(() => {
+    if (skip) return;
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, skip]);
 
   const calcola = useCallback((date: string): PLCalcolato => {
     if (giorni.length === 0) {

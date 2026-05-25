@@ -1149,9 +1149,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
     // (/lazy/news-list) per popolare i siblings (navigazione prev/next).
     Promise.all([
       fetch(`${API_BASE}/lazy/news-article?date=${dateQ}&home=${encodeURIComponent(homeQ)}&away=${encodeURIComponent(awayQ)}`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/lazy/news-list?date=${dateQ}`).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/lazy/news-siblings?date=${dateQ}`).then(r => r.json()).catch(() => null),
     ])
-      .then(([articleData, listData]: any[]) => {
+      .then(([articleData, siblingsData]: any[]) => {
         if (cancelled) return;
         const article = articleData?.article;
         if (!article) {
@@ -1159,10 +1159,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           return;
         }
         setMatchData(article);
-        // Siblings: index light + il pred completo se home/away combaciano
-        const idx = Array.isArray(listData?.index) ? listData.index : [];
-        const sib = idx.filter((m: any) => m.home && m.away);
-        sib.sort((a: any, b: any) => (a.match_time || '').localeCompare(b.match_time || ''));
+        const sib = Array.isArray(siblingsData?.siblings) ? siblingsData.siblings : [];
         setSiblings(sib);
       })
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })

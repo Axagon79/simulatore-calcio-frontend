@@ -88,10 +88,10 @@ function AppRoot() {
   return (
     <ErrorBoundary>
     <AuthProvider>
-    <PLStoricoProvider>
     <PredictionsProvider>
     <PredictionVersionsProvider>
       <BrowserRouter>
+      <PLStoricoProvider>
       <ConsentGate>
       <BackToHome>{(goBack, navigate) => (<>
         <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'#0a0e17'}}><div style={{height:2,width:'60%',maxWidth:600,background:'rgba(255,255,255,0.06)',position:'relative',overflow:'hidden'}}><div style={{position:'absolute',top:0,left:0,height:'100%',width:'40%',background:'linear-gradient(90deg, transparent, #22d3ee, transparent)',animation:'mainfb-shimmer 1.2s ease-in-out infinite'}} /></div><style>{`@keyframes mainfb-shimmer { 0% { left: -40%; } 100% { left: 100%; } }`}</style></div>}>
@@ -134,10 +134,10 @@ function AppRoot() {
       <CookieBanner />
       </>)}</BackToHome>
       </ConsentGate>
+      </PLStoricoProvider>
       </BrowserRouter>
     </PredictionVersionsProvider>
     </PredictionsProvider>
-    </PLStoricoProvider>
     </AuthProvider>
     </ErrorBoundary>
   );

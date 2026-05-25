@@ -450,6 +450,17 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // "Filtra per Algoritmo" e "Mercati". Caricati on-demand all'apertura del pannello.
   const [algoStats, setAlgoStats] = useState<any | null>(null);
   const [marketStats, setMarketStats] = useState<any | null>(null);
+  // [25/05/2026] Summary AI OST (view 'pme'): conteggi + leghe + summary aggregato
+  // dalla collezione predictions_sistema_z. Sostituisce il preload pesante di
+  // /simulation/sistema-z-predictions (~1.3 MB).
+  const [aiOstSummary, setAiOstSummary] = useState<{
+    total_tips: number;
+    summary: { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number; partite_con_centrato: number; total_profit: number; total_bets: number; sum_quota: number };
+    leagues: Array<{ league: string; partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number }>;
+  } | null>(null);
+  // Dettaglio singola partita AI OST (motivazione_notturna, motivazione_pre_match, scout_text).
+  // Chiave = "home|away", caricato on-demand quando si espande la card.
+  const [aiOstMatchDetail, setAiOstMatchDetail] = useState<Record<string, any>>({});
   // [25/05/2026] moePredictions/setMoePredictions rimossi: i conteggi tab
   // arrivano direttamente da tabSummary (gratis dal summary lazy).
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
@@ -786,14 +797,12 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         setLoading(true);
         setError(null);
       }
-      // [24/05/2026] Lazy: per view mixer/super_selection non carichiamo più
-      // daily-predictions-unified (456 kB) al primo accesso. Il primo paint usa
-      // /lazy/pronostici-tab-summary (~10 kB), il dettaglio lega arriva on-demand.
-      // Solo la view pme/AI OST continua a usare /sistema-z-predictions per ora.
-      if (activeView !== 'pme') {
-        setLoading(false);
-        return;
-      }
+      // [24-25/05/2026] Lazy: nessun preload pesante.
+      //  - mixer/super_selection: primo paint via /lazy/pronostici-tab-summary
+      //  - pme (AI OST): primo paint via /lazy/ai-ost-summary
+      // Il dettaglio lega/partita arriva on-demand cliccando.
+      setLoading(false);
+      return;
       try {
         // Quando activeView e' 'pme' (alias frontend: tab "AI OST" = Odds + Stats =
         // Sistema Z) carica da /sistema-z-predictions (collezione predictions_sistema_z).
@@ -914,13 +923,38 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     setLeagueMatchesLoading({});
   }, [sourceFilter, marketFilter]);
 
+  // [25/05/2026] AI OST (view 'pme'): primo paint via /lazy/ai-ost-summary.
+  useEffect(() => {
+    if (activeView !== 'pme') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/lazy/ai-ost-summary?date=${date}`, {
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+        });
+        const j = await r.json();
+        if (!cancelled && j?.success) {
+          setAiOstSummary({
+            total_tips: j.total_tips,
+            summary: j.summary,
+            leagues: j.leagues || [],
+          });
+          setLoading(false);
+          setLastUpdate(new Date());
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [date, activeView, isAdmin]);
+
   // [25/05/2026] Fetch algoStats e marketStats per le capsule "Filtra per Algoritmo" e
   // "Mercati" del tab Mixer/Super Selection. Il backend ha gia' gli endpoint /lazy/algorithm-stats
   // e /lazy/market-stats parametrici sul tab. Carico al primo mount + al cambio activeView.
   useEffect(() => {
-    if (activeView === 'pme') return;
     let cancelled = false;
-    const tabKey = activeView === 'mixer' ? 'mixer' : 'super_selection';
+    const tabKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'ai_ost';
     (async () => {
       try {
         const [aRes, mRes] = await Promise.all([
@@ -941,9 +975,10 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   }, [date, activeView, isAdmin]);
 
   // [24/05/2026] Carica /lazy/pronostici-tab-summary per le view mixer/super_selection.
-  // Sostituisce il preload pesante di daily-predictions-unified per il primo paint.
+  // [25/05/2026] Carica anche quando view='pme' (AI OST), perche' i numerini in cima
+  // (Pronostici/Elite/AR/Mixer/Super Selection) leggono da tabSummary.tabs.* e devono
+  // restare popolati cross-view.
   useEffect(() => {
-    if (activeView === 'pme') return;
     let cancelled = false;
     (async () => {
       try {
@@ -989,29 +1024,16 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // dell'endpoint /sistema-z-predictions (1.3 MB).
   // Nome interno della variabile resta pmeCount per non riscrivere tutto il file.
   useEffect(() => {
-    const computeCount = (preds: any[]) =>
-      preds.reduce(
-        (s: number, p: any) =>
-          s + (p?.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0),
-        0
-      );
-
-    // Caso 1: siamo gia' sul tab OST -> predictions contiene i dati sistema-z,
-    // riusa senza nuova fetch.
-    if (activeView === 'pme') {
-      setPmeCount(computeCount(predictions));
-      return;
-    }
-
-    // [25/05/2026] Caso 2: siamo su altri tab. Prima il count veniva calcolato facendo
-    // una fetch a /sistema-z-predictions (543 kB) — pesantissimo e duplicato 4 volte
-    // perche' attivava il polling. Adesso lo leggo da tabSummary.tabs.ai_ost (gia'
-    // calcolato dal summary, gratis).
-    if (tabSummary?.tabs?.ai_ost != null) {
+    // [25/05/2026] Sorgente unica per il count AI OST: aiOstSummary.total_tips se
+    // disponibile, altrimenti fallback su tabSummary.tabs.ai_ost (calcolato anche dal
+    // summary normale come tip Sistema Z emessi). predictions e' vuoto in lazy.
+    if (aiOstSummary?.total_tips != null) {
+      setPmeCount(aiOstSummary.total_tips);
+    } else if (tabSummary?.tabs?.ai_ost != null) {
       setPmeCount(tabSummary.tabs.ai_ost);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, activeView, predictions, tabSummary]);
+  }, [date, activeView, predictions, tabSummary, aiOstSummary]);
 
   // --- FETCH dataset MoE (sempre, anche quando activeView='pme') ---
   // Necessario per mantenere i conteggi dei tab Pronostici/Elite/AR/Mixer/SuperSel
@@ -1743,6 +1765,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     })
                     .catch(() => {})
                     .finally(() => setPredDetailLoading(prev => { const s = new Set(prev); s.delete(dk); return s; }));
+                }
+                // [25/05/2026] AI OST: carico motivazione_notturna, motivazione_pre_match e
+                // scout_lite.scout_text / scout_deep.scout_text on-demand alla prima espansione.
+                if (activeView === 'pme' && !aiOstMatchDetail[dk]) {
+                  fetch(`${API_BASE}/lazy/ai-ost-match-detail?date=${encodeURIComponent(pred.date)}&home=${encodeURIComponent(pred.home)}&away=${encodeURIComponent(pred.away)}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                      if (data?.success && data.detail) {
+                        setAiOstMatchDetail(prev => ({ ...prev, [dk]: data.detail }));
+                        // Inietto i dati pesanti nella prediction caricata, cosi' il rendering
+                        // delle capsule motivazioni + Scout text trova i campi sul pred stesso.
+                        setLeagueMatches(prev => {
+                          const next = { ...prev };
+                          for (const key of Object.keys(next)) {
+                            next[key] = next[key].map((p: any) =>
+                              p.date === pred.date && p.home === pred.home && p.away === pred.away
+                                ? {
+                                    ...p,
+                                    motivazione_notturna: data.detail.motivazione_notturna,
+                                    motivazione_pre_match: data.detail.motivazione_pre_match,
+                                    scout_lite: { ...(p.scout_lite || {}), ...(data.detail.scout_lite || {}) },
+                                    scout_deep: { ...(p.scout_deep || {}), ...(data.detail.scout_deep || {}) },
+                                    analysis_deepdive: data.detail.analysis_deepdive,
+                                  }
+                                : p
+                            );
+                          }
+                          return next;
+                        });
+                      }
+                    })
+                    .catch(() => {});
                 }
               }
               return next;
@@ -2786,25 +2840,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             const v = o?.[k];
                             return (typeof v === 'number' && v > 0) ? v.toFixed(2) : '—';
                           };
+                          // [25/05/2026] Snapshot quote in box sobrio: 4 gruppi (1X2, O/U, GG/NG, RE-vacant)
+                          // separati visivamente; etichette monospazio + valori tabular-nums.
+                          const Pair = ({ label, value }: { label: string; value: string }) => (
+                            <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '4px' }}>
+                              <span style={{ fontSize: '10px', color: theme.textFaint, fontFamily: 'monospace' as const, letterSpacing: '0.02em' }}>{label}</span>
+                              <span style={{ fontSize: '11px', fontWeight: 600, color: theme.textDim, fontVariantNumeric: 'tabular-nums' as const }}>{value}</span>
+                            </span>
+                          );
+                          const Group = ({ children }: { children: any }) => (
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' as const }}>{children}</div>
+                          );
                           return (
-                            <div style={{ marginTop: '14px', opacity: 0.75 }}>
+                            <div style={{
+                              marginTop: '14px',
+                              padding: '10px 12px',
+                              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                              borderRadius: '6px',
+                            }}>
                               <div style={{
-                                fontSize: '10px', color: theme.textDim,
-                                fontStyle: 'italic' as const, marginBottom: '4px',
-                                lineHeight: '1.4',
+                                fontSize: '9.5px', color: theme.textFaint,
+                                textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+                                fontWeight: 700, marginBottom: '8px',
                               }}>
-                                Quote nel momento di questa lettura (fotografia di riferimento, non sono le quote attuali):
+                                Quote al momento della lettura · fotografia di riferimento
                               </div>
-                              <div style={{
-                                fontSize: '11px',
-                                color: theme.textDim, lineHeight: '1.55',
-                                fontVariantNumeric: 'tabular-nums' as const,
-                              }}>
-                                1 {q('1')} · X {q('X')} · 2 {q('2')} &nbsp;|&nbsp;
-                                O 1.5 {q('over_15')} · U 1.5 {q('under_15')} &nbsp;|&nbsp;
-                                O 2.5 {q('over_25')} · U 2.5 {q('under_25')} &nbsp;|&nbsp;
-                                O 3.5 {q('over_35')} · U 3.5 {q('under_35')} &nbsp;|&nbsp;
-                                GG {q('gg')} · NG {q('ng')}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px 18px' }}>
+                                <Group><Pair label="1" value={q('1')} /><Pair label="X" value={q('X')} /><Pair label="2" value={q('2')} /></Group>
+                                <Group><Pair label="O1.5" value={q('over_15')} /><Pair label="U1.5" value={q('under_15')} /></Group>
+                                <Group><Pair label="O2.5" value={q('over_25')} /><Pair label="U2.5" value={q('under_25')} /></Group>
+                                <Group><Pair label="O3.5" value={q('over_35')} /><Pair label="U3.5" value={q('under_35')} /></Group>
+                                <Group><Pair label="GG" value={q('gg')} /><Pair label="NG" value={q('ng')} /></Group>
                               </div>
                             </div>
                           );
@@ -4537,7 +4604,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           // (total_profit / total_bets / sum_quota / tips_with_prob / sum_edge dal backend).
           // Altrimenti calcolate inline da marketFilteredTips.
           const finSubKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
-          const finSub = tabSummary?.sub_summary?.[finSubKey] as any;
+          const finSub = activeView === 'pme' ? (aiOstSummary?.summary as any) : (tabSummary?.sub_summary?.[finSubKey] as any);
           const useFinLazy = predictions.length === 0 && finSub;
           const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
           let totalBets: number, plUnits: number | null, avgQuota: number | null, avgEdge: number | null;
@@ -4562,9 +4629,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           // [25/05/2026] Bypass del return null quando siamo in modalita' lazy
           // (predictions vuoto ma tabSummary popolato). Senza questo bypass,
           // Rendimento/Filtri/header tab interno non apparivano mai su Mixer locale.
-          const lazyHasData = tabSummary && predictions.length === 0 && (
-            activeView === 'mixer' ? (tabSummary.tabs?.mixer ?? 0) > 0
-            : activeView === 'super_selection' ? (tabSummary.tabs?.super_selection ?? 0) > 0
+          const lazyHasData = predictions.length === 0 && (
+            activeView === 'mixer' ? ((tabSummary?.tabs?.mixer ?? 0) > 0)
+            : activeView === 'super_selection' ? ((tabSummary?.tabs?.super_selection ?? 0) > 0)
+            : activeView === 'pme' ? ((aiOstSummary?.total_tips ?? 0) > 0)
             : false
           );
           if (totalAllTips === 0 && !lazyHasData) return null;
@@ -4597,10 +4665,11 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                       {(() => {
-                        // [25/05/2026] HR e Partite: presi da tabSummary.sub_summary[activeView]
-                        // quando predictions e' vuoto (modalita' lazy). Altrimenti calcolati inline.
+                        // [25/05/2026] HR e Partite: in lazy presi da:
+                        //  - aiOstSummary.summary per AI OST (predictions_sistema_z)
+                        //  - tabSummary.sub_summary[activeView] per gli altri (daily_predictions_unified)
                         const subKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
-                        const sub = tabSummary?.sub_summary?.[subKey];
+                        const sub = activeView === 'pme' ? (aiOstSummary?.summary as any) : tabSummary?.sub_summary?.[subKey];
                         const useLazy = predictions.length === 0 && sub;
                         let centrate = 0, mancate = 0;
                         if (useLazy) {
@@ -5138,13 +5207,15 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 // [24/05/2026] In Mixer/Super Selection (no sotto-tab visibili — vedi wiki riga 152
                 // "activeTab interno c'è ma non si usa"), il titolo e il count vengono dalla view
                 // attiva. In modalità lazy il count arriva da tabSummary.tabs[activeView].
-                const inMixerView = activeView === 'mixer' || activeView === 'super_selection';
-                const viewColor = activeView === 'mixer' ? '#10b981' : activeView === 'super_selection' ? '#f59e0b' : theme.cyan;
-                const viewLabel = activeView === 'mixer' ? 'Mixer' : activeView === 'super_selection' ? 'Super Selection' : 'Pronostici';
-                const tabColor = inMixerView ? viewColor : (activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold);
-                const tabLabel = inMixerView ? viewLabel : (activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento');
-                const tabCount = inMixerView
-                  ? (tabSummary?.tabs?.[activeView] ?? 0)
+                const inViewMode = activeView === 'mixer' || activeView === 'super_selection' || activeView === 'pme';
+                const viewColor = activeView === 'mixer' ? '#10b981' : activeView === 'super_selection' ? '#f59e0b' : activeView === 'pme' ? '#a855f7' : theme.cyan;
+                const viewLabel = activeView === 'mixer' ? 'Mixer' : activeView === 'super_selection' ? 'Super Selection' : activeView === 'pme' ? 'AI OST' : 'Pronostici';
+                const tabColor = inViewMode ? viewColor : (activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold);
+                const tabLabel = inViewMode ? viewLabel : (activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento');
+                const tabCount = inViewMode
+                  ? (activeView === 'pme'
+                      ? (aiOstSummary?.total_tips ?? tabSummary?.tabs?.ai_ost ?? 0)
+                      : (tabSummary?.tabs?.[activeView] ?? 0))
                   : activeTab === 'pronostici'
                   ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
                   : activeTab === 'elite'
@@ -5179,9 +5250,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {filtersOpen && (() => {
             // Conteggi inline (come HR/Partite) per caricamento veloce senza useMemo
             const fcCounts: Record<string, number> = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-            // [25/05/2026] In modalita' lazy: prendi da sub_summary[activeView]
+            // [25/05/2026] In modalita' lazy: prendi i conteggi dal summary giusto.
+            // Per AI OST (view='pme') leggo da aiOstSummary.summary (collezione predictions_sistema_z).
+            // Altrimenti da tabSummary.sub_summary[activeView] (collezione daily_predictions_unified).
             const fcSubKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
-            const fcSub = tabSummary?.sub_summary?.[fcSubKey] as any;
+            const fcSub = activeView === 'pme'
+              ? (aiOstSummary?.summary as any)
+              : (tabSummary?.sub_summary?.[fcSubKey] as any);
             if (predictions.length === 0 && fcSub) {
               fcCounts.tutte = fcSub.partite || 0;
               fcCounts.live = fcSub.live || 0;
@@ -5320,7 +5395,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         )}
 
         {/* NESSUN DATO — nasconde l'empty state se il blocco lazy ha leghe da mostrare. */}
-        {!loading && !error && predictions.length === 0 && !(activeView !== 'pme' && tabSummary && tabSummary.leagues.length > 0) && (
+        {!loading && !error && predictions.length === 0 && !(activeView !== 'pme' && tabSummary && tabSummary.leagues.length > 0) && !(activeView === 'pme' && aiOstSummary && aiOstSummary.leagues.length > 0) && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -5553,6 +5628,155 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                           {renderPredictionCard(m as Prediction)}
                         </div>
                       ))
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>Nessuna partita trovata.</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* [25/05/2026] BLOCCO LAZY AI OST: lista campionati da /lazy/ai-ost-summary.
+            Click su una lega → fetch /lazy/ai-ost-by-league. Espansione card →
+            /lazy/ai-ost-match-detail per motivazioni notturna/pre_match + Scout text. */}
+        {!loading && !error && activeView === 'pme' && aiOstSummary && aiOstSummary.leagues.length > 0 && predictions.length === 0 && (
+          <div style={{ animation: 'fadeIn 0.4s ease' }}>
+            {/* Banner filtri attivi + Reset */}
+            {(() => {
+              const marketActive = marketFilter !== 'tutti';
+              const sourceActive = sourceFilter !== 'tutti';
+              const statusActive = statusFilter !== 'tutte';
+              if (!marketActive && !sourceActive && !statusActive) return null;
+              const marketLabel = marketFilter === 'nobet' ? 'NO BET' : (MARKET_DEFS.find(m => m.id === marketFilter)?.label || marketFilter);
+              const sourceLabel = SOURCE_DEFS.find(s => s.id === sourceFilter)?.id || sourceFilter;
+              const statusLabel = statusFilter === 'live' ? 'LIVE'
+                : statusFilter === 'da_giocare' ? 'Da giocare'
+                : statusFilter === 'finite' ? 'Finite'
+                : statusFilter === 'centrate' ? 'Centrati'
+                : statusFilter === 'mancate' ? 'Mancati'
+                : statusFilter;
+              const chipStyle: React.CSSProperties = {
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '10px', fontWeight: 700,
+                padding: '3px 8px', borderRadius: '12px',
+                background: isLight ? '#dbeafe' : `${theme.cyan}25`,
+                border: `1px solid ${theme.cyan}`,
+                color: theme.cyan,
+                cursor: 'pointer',
+              };
+              return (
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px',
+                  padding: '8px 12px', marginBottom: '10px',
+                  background: isLight ? '#f1f5f9' : theme.surfaceSubtle,
+                  border: `1px solid ${theme.surface08}`,
+                  borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: theme.textDim }}>🔵 Filtri attivi:</span>
+                  {marketActive && <span style={chipStyle} onClick={() => setMarketFilter('tutti')}>Mercato: {marketLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {sourceActive && <span style={chipStyle} onClick={() => setSourceFilter('tutti')}>Algoritmo: {sourceLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {statusActive && <span style={chipStyle} onClick={() => setStatusFilter('tutte')}>Stato: {statusLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: '10px', fontWeight: 800,
+                      padding: '3px 10px', borderRadius: '12px',
+                      background: theme.danger, color: '#fff', cursor: 'pointer',
+                    }}
+                    onClick={() => { setMarketFilter('tutti'); setSourceFilter('tutti'); setStatusFilter('tutte'); }}
+                  >Reset filtri</span>
+                </div>
+              );
+            })()}
+            {aiOstSummary.leagues.map((L) => {
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
+              if (statusFilter === 'live' && L.live === 0) return null;
+              if (statusFilter === 'da_giocare' && L.daGiocare === 0) return null;
+              if (statusFilter === 'finite' && L.finite === 0) return null;
+              if (statusFilter === 'centrate' && L.centrati === 0) return null;
+              if (statusFilter === 'mancate' && L.mancati === 0) return null;
+              const partiteVisibili = statusFilter === 'live' ? L.live
+                : statusFilter === 'da_giocare' ? L.daGiocare
+                : statusFilter === 'finite' ? L.finite
+                : statusFilter === 'centrate' ? L.centrati
+                : statusFilter === 'mancate' ? L.mancati
+                : L.partite;
+              const verified = L.centrati + L.mancati;
+              const hitRateVal = verified > 0 ? Math.round((L.centrati / verified) * 1000) / 10 : null;
+              const statusBg = L.finite === 0 ? theme.surface05 : L.finite === L.partite ? `${theme.success}30` : `${theme.warning}30`;
+              const statusColor = L.finite === 0 ? theme.textDim : L.finite === L.partite ? theme.success : theme.warning;
+              const missRate = verified > 0 ? L.mancati / verified : 0;
+              const hitColor = L.centrati === 0 ? theme.textDim : theme.success;
+              const missColor = L.mancati === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+              const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+              const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+              const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+              const isLeagueExpanded = collapsedLeagues.has(L.league);
+              return (
+                <div key={L.league} style={{ marginBottom: '16px' }}>
+                  <div
+                    style={{
+                      padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
+                      background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
+                    }}
+                    onClick={async () => {
+                      toggleLeague(L.league);
+                      if (!leagueMatches[L.league] && !leagueMatchesLoading[L.league]) {
+                        setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: true }));
+                        try {
+                          const r = await fetch(`${API_BASE}/lazy/ai-ost-by-league?date=${date}&league=${encodeURIComponent(L.league)}`, {
+                            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                          });
+                          const j = await r.json();
+                          if (j?.success) setLeagueMatches(prev => ({ ...prev, [L.league]: j.predictions || [] }));
+                        } catch (e) {
+                          console.warn('[ai-ost-by-league] fetch fallito:', e);
+                        } finally {
+                          setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: false }));
+                        }
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                          <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[L.league] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <StemmaImg src={getLeagueLogoUrl(L.league)} size={18} />
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1 }}>{L.league}</span>
+                          {isMobile && L.live > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {L.live} LIVE</span>}
+                        </div>
+                        {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{L.live > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {L.live} LIVE</span>}</div>}
+                        {!isMobile && (
+                          <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '3px' }}>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                            <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {partiteVisibili}</span>
+                            {L.finite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {L.finite} {L.finite === 1 ? 'finita' : 'finite'}</span></>}
+                            {L.daGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {L.daGiocare} da giocare</span></>}
+                            {sep}
+                            <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {L.centrati}{!isMobile && ` ${L.centrati === 1 ? 'centrato' : 'centrati'}`}</span>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {L.mancati}{!isMobile && ` ${L.mancati === 1 ? 'mancato' : 'mancati'}`}</span>
+                            {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isLeagueExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                    </div>
+                  </div>
+                  {isLeagueExpanded && leagueMatchesLoading[L.league] && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>⏳ Caricamento partite di {L.league}…</div>
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length > 0 && (
+                    leagueMatches[L.league].map((m: any, predIdx: number) => (
+                      <div key={`${m.home}-${m.away}-${predIdx}`}>
+                        {renderPredictionCard(m as Prediction)}
+                      </div>
+                    ))
                   )}
                   {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length === 0 && (
                     <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>Nessuna partita trovata.</div>

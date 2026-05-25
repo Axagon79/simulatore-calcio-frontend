@@ -46,8 +46,8 @@ interface Match {
   league?: string;
   lega?: string;
   pronostici?: PronosticoTip[];
-  scout_lite?: { scout_text?: string; computed_at?: string };
-  scout_deep?: { scout_text?: string; computed_at?: string };
+  scout_lite?: { scout_text?: string; scout_text_preview?: string; computed_at?: string };
+  scout_deep?: { scout_text?: string; scout_text_preview?: string; computed_at?: string };
   expected_total_goals?: number | null;
   news_meta?: NewsMeta;
   odds?: Record<string, any> | null;
@@ -763,28 +763,17 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
 
     // Helper: processa il payload (cache o rete) - logica condivisa.
     const processPredictions = (preds: Match[]) => {
-      const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_lite?.scout_text));
+      const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_deep?.scout_text_preview || p.scout_lite?.scout_text || p.scout_lite?.scout_text_preview));
       withArticle.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
       setMatches(withArticle);
     };
 
     // Provo prima la cache sessionStorage (popolata da PredictionsContext o
     // da una precedente visita a News/NewsArticolo). TTL 5 min: oltre rifaccio
-    // fetch fresh per non mostrare dati stantii.
-    try {
-      const cached = sessionStorage.getItem(`sz-v2-${activeDateISO}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        const ageMs = Date.now() - (parsed.ts || 0);
-        if (ageMs < 5 * 60 * 1000 && Array.isArray(parsed.predictions)) {
-          processPredictions(parsed.predictions);
-          setLoading(false);
-          return () => { cancelled = true; };
-        }
-      }
-    } catch { /* cache corrotta: ignora e va su rete */ }
+    // [25/05/2026 TEST] cache sessionStorage temporaneamente disattivata per misurare
+    // tempo di primo caricamento reale (sempre fetch fresh).
 
-    fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${activeDateISO}`)
+    fetch(`${API_BASE}/lazy/news-list?date=${activeDateISO}`)
       .then(r => r.json())
       .then((data: ApiResp) => {
         if (cancelled) return;
@@ -962,7 +951,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed.predictions)) continue;
         for (const m of parsed.predictions) {
-          if (m.scout_deep?.scout_text || m.scout_lite?.scout_text) all.push(m);
+          if (m.scout_deep?.scout_text || m.scout_deep?.scout_text_preview || m.scout_lite?.scout_text || m.scout_lite?.scout_text_preview) all.push(m);
         }
       } catch { /* cache rotta, skip */ }
     }
@@ -1218,9 +1207,15 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           {!loading && !error && filtered.map((m, idx) => {
             const id = `a-${idx + 1}`;
             const isFeature = idx === 0;
-            const effort: 'DEEP' | 'LITE' = m.scout_deep?.scout_text ? 'DEEP' : 'LITE';
-            const scoutText = (effort === 'DEEP' ? m.scout_deep?.scout_text : m.scout_lite?.scout_text) || '';
-            const lede = extractLede(scoutText);
+            // [25/05/2026] Endpoint /lazy/news-list manda scout_text_preview (lede gia' tagliato
+            // backend). Fallback su scout_text completo per compatibilita' con il vecchio payload.
+            const sd: any = m.scout_deep || {};
+            const sl: any = m.scout_lite || {};
+            const hasDeep = !!(sd.scout_text || sd.scout_text_preview);
+            const effort: 'DEEP' | 'LITE' = hasDeep ? 'DEEP' : 'LITE';
+            const lede = hasDeep
+              ? (sd.scout_text_preview || extractLede(sd.scout_text || ''))
+              : (sl.scout_text_preview || extractLede(sl.scout_text || ''));
             const tip = getTopTip(m);
             const conf = tip?.confidence || 0;
             const confMed = conf < 60;

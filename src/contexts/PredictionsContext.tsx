@@ -17,6 +17,10 @@ interface PredictionsContextType {
 
 const PredictionsContext = createContext<PredictionsContextType | null>(null);
 
+// [DISATTIVATO 24/05/2026] getToday / getOtherDates erano usati dal vecchio
+// prefetchAll. Tenuti commentati per rollback rapido se serve riattivare il
+// preload massivo. Vedi commento dentro PredictionsProvider sotto.
+/*
 function getToday(): string {
   return new Date().toISOString().split('T')[0];
 }
@@ -32,6 +36,7 @@ function getOtherDates(): string[] {
   }
   return dates;
 }
+*/
 
 const EMPTY: PredictionData = { predictions: [], stats: {}, count: 0 };
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -55,8 +60,10 @@ async function fetchOne(date: string): Promise<{ date: string; data: PredictionD
   }
 }
 
-const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
+// [DISATTIVATO 24/05/2026] delay / POLL_INTERVAL erano usati dal vecchio prefetchAll.
+// Tenuti commentati per rollback rapido.
+// const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+// const POLL_INTERVAL = 15 * 60 * 1000; // 15 minuti
 
 export function PredictionsProvider({ children }: { children: ReactNode }) {
   const cacheRef = useRef<Record<string, PredictionData>>({});
@@ -77,12 +84,13 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    // Preload background di sistema-z-predictions per la pagina News.
-    // Lo carico in parallelo a daily-predictions-unified, cosi' quando l'utente
-    // clicca su "News" il payload e' gia' in sessionStorage e la pagina e'
-    // istantanea (oggi richiedeva 6s per quella prima fetch).
+    // [DISATTIVATO 24/05/2026] Preload aggressivo di sistema-z-predictions disabilitato.
+    // Motivo: il preload scaricava ~3.3 MB × 3 giorni = ~10 MB anche se l'utente
+    // non andava mai sulla pagina News. Nuova filosofia "lazy + minimo": ogni pagina
+    // fetcha i suoi dati solo quando l'utente ci arriva, e fetcha solo lo stretto
+    // necessario. Vedi sessione 24/05/2026 sulla velocizzazione end-to-end.
+    // Codice originale tenuto come commento per rollback rapido se serve.
+    /*
     const preloadSistemaZ = async (date: string) => {
       try {
         const key = `sz-v2-${date}`;
@@ -92,59 +100,27 @@ export function PredictionsProvider({ children }: { children: ReactNode }) {
           try {
             const parsed = JSON.parse(existing);
             if (Date.now() - (parsed.ts || 0) < 5 * 60 * 1000) return;
-          } catch { /* cache corrotta, sovrascrivi */ }
+          } catch { // cache corrotta, sovrascrivi
+          }
         }
         const res = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`);
         if (!res.ok) return;
         const json = await res.json();
         const preds = Array.isArray(json?.predictions) ? json.predictions : [];
         sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), predictions: preds }));
-      } catch { /* preload fallito: ignora, l'utente fara' la fetch normale */ }
-    };
-
-    const prefetchAll = async () => {
-      // PRIORITA' ASSOLUTA: solo daily-predictions-unified di oggi.
-      // E' il dato che alimenta la Topbar (pronostici con effetto pixel)
-      // e la sidebar. Tutto il resto (sistema-z News, altre date) attende.
-      const today = getToday();
-      const data = await fetchWithDedup(today);
-      if (cancelled) return;
-      cacheRef.current[today] = data;
-      setLoading(false);
-
-      // Pausa per dare al browser il tempo di renderizzare la Topbar
-      // prima di occupare la banda con i preload background.
-      await delay(300);
-      if (cancelled) return;
-
-      // Background: sistema-z di oggi/domani/dopodomani (pagina News).
-      const tomorrowISO = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })();
-      const afterISO = (() => { const d = new Date(); d.setDate(d.getDate() + 2); return d.toISOString().split('T')[0]; })();
-      preloadSistemaZ(today);
-      await delay(500);
-      if (cancelled) return;
-      preloadSistemaZ(tomorrowISO);
-      await delay(500);
-      if (cancelled) return;
-      preloadSistemaZ(afterISO);
-
-      // Poi carica le altre date di daily-predictions-unified in background.
-      const others = getOtherDates();
-      for (const date of others) {
-        if (cancelled) return;
-        if (cacheRef.current[date]) continue;
-        await delay(500);
-        await fetchWithDedup(date);
+      } catch { // preload fallito: ignora, l'utente fara' la fetch normale
       }
     };
+    */
 
-    prefetchAll();
-
-    const interval = setInterval(() => {
-      if (!cancelled) prefetchAll();
-    }, POLL_INTERVAL);
-
-    return () => { cancelled = true; clearInterval(interval); };
+    // [DISATTIVATO 24/05/2026] prefetchAll disabilitato per filosofia "lazy + minimo".
+    // Il PredictionsContext NON precarica più daily-predictions-unified all'avvio
+    // dell'app (in precedenza scaricava ~1 MB di oggi + ~6-10 MB delle altre date
+    // su un ciclo background). Resta attivo solo come cache/dedup per chiamate
+    // esplicite via `fetchPredictions(date)` da componenti che davvero ne hanno
+    // bisogno. Per recuperare il codice originale del prefetchAll vedi git log
+    // pre-commit di questa modifica.
+    setLoading(false);
   }, [fetchWithDedup]);
 
   const getPredictions = useCallback((date: string): PredictionData | null => {

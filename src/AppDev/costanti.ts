@@ -1,11 +1,27 @@
 import type { League } from '../types';
 
 // --- CONFIGURAZIONE API ---
+//
+// API_BASE punta a:
+//   - emulatore Firebase locale se `npm run dev` (variabile VITE_USE_EMULATOR=true)
+//   - Cloud Run produzione altrimenti (build + deploy, oppure dev senza emulatore)
+//
+// Per attivare l'emulatore durante lo sviluppo:
+//   1. avvia l'emulatore Functions:  firebase emulators:start --only functions
+//   2. avvia Vite con VITE_USE_EMULATOR=true:  $env:VITE_USE_EMULATOR='true'; npm run dev
+//
+// Cosi' frontend in locale chiama localhost (modifiche backend visibili senza deploy);
+// in produzione resta tutto invariato.
+
+const USE_EMULATOR = (import.meta as any).env?.VITE_USE_EMULATOR === 'true';
+const FIREBASE_PROJECT_ID = 'puppals-456c7';
 
 // 1. API Node.js
-export const API_BASE = 'https://api-6b34yfzjia-uc.a.run.app';
+export const API_BASE = USE_EMULATOR
+  ? `http://localhost:5001/${FIREBASE_PROJECT_ID}/us-central1/api`
+  : 'https://api-6b34yfzjia-uc.a.run.app';
 
-// 2. API PYTHON AI -> FORZIAMO IL CLOUD!
+// 2. API PYTHON AI -> FORZIAMO IL CLOUD! (l'emulatore Python ha quirks, qui restiamo sempre su Cloud)
 export const AI_ENGINE_URL = 'https://run-simulation-6b34yfzjia-uc.a.run.app';
 
 

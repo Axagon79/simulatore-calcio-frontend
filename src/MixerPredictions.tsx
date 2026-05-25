@@ -434,9 +434,35 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   const isAdmin = checkAdmin();
   // Count tip PME (caricato sempre, anche fuori dalla view PME, per il numerino del bottone)
   const [pmeCount, setPmeCount] = useState<number | null>(null);
-  // Dataset MoE caricato sempre (anche quando activeView='pme'), per i conteggi dei tab
-  // Pronostici/Elite/AR/Mixer/SuperSel: devono restare fissi indipendentemente dal tab attivo.
-  const [moePredictions, setMoePredictions] = useState<Prediction[]>([]);
+
+  // [24/05/2026] Lazy loading per view mixer e super_selection:
+  // stesse strutture usate da UnifiedPredictions.tsx. Vengono usate solo quando
+  // activeView !== 'pme' (per pme/AI OST resta il caricamento da /sistema-z-predictions).
+  const [tabSummary, setTabSummary] = useState<{
+    tabs: { pronostici: number; elite: number; alto_rendimento: number; mixer: number; super_selection: number; ai_ost: number };
+    summary: { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number };
+    sub_summary?: Record<string, { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number }>;
+    leagues: Array<{ league: string; partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number; per_tab?: Record<string, number>; per_tab_counts?: Record<string, { partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number }> }>;
+  } | null>(null);
+  const [leagueMatches, setLeagueMatches] = useState<Record<string, any[]>>({});
+  const [leagueMatchesLoading, setLeagueMatchesLoading] = useState<Record<string, boolean>>({});
+  // [25/05/2026] Aggregati Algoritmo (gruppi A/C/S/...) e Mercati per le capsule
+  // "Filtra per Algoritmo" e "Mercati". Caricati on-demand all'apertura del pannello.
+  const [algoStats, setAlgoStats] = useState<any | null>(null);
+  const [marketStats, setMarketStats] = useState<any | null>(null);
+  // [25/05/2026] Summary AI OST (view 'pme'): conteggi + leghe + summary aggregato
+  // dalla collezione predictions_sistema_z. Sostituisce il preload pesante di
+  // /simulation/sistema-z-predictions (~1.3 MB).
+  const [aiOstSummary, setAiOstSummary] = useState<{
+    total_tips: number;
+    summary: { partite: number; finite: number; da_giocare: number; live: number; centrati: number; mancati: number; partite_con_centrato: number; total_profit: number; total_bets: number; sum_quota: number };
+    leagues: Array<{ league: string; partite: number; finite: number; daGiocare: number; live: number; centrati: number; mancati: number }>;
+  } | null>(null);
+  // Dettaglio singola partita AI OST (motivazione_notturna, motivazione_pre_match, scout_text).
+  // Chiave = "home|away", caricato on-demand quando si espande la card.
+  const [aiOstMatchDetail, setAiOstMatchDetail] = useState<Record<string, any>>({});
+  // [25/05/2026] moePredictions/setMoePredictions rimossi: i conteggi tab
+  // arrivano direttamente da tabSummary (gratis dal summary lazy).
   const [premiumAnalysis, setPremiumAnalysis] = useState<Record<string, string>>({});
   const [premiumLoading, setPremiumLoading] = useState<Record<string, boolean>>({});
   const [analysisTab, setAnalysisTab] = useState<Record<string, 'free' | 'premium' | 'deepdive'>>({});
@@ -771,6 +797,12 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
         setLoading(true);
         setError(null);
       }
+      // [24-25/05/2026] Lazy: nessun preload pesante.
+      //  - mixer/super_selection: primo paint via /lazy/pronostici-tab-summary
+      //  - pme (AI OST): primo paint via /lazy/ai-ost-summary
+      // Il dettaglio lega/partita arriva on-demand cliccando.
+      setLoading(false);
+      return;
       try {
         // Quando activeView e' 'pme' (alias frontend: tab "AI OST" = Odds + Stats =
         // Sistema Z) carica da /sistema-z-predictions (collezione predictions_sistema_z).
@@ -885,6 +917,96 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
     fetchData(false);
   }, [date, activeView, fetchData]);
 
+  // [24/05/2026] Al cambio filtri Algoritmo/Mercati/Stato invalido la cache partite per lega.
+  useEffect(() => {
+    setLeagueMatches({});
+    setLeagueMatchesLoading({});
+  }, [sourceFilter, marketFilter]);
+
+  // [25/05/2026] AI OST (view 'pme'): primo paint via /lazy/ai-ost-summary.
+  useEffect(() => {
+    if (activeView !== 'pme') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/lazy/ai-ost-summary?date=${date}`, {
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+        });
+        const j = await r.json();
+        if (!cancelled && j?.success) {
+          setAiOstSummary({
+            total_tips: j.total_tips,
+            summary: j.summary,
+            leagues: j.leagues || [],
+          });
+          setLoading(false);
+          setLastUpdate(new Date());
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [date, activeView, isAdmin]);
+
+  // [25/05/2026] Fetch algoStats e marketStats per le capsule "Filtra per Algoritmo" e
+  // "Mercati" del tab Mixer/Super Selection. Il backend ha gia' gli endpoint /lazy/algorithm-stats
+  // e /lazy/market-stats parametrici sul tab. Carico al primo mount + al cambio activeView.
+  useEffect(() => {
+    let cancelled = false;
+    const tabKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'ai_ost';
+    (async () => {
+      try {
+        const [aRes, mRes] = await Promise.all([
+          fetch(`${API_BASE}/lazy/algorithm-stats?date=${date}&tab=${tabKey}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} }),
+          fetch(`${API_BASE}/lazy/market-stats?date=${date}&tab=${tabKey}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} }),
+        ]);
+        const aJ = await aRes.json();
+        const mJ = await mRes.json();
+        if (!cancelled) {
+          if (aJ?.success) setAlgoStats(aJ);
+          if (mJ?.success) setMarketStats(mJ);
+        }
+      } catch {
+        if (!cancelled) { setAlgoStats(null); setMarketStats(null); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [date, activeView, isAdmin]);
+
+  // [24/05/2026] Carica /lazy/pronostici-tab-summary per le view mixer/super_selection.
+  // [25/05/2026] Carica anche quando view='pme' (AI OST), perche' i numerini in cima
+  // (Pronostici/Elite/AR/Mixer/Super Selection) leggono da tabSummary.tabs.* e devono
+  // restare popolati cross-view.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = new URLSearchParams({ date });
+        // Nota: il summary calcola conteggi per tutti i tab in un solo passaggio
+        // (tabs.mixer, tabs.super_selection, ecc.). Il filtro per la view attiva si applica
+        // poi sul frontend selezionando per_tab_counts[activeView] nella riga campionato.
+        const r = await fetch(`${API_BASE}/lazy/pronostici-tab-summary?${qs.toString()}`, {
+          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+        });
+        const j = await r.json();
+        if (!cancelled && j?.success) {
+          setTabSummary({
+            tabs: j.tabs,
+            summary: j.summary,
+            sub_summary: j.sub_summary,
+            leagues: j.leagues || [],
+          });
+          setLoading(false);
+          setLastUpdate(new Date());
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [date, activeView, isAdmin]);
+
   // Polling silenzioso ogni 60s per intercettare aggiornamenti Fase 2 + Scout
   // senza richiedere F5 all'utente. Non tocca lo spinner ne' lo state di errore.
   // Indipendente dal polling live-scores (15s) che resta invariato.
@@ -902,63 +1024,24 @@ export default function MixerPredictions({ onBack, onNavigateToLeague }: Unified
   // dell'endpoint /sistema-z-predictions (1.3 MB).
   // Nome interno della variabile resta pmeCount per non riscrivere tutto il file.
   useEffect(() => {
-    let cancelled = false;
-    const computeCount = (preds: any[]) =>
-      preds.reduce(
-        (s: number, p: any) =>
-          s + (p?.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0),
-        0
-      );
-
-    // Caso 1: siamo gia' sul tab OST -> predictions contiene i dati sistema-z,
-    // riusa senza nuova fetch.
-    if (activeView === 'pme') {
-      setPmeCount(computeCount(predictions));
-      return;
+    // [25/05/2026] Sorgente unica per il count AI OST: aiOstSummary.total_tips se
+    // disponibile, altrimenti fallback su tabSummary.tabs.ai_ost (calcolato anche dal
+    // summary normale come tip Sistema Z emessi). predictions e' vuoto in lazy.
+    if (aiOstSummary?.total_tips != null) {
+      setPmeCount(aiOstSummary.total_tips);
+    } else if (tabSummary?.tabs?.ai_ost != null) {
+      setPmeCount(tabSummary.tabs.ai_ost);
     }
-
-    // Caso 2: siamo su altri tab -> serve comunque il count, fetch dedicata.
-    const loadPmeCount = async () => {
-      try {
-        const r = await fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${date}`, {
-          headers: isAdmin ? { 'x-admin-key': '000128' } : {}
-        });
-        const j = await r.json();
-        if (cancelled) return;
-        // Conteggio tip emessi, allineato esattamente al tab Pronostici di
-        // UnifiedPredictions (filter pronostico && != 'NO BET'). L'endpoint
-        // /sistema-z-predictions popola gia' pronostici[] con i soli tip emit=true.
-        const preds = Array.isArray(j?.predictions) ? j.predictions : [];
-        setPmeCount(computeCount(preds));
-      } catch {
-        if (!cancelled) setPmeCount(null);
-      }
-    };
-    loadPmeCount();
-    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, activeView, predictions]);
+  }, [date, activeView, predictions, tabSummary, aiOstSummary]);
 
   // --- FETCH dataset MoE (sempre, anche quando activeView='pme') ---
   // Necessario per mantenere i conteggi dei tab Pronostici/Elite/AR/Mixer/SuperSel
   // fissi indipendentemente dal tab attivo (regola: i numerini tra parentesi non
   // devono cambiare quando si switcha tra tab).
-  useEffect(() => {
-    let cancelled = false;
-    const loadMoe = async () => {
-      try {
-        const cached = getCachedPredictions(date);
-        const data = cached ?? await fetchCachedPredictions(date);
-        if (cancelled) return;
-        setMoePredictions((data?.predictions || []) as Prediction[]);
-      } catch {
-        if (!cancelled) setMoePredictions([]);
-      }
-    };
-    loadMoe();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  // [25/05/2026] loadMoe rimosso: i conteggi tab arrivano da tabSummary (gratis).
+  // moePredictions resta in state come [] (non piu' alimentato) per retrocompatibilita'
+  // con eventuali consumatori residui — rimuovere quando si verifica che nessuno la legge.
 
   // --- RESET accordion su cambio data: nessuna lega/card resta aperta ---
   useEffect(() => {
@@ -1401,40 +1484,16 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
   };
 
 
-  // --- CONTEGGI per tab link (calcolati su predictions originali, stessa logica di UnifiedPredictions) ---
-  // Conteggi dei tab Pronostici/Elite/Alto Rendimento: sempre calcolati sul dataset MoE
-  // fisso (moePredictions), così i numeri non cambiano quando l'utente switcha tra tab
-  // (es. tab PME) — i tab MoE devono mostrare sempre lo stesso conteggio.
-  const tabCounts = useMemo(() => {
-    const all = moePredictions.filter(p => !p.is_exact_score && p.pronostici?.length);
-    let pronostici = 0, elite = 0, alto = 0;
-    for (const p of all) {
-      for (const pr of (p.pronostici || [])) {
-        if (pr.tipo === 'RISULTATO_ESATTO') continue;
-        if (!pr.pronostico || pr.pronostico === 'NO BET') {
-          if (pr.elite) elite++;
-          continue;
-        }
-        const q = pr.quota || (pr.tipo === 'SEGNO' && p.odds ? (p.odds as any)[pr.pronostico] : null)
-          || (pr.tipo === 'DOPPIA_CHANCE' && p.odds ? (p.odds as any)[pr.pronostico] : null)
-          || (pr.tipo === 'GOL' && p.odds ? getGolQuota(pr.pronostico, p.odds) : null);
-        const soglia = pr.tipo === 'DOPPIA_CHANCE' ? 2.00 : 2.51;
-        if (!q || q < soglia) pronostici++;
-        if (q != null && q >= soglia) alto++;
-        if (pr.elite) elite++;
-      }
-    }
-    return { pronostici, elite, alto };
-  }, [moePredictions]);
-
-  // Conteggi tab Mixer e Super Selection: stesso pattern, calcolati sul dataset MoE fisso
-  // (i flag mixer/super_selection vivono nei tip MoE).
-  const mixerCount = useMemo(() =>
-    moePredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.mixer === true).length || 0), 0)
-  , [moePredictions]);
-  const superSelectionCount = useMemo(() =>
-    moePredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.super_selection === true).length || 0), 0)
-  , [moePredictions]);
+  // [25/05/2026] CONTEGGI tab link: presi da tabSummary.tabs (gratis dal summary lazy).
+  // Prima erano calcolati su moePredictions (158 kB di daily-predictions-unified caricato
+  // in background), ora arrivano dal summary che pesa ~5 kB.
+  const tabCounts = useMemo(() => ({
+    pronostici: tabSummary?.tabs?.pronostici ?? 0,
+    elite: tabSummary?.tabs?.elite ?? 0,
+    alto: tabSummary?.tabs?.alto_rendimento ?? 0,
+  }), [tabSummary]);
+  const mixerCount = tabSummary?.tabs?.mixer ?? 0;
+  const superSelectionCount = tabSummary?.tabs?.super_selection ?? 0;
 
   // --- PRE-FILTRO: solo pronostici con flag attivo (mixer / super_selection / pme) ---
   // Il flag usato dipende da activeView. Per PME il caricamento e' gia' filtrato
@@ -1706,6 +1765,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     })
                     .catch(() => {})
                     .finally(() => setPredDetailLoading(prev => { const s = new Set(prev); s.delete(dk); return s; }));
+                }
+                // [25/05/2026] AI OST: carico motivazione_notturna, motivazione_pre_match e
+                // scout_lite.scout_text / scout_deep.scout_text on-demand alla prima espansione.
+                if (activeView === 'pme' && !aiOstMatchDetail[dk]) {
+                  fetch(`${API_BASE}/lazy/ai-ost-match-detail?date=${encodeURIComponent(pred.date)}&home=${encodeURIComponent(pred.home)}&away=${encodeURIComponent(pred.away)}`, { headers: isAdmin ? { 'x-admin-key': '000128' } : {} })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                      if (data?.success && data.detail) {
+                        setAiOstMatchDetail(prev => ({ ...prev, [dk]: data.detail }));
+                        // Inietto i dati pesanti nella prediction caricata, cosi' il rendering
+                        // delle capsule motivazioni + Scout text trova i campi sul pred stesso.
+                        setLeagueMatches(prev => {
+                          const next = { ...prev };
+                          for (const key of Object.keys(next)) {
+                            next[key] = next[key].map((p: any) =>
+                              p.date === pred.date && p.home === pred.home && p.away === pred.away
+                                ? {
+                                    ...p,
+                                    motivazione_notturna: data.detail.motivazione_notturna,
+                                    motivazione_pre_match: data.detail.motivazione_pre_match,
+                                    scout_lite: { ...(p.scout_lite || {}), ...(data.detail.scout_lite || {}) },
+                                    scout_deep: { ...(p.scout_deep || {}), ...(data.detail.scout_deep || {}) },
+                                    analysis_deepdive: data.detail.analysis_deepdive,
+                                  }
+                                : p
+                            );
+                          }
+                          return next;
+                        });
+                      }
+                    })
+                    .catch(() => {});
                 }
               }
               return next;
@@ -2749,25 +2840,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                             const v = o?.[k];
                             return (typeof v === 'number' && v > 0) ? v.toFixed(2) : '—';
                           };
+                          // [25/05/2026] Snapshot quote in box sobrio: 4 gruppi (1X2, O/U, GG/NG, RE-vacant)
+                          // separati visivamente; etichette monospazio + valori tabular-nums.
+                          const Pair = ({ label, value }: { label: string; value: string }) => (
+                            <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '4px' }}>
+                              <span style={{ fontSize: '10px', color: theme.textFaint, fontFamily: 'monospace' as const, letterSpacing: '0.02em' }}>{label}</span>
+                              <span style={{ fontSize: '11px', fontWeight: 600, color: theme.textDim, fontVariantNumeric: 'tabular-nums' as const }}>{value}</span>
+                            </span>
+                          );
+                          const Group = ({ children }: { children: any }) => (
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' as const }}>{children}</div>
+                          );
                           return (
-                            <div style={{ marginTop: '14px', opacity: 0.75 }}>
+                            <div style={{
+                              marginTop: '14px',
+                              padding: '10px 12px',
+                              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
+                              borderRadius: '6px',
+                            }}>
                               <div style={{
-                                fontSize: '10px', color: theme.textDim,
-                                fontStyle: 'italic' as const, marginBottom: '4px',
-                                lineHeight: '1.4',
+                                fontSize: '9.5px', color: theme.textFaint,
+                                textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+                                fontWeight: 700, marginBottom: '8px',
                               }}>
-                                Quote nel momento di questa lettura (fotografia di riferimento, non sono le quote attuali):
+                                Quote al momento della lettura · fotografia di riferimento
                               </div>
-                              <div style={{
-                                fontSize: '11px',
-                                color: theme.textDim, lineHeight: '1.55',
-                                fontVariantNumeric: 'tabular-nums' as const,
-                              }}>
-                                1 {q('1')} · X {q('X')} · 2 {q('2')} &nbsp;|&nbsp;
-                                O 1.5 {q('over_15')} · U 1.5 {q('under_15')} &nbsp;|&nbsp;
-                                O 2.5 {q('over_25')} · U 2.5 {q('under_25')} &nbsp;|&nbsp;
-                                O 3.5 {q('over_35')} · U 3.5 {q('under_35')} &nbsp;|&nbsp;
-                                GG {q('gg')} · NG {q('ng')}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px 18px' }}>
+                                <Group><Pair label="1" value={q('1')} /><Pair label="X" value={q('X')} /><Pair label="2" value={q('2')} /></Group>
+                                <Group><Pair label="O1.5" value={q('over_15')} /><Pair label="U1.5" value={q('under_15')} /></Group>
+                                <Group><Pair label="O2.5" value={q('over_25')} /><Pair label="U2.5" value={q('under_25')} /></Group>
+                                <Group><Pair label="O3.5" value={q('over_35')} /><Pair label="U3.5" value={q('under_35')} /></Group>
+                                <Group><Pair label="GG" value={q('gg')} /><Pair label="NG" value={q('ng')} /></Group>
                               </div>
                             </div>
                           );
@@ -4458,9 +4562,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               _effHit: getEffectiveHit(p, t)
             }))
           );
-          // Calcolo per gruppo capsula (total + finished + hits + HR)
+          // Calcolo per gruppo capsula (total + finished + hits + HR) — solo tip reali (non NO BET).
           const capsuleData = (def: typeof MARKET_DEFS[0]) => {
-            const tips = allTips.filter(def.filter);
+            const tips = allTips.filter(t => t && t.pronostico && t.pronostico !== 'NO BET' && def.filter(t));
             const total = tips.length;
             const verified = tips.filter(t => t._effHit === true || t._effHit === false);
             const hits = tips.filter(t => t._effHit === true).length;
@@ -4469,13 +4573,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const avgTh = thresholds.length > 0 ? Math.round(thresholds.reduce((a, b) => a + b, 0) / thresholds.length * 10) / 10 : 55;
             return { ...def, total, finished: verified.length, hits, hr, threshold: avgTh };
           };
-          const capsules = MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
-          // NO BET: conta prediction escluse, non tips
-          const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
-          if (noBetPreds.length > 0) {
-            capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+          // [25/05/2026] Override capsule da marketStats quando in modalita' lazy
+          const useLazyMkt = predictions.length === 0 && marketStats;
+          const capsules = useLazyMkt
+            ? (marketStats.capsules || []).map((c: any) => {
+                const def = MARKET_DEFS.find(d => d.id === c.id);
+                return { ...def, ...c, threshold: 55 };
+              })
+            : MARKET_DEFS.filter(d => d.id !== 'nobet').map(def => capsuleData(def));
+          // NO BET: conta prediction escluse, non tips (solo modalita' non-lazy)
+          if (!useLazyMkt) {
+            const noBetPreds = sourcePreds.filter(p => !hasRealTip(p)).filter(predMatchesSource);
+            if (noBetPreds.length > 0) {
+              capsules.push({ id: 'nobet' as MarketFilter, label: 'NO BET', filter: () => false, color: isLight ? '#dc2626' : '#ef4444', total: noBetPreds.length, finished: 0, hits: 0, hr: null, threshold: 55 });
+            }
           }
-          const totalAllTips = allTips.length;
+          const totalAllTips = useLazyMkt ? (marketStats.totalAll || 0) : allTips.length;
           const reHitsTotal = sourceFilteredPreds.filter(p => {
             const es = getEffectiveScore(p);
             if (!es) return false;
@@ -4487,19 +4600,42 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             const mf = MARKET_DEFS.find(m => m.id === marketFilter);
             return mf ? allTips.filter(mf.filter) : allTips;
           })();
-          // Calcolo metriche finanziarie (stake REALI dal pronostico)
+          // [25/05/2026] Metriche finanziarie: in modalita' lazy lette da sub_summary
+          // (total_profit / total_bets / sum_quota / tips_with_prob / sum_edge dal backend).
+          // Altrimenti calcolate inline da marketFilteredTips.
+          const finSubKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
+          const finSub = activeView === 'pme' ? (aiOstSummary?.summary as any) : (tabSummary?.sub_summary?.[finSubKey] as any);
+          const useFinLazy = predictions.length === 0 && finSub;
           const verifiedWithQuota = marketFilteredTips.filter(t => (t._effHit === true || t._effHit === false) && t._quota && t._quota > 1);
-          const totalBets = verifiedWithQuota.length;
-          const totalProfit = verifiedWithQuota.reduce((sum, t) => {
-            const stake = t.stake || 1;
-            return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
-          }, 0);
-          const plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
-          const avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
-          const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
-          const avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          let totalBets: number, plUnits: number | null, avgQuota: number | null, avgEdge: number | null;
+          if (useFinLazy) {
+            totalBets = finSub.total_bets || 0;
+            plUnits = totalBets > 0 ? Math.round((finSub.total_profit || 0) * 100) / 100 : null;
+            avgQuota = totalBets > 0 ? Math.round((finSub.sum_quota || 0) / totalBets * 100) / 100 : null;
+            const twp = finSub.tips_with_prob || 0;
+            avgEdge = twp > 0 ? Math.round((finSub.sum_edge || 0) / twp * 10) / 10 : null;
+          } else {
+            totalBets = verifiedWithQuota.length;
+            const totalProfit = verifiedWithQuota.reduce((sum, t) => {
+              const stake = t.stake || 1;
+              return sum + (t._effHit ? (t._quota - 1) * stake : -stake);
+            }, 0);
+            plUnits = totalBets > 0 ? Math.round(totalProfit * 100) / 100 : null;
+            avgQuota = totalBets > 0 ? Math.round(verifiedWithQuota.reduce((sum, t) => sum + t._quota, 0) / totalBets * 100) / 100 : null;
+            const tipsWithProb = verifiedWithQuota.filter(t => t._probStimata && t._probStimata > 0);
+            avgEdge = tipsWithProb.length > 0 ? Math.round(tipsWithProb.reduce((sum, t) => sum + ((t._probStimata ?? 0) - (1 / t._quota * 100)), 0) / tipsWithProb.length * 10) / 10 : null;
+          }
 
-          if (totalAllTips === 0) return null;
+          // [25/05/2026] Bypass del return null quando siamo in modalita' lazy
+          // (predictions vuoto ma tabSummary popolato). Senza questo bypass,
+          // Rendimento/Filtri/header tab interno non apparivano mai su Mixer locale.
+          const lazyHasData = predictions.length === 0 && (
+            activeView === 'mixer' ? ((tabSummary?.tabs?.mixer ?? 0) > 0)
+            : activeView === 'super_selection' ? ((tabSummary?.tabs?.super_selection ?? 0) > 0)
+            : activeView === 'pme' ? ((aiOstSummary?.total_tips ?? 0) > 0)
+            : false
+          );
+          if (totalAllTips === 0 && !lazyHasData) return null;
           return (
             <>
             {/* Box RE MC admin-only rimosso — RE ora è pronostico ufficiale in Alto Rendimento */}
@@ -4529,28 +4665,39 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                       {(() => {
-                        // HR: centrate/mancate calcolati inline (come Partite) per caricamento veloce
-                        const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-                        const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                        // [25/05/2026] HR e Partite: in lazy presi da:
+                        //  - aiOstSummary.summary per AI OST (predictions_sistema_z)
+                        //  - tabSummary.sub_summary[activeView] per gli altri (daily_predictions_unified)
+                        const subKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
+                        const sub = activeView === 'pme' ? (aiOstSummary?.summary as any) : tabSummary?.sub_summary?.[subKey];
+                        const useLazy = predictions.length === 0 && sub;
                         let centrate = 0, mancate = 0;
-                        hrFiltered.forEach(item => {
-                          item.pronostici?.forEach(p => {
-                            const h = getEffectiveHit(item, p);
-                            if (h === true) centrate++;
-                            else if (h === false) mancate++;
+                        if (useLazy) {
+                          centrate = (sub as any).centrati || 0;
+                          mancate = (sub as any).mancati || 0;
+                        } else {
+                          const hrSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+                          const hrFiltered = hrSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+                          hrFiltered.forEach(item => {
+                            item.pronostici?.forEach(p => {
+                              const h = getEffectiveHit(item, p);
+                              if (h === true) centrate++;
+                              else if (h === false) mancate++;
+                            });
                           });
-                        });
+                        }
                         const verified = centrate + mancate;
                         const hr = verified > 0 ? Math.round((centrate / verified) * 1000) / 10 : null;
                         const hrThreshold = activeTab === 'alto_rendimento' ? 25 : 50;
                         const hrColor = hr !== null ? getHRColor(hr, hrThreshold) : theme.textDim;
-                        const matchesFinished = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p));
-                        const matchHits = matchesFinished.filter(p => p.pronostici?.some(pr => {
+                        const matchesFinishedCount = useLazy ? ((sub as any).finite || 0) : (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p)).length;
+                        const matchHits = useLazy ? ((sub as any).partite_con_centrato || 0) : (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : [...exactScorePredictions]).filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource).filter(p => !!getEffectiveScore(p)).filter(p => p.pronostici?.some(pr => {
                           const score = p.real_score || p.live_score;
                           return score ? calculateHitFromScore(score, pr.pronostico, pr.tipo) === true : false;
                         })).length;
-                        const matchHR = matchesFinished.length > 0 ? Math.round((matchHits / matchesFinished.length) * 1000) / 10 : null;
+                        const matchHR = matchesFinishedCount > 0 ? Math.round((matchHits / matchesFinishedCount) * 1000) / 10 : null;
                         const matchHRColor = matchHR !== null ? getHRColor(matchHR, hrThreshold) : theme.textDim;
+                        const matchesFinished = { length: matchesFinishedCount };
                         return (
                           <>
                             {hr !== null && (
@@ -4678,7 +4825,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const basePreds = (activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds)
                 .filter(p => statusFilter === 'tutte' || predMatchesFilter(p, statusFilter))
                 .filter(predMatchesMarket);
-              const sourceCounts = SOURCE_DEFS.map(g => {
+              const liveSourceCounts = SOURCE_DEFS.map(g => {
                 const matchingPreds = basePreds.filter(p => p.pronostici?.some((t: any) => g.match(t.source || '')));
                 const total = matchingPreds.length;
                 let hits = 0, finished = 0;
@@ -4691,15 +4838,22 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 const hr = finished > 0 ? Math.round((hits / finished) * 100) : null;
                 return { ...g, total, hits, finished, hr };
               }).filter(g => g.total > 0);
-              const totalAll = basePreds.length;
-              let allHits = 0, allFinished = 0;
+              const liveTotalAll = basePreds.length;
+              let liveAllHits = 0, liveAllFinished = 0;
               basePreds.forEach(p => {
                 p.pronostici?.forEach((t: any) => {
                   const h = getEffectiveHit(p, t);
-                  if (h !== null) { allFinished++; if (h) allHits++; }
+                  if (h !== null) { liveAllFinished++; if (h) liveAllHits++; }
                 });
               });
-              const allHr = allFinished > 0 ? Math.round((allHits / allFinished) * 100) : null;
+              const liveAllHr = liveAllFinished > 0 ? Math.round((liveAllHits / liveAllFinished) * 100) : null;
+              // [25/05/2026] Override dal backend in modalita' lazy
+              const useLazyAlgo = predictions.length === 0 && algoStats;
+              const sourceCounts = useLazyAlgo
+                ? (algoStats.sourceCounts || []).map((sc: any) => ({ ...SOURCE_DEFS.find(s => s.id === sc.id), ...sc }))
+                : liveSourceCounts;
+              const totalAll = useLazyAlgo ? (algoStats.totalAll || 0) : liveTotalAll;
+              const allHr = useLazyAlgo ? algoStats.allHr : liveAllHr;
               return (
                 <div
                   style={{
@@ -4746,7 +4900,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                         <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalAll}</span>
                         {allHr !== null && <span style={{ fontSize: '9px', fontWeight: '700', color: allHr >= 50 ? theme.hitText : theme.missText, lineHeight: '14px' }}>{allHr}%</span>}
                       </button>
-                      {sourceCounts.map(g => {
+                      {sourceCounts.map((g: any) => {
                         const isActive = sourceFilter === g.id;
                         return (
                           <button
@@ -4917,10 +5071,10 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                 <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '700' }}>Mercati</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
                   {(() => {
-                    const segno = capsules.find(c => c.id === 'segno');
-                    const ouCaps = capsules.filter(c => c.id === 'ou15' || c.id === 'ou25' || c.id === 'ou35');
-                    const ouFinished = ouCaps.reduce((a, c) => a + c.finished, 0);
-                    const ouHits = ouCaps.reduce((a, c) => a + c.hits, 0);
+                    const segno = capsules.find((c: any) => c.id === 'segno');
+                    const ouCaps = capsules.filter((c: any) => c.id === 'ou15' || c.id === 'ou25' || c.id === 'ou35');
+                    const ouFinished = ouCaps.reduce((a: number, c: any) => a + c.finished, 0);
+                    const ouHits = ouCaps.reduce((a: number, c: any) => a + c.hits, 0);
                     const ouHr = ouFinished > 0 ? Math.round((ouHits / ouFinished) * 1000) / 10 : null;
                     const pills: { label: string; hr: number | null; hits: number; finished: number; color: string }[] = [];
                     if (segno && segno.finished > 0) pills.push({ label: '1X2', hr: segno.hr, hits: segno.hits, finished: segno.finished, color: segno.color });
@@ -4966,7 +5120,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   >
                     <span style={{ lineHeight: '14px' }}>Tutti</span> <span style={{ fontSize: '9px', opacity: 0.7, lineHeight: '14px' }}>{totalAllTips}</span>
                   </button>
-                  {capsules.map(c => {
+                  {capsules.map((c: any) => {
                     if (c.total === 0) return null;
                     const isActive = marketFilter === c.id;
                     const clr = c.hr !== null ? getHRColor(c.hr, c.threshold) : null;
@@ -5050,9 +5204,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           >
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {(() => {
-                const tabColor = activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold;
-                const tabLabel = activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento';
-                const tabCount = activeTab === 'pronostici'
+                // [24/05/2026] In Mixer/Super Selection (no sotto-tab visibili — vedi wiki riga 152
+                // "activeTab interno c'è ma non si usa"), il titolo e il count vengono dalla view
+                // attiva. In modalità lazy il count arriva da tabSummary.tabs[activeView].
+                const inViewMode = activeView === 'mixer' || activeView === 'super_selection' || activeView === 'pme';
+                const viewColor = activeView === 'mixer' ? '#10b981' : activeView === 'super_selection' ? '#f59e0b' : activeView === 'pme' ? '#a855f7' : theme.cyan;
+                const viewLabel = activeView === 'mixer' ? 'Mixer' : activeView === 'super_selection' ? 'Super Selection' : activeView === 'pme' ? 'AI OST' : 'Pronostici';
+                const tabColor = inViewMode ? viewColor : (activeTab === 'pronostici' ? theme.cyan : activeTab === 'elite' ? '#f59e0b' : theme.gold);
+                const tabLabel = inViewMode ? viewLabel : (activeTab === 'pronostici' ? 'Pronostici' : activeTab === 'elite' ? 'Elite' : 'Alto Rendimento');
+                const tabCount = inViewMode
+                  ? (activeView === 'pme'
+                      ? (aiOstSummary?.total_tips ?? tabSummary?.tabs?.ai_ost ?? 0)
+                      : (tabSummary?.tabs?.[activeView] ?? 0))
+                  : activeTab === 'pronostici'
                   ? filteredPredictions.reduce((s, p) => s + (p.pronostici?.filter((pr: any) => pr.pronostico && pr.pronostico !== 'NO BET').length || 0), 0)
                   : activeTab === 'elite'
                   ? elitePredictions.reduce((s, p) => s + (p.pronostici?.length || 0), 0)
@@ -5086,22 +5250,38 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           {filtersOpen && (() => {
             // Conteggi inline (come HR/Partite) per caricamento veloce senza useMemo
             const fcCounts: Record<string, number> = { tutte: 0, live: 0, da_giocare: 0, finite: 0, centrate: 0, mancate: 0 };
-            const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
-            const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
-            fcFiltered.forEach(item => {
-              fcCounts.tutte++;
-              const s = getMatchStatus(item);
-              if (s === 'live') fcCounts.live++;
-              else if (s === 'to_play') fcCounts.da_giocare++;
-              else {
-                fcCounts.finite++;
-                item.pronostici?.forEach(p => {
-                  const h = getEffectiveHit(item, p);
-                  if (h === true) fcCounts.centrate++;
-                  if (h === false) fcCounts.mancate++;
-                });
-              }
-            });
+            // [25/05/2026] In modalita' lazy: prendi i conteggi dal summary giusto.
+            // Per AI OST (view='pme') leggo da aiOstSummary.summary (collezione predictions_sistema_z).
+            // Altrimenti da tabSummary.sub_summary[activeView] (collezione daily_predictions_unified).
+            const fcSubKey = activeView === 'mixer' ? 'mixer' : activeView === 'super_selection' ? 'super_selection' : 'pronostici';
+            const fcSub = activeView === 'pme'
+              ? (aiOstSummary?.summary as any)
+              : (tabSummary?.sub_summary?.[fcSubKey] as any);
+            if (predictions.length === 0 && fcSub) {
+              fcCounts.tutte = fcSub.partite || 0;
+              fcCounts.live = fcSub.live || 0;
+              fcCounts.da_giocare = fcSub.da_giocare || 0;
+              fcCounts.finite = fcSub.finite || 0;
+              fcCounts.centrate = fcSub.centrati || 0;
+              fcCounts.mancate = fcSub.mancati || 0;
+            } else {
+              const fcSource = activeTab === 'elite' ? elitePredictions : activeTab === 'pronostici' ? normalPredictions : altoRendimentoPreds;
+              const fcFiltered = fcSource.filter(p => hasRealTip(p)).filter(predMatchesMarket).filter(predMatchesSource);
+              fcFiltered.forEach(item => {
+                fcCounts.tutte++;
+                const s = getMatchStatus(item);
+                if (s === 'live') fcCounts.live++;
+                else if (s === 'to_play') fcCounts.da_giocare++;
+                else {
+                  fcCounts.finite++;
+                  item.pronostici?.forEach(p => {
+                    const h = getEffectiveHit(item, p);
+                    if (h === true) fcCounts.centrate++;
+                    if (h === false) fcCounts.mancate++;
+                  });
+                }
+              });
+            }
             return (
             <div style={{
               display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: '10px',
@@ -5214,8 +5394,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
-        {/* NESSUN DATO */}
-        {!loading && !error && predictions.length === 0 && (
+        {/* NESSUN DATO — nasconde l'empty state se il blocco lazy ha leghe da mostrare. */}
+        {!loading && !error && predictions.length === 0 && !(activeView !== 'pme' && tabSummary && tabSummary.leagues.length > 0) && !(activeView === 'pme' && aiOstSummary && aiOstSummary.leagues.length > 0) && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'
@@ -5272,6 +5452,338 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             >
               Mostra tutte
             </button>
+          </div>
+        )}
+
+        {/* [24/05/2026] BLOCCO LAZY: lista campionati da /lazy/pronostici-tab-summary.
+            Attivo per view mixer/super_selection (pme/AI OST gestito a parte) quando
+            predictions è ancora vuoto. Click su una lega → fetch /lazy/predictions-by-league. */}
+        {!loading && !error && activeView !== 'pme' && tabSummary && tabSummary.leagues.length > 0 && predictions.length === 0 && (
+          <div style={{ animation: 'fadeIn 0.4s ease' }}>
+            {/* Banner filtri attivi + Reset */}
+            {(() => {
+              const marketActive = marketFilter !== 'tutti';
+              const sourceActive = sourceFilter !== 'tutti';
+              const statusActive = statusFilter !== 'tutte';
+              if (!marketActive && !sourceActive && !statusActive) return null;
+              const marketLabel = marketFilter === 'nobet' ? 'NO BET' : (MARKET_DEFS.find(m => m.id === marketFilter)?.label || marketFilter);
+              const sourceLabel = SOURCE_DEFS.find(s => s.id === sourceFilter)?.id || sourceFilter;
+              const statusLabel = statusFilter === 'live' ? 'LIVE'
+                : statusFilter === 'da_giocare' ? 'Da giocare'
+                : statusFilter === 'finite' ? 'Finite'
+                : statusFilter === 'centrate' ? 'Centrati'
+                : statusFilter === 'mancate' ? 'Mancati'
+                : statusFilter;
+              const chipStyle: React.CSSProperties = {
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '10px', fontWeight: 700,
+                padding: '3px 8px', borderRadius: '12px',
+                background: isLight ? '#dbeafe' : `${theme.cyan}25`,
+                border: `1px solid ${theme.cyan}`,
+                color: theme.cyan,
+                cursor: 'pointer',
+              };
+              return (
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px',
+                  padding: '8px 12px', marginBottom: '10px',
+                  background: isLight ? '#f1f5f9' : theme.surfaceSubtle,
+                  border: `1px solid ${theme.surface08}`,
+                  borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: theme.textDim }}>🔵 Filtri attivi:</span>
+                  {marketActive && <span style={chipStyle} onClick={() => setMarketFilter('tutti')}>Mercato: {marketLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {sourceActive && <span style={chipStyle} onClick={() => setSourceFilter('tutti')}>Algoritmo: {sourceLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {statusActive && <span style={chipStyle} onClick={() => setStatusFilter('tutte')}>Stato: {statusLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: '10px', fontWeight: 800,
+                      padding: '3px 10px', borderRadius: '12px',
+                      background: theme.danger, color: '#fff', cursor: 'pointer',
+                    }}
+                    onClick={() => { setMarketFilter('tutti'); setSourceFilter('tutti'); setStatusFilter('tutte'); }}
+                  >Reset filtri</span>
+                </div>
+              );
+            })()}
+            {tabSummary.leagues.map((L) => {
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
+              const tabKey = activeView as string; // 'mixer' o 'super_selection'
+              const partiteTabRaw = L.per_tab?.[tabKey] ?? 0;
+              if (partiteTabRaw === 0) return null;
+              const liveTab = (L as any).per_tab_live?.[tabKey] ?? L.live;
+              const tabCounts = L.per_tab_counts?.[tabKey];
+              const Lpartite = tabCounts?.partite ?? L.partite;
+              const Lfinite = tabCounts?.finite ?? L.finite;
+              const LdaGiocare = tabCounts?.daGiocare ?? L.daGiocare;
+              const Llive = tabCounts?.live ?? L.live;
+              const Lcentrati = tabCounts?.centrati ?? L.centrati;
+              const Lmancati = tabCounts?.mancati ?? L.mancati;
+              const partiteTab = statusFilter === 'live' ? Llive
+                : statusFilter === 'da_giocare' ? LdaGiocare
+                : statusFilter === 'finite' ? Lfinite
+                : statusFilter === 'centrate' ? Lcentrati
+                : statusFilter === 'mancate' ? Lmancati
+                : partiteTabRaw;
+              if (statusFilter === 'live' && Llive === 0) return null;
+              if (statusFilter === 'da_giocare' && LdaGiocare === 0) return null;
+              if (statusFilter === 'finite' && Lfinite === 0) return null;
+              if (statusFilter === 'centrate' && Lcentrati === 0) return null;
+              if (statusFilter === 'mancate' && Lmancati === 0) return null;
+              const verified = Lcentrati + Lmancati;
+              const hitRateVal = verified > 0 ? Math.round((Lcentrati / verified) * 1000) / 10 : null;
+              const statusBg = Lfinite === 0 ? theme.surface05 : Lfinite === Lpartite ? `${theme.success}30` : `${theme.warning}30`;
+              const statusColor = Lfinite === 0 ? theme.textDim : Lfinite === Lpartite ? theme.success : theme.warning;
+              const missRate = verified > 0 ? Lmancati / verified : 0;
+              const hitColor = Lcentrati === 0 ? theme.textDim : theme.success;
+              const missColor = Lmancati === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+              const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+              const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+              const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+              const isLeagueExpanded = collapsedLeagues.has(L.league);
+              return (
+                <div key={L.league} style={{ marginBottom: '16px' }}>
+                  <div
+                    style={{
+                      padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
+                      background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
+                    }}
+                    onClick={async () => {
+                      toggleLeague(L.league);
+                      if (!leagueMatches[L.league] && !leagueMatchesLoading[L.league]) {
+                        setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: true }));
+                        try {
+                          const qs = new URLSearchParams({ date, league: L.league, tab: tabKey });
+                          if (sourceFilter && sourceFilter !== 'tutti') qs.set('source', sourceFilter);
+                          if (marketFilter && marketFilter !== 'tutti') qs.set('market', marketFilter);
+                          const r = await fetch(`${API_BASE}/lazy/predictions-by-league?${qs.toString()}`, {
+                            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                          });
+                          const j = await r.json();
+                          if (j?.success) setLeagueMatches(prev => ({ ...prev, [L.league]: j.predictions || [] }));
+                        } catch (e) {
+                          console.warn('[mixer predictions-by-league] fetch fallito:', e);
+                        } finally {
+                          setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: false }));
+                        }
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                          <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[L.league] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <StemmaImg src={getLeagueLogoUrl(L.league)} size={18} />
+                          <span
+                            onClick={onNavigateToLeague ? (e: React.MouseEvent) => { e.stopPropagation(); onNavigateToLeague(L.league); } : undefined}
+                            style={{ fontSize: '12px', fontWeight: '700', color: onNavigateToLeague ? theme.gold : theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1, cursor: onNavigateToLeague ? 'pointer' : 'default' }}
+                          >{L.league}</span>
+                          {isMobile && liveTab > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {liveTab} LIVE</span>}
+                        </div>
+                        {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{liveTab > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {liveTab} LIVE</span>}</div>}
+                        {!isMobile && (
+                          <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '3px' }}>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                            <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {partiteTab}</span>
+                            {Lfinite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {Lfinite} {Lfinite === 1 ? 'finita' : 'finite'}</span></>}
+                            {LdaGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {LdaGiocare} da giocare</span></>}
+                            {sep}
+                            <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {Lcentrati}{!isMobile && ` ${Lcentrati === 1 ? 'centrato' : 'centrati'}`}</span>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {Lmancati}{!isMobile && ` ${Lmancati === 1 ? 'mancato' : 'mancati'}`}</span>
+                            {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                            {(L as any).reCount > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.warning }}>💎 {(L as any).reCount}</span></>}
+                            {(L as any).reHits > 0 && <>{sep}<span style={{ fontSize: '9px', fontWeight: 700, color: theme.hitText, background: theme.hitBg, borderRadius: '3px', padding: '1px 5px' }}>✓RE {(L as any).reHits}</span></>}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isLeagueExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                    </div>
+                    {isMobile && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {Lpartite}</span>
+                        {Lfinite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {Lfinite}</span></>}
+                        {LdaGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {LdaGiocare}</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {Lcentrati}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {Lmancati}</span>
+                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      </div>
+                    )}
+                  </div>
+                  {isLeagueExpanded && leagueMatchesLoading[L.league] && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>⏳ Caricamento partite di {L.league}…</div>
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length > 0 && (
+                    leagueMatches[L.league]
+                      .filter((m: any) => statusFilter === 'tutte' || predMatchesFilter(m as Prediction, statusFilter))
+                      .map((m: any, predIdx: number) => (
+                        <div key={`${m.home}-${m.away}-${predIdx}`}>
+                          {renderPredictionCard(m as Prediction)}
+                        </div>
+                      ))
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>Nessuna partita trovata.</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* [25/05/2026] BLOCCO LAZY AI OST: lista campionati da /lazy/ai-ost-summary.
+            Click su una lega → fetch /lazy/ai-ost-by-league. Espansione card →
+            /lazy/ai-ost-match-detail per motivazioni notturna/pre_match + Scout text. */}
+        {!loading && !error && activeView === 'pme' && aiOstSummary && aiOstSummary.leagues.length > 0 && predictions.length === 0 && (
+          <div style={{ animation: 'fadeIn 0.4s ease' }}>
+            {/* Banner filtri attivi + Reset */}
+            {(() => {
+              const marketActive = marketFilter !== 'tutti';
+              const sourceActive = sourceFilter !== 'tutti';
+              const statusActive = statusFilter !== 'tutte';
+              if (!marketActive && !sourceActive && !statusActive) return null;
+              const marketLabel = marketFilter === 'nobet' ? 'NO BET' : (MARKET_DEFS.find(m => m.id === marketFilter)?.label || marketFilter);
+              const sourceLabel = SOURCE_DEFS.find(s => s.id === sourceFilter)?.id || sourceFilter;
+              const statusLabel = statusFilter === 'live' ? 'LIVE'
+                : statusFilter === 'da_giocare' ? 'Da giocare'
+                : statusFilter === 'finite' ? 'Finite'
+                : statusFilter === 'centrate' ? 'Centrati'
+                : statusFilter === 'mancate' ? 'Mancati'
+                : statusFilter;
+              const chipStyle: React.CSSProperties = {
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '10px', fontWeight: 700,
+                padding: '3px 8px', borderRadius: '12px',
+                background: isLight ? '#dbeafe' : `${theme.cyan}25`,
+                border: `1px solid ${theme.cyan}`,
+                color: theme.cyan,
+                cursor: 'pointer',
+              };
+              return (
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px',
+                  padding: '8px 12px', marginBottom: '10px',
+                  background: isLight ? '#f1f5f9' : theme.surfaceSubtle,
+                  border: `1px solid ${theme.surface08}`,
+                  borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: theme.textDim }}>🔵 Filtri attivi:</span>
+                  {marketActive && <span style={chipStyle} onClick={() => setMarketFilter('tutti')}>Mercato: {marketLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {sourceActive && <span style={chipStyle} onClick={() => setSourceFilter('tutti')}>Algoritmo: {sourceLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  {statusActive && <span style={chipStyle} onClick={() => setStatusFilter('tutte')}>Stato: {statusLabel} <span style={{ fontWeight: 900 }}>✕</span></span>}
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: '10px', fontWeight: 800,
+                      padding: '3px 10px', borderRadius: '12px',
+                      background: theme.danger, color: '#fff', cursor: 'pointer',
+                    }}
+                    onClick={() => { setMarketFilter('tutti'); setSourceFilter('tutti'); setStatusFilter('tutte'); }}
+                  >Reset filtri</span>
+                </div>
+              );
+            })()}
+            {aiOstSummary.leagues.map((L) => {
+              const sep = <span style={{ color: theme.surface15, fontSize: '10px' }}>│</span>;
+              if (statusFilter === 'live' && L.live === 0) return null;
+              if (statusFilter === 'da_giocare' && L.daGiocare === 0) return null;
+              if (statusFilter === 'finite' && L.finite === 0) return null;
+              if (statusFilter === 'centrate' && L.centrati === 0) return null;
+              if (statusFilter === 'mancate' && L.mancati === 0) return null;
+              const partiteVisibili = statusFilter === 'live' ? L.live
+                : statusFilter === 'da_giocare' ? L.daGiocare
+                : statusFilter === 'finite' ? L.finite
+                : statusFilter === 'centrate' ? L.centrati
+                : statusFilter === 'mancate' ? L.mancati
+                : L.partite;
+              const verified = L.centrati + L.mancati;
+              const hitRateVal = verified > 0 ? Math.round((L.centrati / verified) * 1000) / 10 : null;
+              const statusBg = L.finite === 0 ? theme.surface05 : L.finite === L.partite ? `${theme.success}30` : `${theme.warning}30`;
+              const statusColor = L.finite === 0 ? theme.textDim : L.finite === L.partite ? theme.success : theme.warning;
+              const missRate = verified > 0 ? L.mancati / verified : 0;
+              const hitColor = L.centrati === 0 ? theme.textDim : theme.success;
+              const missColor = L.mancati === 0 ? theme.textDim : missRate <= 0.25 ? '#FFA726' : missRate <= 0.5 ? '#F4511E' : theme.danger;
+              const hrHue = hitRateVal !== null ? Math.min(130, hitRateVal * 1.3) : 0;
+              const hrColor = hitRateVal !== null ? `hsl(${Math.round(hrHue)}, 85%, 48%)` : theme.textDim;
+              const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
+              const isLeagueExpanded = collapsedLeagues.has(L.league);
+              return (
+                <div key={L.league} style={{ marginBottom: '16px' }}>
+                  <div
+                    style={{
+                      padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
+                      background: isLight ? '#eef7ff' : '#1e2337', borderRadius: '8px',
+                      cursor: 'pointer', userSelect: 'none' as const,
+                      border: isLight ? '1px solid #e0e2e6' : '1px solid rgba(255,255,255,0.15)',
+                    }}
+                    onClick={async () => {
+                      toggleLeague(L.league);
+                      if (!leagueMatches[L.league] && !leagueMatchesLoading[L.league]) {
+                        setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: true }));
+                        try {
+                          const r = await fetch(`${API_BASE}/lazy/ai-ost-by-league?date=${date}&league=${encodeURIComponent(L.league)}`, {
+                            headers: isAdmin ? { 'x-admin-key': '000128' } : {}
+                          });
+                          const j = await r.json();
+                          if (j?.success) setLeagueMatches(prev => ({ ...prev, [L.league]: j.predictions || [] }));
+                        } catch (e) {
+                          console.warn('[ai-ost-by-league] fetch fallito:', e);
+                        } finally {
+                          setLeagueMatchesLoading(prev => ({ ...prev, [L.league]: false }));
+                        }
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', ...(isMobile ? {} : { width: '180px', minWidth: '180px', flexShrink: 0 }) }}>
+                          <img src={`https://flagcdn.com/w40/${LEAGUE_TO_COUNTRY_CODE[L.league] || 'xx'}.png`} alt="" style={{ width: '20px', height: '14px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <StemmaImg src={getLeagueLogoUrl(L.league)} size={18} />
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, flex: 1 }}>{L.league}</span>
+                          {isMobile && L.live > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0, background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {L.live} LIVE</span>}
+                        </div>
+                        {!isMobile && <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{L.live > 0 && (statusFilter === 'tutte' || statusFilter === 'live') && <span style={{ fontSize: '8px', color: theme.liveText, fontWeight: '800', animation: 'pulse 1.5s ease-in-out infinite', background: theme.liveBg, border: `1px solid ${theme.liveBorder}`, borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.5px' }}>🔴 {L.live} LIVE</span>}</div>}
+                        {!isMobile && (
+                          <div style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden', alignItems: 'center', gap: '3px' }}>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                            <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {partiteVisibili}</span>
+                            {L.finite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {L.finite} {L.finite === 1 ? 'finita' : 'finite'}</span></>}
+                            {L.daGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {L.daGiocare} da giocare</span></>}
+                            {sep}
+                            <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {L.centrati}{!isMobile && ` ${L.centrati === 1 ? 'centrato' : 'centrati'}`}</span>
+                            {sep}
+                            <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {L.mancati}{!isMobile && ` ${L.mancati === 1 ? 'mancato' : 'mancati'}`}</span>
+                            {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isLeagueExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
+                    </div>
+                  </div>
+                  {isLeagueExpanded && leagueMatchesLoading[L.league] && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>⏳ Caricamento partite di {L.league}…</div>
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length > 0 && (
+                    leagueMatches[L.league].map((m: any, predIdx: number) => (
+                      <div key={`${m.home}-${m.away}-${predIdx}`}>
+                        {renderPredictionCard(m as Prediction)}
+                      </div>
+                    ))
+                  )}
+                  {isLeagueExpanded && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>Nessuna partita trovata.</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

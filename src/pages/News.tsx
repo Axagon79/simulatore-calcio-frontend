@@ -404,7 +404,10 @@ const STYLES = `
   .news-root .ml-vs{color:var(--t-faint);font-family:'JetBrains Mono',monospace;font-size:13px}
   .news-root .a-title{font-size:28px;line-height:1.18;letter-spacing:-0.022em;margin:0 0 14px;font-weight:600;text-wrap:balance}
   .news-root .a-title a:hover{color:var(--cyan)}
-  .news-root .a-lede{color:var(--t-dim);font-size:15px;line-height:1.65;margin:0 0 14px;text-wrap:pretty}
+  .news-root .player-link{transition:color .15s}
+  .news-root .player-link:hover{color:var(--cyan)}
+  .news-root .a-lede{color:var(--t-dim);font-size:15px;line-height:1.65;margin:0 0 14px;text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:calc(1.65em * 3)}
+  .news-root .a-lede::first-letter{font-size:2.6em;line-height:1;float:left;margin:0 8px 0 0;font-weight:700;color:var(--t);padding-top:2px}
   .news-root .a-lede b{color:var(--t);font-weight:500}
   .news-root .a-bullets{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--t-dim)}
   .news-root .a-bullets li{padding-left:18px;position:relative}
@@ -668,6 +671,9 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'oggi' | 'domani' | 'dopodomani'>(initialTab);
   const [activeCountry, setActiveCountry] = useState<string>('');
   const [activeLeague, setActiveLeague] = useState<string>('');
+  // [25/05/2026] Filtro "Escludi finite": nasconde solo le partite con real_score
+  // valorizzato (quelle gia' giocate). Lascia visibili da-giocare e live.
+  const [escludiFinite, setEscludiFinite] = useState<boolean>(false);
   const [activeRail, setActiveRail] = useState<string>('');
 
   // Modali: scheda squadra + scheda redattore.
@@ -697,6 +703,13 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
 
   // Dati reali dal backend.
   const [matches, setMatches] = useState<Match[]>([]);
+  // [25/05/2026] Indice leggero di TUTTI gli articoli del giorno: usato dalla sidebar
+  // sinistra e dai contatori totali (articoli/leghe). 'matches' contiene solo i 5
+  // articoli della pagina corrente (paginazione lato server).
+  const [indexAll, setIndexAll] = useState<Match[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [totalArticles, setTotalArticles] = useState<number>(0);
+  const PER_PAGE = 5;
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -771,13 +784,20 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     // Provo prima la cache sessionStorage (popolata da PredictionsContext o
     // da una precedente visita a News/NewsArticolo). TTL 5 min: oltre rifaccio
     // [25/05/2026 TEST] cache sessionStorage temporaneamente disattivata per misurare
-    // tempo di primo caricamento reale (sempre fetch fresh).
+    // tempo di primo caricamento reale.
 
-    fetch(`${API_BASE}/lazy/news-list?date=${activeDateISO}`)
+    const qs = new URLSearchParams({ date: activeDateISO, page: String(page), per_page: String(PER_PAGE) });
+    if (activeCountry) qs.set('country', activeCountry);
+    if (activeLeague) qs.set('league', activeLeague);
+    if (escludiFinite) qs.set('escludi_finite', 'true');
+    fetch(`${API_BASE}/lazy/news-list?${qs.toString()}`)
       .then(r => r.json())
       .then((data: ApiResp) => {
         if (cancelled) return;
         const preds = Array.isArray(data?.predictions) ? data.predictions : [];
+        const idx = Array.isArray((data as any)?.index) ? (data as any).index : [];
+        setIndexAll(idx);
+        setTotalArticles((data as any)?.total ?? preds.length);
         processPredictions(preds);
         // Cache in sessionStorage: NewsArticolo riusa il payload invece di
         // rifare la stessa fetch da 6s. TTL 5 min via timestamp.
@@ -791,37 +811,50 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [activeDateISO]);
+  }, [activeDateISO, page, activeCountry, activeLeague, escludiFinite]);
+
+  // [25/05/2026] Al cambio filtro (country/league/escludiFinite) torno sempre a pagina 1.
+  useEffect(() => {
+    setPage(1);
+  }, [activeCountry, activeLeague, escludiFinite]);
 
   const countryOf = (m: Match): string => LEAGUE_TO_COUNTRY[m.league || m.lega || ''] || '';
 
-  // Filtro nazione + lega.
+  // Filtro nazione + lega + "Escludi finite".
   const filtered = useMemo(() => matches.filter(m => {
     if (activeCountry && countryOf(m) !== activeCountry) return false;
     if (activeLeague) {
       const lg = m.league || m.lega || '';
       if (leagueSlug(lg) !== activeLeague) return false;
     }
+    if (escludiFinite && (m as any).real_score) return false;
     return true;
-  }), [matches, activeCountry, activeLeague]);
+  }), [matches, activeCountry, activeLeague, escludiFinite]);
 
   const visibleCountries = useMemo(() => {
+    // [25/05/2026] Calcolato su indexAll (tutti gli articoli del giorno),
+    // non solo su matches (i 5 della pagina corrente).
     const set = new Set<string>();
-    matches.forEach(m => { const c = countryOf(m); if (c) set.add(c); });
+    indexAll.forEach(m => {
+      if (escludiFinite && (m as any).real_score) return;
+      const c = countryOf(m);
+      if (c) set.add(c);
+    });
     return Array.from(set).sort();
-  }, [matches]);
+  }, [indexAll, escludiFinite]);
 
   const visibleLeaguesForCountry = useMemo(() => {
     if (!activeCountry) return [] as Array<{ slug: string; name: string }>;
     const seen = new Map<string, string>();
-    matches.forEach(m => {
+    indexAll.forEach(m => {
       if (countryOf(m) !== activeCountry) return;
+      if (escludiFinite && (m as any).real_score) return;
       const lg = m.league || m.lega || '';
       const slug = leagueSlug(lg);
       if (lg && !seen.has(slug)) seen.set(slug, lg);
     });
     return Array.from(seen.entries()).map(([slug, name]) => ({ slug, name }));
-  }, [matches, activeCountry]);
+  }, [indexAll, activeCountry, escludiFinite]);
 
   const visibleLeaguesAll = new Set(filtered.map(m => leagueSlug(m.league || m.lega || '')));
 
@@ -850,8 +883,20 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     setActiveLeague('');
   };
 
-  const shown = filtered.length;
-  const legheCount = visibleLeaguesAll.size;
+  // [25/05/2026] Contatori totali calcolati su indexAll (TUTTI gli articoli del giorno),
+  // non su 'filtered' (solo i 5 della pagina corrente).
+  const indexFiltered = useMemo(() => indexAll.filter(m => {
+    if (activeCountry && countryOf(m) !== activeCountry) return false;
+    if (activeLeague) {
+      const lg = m.league || m.lega || '';
+      if (leagueSlug(lg) !== activeLeague) return false;
+    }
+    if (escludiFinite && (m as any).real_score) return false;
+    return true;
+  }), [indexAll, activeCountry, activeLeague, escludiFinite]);
+  const shown = indexFiltered.length;
+  const legheTotali = new Set(indexFiltered.map(m => leagueSlug(m.league || m.lega || ''))).size;
+  const legheCount = legheTotali;
   const countText = `${shown} articol${shown === 1 ? 'o' : 'i'} · ${legheCount} ${legheCount === 1 ? 'lega' : 'leghe'}`;
 
   // Raggruppo le partite in cluster naturali: gap > 60 min tra una partita e
@@ -861,8 +906,10 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   // Se cluster ha una sola ora distinta, scrivo solo quella.
   type Cluster = { id: string; label: string; matches: Match[] };
   const clusters: Cluster[] = useMemo(() => {
-    const withTime = filtered.filter(m => m.match_time && /^\d{1,2}:\d{2}/.test(m.match_time));
-    const noTime = filtered.filter(m => !m.match_time || !/^\d{1,2}:\d{2}/.test(m.match_time));
+    // [25/05/2026] Cluster sidebar = TUTTI gli articoli del giorno (indexFiltered),
+    // non solo quelli della pagina corrente.
+    const withTime = indexFiltered.filter(m => m.match_time && /^\d{1,2}:\d{2}/.test(m.match_time));
+    const noTime = indexFiltered.filter(m => !m.match_time || !/^\d{1,2}:\d{2}/.test(m.match_time));
     // Helper: stringa "HH:MM" -> minuti dall'inizio giornata
     const toMin = (t: string) => {
       const [h, m] = t.split(':').map(Number);
@@ -902,7 +949,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       groups.push({ id: 'cl-tbd', label: 'Orario da definire', matches: noTime });
     }
     return groups;
-  }, [filtered]);
+  }, [indexFiltered]);
 
   // Stato accordion: quali cluster sono aperti. Di default tutti chiusi.
   const [openClusters, setOpenClusters] = useState<Set<string>>(new Set());
@@ -1059,7 +1106,9 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         <div className="filter-bar">
           <div className="filter-row countries">
             <span className="lbl">Notizie da</span>
-            <button className={`f-link ${activeCountry === '' ? 'on' : ''}`} onClick={() => handleCountry('')}>Tutte</button>
+            <button className={`f-link ${activeCountry === '' && !escludiFinite ? 'on' : ''}`} onClick={() => { handleCountry(''); setEscludiFinite(false); }}>Tutte</button>
+            <span className="sep">·</span>
+            <button className={`f-link ${escludiFinite ? 'on' : ''}`} onClick={() => setEscludiFinite(!escludiFinite)}>Escludi finite</button>
             {visibleCountries.map(c => (
               <React.Fragment key={c}>
                 <span className="sep">·</span>
@@ -1224,7 +1273,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             // Redattore assegnato (deterministico: stessa partita = sempre stesso redattore)
             const redattore = assegnaRedattore({ home: m.home, away: m.away, date: m.date, league: m.league || m.lega || '' });
             return (
-              <article key={id} className={`article ${isFeature ? 'feature' : ''}`} id={id}>
+              <article key={id} className="article" id={id}>
                 <div>
                   <div className="a-eyebrow">
                     <span className="league">
@@ -1284,7 +1333,23 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                       }}>{crestInitial(m.away)}</div>
                       <div className="ml-name"><span className="player-link" onClick={(e) => { e.stopPropagation(); openTeamModal(m.away); }} style={{ cursor: 'pointer' }}>{m.away}</span></div>
                     </div>
+                    {(m as any).real_score && (
+                      <span style={{
+                        marginLeft: 'auto',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        padding: '4px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--t-faint)',
+                        color: 'var(--t)',
+                        letterSpacing: '0.04em',
+                        fontFamily: 'JetBrains Mono, monospace',
+                      }}>
+                        {(m as any).real_score}
+                      </span>
+                    )}
                   </div>
+                  <div style={{ height: 1, background: 'var(--t-faint)', opacity: 0.3, margin: '0 0 16px 0' }} />
                   <h2 className="a-title">
                     <a href={`#${id}`} onClick={(e) => openArticle(e, m)} style={{ cursor: 'pointer' }}>{title}</a>
                   </h2>
@@ -1344,6 +1409,22 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               </article>
             );
           })}
+          {/* [25/05/2026] Paginazione: 5 articoli per pagina (PER_PAGE) */}
+          {!loading && !error && totalArticles > PER_PAGE && (() => {
+            const totalPages = Math.ceil(totalArticles / PER_PAGE);
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 36, padding: '24px 0', marginTop: 8, width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button onClick={() => setPage(1)} disabled={page <= 1} title="Prima pagina" style={{ padding: '8px 12px', background: 'transparent', color: page <= 1 ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page <= 1 ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>«</button>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', background: 'transparent', color: page <= 1 ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page <= 1 ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>← Precedente</button>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--t-dim)' }}>Pagina {page} di {totalPages}</span>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ padding: '8px 16px', background: 'transparent', color: page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>Successivo →</button>
+                  <button onClick={() => setPage(totalPages)} disabled={page >= totalPages} title="Ultima pagina" style={{ padding: '8px 12px', background: 'transparent', color: page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>»</button>
+                </div>
+                <div />
+              </div>
+            );
+          })()}
         </main>
       </div>
 

@@ -1165,32 +1165,26 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
       }
     };
 
-    // Provo prima la cache sessionStorage (popolata da News.tsx). TTL 5 min:
-    // oltre i 300s rifaccio fetch fresh per non mostrare dati stantii.
-    try {
-      const cached = sessionStorage.getItem(`sz-v2-${dateQ}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        const ageMs = Date.now() - (parsed.ts || 0);
-        if (ageMs < 5 * 60 * 1000 && Array.isArray(parsed.predictions)) {
-          processPredictions(parsed.predictions);
-          setLoading(false);
-          return () => { cancelled = true; };
-        }
-      }
-    } catch { /* cache corrotta: ignora e va su rete */ }
-
-    fetch(`${API_BASE}/simulation/sistema-z-predictions?date=${dateQ}`)
-      .then(r => r.json())
-      .then((data: ApiRespA) => {
+    // [25/05/2026] 2 fetch parallele: una per l'articolo completo (/lazy/news-article)
+    // con scout_text + motivazioni + news_meta arricchito, una per la lista light
+    // (/lazy/news-list) per popolare i siblings (navigazione prev/next).
+    Promise.all([
+      fetch(`${API_BASE}/lazy/news-article?date=${dateQ}&home=${encodeURIComponent(homeQ)}&away=${encodeURIComponent(awayQ)}`).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/lazy/news-list?date=${dateQ}`).then(r => r.json()).catch(() => null),
+    ])
+      .then(([articleData, listData]: any[]) => {
         if (cancelled) return;
-        const preds = Array.isArray(data?.predictions) ? data.predictions : [];
-        // Salvo anche qui in cache (es. utente arriva direttamente all'articolo
-        // senza passare da News.tsx, e poi navigando vorra' la lista veloce).
-        try {
-          sessionStorage.setItem(`sz-v2-${dateQ}`, JSON.stringify({ ts: Date.now(), predictions: preds }));
-        } catch { /* quota piena: ignora */ }
-        processPredictions(preds);
+        const article = articleData?.article;
+        if (!article) {
+          setError(`Partita ${homeQ}-${awayQ} non trovata per la data ${dateQ}.`);
+          return;
+        }
+        setMatchData(article);
+        // Siblings: index light + il pred completo se home/away combaciano
+        const idx = Array.isArray(listData?.index) ? listData.index : [];
+        const sib = idx.filter((m: any) => m.home && m.away);
+        sib.sort((a: any, b: any) => (a.match_time || '').localeCompare(b.match_time || ''));
+        setSiblings(sib);
       })
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
       .finally(() => { if (!cancelled) setLoading(false); });

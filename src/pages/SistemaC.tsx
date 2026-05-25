@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 // --- TEMA (centralizzato) ---
 import { getTheme, API_BASE } from '../AppDev/costanti';
 import StemmaImg from '../components/StemmaImg';
+import ShimmerBar from '../components/ShimmerBar';
 const theme = getTheme();
 
 // --- API BASE ---
@@ -659,12 +660,7 @@ export default function SistemaC() {
         )}
 
         {/* Loading / Error */}
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>⏳</div>
-            Caricamento...
-          </div>
-        )}
+        {loading && <ShimmerBar />}
 
         {error && (
           <div style={{ textAlign: 'center', padding: '20px', color: theme.danger, background: 'rgba(255,42,109,0.1)', borderRadius: '8px', marginBottom: '16px' }}>

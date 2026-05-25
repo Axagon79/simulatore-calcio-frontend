@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import QuoteAnomaleDetail from './QuoteAnomaleDetail';
+import ShimmerBar from '../components/ShimmerBar';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -1335,7 +1336,7 @@ export default function QuoteAnomale({ onBack }: { onBack: () => void }) {
 
       {/* CONTENUTO */}
       <div style={{ padding: '0 12px 40px' }}>
-        {loading && <div style={{ textAlign: 'center', padding: 30, color: theme.textDim, fontSize: 11 }}>Caricamento...</div>}
+        {loading && <ShimmerBar />}
         {error && <div style={{ textAlign: 'center', padding: 16, color: theme.danger, fontSize: 11 }}>{error}</div>}
         {!loading && !error && matches.length === 0 && (
           <div style={{ textAlign: 'center', padding: 30, color: theme.textDim, fontSize: 11 }}>Nessuna partita per questa data</div>

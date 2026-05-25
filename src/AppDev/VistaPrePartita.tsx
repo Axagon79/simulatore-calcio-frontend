@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Dispatch, SetStateAction, CSSProperties } from 'react';
 import type { Match } from '../types';
 import { API_BASE, getThemeMode } from './costanti';
+import ShimmerBar from '../components/ShimmerBar';
 
 // ============================================================
 // TYPES & INTERFACES
@@ -2028,9 +2029,7 @@ export default function VistaPrePartita({
                 STRISCE
               </div>
               {streakLoading ? (
-                <div style={{ textAlign: 'center', color: isLight ? '#6b7280' : '#888', padding: '20px 10px', fontSize: '11px' }}>
-                  Caricamento...
-                </div>
+                <ShimmerBar />
               ) : !streakData ? (
                 <div style={{ textAlign: 'center', color: isLight ? '#9ca3af' : '#666', padding: '20px 10px', fontSize: '11px' }}>
                   <div style={{ color: isLight ? '#6b7280' : '#888' }}>Nessun dato disponibile</div>

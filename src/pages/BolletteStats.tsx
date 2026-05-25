@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import LogoVirgo from '../components/LogoVirgo';
+import ShimmerBar from '../components/ShimmerBar';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -795,7 +796,7 @@ export default function BolletteStats({ onBack }: { onBack: () => void }) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>Caricamento...</div>
+          <ShimmerBar />
         ) : (
           <StatsBlock bollette={filtered} liveScores={liveScores} />
         )}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import CupMatchAnalysis from './CupMatchAnalysis';
 import CupMatchResult from './CupMatchResult';
 import { getTheme, getThemeMode, API_BASE } from './AppDev/costanti';
+import ShimmerBar from './components/ShimmerBar';
 
 const appTheme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -152,10 +153,7 @@ export default function CupMatches({ cupId, onOpenCoachAI }: CupMatchesProps) {
         justifyContent: 'center',
         color: appTheme.text
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>{theme.icon}</div>
-          <div>Caricamento partite...</div>
-        </div>
+        <ShimmerBar />
       </div>
     );
   }

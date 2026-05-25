@@ -4,6 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Legend, ReferenceArea,
 } from 'recharts';
+import ShimmerBar from '../components/ShimmerBar';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -436,7 +437,7 @@ export default function QuoteAnomaleDetail({ date, matchKey, chartFilter }: {
   }, [match]);
 
   if (loading) {
-    return <div style={{ padding: '16px', textAlign: 'center', color: theme.textDim, fontSize: 11 }}>Caricamento storico...</div>;
+    return <ShimmerBar />;
   }
 
   const hasEnoughData = chartData && chartData.quote.length >= 2;

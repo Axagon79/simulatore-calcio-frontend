@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import DashboardHome from './DashboardHome';
+import ShimmerBar from './components/ShimmerBar';
 import './BadgeClassifica_pt_pos.css'
 import './styles/AppDev-grid.css';
 import { checkAdmin, PERMISSIONS } from './permissions';
@@ -1726,10 +1727,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
 
         {/* LOADING / EMPTY / LISTA */}
         {todayLoading ? (
-          <div style={{ textAlign: 'center' as const, padding: '40px', color: theme.textDim }}>
-            <div style={{ display: 'inline-block', width: 24, height: 24, border: `3px solid ${theme.borderSubtle}`, borderTopColor: theme.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <div style={{ marginTop: 8 }}>Caricamento partite di oggi...</div>
-          </div>
+          <ShimmerBar />
         ) : filteredData.length === 0 ? (
           <div style={{ textAlign: 'center' as const, padding: '40px', color: theme.textDim }}>
             Nessuna partita trovata per oggi
@@ -1846,7 +1844,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       
       {/* Se è selezionata una coppa, mostra CupMatches */}
       {selectedCup ? (
-      <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Caricamento...</div>}>
+      <Suspense fallback={<div style={{ padding: '40px', display: 'flex', justifyContent: 'center' }}><div style={{ height: 2, width: '60%', maxWidth: 400, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}><div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', background: `linear-gradient(90deg, transparent, ${theme.cyan}, transparent)`, animation: 'appdev-shimmer 1.2s ease-in-out infinite' }} /></div><style>{`@keyframes appdev-shimmer { 0% { left: -40%; } 100% { left: 100%; } }`}</style></div>}>
         <CupMatches
           cupId={selectedCup as 'UCL' | 'UEL'}
           onBack={() => {
@@ -1857,10 +1855,7 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
         />
       </Suspense>
       ) : isLoadingMatches ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>
-          <div style={{ display: 'inline-block', width: 24, height: 24, border: `3px solid ${theme.borderSubtle}`, borderTopColor: theme.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <div style={{ marginTop: 8 }}>Caricamento partite...</div>
-        </div>
+        <ShimmerBar />
       ) : matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: theme.textDim }}>Nessuna partita trovata</div>
       ) : (

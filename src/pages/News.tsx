@@ -5,6 +5,7 @@ import { assegnaRedattore } from './news/assegnazione';
 import TeamScheda from './news/TeamScheda';
 import RedattoreProfilo from './news/RedattoreProfilo';
 import SguardoVeloce from './news/SguardoVeloce';
+import ShimmerBar from '../components/ShimmerBar';
 import type { Redattore } from './news/redattori';
 
 interface NewsProps {
@@ -1199,12 +1200,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         </aside>
 
         <main className="stack">
-          {loading && (
-            <div className="empty-state show">
-              <div className="eye">Caricamento</div>
-              <p>Caricamento articoli in corso…</p>
-            </div>
-          )}
+          {loading && <ShimmerBar />}
           {!loading && error && (
             <div className="empty-state show">
               <div className="eye">Errore</div>
@@ -1216,7 +1212,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               <div className="eye">Nessun articolo</div>
               <p>{activeCountry || activeLeague
                 ? 'Nessuna partita corrisponde al filtro selezionato per questa giornata.'
-                : 'Nessun articolo disponibile per questa giornata. Gli articoli vengono pubblicati a partire da T-6h dal kickoff.'}</p>
+                : 'Nessun articolo disponibile per questa giornata. Riprova più tardi o cambia data.'}</p>
             </div>
           )}
           {!loading && !error && filtered.map((m, idx) => {

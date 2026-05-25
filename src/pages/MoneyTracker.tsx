@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
+import ShimmerBar from '../components/ShimmerBar';
 
 // ============================================
 // THEME & CONSTANTS
@@ -453,7 +454,7 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
         </div>
 
         {/* LOADING */}
-        {loading && <div style={{ textAlign: 'center', padding: '60px', color: theme.textDim }}>Caricamento...</div>}
+        {loading && <ShimmerBar />}
 
         {/* ================================================ */}
         {/* TAB: SCOMMESSE */}
@@ -1018,7 +1019,7 @@ export default function MoneyTracker({ onBack }: { onBack?: () => void }) {
 
               <div style={{ overflowY: 'auto', flex: 1 }}>
                 {matchPickerLoading ? (
-                  <div style={{ color: theme.textDim, textAlign: 'center', padding: '20px' }}>Caricamento partite...</div>
+                  <ShimmerBar />
                 ) : matchPickerPreds.length === 0 ? (
                   <div style={{ color: theme.textDim, textAlign: 'center', padding: '20px' }}>Nessuna partita disponibile per {betDate}</div>
                 ) : (() => {

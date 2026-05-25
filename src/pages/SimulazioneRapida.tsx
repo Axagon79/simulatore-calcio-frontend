@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
+import ShimmerBar from '../components/ShimmerBar';
 import { ArrowLeft, ChevronDown, ChevronRight, Zap } from 'lucide-react';
 import { getTheme, getThemeMode, getMobileTheme, API_BASE, STEMMI_CAMPIONATI, LEAGUES_MAP, SPEED_PRESETS } from '../AppDev/costanti';
 
@@ -213,17 +214,7 @@ export default function SimulazioneRapida({ onBack }: SimulazioneRapidaProps) {
       </div>
 
       {/* LOADING */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: theme.textDim }}>
-          <div style={{
-            display: 'inline-block', width: 28, height: 28,
-            border: `3px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`,
-            borderTopColor: theme.cyan, borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <div style={{ marginTop: 10 }}>Caricamento partite...</div>
-        </div>
-      )}
+      {loading && <ShimmerBar />}
 
       {/* NESSUNA PARTITA */}
       {!loading && leagues.length === 0 && (

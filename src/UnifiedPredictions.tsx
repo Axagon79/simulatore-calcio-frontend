@@ -3524,6 +3524,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
     }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes lazy-loading-bar { 0% { left: -40%; } 100% { left: 100%; } }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
         @keyframes pulseLiveScore { 0% { opacity: 0.4; color: #c53030; } 50% { opacity: 1; color: #ff3333; text-shadow: 0 0 8px #ff3333; } 100% { opacity: 0.4; color: #c53030; } }
         @keyframes pulseBar { 0% { background: #7a4d00; } 50% { background: #fbbf24; } 100% { background: #7a4d00; } }
@@ -4984,16 +4985,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
         </div>
         </>)}
 
-        {/* LOADING */}
-        {loading && (
-          <div style={{
-            textAlign: 'center', padding: '60px 0',
-            color: theme.cyan, fontSize: '14px',
-            animation: 'pulse 1.5s infinite'
-          }}>
-            ⏳ Caricamento pronostici...
-          </div>
-        )}
+        {/* LOADING — coperto dalla barra shimmer sotto (vedi blocco Barra shimmer). */}
 
         {/* ERRORE */}
         {error && (
@@ -5003,6 +4995,13 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
             color: theme.danger, fontSize: '13px', marginBottom: '20px'
           }}>
             ❌ {error}
+          </div>
+        )}
+
+        {/* [25/05/2026] Barra shimmer durante il caricamento del summary o cambio tab. */}
+        {!error && (loading || !tabSummary) && (
+          <div style={{ height: 2, marginBottom: '8px', background: isLight ? '#e0e0e0' : 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', background: `linear-gradient(90deg, transparent, ${theme.cyan}, transparent)`, animation: 'lazy-loading-bar 1.2s ease-in-out infinite' }} />
           </div>
         )}
 
@@ -5202,8 +5201,8 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                   </div>
                   {/* [24/05/2026] Lista partite della lega — visibile quando espansa, caricata on-demand. */}
                   {collapsedLeagues.has(L.league) && leagueMatchesLoading[L.league] && (
-                    <div style={{ padding: '12px', textAlign: 'center', color: theme.textDim, fontSize: '11px' }}>
-                      ⏳ Caricamento partite di {L.league}…
+                    <div style={{ height: 2, marginBottom: '6px', background: isLight ? '#e0e0e0' : 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', background: `linear-gradient(90deg, transparent, ${theme.cyan}, transparent)`, animation: 'lazy-loading-bar 1.2s ease-in-out infinite' }} />
                     </div>
                   )}
                   {collapsedLeagues.has(L.league) && !leagueMatchesLoading[L.league] && leagueMatches[L.league] && leagueMatches[L.league].length > 0 && (
@@ -5226,8 +5225,9 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
           </div>
         )}
 
-        {/* NESSUN DATO (fallback se l'endpoint summary non risponde / ritorna 0 leghe) */}
-        {!loading && !error && (!tabSummary || tabSummary.leagues.length === 0) && predictions.length === 0 && (
+        {/* NESSUN DATO: solo quando il summary e' arrivato ed e' davvero vuoto.
+            Mentre carica appare la barra shimmer sopra. */}
+        {!loading && !error && tabSummary && tabSummary.leagues.length === 0 && predictions.length === 0 && (
           <div style={{
             textAlign: 'center', padding: '60px 0',
             color: theme.textDim, fontSize: '14px'

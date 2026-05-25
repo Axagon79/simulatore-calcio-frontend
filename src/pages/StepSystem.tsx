@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
 import infoIcon from '../assets/info-icon.webp';
+import ShimmerBar from '../components/ShimmerBar';
 
 // ============================================
 // THEME & CONSTANTS
@@ -389,11 +390,7 @@ export default function StepSystem({ onBack }: StepSystemProps) {
   }
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'transparent', color: theme.text, fontFamily: theme.font, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        Caricamento...
-      </div>
-    );
+    return <ShimmerBar fullScreen />;
   }
 
   // Currently viewed session

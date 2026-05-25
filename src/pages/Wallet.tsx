@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
+import ShimmerBar from '../components/ShimmerBar';
 
 const theme = getTheme();
 
@@ -159,7 +160,7 @@ export default function Wallet({ onBack }: { onBack: () => void }) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '20px', color: theme.textDim }}>Caricamento...</div>
+          <ShimmerBar />
         ) : transactions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px', color: theme.textDim, fontSize: '13px' }}>
             Nessuna transazione ancora.

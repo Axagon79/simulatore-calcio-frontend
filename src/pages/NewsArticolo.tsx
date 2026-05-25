@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../AppDev/costanti';
 import { assegnaRedattore, selezionaTopPronostici } from './news/assegnazione';
+import ShimmerBar from '../components/ShimmerBar';
 import TeamScheda from './news/TeamScheda';
 import RedattoreProfilo from './news/RedattoreProfilo';
 
@@ -1436,9 +1437,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
         </div>
       </header>
 
-      {loading && (
-        <section className="article-head"><div className="a-head-main"><p className="a-subtitle">Caricamento articolo…</p></div></section>
-      )}
+      {loading && <ShimmerBar />}
       {!loading && error && (
         <section className="article-head"><div className="a-head-main">
           <button className="backlink" onClick={onBack ?? (() => navigate('/news'))}>← Torna alle notizie</button>

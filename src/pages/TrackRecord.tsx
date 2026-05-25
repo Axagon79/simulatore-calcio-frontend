@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getThemeMode, API_BASE } from '../AppDev/costanti';
 import { getRoutingRule, isOptimized } from '../utils/routingRules';
+import ShimmerBar from '../components/ShimmerBar';
 
 
 
@@ -976,17 +977,7 @@ export default function TrackRecord({ onBack }: TrackRecordProps) {
       )}
 
       {/* ─── Loading / Error ─────────────────────────────────────────────── */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '60px', color: C.textMuted }}>
-          <div style={{
-            width: '32px', height: '32px', border: `2px solid ${C.cardBorder}`, borderTop: `2px solid ${accent}`,
-            borderRadius: '50%', margin: '0 auto 12px',
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-          Caricamento...
-        </div>
-      )}
+      {loading && <ShimmerBar />}
 
       {error && (
         <div style={{ ...card, borderColor: 'rgba(239,68,68,0.3)', color: C.red, textAlign: 'center' }}>

@@ -5,6 +5,7 @@ import { getTheme, getThemeMode, API_BASE } from '../AppDev/costanti';
 import { checkAdmin } from '../permissions';
 import { shareElement } from '../utils/shareCard';
 import LogoVirgo from '../components/LogoVirgo';
+import ShimmerBar from '../components/ShimmerBar';
 
 const theme = getTheme();
 const isLight = getThemeMode() === 'light';
@@ -884,7 +885,7 @@ function MieBollette({ onBack, liveScores, user, getIdToken, initialFiltro = 'tu
 
         {/* Loading */}
         {loadingMy ? (
-          <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>Caricamento...</div>
+          <ShimmerBar />
         ) : myBollette.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: textSecondary }}>
             Nessuna bolletta salvata. Salva le bollette che ti piacciono dalla pagina principale!

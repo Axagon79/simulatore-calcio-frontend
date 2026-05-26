@@ -1144,13 +1144,46 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
     setLoading(true);
     setError(null);
 
-    // [25/05/2026] 2 fetch parallele: una per l'articolo completo (/lazy/news-article)
-    // con scout_text + motivazioni + news_meta arricchito, una per la lista light
-    // (/lazy/news-list) per popolare i siblings (navigazione prev/next).
-    Promise.all([
-      fetch(`${API_BASE}/lazy/news-article?date=${dateQ}&home=${encodeURIComponent(homeQ)}&away=${encodeURIComponent(awayQ)}`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/lazy/news-siblings?date=${dateQ}`).then(r => r.json()).catch(() => null),
-    ])
+    // [26/05/2026] Cache sessionStorage con TTL 30 min:
+    //  - sz-article-{home}|{away}|{date}: articolo singolo (Scout immutabile post T-6h)
+    //  - sz-siblings-{date}: lista light per nav prev/next (lo stesso per tutta la giornata)
+    // Quando l'utente naviga prev/next, l'articolo cambia (fetch nuova chiave) ma
+    // siblings resta dalla cache: zero fetch sprecate.
+    const CACHE_TTL_MS = 30 * 60 * 1000;
+    const articleCacheKey = `sz-article-${homeQ}|${awayQ}|${dateQ}`;
+    const siblingsCacheKey = `sz-siblings-${dateQ}`;
+
+    const readCache = (key: string): any | null => {
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.ts) return null;
+        if ((Date.now() - parsed.ts) >= CACHE_TTL_MS) return null;
+        return parsed;
+      } catch { return null; }
+    };
+
+    const cachedArticle = readCache(articleCacheKey);
+    const cachedSiblings = readCache(siblingsCacheKey);
+
+    // Se ho entrambi in cache, salto le fetch.
+    if (cachedArticle?.article && cachedSiblings?.siblings) {
+      setMatchData(cachedArticle.article);
+      setSiblings(cachedSiblings.siblings);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch solo per quello che manca in cache.
+    const articleP = cachedArticle?.article
+      ? Promise.resolve({ article: cachedArticle.article })
+      : fetch(`${API_BASE}/lazy/news-article?date=${dateQ}&home=${encodeURIComponent(homeQ)}&away=${encodeURIComponent(awayQ)}`).then(r => r.json()).catch(() => null);
+    const siblingsP = cachedSiblings?.siblings
+      ? Promise.resolve({ siblings: cachedSiblings.siblings })
+      : fetch(`${API_BASE}/lazy/news-siblings?date=${dateQ}`).then(r => r.json()).catch(() => null);
+
+    Promise.all([articleP, siblingsP])
       .then(([articleData, siblingsData]: any[]) => {
         if (cancelled) return;
         const article = articleData?.article;
@@ -1161,6 +1194,15 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
         setMatchData(article);
         const sib = Array.isArray(siblingsData?.siblings) ? siblingsData.siblings : [];
         setSiblings(sib);
+        // Scrivo in cache solo cio' che e' venuto da fetch (non riscrivo cio' che gia' c'era)
+        try {
+          if (!cachedArticle?.article) {
+            sessionStorage.setItem(articleCacheKey, JSON.stringify({ ts: Date.now(), article }));
+          }
+          if (!cachedSiblings?.siblings) {
+            sessionStorage.setItem(siblingsCacheKey, JSON.stringify({ ts: Date.now(), siblings: sib }));
+          }
+        } catch { /* quota piena: ignora */ }
       })
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -1595,6 +1637,11 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
               <div className="poster-center">
                 {displayScore ? (
                   <>
+                    {isFinished && kickoff && (
+                      <div className="poster-when" style={{ marginTop: 0, marginBottom: 6 }}>
+                        Kickoff · <b>{kickoff}</b>
+                      </div>
+                    )}
                     <div className="poster-ko" style={{
                       color: isLive ? 'var(--green)' : 'var(--t)',
                     }}>
@@ -1685,7 +1732,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                   )}
                   <ReactMarkdown
                     components={{
-                      p: ({ children }) => <p className={idx === 0 ? 'dropcap' : ''}>{children}</p>,
+                      p: ({ children }) => <p>{children}</p>,
                       strong: ({ children }) => <strong>{children}</strong>,
                       em: ({ children }) => <em>{children}</em>,
                       ul: ({ children }) => <ul>{children}</ul>,

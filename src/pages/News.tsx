@@ -301,7 +301,19 @@ const STYLES = `
   .news-root .ti .mono{color:var(--cyan);font-size:11.5px}
   .news-root .ti .sep{color:var(--t-faint)}
 
-  .news-root .tabs-wrap{border-bottom:1px solid var(--line);background:var(--bg)}
+  /* [26/05/2026] Sticky: tabs + filter restano in alto durante lo scroll della lista,
+     subito sotto il chyron+ticker (gia' sticky top:0). Top stimato 88px desktop:
+     copre con margine il gap di 4-5px sotto il ticker. Sfondo bg-2 leggermente
+     diverso dal bg principale per differenziare visivamente la zona di navigazione
+     dalla zona contenuto. Tema-aware (dark+light). */
+  /* [26/05/2026] Fascia tab sticky: gradient orizzontale verde-petrolio scuro
+     (#0c1b20) -> bg. Direzione: destra -> sinistra (270deg). Colore scelto dopo
+     iterazione su 10+ candidati col criterio "sport broadcast professionale":
+     cyan accent del prodotto + tonalita' fredda.
+     Alternative candidate (mantenute come reference): #12091e viola magazine,
+     #060513 viola quasi nero. */
+  .news-root .tabs-wrap{border-bottom:1px solid var(--line-strong);background:linear-gradient(90deg, var(--bg) 0%, #0c1b20 20%, #0c1b20 80%, var(--bg) 100%);position:sticky;top:88px;z-index:40}
+  :root[data-theme="light"] .news-root .tabs-wrap{background:linear-gradient(90deg, var(--bg) 0%, #d8eef0 20%, #d8eef0 80%, var(--bg) 100%)}
   .news-root .tabs{max-width:1280px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between}
   .news-root .tabs-left{display:flex;gap:2px}
   .news-root .tab{padding:18px 22px 16px;color:var(--t-dim);font-weight:500;font-size:13.5px;border-bottom:2px solid transparent;cursor:pointer;display:flex;gap:10px;align-items:baseline}
@@ -309,23 +321,54 @@ const STYLES = `
   .news-root .tab .date{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-faint)}
   .news-root .tab.active{color:var(--t);border-color:var(--cyan)}
   .news-root .tab.active .date{color:var(--cyan)}
+  /* [26/05/2026] Tab 'Ultimi 30 articoli': accent viola tenue per distinguerlo
+     visivamente dai tab cronologici (Oggi/Domani/Dopodomani). */
+  .news-root .tab-recent .day{color:var(--t-dim)}
+  .news-root .tab-recent.active{border-color:#a78bfa}
+  .news-root .tab-recent.active .day{color:#a78bfa}
+  /* Banner sottile sopra il main quando si e' in modalita' archivio */
+  .news-root .archive-banner{
+    background:linear-gradient(90deg, rgba(167,139,250,0.10), rgba(167,139,250,0.02) 60%, transparent);
+    border-left:3px solid #a78bfa;
+    padding:10px 24px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--t-dim);
+    margin-bottom:14px;
+  }
+  .news-root .archive-banner b{color:#a78bfa;font-weight:600}
+  /* Mobile: tab 'Ultimi 30 articoli' su due righe per non rompere il layout */
+  @media (max-width:760px){
+    .news-root .tab-recent .day{font-size:11px;line-height:1.15;white-space:normal;text-align:center}
+    .news-root .archive-banner{padding:8px 14px;font-size:10px;letter-spacing:0.08em}
+  }
+  /* [26/05/2026] Pallino esito pronostico (live = arancione pulsante) */
+  .news-root .tip-dot-pulse{animation:tipDotPulse 1.4s ease-in-out infinite}
+  @keyframes tipDotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
   .news-root .tabs-meta{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--t-dim)}
   .news-root .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--t);font-size:11.5px}
   .news-root .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
   .news-root .count-pill{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--t-dim)}
 
-  .news-root .masthead{max-width:1280px;margin:0 auto;padding:48px 28px 22px}
-  .news-root .mast-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--t-faint);display:flex;gap:14px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+  .news-root .masthead{max-width:1280px;margin:0 auto;padding:18px 28px 14px}
+  .news-root .mast-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--t-faint);display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
   .news-root .mast-eyebrow .sep{color:var(--t-faint)}
   .news-root .mast-eyebrow b{color:var(--cyan);font-weight:500}
-  .news-root .mast-title{font-size:48px;line-height:1.05;letter-spacing:-0.03em;margin:0;font-weight:600;text-wrap:balance;max-width:1000px}
+  .news-root .mast-title{font-size:36px;line-height:1.1;letter-spacing:-0.025em;margin:0;font-weight:600;text-wrap:balance;max-width:1000px}
   .news-root .mast-title em{font-style:normal;color:var(--cyan)}
-  .news-root .mast-deck{color:var(--t-dim);font-size:16px;margin-top:14px;max-width:760px;line-height:1.6;text-wrap:pretty}
+  .news-root .mast-deck{color:var(--t-dim);font-size:16px;margin-top:8px;max-width:760px;line-height:1.5;text-wrap:pretty}
   .news-root .mast-deck b{color:var(--t);font-weight:500}
 
-  .news-root .filter-wrap{max-width:1280px;margin:0 auto;padding:8px 28px 0}
-  .news-root .filter-bar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:0}
-  .news-root .filter-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;overflow-x:auto;scrollbar-width:none}
+  /* filter-wrap: container centrato 1280px, il gradient sta solo dentro
+     il filter-bar cosi' parte e finisce esattamente dove cominciano e
+     finiscono le 2 linee (border-top/bottom). */
+  .news-root .filter-wrap{max-width:1280px;margin:0 auto;padding:0 28px;position:sticky;top:145px;z-index:39}
+  .news-root .filter-wrap > .filter-bar{background:linear-gradient(90deg, var(--bg) 0%, #0c1b20 20%, #0c1b20 80%, var(--bg) 100%)}
+  :root[data-theme="light"] .news-root .filter-wrap > .filter-bar{background:linear-gradient(90deg, var(--bg) 0%, #d8eef0 20%, #d8eef0 80%, var(--bg) 100%)}
+  .news-root .filter-bar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;display:flex;flex-direction:column;gap:0}
+  .news-root .filter-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;overflow-x:auto;scrollbar-width:none;padding-left:20px}
   .news-root .filter-row::-webkit-scrollbar{display:none}
   .news-root .filter-row .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--t-faint);flex:none;padding-right:4px}
   .news-root .filter-row .sep{color:var(--t-faint);user-select:none;font-size:13px;flex:none}
@@ -505,7 +548,7 @@ const STYLES = `
        sulla destra dei tab per non averlo schiacciato a fianco delle date. */
     .news-root .tabs-meta{display:none}
     .news-root .masthead, .news-root .filter-wrap, .news-root .breadcrumb, .news-root .layout, .news-root .site-foot{padding-left:16px;padding-right:16px}
-    .news-root .mast-title{font-size:30px}
+    .news-root .mast-title{font-size:24px}
     .news-root .mast-deck{font-size:14.5px}
     .news-root .article.feature .a-title, .news-root .a-title{font-size:22px}
     .news-root .pron-card{padding:14px}
@@ -570,7 +613,7 @@ const TickerStrip: React.FC<{
         requestAnimationFrame(init);
         return;
       }
-      const durationS = window.innerWidth < 760 ? 120 : 90;
+      const durationS = window.innerWidth < 760 ? 120 : 120;
       s.speed = s.halfWidth / durationS;
       s.lastFrame = performance.now();
       s.rafId = requestAnimationFrame(animate);
@@ -643,7 +686,7 @@ const TickerStrip: React.FC<{
             >
               <span className="mono">{it.time}</span>
               <b>{it.league} · {it.home}–{it.away}</b>
-              <span className="sep">·</span> pronostico <b>{it.pick}</b> conf. <span className="mono">{it.conf}%</span>
+              <span className="sep">·</span> {it.pick} <span className="mono">{it.conf}%</span>
             </span>
           )) : (
             <span className="ti"><span className="mono">--:--</span><b>Caricamento partite in corso...</b></span>
@@ -654,21 +697,101 @@ const TickerStrip: React.FC<{
   );
 };
 
+// [26/05/2026] NewsStyles: tag <style> con tutto il CSS della pagina, memoized.
+// PERCHE': il componente News re-renderizza ogni secondo per via dell'orologio
+// (setInterval su setClockMono). Senza memo, il tag <style> con i ~2700 caratteri
+// di CSS verrebbe ricreato ogni secondo nel DOM. Effetti collaterali:
+//  1) Le modifiche live dai DevTools (sperimentazione colori) sparivano dopo 1s
+//  2) Spreco di lavoro DOM (~165 kB/min di stringhe CSS ricreate inutilmente)
+// React.memo senza props -> il componente non re-renderizza mai dopo il mount.
+const NewsStyles = React.memo(() => (
+  <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+));
+
+// [26/05/2026] PaginationBar: barra di paginazione riusabile (top + bottom della lista).
+//  - `reversed=true`: per la modalita' "Ultimi 30 articoli", l'utente inizia
+//    dall'ultima pagina (articoli piu' recenti) e clicca "Precedente" per andare
+//    indietro nel tempo. Quindi i bottoni Prev/Next sono invertiti: "Precedente"
+//    fa page+1 (verso il passato), "Successivo" fa page-1 (verso il presente).
+const PaginationBar: React.FC<{
+  page: number;
+  setPage: (updater: number | ((p: number) => number)) => void;
+  totalArticles: number;
+  perPage: number;
+  reversed?: boolean;
+  top?: boolean;
+  // [26/05/2026] Callback cross-tab: se sei al primo estremo (verso il passato)
+  // e clicchi "Precedente", invece di restare disabled saltiamo al tab adiacente
+  // passato (es. Oggi p.1 -> Ultimi 30 ultima pagina). Idem per "Successivo".
+  onJumpPrevTab?: () => void;
+  onJumpNextTab?: () => void;
+}> = ({ page, setPage, totalArticles, perPage, reversed = false, top = false, onJumpPrevTab, onJumpNextTab }) => {
+  const totalPages = Math.max(1, Math.ceil(totalArticles / perPage));
+  // In reversed: "Precedente" = pagina piu' alta (indietro nel tempo).
+  // atPrevEdge = sono all'estremo prev della pagina corrente (page=1 normale,
+  // page=totalPages in reversed).
+  const atPrevEdge = reversed ? page >= totalPages : page <= 1;
+  const atNextEdge = reversed ? page <= 1 : page >= totalPages;
+  // Bottoni "Precedente"/"Successivo" disabilitati SOLO se siamo all'estremo
+  // della pagina E non c'e' un tab adiacente a cui saltare.
+  const disabledPrev = atPrevEdge && !onJumpPrevTab;
+  const disabledNext = atNextEdge && !onJumpNextTab;
+  const goPrev = () => {
+    if (atPrevEdge && onJumpPrevTab) { onJumpPrevTab(); return; }
+    setPage(p => reversed ? Math.min(totalPages, p + 1) : Math.max(1, p - 1));
+  };
+  const goNext = () => {
+    if (atNextEdge && onJumpNextTab) { onJumpNextTab(); return; }
+    setPage(p => reversed ? Math.max(1, p - 1) : Math.min(totalPages, p + 1));
+  };
+  const goFirst = () => setPage(reversed ? totalPages : 1);
+  const goLast = () => setPage(reversed ? 1 : totalPages);
+  const btn = (disabled: boolean): React.CSSProperties => ({
+    padding: '8px 16px', background: 'transparent',
+    color: disabled ? 'var(--t-faint)' : 'var(--cyan)',
+    border: `1px solid ${disabled ? 'var(--t-faint)' : 'var(--cyan)'}`,
+    borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12,
+    fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
+  });
+  const btnSmall = (disabled: boolean): React.CSSProperties => ({ ...btn(disabled), padding: '8px 12px' });
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '1fr 260px', gap: 36,
+      padding: top ? '8px 0 20px' : '24px 0', marginTop: top ? 0 : 8, width: '100%',
+      ...(top ? { borderBottom: '1px dashed var(--line)' } : {}),
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button onClick={goFirst} disabled={totalArticles === 0 || disabledPrev} title={reversed ? 'Pagina piu\' vecchia' : 'Prima pagina'} style={btnSmall(totalArticles === 0 || disabledPrev)}>«</button>
+        <button onClick={goPrev} disabled={disabledPrev} style={btn(disabledPrev)}>← Precedente</button>
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--t-dim)' }}>
+          {totalArticles === 0 ? 'Nessun articolo' : `Pagina ${page} di ${totalPages}`}
+        </span>
+        <button onClick={goNext} disabled={disabledNext} style={btn(disabledNext)}>Successivo →</button>
+        <button onClick={goLast} disabled={totalArticles === 0 || disabledNext} title={reversed ? 'Pagina piu\' recente' : 'Ultima pagina'} style={btnSmall(totalArticles === 0 || disabledNext)}>»</button>
+      </div>
+      <div />
+    </div>
+  );
+};
+
 const News: React.FC<NewsProps> = ({ onBack }) => {
   const navigate = useNavigate();
   // Legge ?tab= dall'URL: 'today'/'tomorrow'/'after' o 'oggi'/'domani'/'dopodomani'
   // Default 'oggi'. Permette al menu nav della Dashboard di aprire News su un
   // tab specifico (es. /news?tab=tomorrow).
   const [searchParams] = useSearchParams();
-  const initialTab: 'oggi' | 'domani' | 'dopodomani' = (() => {
+  const initialTab: 'recenti' | 'oggi' | 'domani' | 'dopodomani' = (() => {
     const t = (searchParams.get('tab') || '').toLowerCase();
+    if (t === 'recent' || t === 'recenti') return 'recenti';
     if (t === 'tomorrow' || t === 'domani') return 'domani';
     if (t === 'after' || t === 'dopodomani') return 'dopodomani';
     return 'oggi';
   })();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [clockMono, setClockMono] = useState('14:32:07 CEST');
-  const [activeTab, setActiveTab] = useState<'oggi' | 'domani' | 'dopodomani'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'recenti' | 'oggi' | 'domani' | 'dopodomani'>(initialTab);
+  const RECENT_LIMIT = 30;
+  const isRecentMode = activeTab === 'recenti';
   const [activeCountry, setActiveCountry] = useState<string>('');
   const [activeLeague, setActiveLeague] = useState<string>('');
   // [25/05/2026] Filtro "Escludi finite": nasconde solo le partite con real_score
@@ -781,27 +904,59 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       setMatches(withArticle);
     };
 
-    // Provo prima la cache sessionStorage (popolata da PredictionsContext o
-    // da una precedente visita a News/NewsArticolo). TTL 5 min: oltre rifaccio
-    // [25/05/2026 TEST] cache sessionStorage temporaneamente disattivata per misurare
-    // tempo di primo caricamento reale.
-
-    const qs = new URLSearchParams({ date: activeDateISO, page: String(page), per_page: String(PER_PAGE) });
+    const qs = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+    if (isRecentMode) {
+      qs.set('mode', 'recent');
+      qs.set('limit', String(RECENT_LIMIT));
+    } else {
+      qs.set('date', activeDateISO);
+    }
     if (activeCountry) qs.set('country', activeCountry);
     if (activeLeague) qs.set('league', activeLeague);
     if (escludiFinite) qs.set('escludi_finite', 'true');
+
+    // [26/05/2026] Cache sessionStorage riattivata con TTL 30 min e chiave che
+    // include tutti i params (date+page+country+league+escludiFinite), cosi'
+    // ogni filtro ha la sua cache separata. Riattivata dopo test 25/05 sul tempo
+    // di primo caricamento reale (~500ms-1s).
+    const cacheKey = `sz-list-${qs.toString()}`;
+    const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached && cached.ts && (Date.now() - cached.ts) < CACHE_TTL_MS) {
+          // Cache fresca: usa subito, salta la fetch
+          setIndexAll(Array.isArray(cached.index) ? cached.index : []);
+          setTotalArticles(cached.total ?? (cached.predictions?.length || 0));
+          processPredictions(cached.predictions || []);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch { /* parse fallito o storage non disponibile: ignora e fetcha */ }
+
     fetch(`${API_BASE}/lazy/news-list?${qs.toString()}`)
       .then(r => r.json())
       .then((data: ApiResp) => {
         if (cancelled) return;
         const preds = Array.isArray(data?.predictions) ? data.predictions : [];
         const idx = Array.isArray((data as any)?.index) ? (data as any).index : [];
+        const total = (data as any)?.total ?? preds.length;
         setIndexAll(idx);
-        setTotalArticles((data as any)?.total ?? preds.length);
+        setTotalArticles(total);
         processPredictions(preds);
-        // Cache in sessionStorage: NewsArticolo riusa il payload invece di
-        // rifare la stessa fetch da 6s. TTL 5 min via timestamp.
+        // Cache in sessionStorage: incluso index+total cosi' la sidebar e i
+        // contatori non vengono persi. TTL 30 min via timestamp.
         try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({
+            ts: Date.now(),
+            predictions: preds,
+            index: idx,
+            total,
+          }));
+          // Legacy compat: NewsArticolo legge ancora sz-v2-{date}. Manteniamo
+          // anche quella chiave (solo predictions, senza index/total).
           sessionStorage.setItem(`sz-v2-${activeDateISO}`, JSON.stringify({
             ts: Date.now(),
             predictions: preds,
@@ -811,12 +966,86 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       .catch(err => { if (!cancelled) setError(err?.message || 'Errore di rete'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [activeDateISO, page, activeCountry, activeLeague, escludiFinite]);
+  }, [activeDateISO, page, activeCountry, activeLeague, escludiFinite, isRecentMode]);
 
   // [25/05/2026] Al cambio filtro (country/league/escludiFinite) torno sempre a pagina 1.
   useEffect(() => {
     setPage(1);
   }, [activeCountry, activeLeague, escludiFinite]);
+
+  // [26/05/2026] Quando si entra in modalita' Recenti, parto dall'ultima pagina
+  // (= articoli piu' recenti in cima, ordine cronologico inverso). L'utente
+  // intuitivamente clicca "Precedente" per andare indietro nel tempo.
+  // Lo faccio dopo il fetch quando ho totalArticles affidabile.
+  const prevRecentRef = React.useRef(false);
+  useEffect(() => {
+    if (isRecentMode && !prevRecentRef.current && totalArticles > 0) {
+      const totalPages = Math.max(1, Math.ceil(totalArticles / PER_PAGE));
+      setPage(totalPages);
+      prevRecentRef.current = true;
+    } else if (!isRecentMode && prevRecentRef.current) {
+      prevRecentRef.current = false;
+      setPage(1);
+    }
+  }, [isRecentMode, totalArticles]);
+
+  // [26/05/2026] Cross-tab pagination: quando saltiamo a un tab adiacente,
+  // dobbiamo poi posizionarci sulla prima o ultima pagina del nuovo tab.
+  // 'first' = piu' lontano dal punto di partenza nella timeline.
+  // 'last' = piu' vicino al punto di partenza.
+  const pendingPageAfterTabSwitch = React.useRef<'first' | 'last' | null>(null);
+  useEffect(() => {
+    if (pendingPageAfterTabSwitch.current && totalArticles > 0) {
+      const totalPages = Math.max(1, Math.ceil(totalArticles / PER_PAGE));
+      // Salto verso il PASSATO -> arrivo all'ultima pagina del tab passato (= la piu' vicina al presente)
+      //   - in modalita' non-reversed (Oggi/Domani/Dopodomani): "ultima" = totalPages
+      //   - in modalita' reversed (Recenti): "ultima" = 1 (piu' recente)
+      // Salto verso il FUTURO -> arrivo alla prima pagina del tab futuro (= la piu' vicina al passato)
+      //   - non-reversed: "prima" = 1
+      //   - reversed: "prima" = totalPages (piu' vecchia)
+      const target = pendingPageAfterTabSwitch.current;
+      const reversed = isRecentMode;
+      let nextPage: number;
+      if (target === 'last') {
+        nextPage = reversed ? 1 : totalPages;
+      } else {
+        nextPage = reversed ? totalPages : 1;
+      }
+      setPage(nextPage);
+      pendingPageAfterTabSwitch.current = null;
+    }
+  }, [activeTab, totalArticles, isRecentMode]);
+
+  // Ordine timeline tab + helper jump
+  const TAB_ORDER: Array<'recenti' | 'oggi' | 'domani' | 'dopodomani'> = ['recenti', 'oggi', 'domani', 'dopodomani'];
+  const jumpToPrevTab = () => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx <= 0) return; // siamo al primo, non si salta
+    pendingPageAfterTabSwitch.current = 'last'; // arrivo all'ultima pagina del tab passato
+    // Resetto il flag Recenti cosi' l'init di Recenti non scatta (vogliamo
+    // controllarlo noi con pendingPageAfterTabSwitch).
+    if (TAB_ORDER[idx - 1] === 'recenti') prevRecentRef.current = true;
+    setActiveTab(TAB_ORDER[idx - 1]);
+  };
+  const jumpToNextTab = () => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx === -1 || idx >= TAB_ORDER.length - 1) return;
+    pendingPageAfterTabSwitch.current = 'first';
+    if (TAB_ORDER[idx + 1] === 'recenti') prevRecentRef.current = true;
+    setActiveTab(TAB_ORDER[idx + 1]);
+  };
+  const canJumpPrev = TAB_ORDER.indexOf(activeTab) > 0;
+  const canJumpNext = TAB_ORDER.indexOf(activeTab) < TAB_ORDER.length - 1;
+
+  // [26/05/2026] Scroll-to-top al cambio pagina, sia in modalita' Recenti sia
+  // negli altri tab. L'utente che cambia pagina vuole vedere subito le nuove
+  // card dall'inizio, non restare a meta' della pagina precedente.
+  const isFirstRender = React.useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
 
   const countryOf = (m: Match): string => LEAGUE_TO_COUNTRY[m.league || m.lega || ''] || '';
 
@@ -904,6 +1133,35 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   // Se cluster ha una sola ora distinta, scrivo solo quella.
   type Cluster = { id: string; label: string; matches: Match[] };
   const clusters: Cluster[] = useMemo(() => {
+    // [26/05/2026] Modalita' archivio: cluster per giornata invece che per fascia oraria.
+    // Le partite gia' giocate non beneficiano dei cluster temporali (l'orario non serve a
+    // pianificare cosa guardare nel pomeriggio/sera). Cluster ordinati dalla giornata piu'
+    // recente alla piu' vecchia, coerente col sort cronologico inverso del backend.
+    if (isRecentMode) {
+      const byDate = new Map<string, Match[]>();
+      for (const m of indexFiltered) {
+        const d = m.date || '?';
+        if (!byDate.has(d)) byDate.set(d, []);
+        byDate.get(d)!.push(m);
+      }
+      // Cluster sidebar: dal piu' vecchio al piu' recente (l'utente scorre dall'alto
+      // arrivando man mano al presente; coerente con la lettura cronologica naturale).
+      const sortedDates = Array.from(byDate.keys()).sort((a, b) => a.localeCompare(b));
+      const fmtDateIt = (iso: string): string => {
+        if (!iso || iso === '?') return 'Senza data';
+        const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return iso;
+        const dt = new Date(`${iso}T00:00:00`);
+        const giorno = GIORNI_LUNGHI[dt.getDay()];
+        const mese = MESI[parseInt(m[2], 10) - 1];
+        return `${giorno.charAt(0).toUpperCase() + giorno.slice(1)} ${parseInt(m[3], 10)} ${mese}`;
+      };
+      return sortedDates.map((d, idx) => ({
+        id: `cl-day-${idx}`,
+        label: fmtDateIt(d),
+        matches: byDate.get(d)!,
+      }));
+    }
     // [25/05/2026] Cluster sidebar = TUTTI gli articoli del giorno (indexFiltered),
     // non solo quelli della pagina corrente.
     const withTime = indexFiltered.filter(m => m.match_time && /^\d{1,2}:\d{2}/.test(m.match_time));
@@ -947,7 +1205,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       groups.push({ id: 'cl-tbd', label: 'Orario da definire', matches: noTime });
     }
     return groups;
-  }, [indexFiltered]);
+  }, [indexFiltered, isRecentMode]);
 
   // Stato accordion: quali cluster sono aperti. Di default tutti chiusi.
   const [openClusters, setOpenClusters] = useState<Set<string>>(new Set());
@@ -1020,14 +1278,17 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     });
     setTickerItems(items);
   }, [matches, datesTabs]);  // si aggiorna quando matches cambia (= nuova cache disponibile)
-  const activeDateObj = activeTab === 'oggi' ? datesTabs.today : activeTab === 'domani' ? datesTabs.tomorrow : datesTabs.after;
+  const activeDateObj = activeTab === 'oggi' ? datesTabs.today
+                       : activeTab === 'domani' ? datesTabs.tomorrow
+                       : activeTab === 'dopodomani' ? datesTabs.after
+                       : datesTabs.today; // fallback per 'recenti' (non usato direttamente nel render)
   const GIORNI = ['dom','lun','mar','mer','gio','ven','sab'];
   const now = new Date();
   const dateLabelChyron = `${GIORNI[now.getDay()]} ${now.getDate()} ${MESI[now.getMonth()]} ${now.getFullYear()}`;
 
   return (
     <div className="news-root" data-screen-label="Mockup D · Home">
-      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+      <NewsStyles />
 
       {/* ============ CHYRON ============ */}
       <header className="chyron">
@@ -1071,6 +1332,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       <div className="tabs-wrap">
         <div className="tabs">
           <div className="tabs-left">
+            <div className={`tab tab-recent ${activeTab === 'recenti' ? 'active' : ''}`} onClick={() => setActiveTab('recenti')}><span className="day">Ultimi 30 articoli</span></div>
             <div className={`tab ${activeTab === 'oggi' ? 'active' : ''}`} onClick={() => setActiveTab('oggi')}><span className="day">Oggi</span><span className="date">{fmtDateLabel(datesTabs.today)}</span></div>
             <div className={`tab ${activeTab === 'domani' ? 'active' : ''}`} onClick={() => setActiveTab('domani')}><span className="day">Domani</span><span className="date">{fmtDateLabel(datesTabs.tomorrow)}</span></div>
             <div className={`tab ${activeTab === 'dopodomani' ? 'active' : ''}`} onClick={() => setActiveTab('dopodomani')}><span className="day">Dopodomani</span><span className="date">{fmtDateLabel(datesTabs.after)}</span></div>
@@ -1150,7 +1412,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
       {/* ============ LAYOUT (dinamico, dati reali dal backend) ============ */}
       <div className="layout">
         <aside className="index-rail">
-          <div className="ir-h">Indice · {activeTab} <span className="ir-count">({shown})</span></div>
+          <div className="ir-h">Indice · {isRecentMode ? 'archivio' : activeTab} <span className="ir-count">({shown})</span></div>
           <div className="ir-clusters">
             {/* Accordion per fasce orarie (cluster naturali con gap > 60 min) */}
             {clusters.map(cluster => {
@@ -1211,7 +1473,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                                         className={`ir-item ${activeRail === id ? 'active' : ''}`}
                                         onClick={(e) => { setActiveRail(id); openArticle(e, m); }}
                                       >
-                                        {m.match_time || MISSING_PLAIN}<span className="lbl">{m.home} · {m.away}</span>
+                                        {isRecentMode ? '' : (m.match_time || MISSING_PLAIN)}<span className="lbl">{m.home} · {m.away}</span>
                                       </a>
                                     );
                                   })}
@@ -1236,6 +1498,11 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         </aside>
 
         <main className="stack">
+          {isRecentMode && (
+            <div className="archive-banner">
+              <b>Archivio</b> · ultimi {RECENT_LIMIT} articoli pubblicati · ordine cronologico inverso
+            </div>
+          )}
           {loading && <ShimmerBar />}
           {!loading && error && (
             <div className="empty-state show">
@@ -1251,6 +1518,12 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                 : 'Nessun articolo disponibile per questa giornata. Riprova più tardi o cambia data.'}</p>
             </div>
           )}
+          {/* [26/05/2026] Paginazione top (oltre che bottom): comoda quando si scorre dopo
+              aver letto le card, non serve scrollare fino in fondo per cambiare pagina.
+              Mostrata anche con 1 sola pagina (bottoni disabilitati) per coerenza visiva. */}
+          {!loading && !error && (totalArticles > 0 || canJumpPrev || canJumpNext) && (
+            <PaginationBar page={page} setPage={setPage} totalArticles={totalArticles} perPage={PER_PAGE} reversed={isRecentMode} top onJumpPrevTab={canJumpPrev ? jumpToPrevTab : undefined} onJumpNextTab={canJumpNext ? jumpToNextTab : undefined} />
+          )}
           {!loading && !error && filtered.map((m, idx) => {
             const id = `a-${idx + 1}`;
             // [25/05/2026] Endpoint /lazy/news-list manda scout_text_preview (lede gia' tagliato
@@ -1265,6 +1538,52 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
             const tip = getTopTip(m);
             const conf = tip?.confidence || 0;
             const confMed = conf < 60;
+            // [26/05/2026] Stato del pronostico per badge pallino nella card lista.
+            // 4 stati: 'won' (verde fisso), 'lost' (rosso fisso), 'live' (arancione
+            // pulsante - solo stato partita, non aggiornato in real-time perche' la
+            // pagina News non e' pensata per i live), 'upcoming' (grigio - partita
+            // non ancora cominciata), null (no dato).
+            const tipStatus: 'won' | 'lost' | 'live' | 'upcoming' | null = (() => {
+              const rs = (m as any).real_score as string | undefined;
+              const liveStatus = (m as any).live_status as string | undefined;
+              // Partita LIVE: prevale sullo stato esito (anche se c'e' un live_score parziale)
+              const isLive = liveStatus && liveStatus !== 'Finished' && liveStatus !== 'finished'
+                          && liveStatus !== 'FT' && liveStatus !== 'notstarted' && liveStatus !== '';
+              if (isLive) return 'live';
+              // Partita finita con risultato: calcolo vinto/perso contro real_score
+              if (rs && tip?.pronostico && tip.tipo) {
+                const s = rs.replace('-', ':').trim();
+                if (s.includes(':')) {
+                  const [hStr, aStr] = s.split(':');
+                  const h = parseInt(hStr, 10), a = parseInt(aStr, 10);
+                  if (!isNaN(h) && !isNaN(a)) {
+                    const sign = h > a ? '1' : (a > h ? '2' : 'X');
+                    const total = h + a, btts = h > 0 && a > 0;
+                    const p = String(tip.pronostico).trim();
+                    const pl = p.toLowerCase();
+                    const t = String(tip.tipo).toUpperCase();
+                    let hit: boolean | null = null;
+                    if (t === 'SEGNO') hit = sign === p;
+                    else if (t === 'DOPPIA_CHANCE') hit = p.includes(sign);
+                    else if (t === 'GOL') {
+                      if (pl.startsWith('over')) {
+                        const n = parseFloat(pl.replace('over', '').trim());
+                        hit = isNaN(n) ? null : total > n;
+                      } else if (pl.startsWith('under')) {
+                        const n = parseFloat(pl.replace('under', '').trim());
+                        hit = isNaN(n) ? null : total < n;
+                      } else if (pl === 'goal' || pl === 'gg') hit = btts;
+                      else if (pl === 'nogoal' || pl === 'ng' || pl === 'no goal') hit = !btts;
+                    }
+                    if (hit === true) return 'won';
+                    if (hit === false) return 'lost';
+                  }
+                }
+              }
+              // Partita non ancora cominciata (no real_score, no live): upcoming
+              if (tip?.pronostico) return 'upcoming';
+              return null;
+            })();
             const dotColor = leagueDotColor(m.league || '');
             const title = `${m.home}–${m.away}: ${tip?.pronostico ? `pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : 'analisi pre-partita'}`;
             // Redattore assegnato (deterministico: stessa partita = sempre stesso redattore)
@@ -1277,7 +1596,17 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                       <span className="ld" style={{ background: dotColor }} />
                       {m.league || m.lega || todoTag('lega')}
                     </span>
-                    <span className="ko">Kickoff {m.match_time || missingTag('orario')}{m.news_meta?.stadio?.name ? <>{' '}· {m.news_meta.stadio.name}</> : <>{' '}· {missingTag('stadio')}</>}</span>
+                    <span className="ko">{(() => {
+                      // [26/05/2026] Data partita: utile anche nei tab Oggi/Domani/Dopodomani
+                      // come ancora rapida ("ho cliccato cosa?"), essenziale in Recenti dove
+                      // si mischiano piu' giornate.
+                      const ds = m.date || '';
+                      const mDate = ds.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                      const dateLabel = mDate
+                        ? `${parseInt(mDate[3], 10)} ${MESI[parseInt(mDate[2], 10) - 1]}`
+                        : '';
+                      return dateLabel ? `${dateLabel} · ` : '';
+                    })()}Kickoff {m.match_time || missingTag('orario')}{m.news_meta?.stadio?.name ? <>{' '}· {m.news_meta.stadio.name}</> : <>{' '}· {missingTag('stadio')}</>}</span>
                     <span className={effort === 'DEEP' ? 'deep' : 'lite'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
                   </div>
                   <div className="match-line">
@@ -1369,7 +1698,30 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
                   </div>
                 </div>
                 <aside className="pron-card">
-                  <div className="pron-h"><span>Pronostico AI</span><span className="src-count">{effort === 'DEEP' ? 'Scout Deep' : 'Scout Lite'}</span></div>
+                  <div className="pron-h">
+                    <span>Pronostico AI</span>
+                    {tipStatus && (() => {
+                      const cfg = {
+                        won:      { color: 'var(--green)',  glow: 'rgba(74,222,128,0.5)',  pulse: false, title: 'Pronostico vincente' },
+                        lost:     { color: 'var(--red)',    glow: 'rgba(239,68,68,0.5)',   pulse: false, title: 'Pronostico perdente' },
+                        live:     { color: '#fb923c',        glow: 'rgba(251,146,60,0.6)',  pulse: true,  title: 'Partita in corso' },
+                        upcoming: { color: 'var(--t-faint)', glow: 'transparent',           pulse: false, title: 'Partita non ancora cominciata' },
+                      }[tipStatus];
+                      return (
+                        <span
+                          title={cfg.title}
+                          className={cfg.pulse ? 'tip-dot tip-dot-pulse' : 'tip-dot'}
+                          style={{
+                            display: 'inline-block',
+                            width: 8, height: 8, borderRadius: '50%',
+                            background: cfg.color,
+                            boxShadow: `0 0 4px ${cfg.glow}`,
+                          }}
+                        />
+                      );
+                    })()}
+                    <span className="src-count">{effort === 'DEEP' ? 'Scout Deep' : 'Scout Lite'}</span>
+                  </div>
                   <div className="pron-main">
                     <div className="pron-pick">
                       <b>{tip?.pronostico || '—'}</b>
@@ -1406,22 +1758,10 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               </article>
             );
           })}
-          {/* [25/05/2026] Paginazione: 5 articoli per pagina (PER_PAGE) */}
-          {!loading && !error && totalArticles > PER_PAGE && (() => {
-            const totalPages = Math.ceil(totalArticles / PER_PAGE);
-            return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 36, padding: '24px 0', marginTop: 8, width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <button onClick={() => setPage(1)} disabled={page <= 1} title="Prima pagina" style={{ padding: '8px 12px', background: 'transparent', color: page <= 1 ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page <= 1 ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>«</button>
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', background: 'transparent', color: page <= 1 ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page <= 1 ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>← Precedente</button>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--t-dim)' }}>Pagina {page} di {totalPages}</span>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ padding: '8px 16px', background: 'transparent', color: page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>Successivo →</button>
-                  <button onClick={() => setPage(totalPages)} disabled={page >= totalPages} title="Ultima pagina" style={{ padding: '8px 12px', background: 'transparent', color: page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)', border: `1px solid ${page >= totalPages ? 'var(--t-faint)' : 'var(--cyan)'}`, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>»</button>
-                </div>
-                <div />
-              </div>
-            );
-          })()}
+          {/* [25/05/2026] Paginazione bottom (sempre visibile anche con 1 pagina sola) */}
+          {!loading && !error && totalArticles > 0 && (
+            <PaginationBar page={page} setPage={setPage} totalArticles={totalArticles} perPage={PER_PAGE} reversed={isRecentMode} onJumpPrevTab={canJumpPrev ? jumpToPrevTab : undefined} onJumpNextTab={canJumpNext ? jumpToNextTab : undefined} />
+          )}
         </main>
       </div>
 

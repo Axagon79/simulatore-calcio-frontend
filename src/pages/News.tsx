@@ -1585,7 +1585,12 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               return null;
             })();
             const dotColor = leagueDotColor(m.league || '');
-            const title = `${m.home}–${m.away}: ${tip?.pronostico ? `pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : 'analisi pre-partita'}`;
+            // [27/05/2026] Cascata titolo: Scout DEEP > Scout LITE > auto-generato.
+            // Il titolo Scout (giornalistico, generato dall'LLM) e' molto piu' editoriale
+            // del fallback algoritmico ("home-away: pronostico X con confidenza Y%").
+            const scoutTitolo = (sd?.raw_json?.titolo || sl?.raw_json?.titolo || '').trim();
+            const title = scoutTitolo
+              || `${m.home}–${m.away}: ${tip?.pronostico ? `pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : 'analisi pre-partita'}`;
             // Redattore assegnato (deterministico: stessa partita = sempre stesso redattore)
             const redattore = assegnaRedattore({ home: m.home, away: m.away, date: m.date, league: m.league || m.lega || '' });
             return (

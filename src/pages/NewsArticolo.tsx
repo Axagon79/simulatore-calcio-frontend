@@ -1498,7 +1498,20 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 <span className={effort === 'DEEP' ? 'deep' : 'deep'} style={effort === 'LITE' ? { color: 'var(--yellow)' } : undefined}>{effort}</span>
               </div>
               <h1 className="a-title">
-                <span className="player-link" onClick={() => openTeamModal(home)}>{home}</span> – <span className="player-link" onClick={() => openTeamModal(away)}>{away}</span>{tip?.pronostico ? `: pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : ''}
+                {(() => {
+                  // [27/05/2026] Cascata titolo: Scout DEEP > Scout LITE > fallback auto-generato.
+                  const scoutTitolo = (
+                    (matchData?.scout_deep as any)?.raw_json?.titolo ||
+                    (matchData?.scout_lite as any)?.raw_json?.titolo ||
+                    ''
+                  ).trim();
+                  if (scoutTitolo) return scoutTitolo;
+                  return (
+                    <>
+                      <span className="player-link" onClick={() => openTeamModal(home)}>{home}</span> – <span className="player-link" onClick={() => openTeamModal(away)}>{away}</span>{tip?.pronostico ? `: pronostico ${tip.pronostico} con confidenza ${conf.toFixed(0)}%` : ''}
+                    </>
+                  );
+                })()}
               </h1>
               <p className="a-subtitle">
                 Articolo generato dalla redazione AI di AI Simulator a partire da fonti pubbliche, conferenze stampa e dati statistici. Tipo: <b>{effort === 'DEEP' ? 'Scout Deep' : 'Scout Lite'}</b>.

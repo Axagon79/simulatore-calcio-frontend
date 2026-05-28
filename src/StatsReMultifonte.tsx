@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from './AppDev/costanti';
+const STATS_RE_BASE = `${API_BASE}/admin/stats-re-multifonte`;
 
 /* =========================================================================
    STATS RE MULTIFONTE — ADMIN DASHBOARD (React port)
@@ -404,6 +406,56 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
   const [activeSub, setActiveSub] = useState<string>('globale');
   const [filters, setFilters] = useState<ActiveFilter[]>(MOCK_ACTIVE_FILTERS);
 
+  // [27/05/2026] Fetch dati reali da backend statsReRoutes.js (al mount, no filtri date).
+  // Fallback ai MOCK_* se la fetch fallisce (es. backend non deployato / endpoint giu').
+  const [matches, setMatches] = useState<MockMatch[]>(MOCK_MATCHES);
+  const [globalStats, setGlobalStats] = useState<typeof MOCK_GLOBAL_STATS>(MOCK_GLOBAL_STATS);
+  const [sourceDetail, setSourceDetail] = useState<typeof MOCK_SOURCE_DETAIL>(MOCK_SOURCE_DETAIL);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFetchError(null);
+    Promise.all([
+      fetch(`${STATS_RE_BASE}/matches`).then(r => r.json()).catch(() => null),
+      fetch(`${STATS_RE_BASE}/aggregate`).then(r => r.json()).catch(() => null),
+      // Source detail: fetch parallelo per tutte e 7 le sorgenti (sub-tab di Tab2)
+      ...SOURCES.map(s =>
+        fetch(`${STATS_RE_BASE}/source/${s.id}`).then(r => r.json()).then(d => ({ id: s.id, data: d })).catch(() => null)
+      ),
+    ])
+      .then((results: any[]) => {
+        if (cancelled) return;
+        const [matchesRes, aggRes, ...sourceResults] = results;
+        if (matchesRes?.success && Array.isArray(matchesRes.matches)) {
+          setMatches(matchesRes.matches);
+        }
+        if (aggRes?.success) {
+          setGlobalStats({
+            total_matches: aggRes.total_matches,
+            period: aggRes.period,
+            sources: aggRes.sources,
+          });
+        }
+        const detail: typeof MOCK_SOURCE_DETAIL = {};
+        for (const r of sourceResults) {
+          if (r?.data?.success) {
+            detail[r.id] = {
+              by_country: r.data.by_country || [],
+              by_league: r.data.by_league || [],
+              weekly: r.data.weekly || [],
+            };
+          }
+        }
+        if (Object.keys(detail).length > 0) setSourceDetail(detail);
+      })
+      .catch(err => { if (!cancelled) setFetchError(err?.message || 'Errore di rete'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   // Inject styles in <head> on mount
   useEffect(() => {
     const styleEl = document.createElement('style');
@@ -416,6 +468,38 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
   const removeFilter = (id: string) => setFilters(prev => prev.filter(f => f.id !== id));
   const clearAllFilters = () => setFilters([]);
 
+  // [27/05/2026] Pattern Builder: state + helper per aggiungere filtri.
+  // openForm: stringa identificativa del bottone cliccato (es. 'src_scout_lite',
+  // 'periodo', 'geo_country', 're_chi_segna') o null se nessun form aperto.
+  const [openForm, setOpenForm] = useState<string | null>(null);
+  const addFilter = (f: ActiveFilter) => {
+    setFilters(prev => [...prev, { ...f, id: `f${Date.now()}-${Math.random().toString(36).slice(2,6)}` }]);
+    setOpenForm(null);
+  };
+
+  // Status options per "Performance fonti" (5 condizioni per ogni fonte)
+  const POS_OPTIONS: Array<{ key: string; label: string; pos?: number | 'miss'; cls: string }> = [
+    { key: 'pos1', label: 'hit 1°',          pos: 1,      cls: 'pos1' },
+    { key: 'pos2', label: 'hit 2°',          pos: 2,      cls: 'pos2' },
+    { key: 'pos3', label: 'hit 3°',          pos: 3,      cls: 'pos3' },
+    { key: 'hit',  label: 'hit (1°-3°)',                  cls: 'hit'  },
+    { key: 'miss', label: 'miss',            pos: 'miss', cls: 'miss' },
+  ];
+
+  // Nazioni e leghe disponibili (statiche per ora — quando i filtri verranno
+  // applicati via fetch backend, il dataset puo' essere derivato dalla risposta).
+  const COUNTRIES_OPT = ['Italia','Inghilterra','Spagna','Germania','Francia','Olanda','Portogallo','Scozia','Belgio','Turchia','Brasile','USA','Messico','Argentina','Arabia Saudita','Giappone','Svezia','Norvegia','Danimarca','Finlandia','Irlanda'];
+  const LEAGUES_OPT = ['Serie A','Serie B','Premier League','Championship','La Liga','LaLiga 2','Bundesliga','2. Bundesliga','Ligue 1','Eredivisie','Liga Portugal','Scottish Premiership','Jupiler Pro League','Süper Lig','Brasileirão Serie A','Major League Soccer','Liga MX','Primera División','Saudi Pro League','Allsvenskan','Eliteserien','Superligaen','Veikkausliiga'];
+  const SEGNI_OPT = ['1','X','2'];
+  const CHI_SEGNA_OPT = [
+    { key: 'solo_casa',   label: 'solo casa' },
+    { key: 'solo_away',   label: 'solo trasferta' },
+    { key: 'entrambe',    label: 'entrambe (GG)' },
+    { key: 'nessuna',     label: 'nessuna (0:0)' },
+  ];
+  // Risultati esatti piu' comuni (selezione typical, copre ~85% dei casi)
+  const RE_OPT = ['0:0','1:0','0:1','1:1','2:0','0:2','2:1','1:2','2:2','3:0','0:3','3:1','1:3','3:2','2:3','3:3','4:0','0:4','4:1','1:4'];
+
   // Group filters by group
   const filtersByGroup: Record<string, ActiveFilter[]> = { sources: [], time: [], match: [] };
   filters.forEach(f => filtersByGroup[f.group].push(f));
@@ -426,21 +510,21 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
     ...SOURCES.map(s => ({
       id: s.id,
       label: s.label,
-      hint: pct(MOCK_GLOBAL_STATS.sources[s.id].rate, 1),
+      hint: pct(globalStats.sources[s.id]?.rate ?? 0, 1),
       color: s.color,
     })),
   ];
 
   /* ----- Tab2 Global ordering ----- */
-  const orderedSources = SOURCES.map(s => ({ ...s, ...MOCK_GLOBAL_STATS.sources[s.id] }))
+  const orderedSources = SOURCES.map(s => ({ ...s, ...(globalStats.sources[s.id] || { matches:0, hit:0, pos1:0, pos2:0, pos3:0, miss:0, rate:0 }) }))
     .sort((a, b) => b.rate - a.rate);
   const best = orderedSources[0];
   const worst = orderedSources[orderedSources.length - 1];
   const maxRate = Math.max(...orderedSources.map(s => s.rate));
 
   /* ----- Tab2 Monte Carlo data ----- */
-  const mcData = MOCK_SOURCE_DETAIL.monte_carlo;
-  const mcStats = MOCK_GLOBAL_STATS.sources.monte_carlo;
+  const mcData = sourceDetail.monte_carlo || { by_country: [], by_league: [], weekly: [] };
+  const mcStats = globalStats.sources.monte_carlo || { matches:0, hit:0, pos1:0, pos2:0, pos3:0, miss:0, rate:0 };
   const mcSlices = [
     { lab: '1° posizione', v: mcStats.pos1, c: '#34d399' },
     { lab: '2° posizione', v: mcStats.pos2, c: '#00d4ff' },
@@ -503,15 +587,269 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
     match: '+ aggiungi caratteristica',
   };
 
+  /* ============== Pattern Builder — render bottoni + form inline ============== */
+  const fmtBox: React.CSSProperties = {
+    display: 'inline-flex', flexDirection: 'column', gap: 8,
+    padding: '12px 14px', background: 'var(--bg-elev-2)',
+    border: '1px solid var(--border-strong)', borderRadius: 8,
+    marginTop: 6,
+  };
+  const fmtRow: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' };
+  const fmtLabel: React.CSSProperties = { fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' };
+  const fmtInput: React.CSSProperties = { padding: '5px 8px', background: 'var(--bg-elev-1)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontFamily: 'inherit', fontSize: 12 };
+  const fmtBtn: React.CSSProperties = { padding: '5px 12px', background: 'var(--bg-elev-3)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text)', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer' };
+  const fmtBtnPrimary: React.CSSProperties = { ...fmtBtn, background: 'var(--grad)', color: '#08111a', fontWeight: 600 };
+
+  // Component: dropdown semplice "select"
+  const renderSelect = (value: string, options: Array<{value:string;label:string}>, onChange: (v:string)=>void) => (
+    <select style={fmtInput} value={value} onChange={e => onChange(e.target.value)}>
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+
+  // Component: multi-checkbox compatto
+  const renderMultiCheck = (values: string[], options: string[], onChange: (v:string[])=>void) => (
+    <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, maxWidth: 480 }}>
+      {options.map(o => {
+        const checked = values.includes(o);
+        return (
+          <button
+            key={o}
+            type="button"
+            onClick={() => onChange(checked ? values.filter(v => v !== o) : [...values, o])}
+            style={{
+              padding: '4px 10px', borderRadius: 999,
+              border: `1px solid ${checked ? 'var(--cyan, #00d4ff)' : 'var(--border)'}`,
+              background: checked ? 'rgba(0,212,255,0.12)' : 'var(--bg-elev-1)',
+              color: checked ? 'var(--text)' : 'var(--text-dim)',
+              fontSize: 11, fontFamily: 'inherit', cursor: 'pointer',
+            }}
+          >
+            {o}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // --- Form Performance fonti ---
+  const FormSourceCondition: React.FC<{ src: { id: string; label: string } }> = ({ src }) => {
+    const [pos, setPos] = useState<string>('hit');
+    return (
+      <div style={fmtBox}>
+        <div style={fmtRow}>
+          <span style={fmtLabel}>{src.label}</span>
+          {renderSelect(pos, POS_OPTIONS.map(o => ({ value: o.key, label: o.label })), setPos)}
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} onClick={() => {
+            const opt = POS_OPTIONS.find(o => o.key === pos)!;
+            addFilter({
+              id: '', group: 'sources', type: pos === 'hit' ? 'src_hit' : 'src_pos',
+              source: src.id, pos: opt.pos, cls: opt.cls,
+              label: src.label, op: '=', value: opt.label,
+            });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Periodo (date from + date to) ---
+  const FormPeriodo: React.FC = () => {
+    const [from, setFrom] = useState<string>('');
+    const [to, setTo] = useState<string>('');
+    return (
+      <div style={fmtBox}>
+        <div style={fmtRow}>
+          <span style={fmtLabel}>Dal</span>
+          <input type="date" style={fmtInput} value={from} onChange={e => setFrom(e.target.value)} />
+          <span style={fmtLabel}>Al</span>
+          <input type="date" style={fmtInput} value={to} onChange={e => setTo(e.target.value)} />
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={!from && !to} onClick={() => {
+            const val = from && to ? `${from} → ${to}` : from ? `dal ${from}` : `fino al ${to}`;
+            addFilter({ id:'', group:'time', type:'date_range', label:'Periodo', op:'=', value: val });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Nazione (multi-select) ---
+  const FormNazione: React.FC = () => {
+    const [sel, setSel] = useState<string[]>([]);
+    return (
+      <div style={fmtBox}>
+        <div style={{ ...fmtRow, alignItems:'flex-start' }}>
+          <span style={fmtLabel}>Nazioni</span>
+          {renderMultiCheck(sel, COUNTRIES_OPT, setSel)}
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={sel.length === 0} onClick={() => {
+            addFilter({ id:'', group:'time', type:'country', label:'Nazione', op:'=', value: sel.join(', ') });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Lega (multi-select) ---
+  const FormLega: React.FC = () => {
+    const [sel, setSel] = useState<string[]>([]);
+    return (
+      <div style={fmtBox}>
+        <div style={{ ...fmtRow, alignItems:'flex-start' }}>
+          <span style={fmtLabel}>Leghe</span>
+          {renderMultiCheck(sel, LEAGUES_OPT, setSel)}
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={sel.length === 0} onClick={() => {
+            addFilter({ id:'', group:'time', type:'league', label:'Lega', op:'=', value: sel.join(', ') });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Range gol totali (min, max) ---
+  const FormRangeGol: React.FC = () => {
+    const [min, setMin] = useState<string>('');
+    const [max, setMax] = useState<string>('');
+    return (
+      <div style={fmtBox}>
+        <div style={fmtRow}>
+          <span style={fmtLabel}>Gol totali</span>
+          <span style={fmtLabel}>min</span>
+          <input type="number" min={0} max={20} style={{ ...fmtInput, width: 70 }} value={min} onChange={e => setMin(e.target.value)} />
+          <span style={fmtLabel}>max</span>
+          <input type="number" min={0} max={20} style={{ ...fmtInput, width: 70 }} value={max} onChange={e => setMax(e.target.value)} />
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={!min && !max} onClick={() => {
+            const val = min && max ? `${min} – ${max}` : min ? `≥ ${min}` : `≤ ${max}`;
+            addFilter({ id:'', group:'match', type:'goals_range', label:'Gol totali', op:'∈', value: val });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Chi segna ---
+  const FormChiSegna: React.FC = () => {
+    const [sel, setSel] = useState<string[]>([]);
+    const opts = CHI_SEGNA_OPT.map(o => o.label);
+    return (
+      <div style={fmtBox}>
+        <div style={fmtRow}>
+          <span style={fmtLabel}>Chi segna</span>
+          {renderMultiCheck(sel, opts, setSel)}
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={sel.length === 0} onClick={() => {
+            addFilter({ id:'', group:'match', type:'chi_segna', label:'Chi segna', op:'∈', value: sel.join(', ') });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Esito segno ---
+  const FormSegno: React.FC = () => {
+    const [sel, setSel] = useState<string[]>([]);
+    return (
+      <div style={fmtBox}>
+        <div style={fmtRow}>
+          <span style={fmtLabel}>Esito segno</span>
+          {renderMultiCheck(sel, SEGNI_OPT, setSel)}
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={sel.length === 0} onClick={() => {
+            addFilter({ id:'', group:'match', type:'segno', label:'Segno', op:'∈', value: sel.join(', ') });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Form Risultato esatto specifico ---
+  const FormRisultato: React.FC = () => {
+    const [sel, setSel] = useState<string[]>([]);
+    return (
+      <div style={fmtBox}>
+        <div style={{ ...fmtRow, alignItems:'flex-start' }}>
+          <span style={fmtLabel}>Risultato esatto</span>
+          {renderMultiCheck(sel, RE_OPT, setSel)}
+        </div>
+        <div style={fmtRow}>
+          <button style={fmtBtnPrimary} disabled={sel.length === 0} onClick={() => {
+            addFilter({ id:'', group:'match', type:'risultato_esatto', label:'RE', op:'∈', value: sel.join(', ') });
+          }}>Aggiungi</button>
+          <button style={fmtBtn} onClick={() => setOpenForm(null)}>Annulla</button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render lista bottoni "+ aggiungi X" per ogni gruppo
+  const renderAddButtons = (group: 'sources' | 'time' | 'match'): React.ReactNode => {
+    const btnStyle: React.CSSProperties = { padding: '6px 12px', background: 'var(--bg-elev-2)', border: '1px dashed var(--border-strong)', borderRadius: 6, color: 'var(--text-dim)', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+    const btn = (key: string, label: string) => (
+      <button key={key} style={btnStyle} onClick={() => setOpenForm(openForm === key ? null : key)}>
+        {openForm === key ? '× ' : '+ '}{label}
+      </button>
+    );
+    if (group === 'sources') {
+      return <>{SOURCES.map(s => btn(`src_${s.id}`, s.label))}</>;
+    }
+    if (group === 'time') {
+      return <>{btn('periodo', 'Periodo')}{btn('geo_country', 'Nazione')}{btn('geo_league', 'Lega')}</>;
+    }
+    // match
+    return <>{btn('re_gol', 'Range gol')}{btn('re_chi', 'Chi segna')}{btn('re_segno', 'Esito segno')}{btn('re_specifico', 'Risultato esatto')}</>;
+  };
+
+  // Render del form attivo per il gruppo (se openForm appartiene al gruppo)
+  const renderActiveForm = (group: 'sources' | 'time' | 'match'): React.ReactNode => {
+    if (!openForm) return null;
+    if (group === 'sources') {
+      const src = SOURCES.find(s => `src_${s.id}` === openForm);
+      if (src) return <FormSourceCondition src={src} />;
+    }
+    if (group === 'time') {
+      if (openForm === 'periodo')     return <FormPeriodo />;
+      if (openForm === 'geo_country') return <FormNazione />;
+      if (openForm === 'geo_league')  return <FormLega />;
+    }
+    if (group === 'match') {
+      if (openForm === 're_gol')        return <FormRangeGol />;
+      if (openForm === 're_chi')        return <FormChiSegna />;
+      if (openForm === 're_segno')      return <FormSegno />;
+      if (openForm === 're_specifico')  return <FormRisultato />;
+    }
+    return null;
+  };
+
   const renderMatchRow = (m: MockMatch) => {
     const hitCount = SOURCES.reduce((acc, s) => acc + (m.sources[s.id]?.pos ? 1 : 0), 0);
+    // Backend usa "X:Y", mock usavano "X-Y": normalizzo entrambi a "X-Y" per il confronto.
+    const realNorm = (m.real || '').replace(':', '-');
     const top3Cell = (srcId: string) => {
       const s = m.sources[srcId];
       if (!s) return <span className="score-pill miss-pill">—</span>;
       return (
         <span className="top3">
           {s.top3.map((sc, i) => {
-            const isReal = sc === m.real;
+            const scNorm = (sc || '').replace(':', '-');
+            const isReal = scNorm === realNorm;
             let cls = 'score-pill';
             if (isReal && s.pos === 1) cls += ' hit-1';
             else if (isReal && s.pos === 2) cls += ' hit-2';
@@ -528,8 +866,8 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
         <td className="date">{fmtDate(m.date)}</td>
         <td className="match-name">{m.home} <span className="away">vs {m.away}</span></td>
         <td className="country">{m.league}</td>
-        <td className="num">{m.quota.toFixed(2)}</td>
-        <td className="num"><span className="score-pill real">{m.real}</span></td>
+        <td className="num">{m.quota != null ? m.quota.toFixed(2) : '—'}</td>
+        <td className="num"><span className="score-pill real">{realNorm}</span></td>
         <td>{top3Cell('scout_lite')}</td>
         <td>{top3Cell('mistral_f2')}</td>
         <td>{top3Cell('monte_carlo')}</td>
@@ -676,7 +1014,7 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
             role="tab" aria-selected={activeTab === 'tab1'}
           >
             <IconList /> Pattern Builder
-            <span className="badge mono">{MOCK_MATCHES.length}</span>
+            <span className="badge mono">{matches.length}</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'tab2' ? 'active' : ''}`}
@@ -724,8 +1062,11 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
                           </div>
                           <div className="chips">
                             {arr.map(renderFilterChip)}
-                            <button className="add-filter">{addLabels[group]}</button>
                           </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                            {renderAddButtons(group)}
+                          </div>
+                          {renderActiveForm(group)}
                         </div>
                       );
                     })}
@@ -766,7 +1107,7 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
                       <span className="legend-chip"><span className="sw" style={{ background: '#4b5563' }} />miss</span>
                     </div>
                     <div className="row">
-                      <span className="card-sub mono">{MOCK_MATCHES.length} partite · ordinate per data ↓</span>
+                      <span className="card-sub mono">{matches.length} partite · ordinate per data ↓</span>
                     </div>
                   </div>
                   <div style={{ maxHeight: 540, overflow: 'auto' }}>
@@ -785,7 +1126,7 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {MOCK_MATCHES.map(renderMatchRow)}
+                        {matches.map(renderMatchRow)}
                       </tbody>
                     </table>
                   </div>
@@ -796,7 +1137,7 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
               <aside>
                 <div className="card side-stats">
                   <div className="section-label">Selezione corrente</div>
-                  <div className="ss-num grad mono">{MOCK_MATCHES.length}</div>
+                  <div className="ss-num grad mono">{matches.length}</div>
                   <div className="ss-lab">partite che matchano il pattern</div>
 
                   <div style={{ height: 14 }} />

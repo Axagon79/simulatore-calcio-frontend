@@ -411,8 +411,10 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
   const [matches, setMatches] = useState<MockMatch[]>(MOCK_MATCHES);
   const [globalStats, setGlobalStats] = useState<typeof MOCK_GLOBAL_STATS>(MOCK_GLOBAL_STATS);
   const [sourceDetail, setSourceDetail] = useState<typeof MOCK_SOURCE_DETAIL>(MOCK_SOURCE_DETAIL);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  // I valori loading/fetchError non sono ancora letti nel render (solo i setter,
+  // per gestione futura di spinner/banner errore). Prefisso _ = intenzionale.
+  const [_loading, setLoading] = useState<boolean>(true);
+  const [_fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -579,12 +581,6 @@ export default function StatsReMultifonte({ onBack }: StatsReMultifonteProps) {
         <button className="chip-x" onClick={() => removeFilter(f.id)} title="Rimuovi">×</button>
       </span>
     );
-  };
-
-  const addLabels: Record<string, string> = {
-    sources: '+ aggiungi condizione fonte',
-    time: '+ aggiungi periodo / geo',
-    match: '+ aggiungi caratteristica',
   };
 
   /* ============== Pattern Builder — render bottoni + form inline ============== */

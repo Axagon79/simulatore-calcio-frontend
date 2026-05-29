@@ -1146,12 +1146,11 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
 
     // [26/05/2026] Cache sessionStorage con TTL 30 min:
     //  - sz-article-{home}|{away}|{date}: articolo singolo (Scout immutabile post T-6h)
-    //  - sz-siblings-{date}: lista light per nav prev/next (lo stesso per tutta la giornata)
-    // Quando l'utente naviga prev/next, l'articolo cambia (fetch nuova chiave) ma
-    // siblings resta dalla cache: zero fetch sprecate.
+    //  - sz-siblings-all: lista light unificata cross-tab (recent + oggi + domani + dopodomani)
+    //    per nav prev/next che attraversa i tab. Una sola chiave riusata da tutti gli articoli.
     const CACHE_TTL_MS = 30 * 60 * 1000;
     const articleCacheKey = `sz-article-${homeQ}|${awayQ}|${dateQ}`;
-    const siblingsCacheKey = `sz-siblings-${dateQ}`;
+    const siblingsCacheKey = `sz-siblings-all`;
 
     const readCache = (key: string): any | null => {
       try {
@@ -1175,16 +1174,69 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
       return;
     }
 
+    // Date Oggi/Domani/Dopodomani per le fetch siblings per-tab.
+    // Format manuale in fuso LOCALE: toISOString() converte in UTC e ti spara
+    // un giorno indietro quando l'utente e' in fusi orari > UTC (es. CEST).
+    const isoOf = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const after = new Date(today); after.setDate(today.getDate() + 2);
+    const isoToday = isoOf(today);
+    const isoTomorrow = isoOf(tomorrow);
+    const isoAfter = isoOf(after);
+
+    // Costruisce la lista unificata cross-tab nell'ordine logico:
+    // Ultimi 30 (cronologia inversa) -> Oggi -> Domani -> Dopodomani.
+    // Dedup per (home,away,date): se un match di Oggi appare anche in "recent",
+    // lo tengo nella posizione "recent" (la prima incontrata).
+    const buildUnifiedSiblings = async (): Promise<MatchA[]> => {
+      const fetchSib = (url: string) =>
+        fetch(url).then(r => r.json()).then((d: any) =>
+          Array.isArray(d?.siblings) ? (d.siblings as MatchA[]) : []
+        ).catch(() => [] as MatchA[]);
+      const [recent, day0, day1, day2] = await Promise.all([
+        fetchSib(`${API_BASE}/lazy/news-siblings?mode=recent&limit=30`),
+        fetchSib(`${API_BASE}/lazy/news-siblings?date=${isoToday}`),
+        fetchSib(`${API_BASE}/lazy/news-siblings?date=${isoTomorrow}`),
+        fetchSib(`${API_BASE}/lazy/news-siblings?date=${isoAfter}`),
+      ]);
+      // Ordine timeline identico alla paginazione esterna di News.tsx:
+      //   1) "Ultimi 30 articoli" (date desc dal backend) navigati dal piu' vecchio
+      //      al piu' nuovo (= reverse), perche' "Successivo" muove verso il presente.
+      //   2) Oggi (match_time asc)
+      //   3) Domani (asc)
+      //   4) Dopodomani (asc)
+      // Dedup tiene la prima occorrenza: i match di Oggi/Domani/Dopodomani gia'
+      // presenti in "Ultimi 30" restano nella loro posizione "Ultimi 30".
+      const recentChronoAsc = [...recent].reverse();
+      const seen = new Set<string>();
+      const out: MatchA[] = [];
+      for (const arr of [recentChronoAsc, day0, day1, day2]) {
+        for (const m of arr) {
+          const k = `${m.home}|${m.away}|${m.date}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push(m);
+        }
+      }
+      return out;
+    };
+
     // Fetch solo per quello che manca in cache.
     const articleP = cachedArticle?.article
       ? Promise.resolve({ article: cachedArticle.article })
       : fetch(`${API_BASE}/lazy/news-article?date=${dateQ}&home=${encodeURIComponent(homeQ)}&away=${encodeURIComponent(awayQ)}`).then(r => r.json()).catch(() => null);
-    const siblingsP = cachedSiblings?.siblings
-      ? Promise.resolve({ siblings: cachedSiblings.siblings })
-      : fetch(`${API_BASE}/lazy/news-siblings?date=${dateQ}`).then(r => r.json()).catch(() => null);
+    const siblingsP: Promise<MatchA[]> = cachedSiblings?.siblings
+      ? Promise.resolve(cachedSiblings.siblings as MatchA[])
+      : buildUnifiedSiblings();
 
     Promise.all([articleP, siblingsP])
-      .then(([articleData, siblingsData]: any[]) => {
+      .then(([articleData, sib]: [any, MatchA[]]) => {
         if (cancelled) return;
         const article = articleData?.article;
         if (!article) {
@@ -1192,7 +1244,6 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
           return;
         }
         setMatchData(article);
-        const sib = Array.isArray(siblingsData?.siblings) ? siblingsData.siblings : [];
         setSiblings(sib);
         // Scrivo in cache solo cio' che e' venuto da fetch (non riscrivo cio' che gia' c'era)
         try {
@@ -1268,8 +1319,15 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
   const computedAt = (effort === 'DEEP' ? matchData?.scout_deep?.computed_at : matchData?.scout_lite?.computed_at) || '';
   const pubLabel = computedAt ? new Date(computedAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 
-  // Nav prev/next nello stesso giorno.
-  const myIdx = matchData ? siblings.findIndex(s => s.home === matchData.home && s.away === matchData.away) : -1;
+  // Nav prev/next: lista unificata cross-tab (Ultimi 30 -> Oggi -> Domani -> Dopodomani).
+  // Match per (home, away, date): la lista ha date diverse, serve tutta la tripla.
+  const myIdx = matchData
+    ? siblings.findIndex(s =>
+        s.home === matchData.home &&
+        s.away === matchData.away &&
+        s.date === matchData.date
+      )
+    : -1;
   const prevMatch = myIdx > 0 ? siblings[myIdx - 1] : null;
   const nextMatch = myIdx >= 0 && myIdx < siblings.length - 1 ? siblings[myIdx + 1] : null;
   const goToSibling = (e: React.MouseEvent, m: MatchA) => {
@@ -1474,7 +1532,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                       <div className="qn-body">
                         <div className="qn-eyebrow">Articolo precedente</div>
                         <div className="qn-teams">{prevMatch.home} – {prevMatch.away}</div>
-                        {prevMatch.match_time && <div className="qn-time">Kickoff · {prevMatch.match_time}</div>}
+                        <div className="qn-time">
+                          {fmtDateLong(prevMatch.date)}{prevMatch.match_time ? ` · Kickoff ${prevMatch.match_time}` : ''}
+                        </div>
                       </div>
                     </a>
                   ) : <span />}
@@ -1483,7 +1543,9 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                       <div className="qn-body">
                         <div className="qn-eyebrow">Articolo successivo</div>
                         <div className="qn-teams">{nextMatch.home} – {nextMatch.away}</div>
-                        {nextMatch.match_time && <div className="qn-time">Kickoff · {nextMatch.match_time}</div>}
+                        <div className="qn-time">
+                          {fmtDateLong(nextMatch.date)}{nextMatch.match_time ? ` · Kickoff ${nextMatch.match_time}` : ''}
+                        </div>
                       </div>
                       <span className="arrow">→</span>
                     </a>
@@ -2016,7 +2078,7 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
             <div className="nav-grid">
               {prevMatch ? (
                 <a className="nav-card prev" onClick={(e) => goToSibling(e, prevMatch)} href="#">
-                  <div className="nav-dir"><span>← Articolo precedente</span><span className="ko">{prevMatch.match_time || ''}</span></div>
+                  <div className="nav-dir"><span>← Articolo precedente</span><span className="ko">{fmtDateLong(prevMatch.date)}{prevMatch.match_time ? ` · ${prevMatch.match_time}` : ''}</span></div>
                   <div className="nav-row-team">
                     <NavCrest m={prevMatch} side="home" />
                     <span>vs</span>
@@ -2026,13 +2088,13 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 </a>
               ) : (
                 <a className="nav-card prev" onClick={handleBack} href="/news">
-                  <div className="nav-dir"><span>← Articolo precedente</span><span className="ko">— · primo del giorno</span></div>
-                  <div className="nav-row-team" style={{ color: 'var(--t-faint)' }}>Nessun articolo precedente nella giornata</div>
+                  <div className="nav-dir"><span>← Articolo precedente</span><span className="ko">— · primo articolo</span></div>
+                  <div className="nav-row-team" style={{ color: 'var(--t-faint)' }}>Nessun articolo precedente</div>
                 </a>
               )}
               {nextMatch ? (
                 <a className="nav-card next" onClick={(e) => goToSibling(e, nextMatch)} href="#">
-                  <div className="nav-dir"><span>Articolo successivo →</span><span className="ko">{nextMatch.match_time || ''}</span></div>
+                  <div className="nav-dir"><span>Articolo successivo →</span><span className="ko">{fmtDateLong(nextMatch.date)}{nextMatch.match_time ? ` · ${nextMatch.match_time}` : ''}</span></div>
                   <div className="nav-row-team">
                     <NavCrest m={nextMatch} side="home" />
                     <span>vs</span>
@@ -2042,8 +2104,8 @@ const NewsArticolo: React.FC<NewsArticoloProps> = ({ onBack }) => {
                 </a>
               ) : (
                 <a className="nav-card next" onClick={handleBack} href="/news">
-                  <div className="nav-dir"><span>Articolo successivo →</span><span className="ko">— · ultimo del giorno</span></div>
-                  <div className="nav-row-team" style={{ color: 'var(--t-faint)' }}>Nessun articolo successivo nella giornata</div>
+                  <div className="nav-dir"><span>Articolo successivo →</span><span className="ko">— · ultimo articolo</span></div>
+                  <div className="nav-row-team" style={{ color: 'var(--t-faint)' }}>Nessun articolo successivo</div>
                 </a>
               )}
             </div>

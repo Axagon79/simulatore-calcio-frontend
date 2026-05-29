@@ -900,7 +900,14 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     // Helper: processa il payload (cache o rete) - logica condivisa.
     const processPredictions = (preds: Match[]) => {
       const withArticle = preds.filter(p => !!(p.scout_deep?.scout_text || p.scout_deep?.scout_text_preview || p.scout_lite?.scout_text || p.scout_lite?.scout_text_preview));
-      withArticle.sort((a, b) => (a.match_time || '').localeCompare(b.match_time || ''));
+      // [29/05/2026] In mode=recent una pagina puo' contenere date diverse: ordino
+      // per (date, match_time) ascendente cosi' la pagina resta cronologica. Negli
+      // altri tab la data e' unica, quindi di fatto conta solo match_time.
+      withArticle.sort((a, b) => {
+        const dc = ((a as any).date || '').localeCompare((b as any).date || '');
+        if (dc !== 0) return dc;
+        return (a.match_time || '').localeCompare(b.match_time || '');
+      });
       setMatches(withArticle);
     };
 
@@ -973,17 +980,19 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
     setPage(1);
   }, [activeCountry, activeLeague, escludiFinite]);
 
-  // [26/05/2026] Quando si entra in modalita' Recenti, parto dall'ultima pagina
-  // (= articoli piu' recenti in cima, ordine cronologico inverso). L'utente
-  // intuitivamente clicca "Precedente" per andare indietro nel tempo.
-  // Lo faccio dopo il fetch quando ho totalArticles affidabile.
+  // [29/05/2026] In modalita' Recenti parto da pagina 1 = articoli piu' VECCHI
+  // tra i 30 (la lista e' ordinata ascendente: pag 1 = 24 mag, ultima = 26 mag).
+  // Paginazione normale (non reversed): "Successivo ->" avanza verso il presente,
+  // poi salta al tab Oggi. Forzo page=1 all'ingresso del tab per evitare di
+  // aprire una pagina centrale lasciata da una cache stantia.
   const prevRecentRef = React.useRef(false);
   useEffect(() => {
-    if (isRecentMode && !prevRecentRef.current && totalArticles > 0) {
-      const totalPages = Math.max(1, Math.ceil(totalArticles / PER_PAGE));
-      setPage(totalPages);
-      prevRecentRef.current = true;
-    } else if (!isRecentMode && prevRecentRef.current) {
+    if (isRecentMode) {
+      if (!prevRecentRef.current) {
+        setPage(1);
+        prevRecentRef.current = true;
+      }
+    } else if (prevRecentRef.current) {
       prevRecentRef.current = false;
       setPage(1);
     }
@@ -997,19 +1006,18 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   useEffect(() => {
     if (pendingPageAfterTabSwitch.current && totalArticles > 0) {
       const totalPages = Math.max(1, Math.ceil(totalArticles / PER_PAGE));
-      // Salto verso il PASSATO -> arrivo all'ultima pagina del tab passato (= la piu' vicina al presente)
-      //   - in modalita' non-reversed (Oggi/Domani/Dopodomani): "ultima" = totalPages
-      //   - in modalita' reversed (Recenti): "ultima" = 1 (piu' recente)
-      // Salto verso il FUTURO -> arrivo alla prima pagina del tab futuro (= la piu' vicina al passato)
-      //   - non-reversed: "prima" = 1
-      //   - reversed: "prima" = totalPages (piu' vecchia)
+      // [29/05/2026] Tutta la timeline e' ASCENDENTE (anche Recenti: pag 1 = piu'
+      // vecchio, ultima = piu' recente). Quindi:
+      //   Salto verso il PASSATO (tab precedente) -> ultima pagina (totalPages),
+      //     la piu' vicina al presente = articolo piu' recente del tab passato.
+      //   Salto verso il FUTURO (tab successivo) -> pagina 1, la piu' vicina al
+      //     passato = articolo piu' vecchio del tab futuro.
       const target = pendingPageAfterTabSwitch.current;
-      const reversed = isRecentMode;
       let nextPage: number;
       if (target === 'last') {
-        nextPage = reversed ? 1 : totalPages;
+        nextPage = totalPages;
       } else {
-        nextPage = reversed ? totalPages : 1;
+        nextPage = 1;
       }
       setPage(nextPage);
       pendingPageAfterTabSwitch.current = null;
@@ -1135,8 +1143,8 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
   const clusters: Cluster[] = useMemo(() => {
     // [26/05/2026] Modalita' archivio: cluster per giornata invece che per fascia oraria.
     // Le partite gia' giocate non beneficiano dei cluster temporali (l'orario non serve a
-    // pianificare cosa guardare nel pomeriggio/sera). Cluster ordinati dalla giornata piu'
-    // recente alla piu' vecchia, coerente col sort cronologico inverso del backend.
+    // pianificare cosa guardare nel pomeriggio/sera). [29/05/2026] Cluster ordinati dalla
+    // giornata piu' vecchia alla piu' recente, coerente con la lista ora ascendente.
     if (isRecentMode) {
       const byDate = new Map<string, Match[]>();
       for (const m of indexFiltered) {
@@ -1500,7 +1508,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
         <main className="stack">
           {isRecentMode && (
             <div className="archive-banner">
-              <b>Archivio</b> · ultimi {RECENT_LIMIT} articoli pubblicati · ordine cronologico inverso
+              <b>Archivio</b> · ultimi {RECENT_LIMIT} articoli pubblicati · dal più vecchio al più recente
             </div>
           )}
           {loading && <ShimmerBar />}
@@ -1522,7 +1530,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
               aver letto le card, non serve scrollare fino in fondo per cambiare pagina.
               Mostrata anche con 1 sola pagina (bottoni disabilitati) per coerenza visiva. */}
           {!loading && !error && (totalArticles > 0 || canJumpPrev || canJumpNext) && (
-            <PaginationBar page={page} setPage={setPage} totalArticles={totalArticles} perPage={PER_PAGE} reversed={isRecentMode} top onJumpPrevTab={canJumpPrev ? jumpToPrevTab : undefined} onJumpNextTab={canJumpNext ? jumpToNextTab : undefined} />
+            <PaginationBar page={page} setPage={setPage} totalArticles={totalArticles} perPage={PER_PAGE} reversed={false} top onJumpPrevTab={canJumpPrev ? jumpToPrevTab : undefined} onJumpNextTab={canJumpNext ? jumpToNextTab : undefined} />
           )}
           {!loading && !error && filtered.map((m, idx) => {
             const id = `a-${idx + 1}`;
@@ -1765,7 +1773,7 @@ const News: React.FC<NewsProps> = ({ onBack }) => {
           })}
           {/* [25/05/2026] Paginazione bottom (sempre visibile anche con 1 pagina sola) */}
           {!loading && !error && totalArticles > 0 && (
-            <PaginationBar page={page} setPage={setPage} totalArticles={totalArticles} perPage={PER_PAGE} reversed={isRecentMode} onJumpPrevTab={canJumpPrev ? jumpToPrevTab : undefined} onJumpNextTab={canJumpNext ? jumpToNextTab : undefined} />
+            <PaginationBar page={page} setPage={setPage} totalArticles={totalArticles} perPage={PER_PAGE} reversed={false} onJumpPrevTab={canJumpPrev ? jumpToPrevTab : undefined} onJumpNextTab={canJumpNext ? jumpToNextTab : undefined} />
           )}
         </main>
       </div>

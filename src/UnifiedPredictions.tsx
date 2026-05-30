@@ -5121,7 +5121,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
               const isLeagueExpanded = collapsedLeagues.has(L.league);
               return (
-                <div key={L.league} style={{ marginBottom: '16px' }}>
+                <div key={L.league} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                   <div
                     {...(leagueIdx === 0 ? { 'data-tour': 'bp-first-league' } : {})}
                     style={{
@@ -5320,7 +5320,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>
                   );
                   return (
-                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                  <div key={leagueName} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
@@ -5404,7 +5404,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>
                   );
                   return (
-                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                  <div key={leagueName} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
@@ -5515,7 +5515,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>
                   );
                   return (
-                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                  <div key={leagueName} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                     {/* HEADER LEGA - CLICCABILE */}
                     <div
                       {...(leagueIdx === 0 ? { 'data-tour': 'bp-first-league' } : {})}

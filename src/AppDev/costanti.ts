@@ -16,9 +16,15 @@ import type { League } from '../types';
 const USE_EMULATOR = (import.meta as any).env?.VITE_USE_EMULATOR === 'true';
 const FIREBASE_PROJECT_ID = 'puppals-456c7';
 
+// Host dell'emulatore: usa lo STESSO host con cui è stata aperta la pagina.
+// Da PC -> "localhost", da telefono -> "192.168.x.x" (l'IP della pagina).
+// Così l'emulatore è raggiungibile da entrambi senza cambiare nulla.
+// (richiede emulatore avviato con host 0.0.0.0 — vedi firebase.json).
+const EMULATOR_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+
 // 1. API Node.js
 export const API_BASE = USE_EMULATOR
-  ? `http://localhost:5001/${FIREBASE_PROJECT_ID}/us-central1/api`
+  ? `http://${EMULATOR_HOST}:5001/${FIREBASE_PROJECT_ID}/us-central1/api`
   : 'https://api-6b34yfzjia-uc.a.run.app';
 
 // 2. API PYTHON AI -> FORZIAMO IL CLOUD! (l'emulatore Python ha quirks, qui restiamo sempre su Cloud)

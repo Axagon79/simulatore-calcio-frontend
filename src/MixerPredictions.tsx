@@ -5442,7 +5442,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
               const isLeagueExpanded = collapsedLeagues.has(L.league);
               return (
-                <div key={L.league} style={{ marginBottom: '16px' }}>
+                <div key={L.league} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                   <div
                     style={{
                       padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
@@ -5616,7 +5616,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               const hrBg = hitRateVal !== null ? `hsla(${Math.round(hrHue)}, 85%, 48%, 0.15)` : theme.surface05;
               const isLeagueExpanded = collapsedLeagues.has(L.league);
               return (
-                <div key={L.league} style={{ marginBottom: '16px' }}>
+                <div key={L.league} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                   <div
                     style={{
                       padding: '8px 12px', marginBottom: isLeagueExpanded ? '8px' : '0',
@@ -5668,6 +5668,19 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                       </div>
                       <span style={{ fontSize: '10px', color: theme.textDim, transition: 'transform 0.2s', transform: isLeagueExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0, marginLeft: '8px' }}>▼</span>
                     </div>
+                    {isMobile && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', flexWrap: 'wrap' as const }}>
+                        <span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>Partite:</span>
+                        <span style={{ fontSize: '9px', color: statusColor, fontWeight: '700', background: statusBg, padding: '1px 6px', borderRadius: '4px' }}>⚽ {partiteVisibili}</span>
+                        {L.finite > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.success, fontWeight: '600' }}>✅ {L.finite}</span></>}
+                        {L.daGiocare > 0 && <>{sep}<span style={{ fontSize: '9px', color: theme.textDim, fontWeight: '600' }}>⏳ {L.daGiocare}</span></>}
+                        {sep}
+                        <span style={{ fontSize: '9px', color: hitColor, fontWeight: '700' }}>✓ {L.centrati}</span>
+                        {sep}
+                        <span style={{ fontSize: '9px', color: missColor, fontWeight: '700' }}>✗ {L.mancati}</span>
+                        {verified > 0 && <>{sep}<span style={{ fontSize: '9px', color: hrColor, fontWeight: '800', background: hrBg, padding: '1px 8px', borderRadius: '10px' }}>{hitRateVal}%</span></>}
+                      </div>
+                    )}
                   </div>
                   {isLeagueExpanded && leagueMatchesLoading[L.league] && (
                     <div style={{ height: 2, marginBottom: '6px', background: isLight ? '#e0e0e0' : 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
@@ -5744,7 +5757,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>
                   );
                   return (
-                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                  <div key={leagueName} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
@@ -5828,7 +5841,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>
                   );
                   return (
-                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                  <div key={leagueName} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                     <div
                       style={{
                         padding: '8px 12px', marginBottom: isCollapsed ? '0' : '8px',
@@ -5923,7 +5936,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
                     </>
                   );
                   return (
-                  <div key={leagueName} style={{ marginBottom: '16px' }}>
+                  <div key={leagueName} style={{ marginBottom: isMobile ? '8px' : '16px' }}>
                     {/* HEADER LEGA - CLICCABILE */}
                     <div
                       {...(leagueIdx === 0 ? { 'data-tour': 'bp-first-league' } : {})}

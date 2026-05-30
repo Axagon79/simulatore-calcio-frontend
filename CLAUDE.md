@@ -80,31 +80,31 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` (sub-comando, AST-only, no LLM/API cost) to keep the graph current. **SEMPRE dalla root del repo**, mai da sotto-cartelle (es. `graphify update ./functions` crea un grafo "fantasma" parallelo non sincronizzato). Esiste UN solo grafo per repo, in `<repo-root>/graphify-out/`. **Importante**: NON usare `graphify <path> --update` (flag) — quello richiede LLM key (Gemini di default) e fallisce se non c'è.
 
-## Regola vincolante — uso obbligatorio di Graphify
+## Gerarchia delle fonti — wiki prima, grafo per navigare il codice, grep ultimo
 
-Quando in un progetto esiste il file `graphify-out/graph.json`, valgono questi obblighi non negoziabili:
+Quando serve capire o trovare qualcosa nel progetto, l'ordine è **vincolante**:
 
-**Prima di qualunque Grep, Glob, o ricerca esplorativa nel codice**, è OBBLIGATORIO eseguire almeno una di queste interrogazioni del grafo, con argomenti pertinenti alla domanda:
-- `graphify query "..."` per esplorare relazioni semantiche
-- `graphify path "A" "B"` per trovare percorsi tra entità
-- `graphify explain "X"` per capire un singolo nodo
+1. **Wiki Obsidian (vault `G:\AI_Simulator_vault\wiki\`) — prima fonte SEMPRE.** Cattura il *perché*, il contesto di prodotto, lo stato (vivo/sospetto/stale), le decisioni (ADR), le trappole, le citazioni dell'utente. È memoria ragionata. Per "cosa fa X", "perché Y", priorità, dipendenze → si parte da qui. Questa è la fonte con cui Claude lavora meglio (verificato su sessioni reali: il grafo non conosce il contesto business, la wiki sì).
 
-Solo dopo aver ricevuto e letto il risultato del grafo, è permesso usare Grep/Glob se il grafo non ha risposto in modo sufficiente.
+2. **Grafo Graphify — navigazione del codice sorgente.** Quando per rispondere serve guardare il **codice** e la wiki non basta, **prima di qualunque Grep/Glob è obbligatorio** interrogare il grafo per individuare il punto giusto:
+   - `graphify query "..."` per relazioni semantiche
+   - `graphify path "A" "B"` per percorsi tra entità
+   - `graphify explain "X"` per un singolo nodo
+   Il grafo è una **mappa per orientarsi**, non una fonte di verità né di importanza. God-node, betweenness, surprising connections, PageRank = rumore topologico, **ignorarli** come argomento di importanza business (consultare invece `BUSINESS_CORE.md`).
+
+3. **Grep/Glob — ultimo.** Solo se wiki + grafo non bastano, dichiarando esplicitamente perché si passa al grep.
+
+4. **Codice sorgente = fonte di verità definitiva.** Wiki e grafo sono strumenti per arrivarci più in fretta; in caso di conflitto **vince il codice** (*"non puoi credere ai database, l'unica fonte di verità è il codice"*).
 
 **Vietato:**
-- Eseguire Grep/Glob senza prima interrogare il grafo
-- Ignorare il suggerimento dell'hook PreToolUse "graphify: knowledge graph disponibile" e procedere comunque con grep
-- Giustificare il salto del grafo con "andavo più veloce a grepare"
+- Grepare senza aver prima consultato wiki e (per il codice) grafo.
+- Ignorare il suggerimento dell'hook PreToolUse "graphify: knowledge graph disponibile" e procedere comunque con grep.
+- Giustificare il salto con "andavo più veloce a grepare".
+- Usare metriche topologiche del grafo come argomento di importanza/priorità.
 
-**Procedura corretta:**
-1. Ricevuta una domanda sul codice → interroga il grafo
-2. Il grafo restituisce risultati → li leggi e li usi
-3. Se i risultati del grafo sono insufficienti → spieghi all'utente perché, e propone esplicitamente di passare a Grep come fallback
-4. L'utente conferma → solo allora esegui Grep
+Se ti accorgi di stare per eseguire Grep senza aver consultato wiki + grafo, FERMATI e fai prima l'interrogazione.
 
-Se ti accorgi di stare per eseguire Grep senza aver consultato il grafo, FERMATI e fai prima l'interrogazione.
-
-Contesto: sessione 22/05/2026, hai eseguito 8 Grep consecutivi su una domanda dove `graphify query "tab AI OST"` avrebbe dato risposta diretta. Hai dichiarato di aver visto il suggerimento dell'hook e averlo ignorato. Questa regola esiste perché quel comportamento è inaccettabile.
+Contesto storico: sessione 22/05/2026, eseguiti 8 Grep consecutivi dove `graphify query "tab AI OST"` avrebbe dato risposta diretta. Questa regola nasce per impedire quel comportamento; la revisione 30/05/2026 ha messo esplicitamente la **wiki come prima fonte** sopra il grafo, riflettendo come Claude lavora meglio.
 
 ## Regola — divieto di concludere "non esiste" senza verifica multipla
 
@@ -149,3 +149,35 @@ CONSULTARE BUSINESS_CORE.md prima di:
 La classifica god-node del grafo NON corrisponde all'importanza business.
 Esempio: PME è in cima al grafo per densità di connessioni, ma è admin-only
 e in shadow mode. Il BUSINESS_CORE riflette la realtà di prodotto.
+
+## Regola — allineamento wiki immediato su incongruenza rilevata
+
+Se durante una sessione (ricerca, query, lettura codice, qualunque momento) trovo
+nella wiki Obsidian (`G:\AI_Simulator_vault\wiki\`) qualcosa di **incongruente,
+disallineato, obsoleto, non più valido o da aggiornare**, lo allineo **subito**,
+nel momento in cui lo rilevo — non a fine sessione, non "dopo".
+
+Procedura: verifico la verità sul **codice reale** (mai a memoria, mai presumendo
+l'esistenza di una pagina — prima Glob/Read per accertarmi che esista davvero),
+poi correggo la pagina aggiornando `ultimo_ingest` e `fonti`. Se la correzione è
+grande o ambigua, la propongo e aspetto OK; se è un fix fattuale netto, la applico
+e lo dichiaro in chat.
+
+**Why:** una wiki con errori non corretti sul momento propaga decisioni sbagliate
+nelle sessioni successive. Rimandare = dimenticare.
+
+## Regola — allineamento wiki immediato su incongruenza rilevata
+
+Se durante una sessione (ricerca, query, lettura codice, qualunque momento) trovo
+nella wiki Obsidian (`G:\AI_Simulator_vault\wiki\`) qualcosa di **incongruente,
+disallineato, obsoleto, non più valido o da aggiornare**, lo allineo **subito**,
+nel momento in cui lo rilevo — non a fine sessione, non "dopo".
+
+Procedura: verifico la verità sul **codice reale** (mai a memoria, mai presumendo
+l'esistenza di una pagina — prima Glob/Read per accertarmi che esista davvero),
+poi correggo la pagina aggiornando `ultimo_ingest` e `fonti`. Se la correzione è
+grande o ambigua, la propongo e aspetto OK; se è un fix fattuale netto, la applico
+e lo dichiaro in chat.
+
+**Why:** una wiki con errori non corretti sul momento propaga decisioni sbagliate
+nelle sessioni successive. Rimandare = dimenticare.

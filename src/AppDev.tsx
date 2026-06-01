@@ -75,6 +75,8 @@ export default function AppDev() {
     leagues,
     league, setLeague,
     rounds,
+    allRounds,
+    currentRound,
     selectedRound, setSelectedRound,
     matches,
     availableCountries,
@@ -1830,6 +1832,8 @@ const recuperoST = estraiRecupero(finalData.cronaca || [], 'st');
       {/* 1. NAVIGAZIONE A CAPSULE GIORNATE */}
       <SelettoreGiornata
         rounds={rounds}
+        allRounds={allRounds}
+        currentRound={currentRound}
         selectedRound={selectedRound}
         setSelectedRound={setSelectedRound}
         hoveredRound={hoveredRound}

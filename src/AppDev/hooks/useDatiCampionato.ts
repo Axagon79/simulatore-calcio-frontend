@@ -8,6 +8,8 @@ export function useDatiCampionato() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [league, setLeague] = useState('');
   const [rounds, setRounds] = useState<RoundInfo[]>([]);
+  const [allRounds, setAllRounds] = useState<string[]>([]);
+  const [currentRound, setCurrentRound] = useState<string | null>(null);
   const [selectedRound, setSelectedRound] = useState<RoundInfo | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [availableCountries, setAvailableCountries] = useState<{code: string, name: string, flag: string}[]>([]);
@@ -83,6 +85,8 @@ export function useDatiCampionato() {
     setSelectedRound(null);
     fetch(`${API_BASE}/rounds?league=${league}`).then(r => r.json()).then(d => {
       setRounds(d.rounds || []);
+      setAllRounds(d.allRounds || []);
+      setCurrentRound(d.currentRound || null);
       const curr = d.rounds?.find((r: any) => r.type === 'current');
       if (curr) setSelectedRound(curr);
     });
@@ -125,6 +129,8 @@ export function useDatiCampionato() {
     leagues, setLeagues,
     league, setLeague,
     rounds, setRounds,
+    allRounds,
+    currentRound,
     selectedRound, setSelectedRound,
     matches, setMatches,
     availableCountries,

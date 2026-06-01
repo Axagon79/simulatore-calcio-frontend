@@ -108,7 +108,7 @@ export default function SelettoreGiornata({
       borderRadius: '20px',
       border: filled
         ? 'none'
-        : `1px solid ${
+        : `${isSelected ? '2px' : '1px'} solid ${
             disabled
               ? neutralBorder
               : isSelected
@@ -264,7 +264,9 @@ export default function SelettoreGiornata({
               {all.map(name => {
                 const isSelected = name === selName;
                 const isCurrent = name === currentRound;
-                const isHover = hoveredCell === name;
+                // Su mobile non c'è mouseleave: l'hover resterebbe "appiccicato" alla riga
+                // toccata. Disattivo l'evidenziazione hover su mobile.
+                const isHover = !isMobile && hoveredCell === name;
                 const filled = isCurrent;
                 const lit = filled || isSelected || isHover;
                 return (

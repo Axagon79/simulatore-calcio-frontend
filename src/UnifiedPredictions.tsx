@@ -5459,7 +5459,7 @@ const renderGolDetailBar = (value: number, label: string, direction?: string) =>
               </div>
             )}
 
-            {activeTab === 'pronostici' && filteredPredictions.length === 0 && !loading && predictions.length > 0 && (
+            {activeTab === 'pronostici' && filteredPredictions.length === 0 && !loading && !(tabSummary && (tabSummary.tabs?.pronostici ?? 0) > 0) && (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textDim }}>
                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏆</div>
                 <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Nessun pronostico per oggi</div>
